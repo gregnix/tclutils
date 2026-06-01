@@ -1,0 +1,50 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tclutils n 0.23.0 tclutils "Tcl Utility Collection"
+.SH NAME
+tclutils \- portable Unix-like utilities in pure Tcl
+.SH SYNOPSIS
+.nf
+package require tclutils ?0.16.0?
+package require tclutils::tufind ?0.1?
+package require tclutils::tugrep ?0.1?
+.fi
+.SH DESCRIPTION
+.PP
+tclutils is a Tcllib\-style collection of portable utilities. Package names use the tu prefix to avoid collisions with Unix command names and other Tcl packages.
+.PP
+Add the module path and require individual packages or the umbrella package:
+.PP
+.nf
+tcl::tm::path add /path/to/tclutils/lib/tm
+package require tclutils
+.fi
+.SH MODULES
+.PP
+See the individual manual pages in section n, for example tugrep(n), tudiff(n), tubin(n).
+.PP
+Command-line wrappers for a subset of modules are documented in section 1, for example tufind(1) and tugrep(1).
+.SH LICENSE
+.PP
+MIT License. Independent implementation; no GNU coreutils source or manual text is included.
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tufind(1), tugrep(1), tuwc(1)

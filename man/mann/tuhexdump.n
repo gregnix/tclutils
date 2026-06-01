@@ -1,0 +1,49 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tuhexdump n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tuhexdump \-  tclutils::tuhexdump  creates a classic hex/ascii dump from data or files.
+.SH SYNOPSIS
+.PP
+.nf
+package require tclutils::tuhexdump
+.fi
+.SH COMMANDS
+.PP
+.nf
+::tclutils::tuhexdump::data data ?options?
+::tclutils::tuhexdump::file filename ?options?
+.fi
+.SH OPTIONS
+.IP
+\fB\-width n\fR, default \fB16\fR
+.IP
+\fB\-offset n\fR, default \fB0\fR
+.IP
+\fB\-length n\fR, default \fB\-1\fR for all remaining bytes
+.SH EXAMPLE
+.PP
+.nf
+puts [::tclutils::tuhexdump::file test.pdf \-length 256]
+.fi
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

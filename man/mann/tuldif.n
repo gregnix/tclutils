@@ -1,0 +1,10 @@
+.TH tuldif n 0.31.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tuldif \- LDIF (RFC 2849) reader/writer
+.SH SYNOPSIS
+package require tclutils::tuldif
+.SH DESCRIPTION
+Parses LDIF into a list of entries (ordered {attr value} pairs) and serializes
+back, decoding/encoding base64 values via tclutils::tubase64. See docs/tuldif.md.
+.SH KEYWORDS
+ldif, ldap, parser

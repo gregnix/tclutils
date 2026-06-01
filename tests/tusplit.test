@@ -1,0 +1,57 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tusplit 0.1
+package require tclutils::common 0.1
+
+set tmp [makeDirectory tusplit]
+
+proc readText {path} { ::tclutils::common::readFile $path }
+proc readBin {path} { ::tclutils::common::readBinaryFile $path }
+
+test tusplit-1.1 {split text by line count} -body {
+    set out [makeDirectory lines]
+    set files [::tclutils::tusplit::splitLines "a\nb\nc\nd\ne" -lines 2 -outdir $out -prefix part -suffix .txt]
+    list [llength $files] [readText [lindex $files 0]] [readText [lindex $files 2]]
+} -result {3 {a
+b} e}
+
+test tusplit-1.2 {file split by line count} -body {
+    set in [makeFile "1\n2\n3\n4" input.txt]
+    set out [makeDirectory filelines]
+    set files [::tclutils::tusplit::file $in -lines 3 -outdir $out -prefix x]
+    list [file tail [lindex $files 0]] [readText [lindex $files 1]]
+} -result {x00 4}
+
+test tusplit-1.3 {split binary by byte count} -body {
+    set out [makeDirectory bytes]
+    set files [::tclutils::tusplit::splitBytes abcdef -bytes 2 -outdir $out -prefix b]
+    list [llength $files] [readBin [lindex $files 1]]
+} -result {3 cd}
+
+test tusplit-1.4 {file split by byte count} -body {
+    set in [file join [makeDirectory bininput] data.bin]
+    set fh [open $in wb]
+    puts -nonewline $fh abcdefgh
+    close $fh
+    set out [makeDirectory filebytes]
+    set files [::tclutils::tusplit::file $in -bytes 3 -outdir $out -prefix b -suffix .part]
+    list [file tail [lindex $files 0]] [readBin [lindex $files 2]]
+} -result {b00.part gh}
+
+test tusplit-1.5 {lines convenience} -body {
+    set in [makeFile "a\nb\nc" convenience.txt]
+    set out [makeDirectory convenience]
+    set files [::tclutils::tusplit::lines $in 2 -outdir $out]
+    llength $files
+} -result 2
+
+test tusplit-1.6 {reject both line and byte modes} -body {
+    set in [makeFile abc both.txt]
+    ::tclutils::tusplit::file $in -lines 1 -bytes 1
+} -returnCodes error -match glob -result {*one of -lines or -bytes*}
+
+cleanupTests

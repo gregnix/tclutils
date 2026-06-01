@@ -1,0 +1,15 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuhead 0.1
+
+set tmp [file join [temporaryDirectory] tuhead-[pid].txt]
+set f [open $tmp w]; puts $f "1\n2\n3\n4"; close $f
+
+test tuhead-1.1 {text first lines} {::tclutils::tuhead::text "1\n2\n3" 2} "1\n2"
+test tuhead-1.2 {file first lines} {::tclutils::tuhead::file $tmp 3} "1\n2\n3"
+test tuhead-1.3 {zero} {::tclutils::tuhead::text "1\n2" 0} ""
+file delete -force $tmp
+cleanupTests

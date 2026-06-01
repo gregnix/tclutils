@@ -1,0 +1,18 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuhexdump 0.1
+
+test tuhexdump-1.1 {dump small data} -body {
+    ::tclutils::tuhexdump::data "ABC" -width 8
+} -result {00000000  41 42 43                 |ABC|}
+
+set hexFile [makeFile "PDF" tuhexdump-input.bin]
+
+test tuhexdump-1.2 {dump file} -body {
+    ::tclutils::tuhexdump::file $hexFile -width 4
+} -result {00000000  50 44 46 0a  |PDF.|}
+
+cleanupTests

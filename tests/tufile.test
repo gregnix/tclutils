@@ -1,0 +1,113 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tufile 0.1
+
+set tmp [makeDirectory tufile]
+
+proc writeBytes {path bytes} {
+    set fh [open $path wb]
+    fconfigure $fh -translation binary -encoding iso8859-1
+    puts -nonewline $fh $bytes
+    close $fh
+    return $path
+}
+
+set png [writeBytes [file join $tmp a.png] "[binary decode hex 89504E470D0A1A0A]rest"]
+set pdf [writeBytes [file join $tmp a.pdf] "%PDF-1.5\n..."]
+set zip [writeBytes [file join $tmp a.zip] "[binary decode hex 504B0304]stuff"]
+set gif [writeBytes [file join $tmp a.gif] "GIF89a...."]
+set bin [writeBytes [file join $tmp a.bin] "\x01\x02\x03\x04nothing magic"]
+
+test tufile-1.1 {detect PNG} -body {
+    list [::tclutils::tufile::type $png] [::tclutils::tufile::mime $png]
+} -result {png image/png}
+
+test tufile-1.2 {detect PDF} -body {
+    ::tclutils::tufile::type $pdf
+} -result pdf
+
+test tufile-1.3 {detect ZIP} -body {
+    ::tclutils::tufile::type $zip
+} -result zip
+
+test tufile-1.4 {detect GIF89a description} -body {
+    ::tclutils::tufile::describe $gif
+} -result {GIF image (89a)}
+
+test tufile-1.5 {unknown content} -body {
+    list [::tclutils::tufile::type $bin] [::tclutils::tufile::describe $bin]
+} -result {{} data}
+
+# Extension checking
+test tufile-2.1 {extension matches type} -body {
+    dict get [::tclutils::tufile::checkExtension $png] status
+} -result ok
+
+test tufile-2.2 {wrong extension detected} -body {
+    set wrong [writeBytes [file join $tmp shot.jpg] "[binary decode hex 89504E470D0A1A0A]x"]
+    set c [::tclutils::tufile::checkExtension $wrong]
+    list [dict get $c status] [dict get $c detected] [dict get $c declared] [dict get $c expected]
+} -result {mismatch png jpg png}
+
+test tufile-2.3 {no extension} -body {
+    set noext [writeBytes [file join $tmp noext] "[binary decode hex 89504E470D0A1A0A]x"]
+    dict get [::tclutils::tufile::checkExtension $noext] status
+} -result noext
+
+test tufile-2.4 {unknown type cannot be judged} -body {
+    set u [writeBytes [file join $tmp x.weird] "\x00\x00random"]
+    dict get [::tclutils::tufile::checkExtension $u] status
+} -result unknown
+
+# User extensibility
+test tufile-3.1 {register a custom signature and detect it} -body {
+    ::tclutils::tufile::register myfmt -ascii "MYFMT1" -mime application/x-myfmt -ext myf -desc "My format"
+    set f [writeBytes [file join $tmp x.myf] "MYFMT1payload"]
+    list [::tclutils::tufile::type $f] [::tclutils::tufile::mime $f]
+} -result {myfmt application/x-myfmt}
+
+test tufile-3.2 {forget removes a signature} -body {
+    ::tclutils::tufile::forget myfmt
+    set f [file join $tmp x.myf]
+    ::tclutils::tufile::type $f
+} -result {}
+
+test tufile-3.3 {most specific signature wins (offset marker beats short prefix)} -body {
+    # bytes that match both a short custom prefix and a longer one
+    ::tclutils::tufile::register shortx -hex AABB -desc short
+    ::tclutils::tufile::register longx  -hex AABBCCDD -desc long
+    set f [writeBytes [file join $tmp x.dat] "[binary decode hex AABBCCDD]tail"]
+    set t [::tclutils::tufile::type $f]
+    ::tclutils::tufile::forget shortx
+    ::tclutils::tufile::forget longx
+    set t
+} -result longx
+
+test tufile-3.4 {reset restores defaults and drops custom} -body {
+    ::tclutils::tufile::register temp -hex 99 -desc tmp
+    ::tclutils::tufile::reset
+    expr {("temp" ni [::tclutils::tufile::signatures]) \
+          && ("png" in [::tclutils::tufile::signatures])}
+} -result 1
+
+# loadFile
+test tufile-4.1 {load signatures from a text file} -body {
+    set sigfile [makeFile "# my list\nfoofmt | 0 | @FOO! | application/x-foo | foo,fo | Foo format\nbarfmt | 4 | CAFE | application/x-bar | bar | Bar format\n" [file join $tmp sigs.txt]]
+    set n [::tclutils::tufile::loadFile $sigfile]
+    set ff [writeBytes [file join $tmp t.foo] "FOO!data"]
+    list $n [::tclutils::tufile::type $ff]
+} -result {2 foofmt}
+
+# Cross-check against a real ODF container produced by tuodf (offset-30 marker)
+package require tclutils::tuodf 0.1
+test tufile-5.1 {detects a real .odt by its offset-30 mimetype marker} -body {
+    set odt [file join $tmp doc.odt]
+    ::tclutils::tuodf::createText $odt {{Hello}}
+    list [::tclutils::tufile::type $odt] [::tclutils::tufile::mime $odt]
+} -result {odt application/vnd.oasis.opendocument.text}
+
+::tclutils::tufile::reset
+cleanupTests

@@ -1,0 +1,46 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuhash 0.1
+
+set fox "The quick brown fox jumps over the lazy dog"
+
+test tuhash-sha256-1 {empty} -body {::tclutils::tuhash::sha256 ""} \
+    -result e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+test tuhash-sha256-2 {abc} -body {::tclutils::tuhash::sha256 abc} \
+    -result ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+test tuhash-sha256-3 {fox} -body {::tclutils::tuhash::sha256 $fox} \
+    -result d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+
+test tuhash-sha1-1 {abc} -body {::tclutils::tuhash::sha1 abc} \
+    -result a9993e364706816aba3e25717850c26c9cd0d89d
+test tuhash-sha1-2 {fox} -body {::tclutils::tuhash::sha1 $fox} \
+    -result 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
+
+test tuhash-md5-1 {empty} -body {::tclutils::tuhash::md5 ""} \
+    -result d41d8cd98f00b204e9800998ecf8427e
+test tuhash-md5-2 {abc} -body {::tclutils::tuhash::md5 abc} \
+    -result 900150983cd24fb0d6963f7d28e17f72
+test tuhash-md5-3 {fox} -body {::tclutils::tuhash::md5 $fox} \
+    -result 9e107d9d372bb6826bd81d3542a419d6
+
+test tuhash-file-1 {file digest equals string digest} -setup {
+    set tmp [makeDirectory tuhash]
+    set f [makeFile "" [file join $tmp x.bin]]
+    set ch [open $f wb]; fconfigure $ch -translation binary; puts -nonewline $ch "abc"; close $ch
+} -body {
+    string equal [::tclutils::tuhash::sha256File $f] [::tclutils::tuhash::sha256 abc]
+} -result 1
+
+test tuhash-binary-1 {binary encoding hashes raw bytes} -body {
+    ::tclutils::tuhash::sha256 [binary format H* 616263] -encoding binary
+} -result ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+
+test tuhash-opt-1 {bad encoding rejected} -body {
+    catch {::tclutils::tuhash::sha256 x -encoding latin1} e
+    set e
+} -result {unsupported -encoding "latin1" (use utf-8 or binary)}
+
+cleanupTests

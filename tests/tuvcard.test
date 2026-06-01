@@ -1,0 +1,56 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file join [file dirname $here] lib tm]
+package require tclutils::tuvcard 0.1
+
+set vcf "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Alice Smith\r\nN:Smith;Alice;;;\r\nEMAIL;TYPE=work:alice@ex.com\r\nEMAIL;TYPE=home:a@home.com\r\nTEL;TYPE=cell:123\r\nEND:VCARD\r\nBEGIN:VCARD\r\nFN:Bob\r\nEND:VCARD\r\n"
+
+test tuvcard-1.1 {parse card count} -body {
+    llength [::tclutils::tuvcard::parse $vcf]
+} -result 2
+
+test tuvcard-1.2 {fullName} -body {
+    ::tclutils::tuvcard::fullName [lindex [::tclutils::tuvcard::parse $vcf] 0]
+} -result {Alice Smith}
+
+test tuvcard-1.3 {multi-valued EMAIL} -body {
+    ::tclutils::tuvcard::get [lindex [::tclutils::tuvcard::parse $vcf] 0] EMAIL
+} -result {alice@ex.com a@home.com}
+
+test tuvcard-1.4 {property params} -body {
+    set card [lindex [::tclutils::tuvcard::parse $vcf] 0]
+    dict get [lindex [::tclutils::tuvcard::properties $card EMAIL] 0] params
+} -result {TYPE work}
+
+test tuvcard-1.5 {names of second card} -body {
+    ::tclutils::tuvcard::names [lindex [::tclutils::tuvcard::parse $vcf] 1]
+} -result FN
+
+test tuvcard-1.6 {round-trip parse -> toVcf -> parse} -body {
+    set a [::tclutils::tuvcard::parse $vcf]
+    set b [::tclutils::tuvcard::parse [::tclutils::tuvcard::toVcf $a]]
+    expr {$a eq $b}
+} -result 1
+
+test tuvcard-1.7 {long value folds and survives round-trip} -body {
+    set long [string repeat x 120]
+    set card [list [dict create name FN value $long params {}]]
+    set out [::tclutils::tuvcard::toVcf $card]
+    set back [::tclutils::tuvcard::property \
+        [lindex [::tclutils::tuvcard::parse $out] 0] FN]
+    list [string match "*\r\n *" $out] [expr {$back eq $long}]
+} -result {1 1}
+
+test tuvcard-2.1 {addProperty / removeProperty / setProperty} -body {
+    set card [list [dict create name FN value Alice params {}]]
+    set card [::tclutils::tuvcard::addProperty $card EMAIL a@x.com {TYPE work}]
+    set v1 [::tclutils::tuvcard::property $card EMAIL]
+    set card [::tclutils::tuvcard::setProperty $card 1 EMAIL b@x.com {TYPE home}]
+    set v2 [::tclutils::tuvcard::property $card EMAIL]
+    set card [::tclutils::tuvcard::removeProperty $card 1]
+    list $v1 $v2 [::tclutils::tuvcard::names $card]
+} -result {a@x.com b@x.com FN}
+
+cleanupTests

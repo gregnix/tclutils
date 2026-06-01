@@ -1,0 +1,49 @@
+# tclutils::tunotes
+
+A small hierarchical note store. A note is a dict with the fields
+`id parent_id title content created modified tags`. The whole collection
+("store") is a dict mapping id -> note, so it is just a value.
+
+Mutating commands take the NAME of a store variable; query commands take the
+store value. Persistence uses `tclutils::tujson` (no external packages).
+
+## Commands
+```tcl
+tunotes::create  storeVar title content ?tags? ?parentId?   ;# -> new id
+tunotes::update  storeVar id title content ?tags? ?parentId|KEEP?
+tunotes::delete  storeVar id ?cascade?      ;# cascade=1 subtree; 0 reparent to root
+tunotes::move    storeVar id newParentId    ;# "" = root; refuses cycles
+tunotes::get     store id                   ;# -> note dict
+tunotes::exists  store id
+tunotes::roots   store                      ;# -> ids (insertion order)
+tunotes::children store parentId            ;# -> ids
+tunotes::descendants store id               ;# -> ids (depth-first)
+tunotes::parent  store id                   ;# -> parent id ("" if root)
+tunotes::path    store id                   ;# -> ids root..id
+tunotes::search  store query                ;# -> ids (title/content, nocase)
+tunotes::byTag   store tag                  ;# -> ids
+tunotes::tags    store                      ;# -> sorted unique tags
+tunotes::ids     store
+tunotes::count   store
+tunotes::toJson  store                      ;# -> pretty JSON
+tunotes::fromJson json                      ;# -> store
+tunotes::load    path                       ;# missing file -> empty store
+tunotes::save    store path
+```
+
+## Error codes
+`{TCLUTILS TUNOTES NOTFOUND}` (unknown id / parent), `{TCLUTILS TUNOTES CYCLE}`
+(move under self or descendant).
+
+## Added in 0.33.0
+```tcl
+tunotes::setTitle   storeVar id title
+tunotes::setContent storeVar id content
+tunotes::addTag     storeVar id tag
+tunotes::removeTag  storeVar id tag
+tunotes::hasTag     store id tag
+tunotes::ancestors  store id        ;# root..parent (excl. self)
+tunotes::siblings   store id
+tunotes::depth      store id        ;# root = 0
+tunotes::subtree    store id        ;# standalone store of branch (re-rooted)
+```

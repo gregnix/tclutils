@@ -1,0 +1,89 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tumd 0.1
+
+test tumd-1.1 {heading with slug id} -body {
+    ::tclutils::tumd::toHtml "# Hello World"
+} -result {<h1 id="hello-world">Hello World</h1>}
+
+test tumd-1.2 {paragraph with inline bold/italic/code} -body {
+    ::tclutils::tumd::toHtml "This is **bold**, *italic* and `code`."
+} -result {<p>This is <strong>bold</strong>, <em>italic</em> and <code>code</code>.</p>}
+
+test tumd-1.3 {link and image} -body {
+    ::tclutils::tumd::toHtml "See \[site\](http://x) and !\[alt\](img.png)"
+} -result {<p>See <a href="http://x">site</a> and <img src="img.png" alt="alt"></p>}
+
+test tumd-1.4 {fenced code is escaped and not inline-processed} -body {
+    ::tclutils::tumd::toHtml "```tcl\nset x <a> & *b*\n```"
+} -result "<pre><code class=\"language-tcl\">set x &lt;a&gt; &amp; *b*</code></pre>"
+
+test tumd-1.5 {unordered list} -body {
+    ::tclutils::tumd::toHtml "- one\n- two"
+} -result "<ul>\n<li>one</li>\n<li>two</li>\n</ul>"
+
+test tumd-1.6 {ordered list} -body {
+    ::tclutils::tumd::toHtml "1. first\n2. second"
+} -result "<ol>\n<li>first</li>\n<li>second</li>\n</ol>"
+
+test tumd-1.7 {horizontal rule} -body {
+    ::tclutils::tumd::toHtml "a\n\n---\n\nb"
+} -result "<p>a</p>\n<hr>\n<p>b</p>"
+
+test tumd-1.8 {blockquote with inner paragraph} -body {
+    ::tclutils::tumd::toHtml "> quoted text"
+} -result "<blockquote>\n<p>quoted text</p>\n</blockquote>"
+
+test tumd-1.9 {HTML special chars in text are escaped} -body {
+    ::tclutils::tumd::toHtml "a < b & c > d"
+} -result {<p>a &lt; b &amp; c &gt; d</p>}
+
+test tumd-1.10 {hard line break (two trailing spaces)} -body {
+    ::tclutils::tumd::toHtml "line one  \nline two"
+} -result "<p>line one<br>\nline two</p>"
+
+test tumd-1.11 {snake_case is not italicized} -body {
+    ::tclutils::tumd::toHtml "use my_var_name here"
+} -result {<p>use my_var_name here</p>}
+
+test tumd-1.12 {autolink} -body {
+    ::tclutils::tumd::toHtml "visit <http://example.com> now"
+} -result {<p>visit <a href="http://example.com">http://example.com</a> now</p>}
+
+# Front matter
+set doc "---\ntitle: Demo\ntags: \[a, b\]\n---\n# Body\n\ntext"
+
+test tumd-2.1 {frontmatter split} -body {
+    lassign [::tclutils::tumd::frontmatter $doc] fm body
+    list $fm [string trim $body]
+} -result "{title: Demo\ntags: \[a, b\]} {# Body\n\ntext}"
+
+test tumd-2.2 {toHtml drops frontmatter} -body {
+    ::tclutils::tumd::toHtml $doc
+} -result "<h1 id=\"body\">Body</h1>\n<p>text</p>"
+
+test tumd-2.3 {no frontmatter leaves body unchanged} -body {
+    lassign [::tclutils::tumd::frontmatter "# Just a doc"] fm body
+    list $fm $body
+} -result {{} {# Just a doc}}
+
+test tumd-2.4 {leading --- without closing is not frontmatter} -body {
+    lassign [::tclutils::tumd::frontmatter "---\nno close here"] fm body
+    set fm
+} -result {}
+
+# Headings and TOC
+set hdoc "# A\n\nsome text\n\n## B\n\n### C\n\n```\n# not a heading\n```"
+
+test tumd-3.1 {headings list, skipping fenced code} -body {
+    ::tclutils::tumd::headings $hdoc
+} -result {{1 A} {2 B} {3 C}}
+
+test tumd-3.2 {toc with indentation and anchors} -body {
+    ::tclutils::tumd::toc $hdoc
+} -result "- \[A\](#a)\n  - \[B\](#b)\n    - \[C\](#c)"
+
+cleanupTests

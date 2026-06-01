@@ -1,0 +1,32 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tunl 0.1
+
+test tunl-1.1 {number nonempty lines by default} {
+    ::tclutils::tunl::text "a\n\nb"
+} "     1\ta\n      \t\n     2\tb"
+
+test tunl-1.2 {style all numbers blank lines too} {
+    ::tclutils::tunl::text "a\n\nb" -style all
+} "     1\ta\n     2\t\n     3\tb"
+
+test tunl-1.3 {style none numbers nothing} {
+    ::tclutils::tunl::text "a\nb" -style none -width 3 -separator :
+} "   :a\n   :b"
+
+test tunl-1.4 {start and increment} {
+    ::tclutils::tunl::text "a\nb\nc" -start 10 -increment 5 -width 2 -separator " "
+} "10 a\n15 b\n20 c"
+
+test tunl-1.5 {trailing newline preserved, not numbered} {
+    ::tclutils::tunl::text "a\n"
+} "     1\ta\n"
+
+test tunl-1.6 {invalid style rejected} {
+    catch {::tclutils::tunl::text x -style bogus} m o
+    dict get $o -errorcode
+} {TCLUTILS TUNL STYLE}
+
+cleanupTests

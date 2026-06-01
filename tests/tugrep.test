@@ -1,0 +1,60 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tugrep 0.1
+
+set grepFile [makeFile "one\nERROR first\nwarn\nerror second\n" tugrep-input.txt]
+
+test tugrep-1.1 {regex search} -body {
+    ::tclutils::tugrep::search "a\nb\nabc" {^a}
+} -result {a abc}
+
+test tugrep-1.2 {file nocase count} -body {
+    ::tclutils::tugrep::file $grepFile error -nocase 1 -count 1
+} -result 2
+
+test tugrep-1.3 {line numbers} -body {
+    ::tclutils::tugrep::file $grepFile ERROR -linenumbers 1
+} -result {{2 {ERROR first}}}
+
+test tugrep-1.4 {fixed string} -body {
+    ::tclutils::tugrep::search {a.c
+abc} {a.c} -fixed 1
+} -result {a.c}
+
+test tugrep-1.5 {invert} -body {
+    ::tclutils::tugrep::search "a\nb\nc" b -invert 1
+} -result {a c}
+
+test tugrep-1.6 {match helper} -body {
+    ::tclutils::tugrep::match {Hello World} hello -nocase 1
+} -result 1
+
+test tugrep-1.7 {files with names} -body {
+    set f2 [makeFile "no match\n" tugrep-other.txt]
+    set r [::tclutils::tugrep::files [list $grepFile $f2] ERROR]
+    expr {[llength $r] == 1 && [lindex [lindex $r 0] 0] eq $grepFile}
+} -result 1
+
+test tugrep-1.8 {files with matches} -body {
+    set r [::tclutils::tugrep::files [list $grepFile] ERROR -fileswithmatches 1]
+    expr {[llength $r] == 1 && [lindex $r 0] eq $grepFile}
+} -result 1
+
+
+# Additional context tests for 0.23.0
+test tugrep-2.1 {after context -A} -body {
+    ::tclutils::tugrep::search "a\nmatch\nc\nd" match -A 1
+} -result {match c}
+
+test tugrep-2.2 {before context -B} -body {
+    ::tclutils::tugrep::search "a\nb\nmatch\nd" match -B 2
+} -result {a b match}
+
+test tugrep-2.3 {context -C de-duplicates overlapping ranges} -body {
+    ::tclutils::tugrep::search "a\nmatch1\nb\nmatch2\nc" {match} -C 1
+} -result {a match1 b match2 c}
+
+cleanupTests

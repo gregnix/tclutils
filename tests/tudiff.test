@@ -1,0 +1,106 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+
+package require tclutils::tudiff 0.1
+
+set tmp [file join $here tmp_tudiff]
+proc rmrf {path} {
+    if {![file exists $path]} { return }
+    if {[file isdirectory $path]} {
+        foreach child [glob -nocomplain -directory $path *] {
+            rmrf $child
+        }
+        file delete $path
+    } else {
+        file delete $path
+    }
+}
+rmrf $tmp
+file mkdir $tmp
+
+proc writefile {name data} {
+    set fh [open $name w]
+    fconfigure $fh -translation lf
+    puts -nonewline $fh $data
+    close $fh
+}
+
+test tudiff-1.1 {equal text} -body {
+    ::tclutils::tudiff::text "a\nb\n" "a\nb\n"
+} -result {{equal a} {equal b}}
+
+test tudiff-1.2 {insert line} -body {
+    ::tclutils::tudiff::text "a\nc\n" "a\nb\nc\n"
+} -result {{equal a} {insert b} {equal c}}
+
+test tudiff-1.3 {delete line} -body {
+    ::tclutils::tudiff::text "a\nb\nc\n" "a\nc\n"
+} -result {{equal a} {delete b} {equal c}}
+
+test tudiff-1.4 {changed line is delete plus insert} -body {
+    ::tclutils::tudiff::text "a\nold\nc\n" "a\nnew\nc\n"
+} -result {{equal a} {delete old} {insert new} {equal c}}
+
+test tudiff-1.5 {files} -body {
+    set a [file join $tmp a.txt]
+    set b [file join $tmp b.txt]
+    writefile $a "one\ntwo\n"
+    writefile $b "one\nthree\n"
+    ::tclutils::tudiff::files $a $b
+} -result {{equal one} {delete two} {insert three}}
+
+test tudiff-1.6 {unified text contains headers and changes} -body {
+    set u [::tclutils::tudiff::unifiedText "one\ntwo\n" "one\nthree\n" -fromlabel A -tolabel B]
+    list [string match "--- A\n+++ B\n@@*" $u] [string match "*-two*" $u] [string match "*+three*" $u]
+} -result {1 1 1}
+
+
+test tudiff-1.7 {maxcells guard prevents accidental huge LCS table} -body {
+    catch {::tclutils::tudiff::text "a
+b
+c
+" "x
+y
+z
+" -maxcells 4} msg opts
+    list $msg [dict get $opts -errorcode]
+} -result {{diff input too large for LCS table: 3 x 3 cells exceeds -maxcells 4} {TCLUTILS TUDIFF TOO_LARGE}}
+
+test tudiff-1.8 {maxcells can be raised explicitly} -body {
+    ::tclutils::tudiff::text "a
+b
+c
+" "x
+y
+z
+" -maxcells 9
+} -result {{delete a} {delete b} {delete c} {insert x} {insert y} {insert z}}
+
+
+test tudiff-2.1 {context text contains context headers and changes} -body {
+    set c [::tclutils::tudiff::contextText "one\ntwo\n" "one\nthree\n" -fromlabel A -tolabel B]
+    list [string match "*** A\n--- B\n***************\n*" $c] [string match "*- two*" $c] [string match "*+ three*" $c]
+} -result {1 1 1}
+
+test tudiff-2.2 {directory diff reports equal different only-old only-new} -body {
+    set d1 [file join $tmp dir1]
+    set d2 [file join $tmp dir2]
+    rmrf $d1
+    rmrf $d2
+    file mkdir $d1 $d2
+    writefile [file join $d1 same.txt] "same\n"
+    writefile [file join $d2 same.txt] "same\n"
+    writefile [file join $d1 changed.txt] "old\n"
+    writefile [file join $d2 changed.txt] "new\n"
+    writefile [file join $d1 old.txt] "old only\n"
+    writefile [file join $d2 new.txt] "new only\n"
+    ::tclutils::tudiff::directory $d1 $d2
+} -result {{different changed.txt} {only-new new.txt} {only-old old.txt} {equal same.txt}}
+
+rmrf $tmp
+cleanupTests

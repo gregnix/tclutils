@@ -1,0 +1,38 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuexpand 0.1
+
+test tuexpand-1.1 {tab at column 0 -> 8 spaces} {
+    ::tclutils::tuexpand::expand "\tx"
+} "        x"
+test tuexpand-1.2 {tab aligns to next stop} {
+    ::tclutils::tuexpand::expand "ab\tc"
+} "ab      c"
+test tuexpand-1.3 {custom tab width} {
+    ::tclutils::tuexpand::expand "a\tb" -tabs 4
+} "a   b"
+test tuexpand-1.4 {multiple lines, trailing nl} {
+    ::tclutils::tuexpand::expand "\ta\n\tb\n"
+} "        a\n        b\n"
+test tuexpand-1.5 {unexpand leading 8 spaces -> tab} {
+    ::tclutils::tuexpand::unexpand "        x"
+} "\tx"
+test tuexpand-1.6 {unexpand leading only by default} {
+    ::tclutils::tuexpand::unexpand "        a        b"
+} "\ta        b"
+test tuexpand-1.7 {unexpand -all converts inner runs} {
+    ::tclutils::tuexpand::unexpand "        a        b" -all 1
+} "\ta\t b"
+test tuexpand-1.8 {expand then unexpand roundtrip leading} {
+    set s "\t\tcode"
+    ::tclutils::tuexpand::unexpand [::tclutils::tuexpand::expand $s]
+} "\t\tcode"
+test tuexpand-1.9 {4 leading spaces stay (cannot reach stop 8)} {
+    ::tclutils::tuexpand::unexpand "    x"
+} "    x"
+test tuexpand-1.10 {invalid mode rejected} {
+    catch {::tclutils::tuexpand::file /dev/null -mode bogus} m o; dict get $o -errorcode
+} {TCLUTILS TUEXPAND MODE}
+cleanupTests

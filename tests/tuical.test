@@ -1,0 +1,71 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file join [file dirname $here] lib tm]
+package require tclutils::tuical 0.1
+
+set ics "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//EN\r\nBEGIN:VEVENT\r\nUID:1\r\nSUMMARY:Meeting\r\nDTSTART;VALUE=DATE:20260101\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nEND:VALARM\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+
+test tuical-1.1 {parse top-level component} -body {
+    set top [::tclutils::tuical::parse $ics]
+    list [llength $top] [dict get [lindex $top 0] type]
+} -result {1 VCALENDAR}
+
+test tuical-1.2 {events + property} -body {
+    set ev [lindex [::tclutils::tuical::events [::tclutils::tuical::parse $ics]] 0]
+    list [::tclutils::tuical::property $ev SUMMARY] [::tclutils::tuical::property $ev UID]
+} -result {Meeting 1}
+
+test tuical-1.3 {property params and value} -body {
+    set ev [lindex [::tclutils::tuical::events [::tclutils::tuical::parse $ics]] 0]
+    set p [lindex [::tclutils::tuical::properties $ev DTSTART] 0]
+    list [dict get $p params] [dict get $p value]
+} -result {{VALUE DATE} 20260101}
+
+test tuical-1.4 {nested component VALARM inside VEVENT} -body {
+    set ev [lindex [::tclutils::tuical::events [::tclutils::tuical::parse $ics]] 0]
+    llength [::tclutils::tuical::components $ev VALARM]
+} -result 1
+
+test tuical-1.5 {unfolding folded lines} -body {
+    set top [::tclutils::tuical::parse "BEGIN:VEVENT\r\nSUMMARY:Long\r\n Continued\r\nEND:VEVENT\r\n"]
+    ::tclutils::tuical::property [lindex $top 0] SUMMARY
+} -result LongContinued
+
+test tuical-1.6 {round-trip parse -> toIcs -> parse} -body {
+    set a [::tclutils::tuical::parse $ics]
+    set b [::tclutils::tuical::parse [::tclutils::tuical::toIcs $a]]
+    expr {$a eq $b}
+} -result 1
+
+test tuical-1.7 {long values are folded and survive round-trip} -body {
+    set long [string repeat x 120]
+    set comp [dict create type VCALENDAR props {} components [list \
+        [dict create type VEVENT \
+            props [list [dict create name SUMMARY value $long params {}]] \
+            components {}]]]
+    set ics2 [::tclutils::tuical::toIcs $comp]
+    set back [::tclutils::tuical::property \
+        [lindex [::tclutils::tuical::events [::tclutils::tuical::parse $ics2]] 0] SUMMARY]
+    list [string match "*\r\n *" $ics2] [expr {$back eq $long}]
+} -result {1 1}
+
+test tuical-1.8 {escapeText / unescapeText round-trip} -body {
+    set s "a,b; c\\d\ne"
+    expr {[::tclutils::tuical::unescapeText [::tclutils::tuical::escapeText $s]] eq $s}
+} -result 1
+
+test tuical-2.1 {setProperty replaces or appends; removeProperty} -body {
+    set ev [dict create type VEVENT props {} components {}]
+    set ev [::tclutils::tuical::setProperty $ev SUMMARY "A"]
+    set ev [::tclutils::tuical::setProperty $ev SUMMARY "B"]
+    set v1 [::tclutils::tuical::property $ev SUMMARY]
+    set ev [::tclutils::tuical::addProperty $ev LOCATION "Room"]
+    set v2 [::tclutils::tuical::property $ev LOCATION]
+    set ev [::tclutils::tuical::removeProperty $ev SUMMARY]
+    list $v1 $v2 [::tclutils::tuical::property $ev SUMMARY] \
+         [llength [::tclutils::tuical::properties $ev]]
+} -result {B Room {} 1}
+
+cleanupTests

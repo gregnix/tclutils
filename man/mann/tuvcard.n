@@ -1,0 +1,10 @@
+.TH tuvcard n 0.32.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tuvcard \- vCard reader/writer
+.SH SYNOPSIS
+package require tclutils::tuvcard
+.SH DESCRIPTION
+Parses vCard text into a list of cards and serializes back with line folding.
+See docs/tuvcard.md.
+.SH KEYWORDS
+vcard, contacts, parser

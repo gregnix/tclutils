@@ -1,0 +1,59 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucut 0.1
+
+set tmp [file join [temporaryDirectory] tucut-[pid].txt]
+set f [open $tmp w]; puts $f "id;name;city\n1;Ada;Berlin\n2;Linus;Helsinki"; close $f
+
+test tucut-1.1 {single field} {
+    ::tclutils::tucut::field "a;b;c" ";" 2
+} {b}
+
+test tucut-1.2 {multiple fields} {
+    ::tclutils::tucut::fields "a;b;c;d" ";" {1 3}
+} {a;c}
+
+test tucut-1.3 {field range} {
+    ::tclutils::tucut::fields "a;b;c;d" ";" {2-4} ,
+} {b,c,d}
+
+test tucut-1.4 {text cut} {
+    ::tclutils::tucut::text "a;b;c\n1;2;3\n" -delimiter ";" -fields {1 3}
+} "a;c\n1;3"
+
+test tucut-1.5 {file cut} {
+    ::tclutils::tucut::file $tmp -delimiter ";" -fields {2}
+} "name\nAda\nLinus"
+
+test tucut-1.6 {invalid field errors} {
+    catch {::tclutils::tucut::fields "a;b" ";" {0}} msg
+    string match {invalid field*} $msg
+} 1
+
+
+test tucut-2.1 {character list} {
+    ::tclutils::tucut::chars "abcdef" {1 3 6}
+} {acf}
+
+test tucut-2.2 {character closed range} {
+    ::tclutils::tucut::text "abcdef\n123456\n" -chars {2-4}
+} "bcd\n234"
+
+test tucut-2.3 {character open-ended from range} {
+    ::tclutils::tucut::chars "abcdef" {4-}
+} {def}
+
+test tucut-2.4 {character open-ended to range} {
+    ::tclutils::tucut::chars "abcdef" {-3}
+} {abc}
+
+test tucut-2.5 {fields and chars are mutually exclusive} {
+    catch {::tclutils::tucut::line "abc" -fields {1} -chars {1}} msg
+    string match {*mutually exclusive*} $msg
+} 1
+
+file delete -force $tmp
+cleanupTests

@@ -1,0 +1,44 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tutee n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tutee \- tutee provides tee\-like helpers in pure Tcl.
+.SH SYNOPSIS
+.PP
+.nf
+package require tclutils::tutee 0.1
+.fi
+.SH COMMANDS
+.PP
+.nf
+::tclutils::tutee::write data paths ?\-append bool? ?\-stdout bool? ?\-nonewline bool?
+::tclutils::tutee::writeFile inputFile paths ?\-append bool? ?\-stdout bool?
+::tclutils::tutee::copyChannel inChan outChans ?\-stdout bool? ?\-chunksize n?
+.fi
+.SH EXAMPLE
+.PP
+.nf
+::tclutils::tutee::write "hello" {a.txt b.txt}
+::tclutils::tutee::writeFile input.txt {copy1.txt copy2.txt}
+.fi
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

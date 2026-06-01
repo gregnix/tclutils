@@ -1,0 +1,27 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucrc 0.1
+
+set tmp [makeDirectory tucrc]
+set f [makeFile "hello" [file join $tmp hello.txt]]
+
+test tucrc-1.1 {crc32 matches Tcl zlib} -body {
+    ::tclutils::tucrc::crc32 hello
+} -result [zlib crc32 hello]
+
+test tucrc-1.2 {adler32 matches Tcl zlib} -body {
+    ::tclutils::tucrc::adler32 hello
+} -result [zlib adler32 hello]
+
+test tucrc-1.3 {hex32} -body {
+    ::tclutils::tucrc::hex32 [::tclutils::tucrc::crc32 hello]
+} -result 3610A686
+
+test tucrc-1.4 {file crc32} -body {
+    ::tclutils::tucrc::crc32File $f
+} -result [zlib crc32 "hello\n"]
+
+cleanupTests

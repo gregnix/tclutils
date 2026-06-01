@@ -1,0 +1,81 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tuhexedit n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tuhexedit \- Small binary read/write/search/patch helpers in pure Tcl.
+.SH SYNOPSIS
+.PP
+.nf
+package require tclutils::tuhexedit 0.1
+.fi
+.SH READ BYTES
+.PP
+.nf
+set bytes [::tclutils::tuhexedit::readBytes file.bin 0x100 32]
+.fi
+.SH WRITE BYTES
+.PP
+.nf
+::tclutils::tuhexedit::writeBytes file.bin 0x100 $bytes
+.fi
+.PP
+By default this creates \fBfile.bin.bak\fR. Pass \fB0\fR as fourth argument to disable
+.PP
+backup creation:
+.PP
+.nf
+::tclutils::tuhexedit::writeBytes file.bin 0x100 $bytes 0
+.fi
+.SH SEARCH
+.PP
+.nf
+::tclutils::tuhexedit::findHex file.bin {50 4B 03 04}
+::tclutils::tuhexedit::findString file.bin content.xml
+.fi
+.PP
+Both commands return a list of byte offsets.
+.SH PATCH
+.PP
+.nf
+::tclutils::tuhexedit::patch file.bin 0x100 {50 4B 03 04}
+::tclutils::tuhexedit::patch file.bin 0x100 {50 4B} \-backup 0
+.fi
+.SH DUMP
+.PP
+.nf
+puts [::tclutils::tuhexedit::dump file.bin \-offset 0 \-length 128]
+.fi
+.PP
+The dump command delegates to \fBtclutils::tuhexdump\fR.
+.SH LIMITS
+.PP
+\fBpatch\fR and \fBwriteBytes\fR are in\-place, length\-preserving operations. They do
+.PP
+not insert or delete bytes and therefore do not shift the remaining file
+.PP
+content.
+.PP
+\fBfindHex\fR, \fBfindString\fR, and \fBpatch\fR currently read the complete file into
+.PP
+memory. \fBreadBytes\fR is the partial\-read API for large files.
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

@@ -1,0 +1,61 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tufuzzy 0.1
+
+test tufuzzy-1.1 {levenshtein kitten/sitting} -body {
+    ::tclutils::tufuzzy::distance kitten sitting
+} -result 3
+
+test tufuzzy-1.2 {distance identical is zero} -body {
+    ::tclutils::tufuzzy::distance hello hello
+} -result 0
+
+test tufuzzy-1.3 {distance against empty equals length} -body {
+    list [::tclutils::tufuzzy::distance "" abc] [::tclutils::tufuzzy::distance abc ""]
+} -result {3 3}
+
+test tufuzzy-2.1 {searchDistance: exact substring is zero} -body {
+    ::tclutils::tufuzzy::searchDistance needle "find the needle here"
+} -result 0
+
+test tufuzzy-2.2 {searchDistance: one typo in substring is one} -body {
+    ::tclutils::tufuzzy::searchDistance needle "find the neddle here"
+} -result 1
+
+test tufuzzy-2.3 {searchDistance: empty pattern is zero} -body {
+    ::tclutils::tufuzzy::searchDistance "" "anything"
+} -result 0
+
+test tufuzzy-3.1 {similarity identical is 1.0} -body {
+    ::tclutils::tufuzzy::similarity abc abc
+} -result 1.0
+
+test tufuzzy-3.2 {similarity drops with edits} -body {
+    expr {[::tclutils::tufuzzy::similarity abc abx] < 1.0
+          && [::tclutils::tufuzzy::similarity abc abx] > 0.0}
+} -result 1
+
+test tufuzzy-4.1 {subsequence present} -body {
+    ::tclutils::tufuzzy::subsequence ace abcde
+} -result 1
+
+test tufuzzy-4.2 {subsequence order matters} -body {
+    ::tclutils::tufuzzy::subsequence aec abcde
+} -result 0
+
+test tufuzzy-4.3 {subsequence nocase} -body {
+    ::tclutils::tufuzzy::subsequence ACE abcde -nocase 1
+} -result 1
+
+test tufuzzy-5.1 {bestMatch picks the closest candidate} -body {
+    ::tclutils::tufuzzy::bestMatch colour {color colored colourful flavour}
+} -result color
+
+test tufuzzy-5.2 {bestMatch empty candidates} -body {
+    ::tclutils::tufuzzy::bestMatch x {}
+} -result {}
+
+cleanupTests

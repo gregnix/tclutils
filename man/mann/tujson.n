@@ -1,0 +1,19 @@
+.TH tujson n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+ tujson \- small JSON helper and parser
+.SH SYNOPSIS
+ package require tclutils::tujson
+.br
+ ::tclutils::tujson::parse json
+.br
+ ::tclutils::tujson::pretty json ?-indent string?
+.br
+ ::tclutils::tujson::minify json
+.br
+ ::tclutils::tujson::validate json
+.SH DESCRIPTION
+ tujson provides dependency-free JSON helpers in pure Tcl.  It can quote,
+escape, minify, pretty-print, validate, and parse JSON text.  Parsed JSON
+objects become Tcl dictionaries and JSON arrays become Tcl lists.
+.SH SEE ALSO
+ tucsv(n), tuxml(n)

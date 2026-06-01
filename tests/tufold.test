@@ -1,0 +1,33 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tufold 0.1
+
+set tmp [makeDirectory tufold]
+set f [makeFile "abcdefghi\nword wrap here\n" [file join $tmp input.txt]]
+
+test tufold-1.1 {hard fold line} -body {
+    ::tclutils::tufold::foldLine abcdefghi -width 3
+} -result {abc def ghi}
+
+test tufold-1.2 {text hard fold} -body {
+    ::tclutils::tufold::text abcdef -width 2
+} -result "ab\ncd\nef"
+
+test tufold-1.3 {word fold prefers blanks} -body {
+    ::tclutils::tufold::text {one two three} -width 7 -words 1
+} -result "one two\nthree"
+
+test tufold-1.4 {file fold} -body {
+    set out [::tclutils::tufold::file $f -width 4]
+    lindex [split $out \n] 0
+} -result abcd
+
+test tufold-1.5 {width must be positive} -body {
+    catch {::tclutils::tufold::text abc -width 0} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON INTEGER -width}
+
+cleanupTests

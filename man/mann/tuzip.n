@@ -1,0 +1,49 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tuzip n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tuzip \- Small ZIP helper written in pure Tcl.
+.SH SYNOPSIS
+.PP
+.nf
+package require tclutils::tuzip
+.fi
+.SH COMMANDS
+.PP
+.nf
+::tclutils::tuzip::entries archive.zip
+::tclutils::tuzip::names archive.zip
+::tclutils::tuzip::readMember archive.zip member/name.txt
+::tclutils::tuzip::extract archive.zip member/name.txt out.txt
+::tclutils::tuzip::create archive.zip $files \-base $directory \-compress 1
+.fi
+.SH NOTES
+.PP
+\fBtuzip\fR currently supports stored entries and deflated entries. This is enough
+.PP
+for common ZIP files and for inspecting ODF files such as \fB.odt\fR, \fB.ods\fR, \fB.odg\fR
+.PP
+and \fB.odp\fR, because those files are ZIP containers.
+.PP
+Binary files are always opened in binary mode.
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

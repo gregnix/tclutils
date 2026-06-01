@@ -1,0 +1,79 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tused
+
+test tused-1.1 {replace first regex occurrence per line} -body {
+    ::tclutils::tused::replace "foo foo\nbar foo" {foo} baz
+} -result "baz foo\nbar baz"
+
+test tused-1.2 {replace all regex occurrences per line} -body {
+    ::tclutils::tused::replace "foo foo\nbar foo" {foo} baz -all 1
+} -result "baz baz\nbar baz"
+
+test tused-1.3 {fixed nocase replacement} -body {
+    ::tclutils::tused::replace "Foo foo FOO" foo x -all 1 -fixed 1 -nocase 1
+} -result "x x x"
+
+test tused-1.4 {delete matching lines} -body {
+    ::tclutils::tused::delete "one\n# two\nthree" {^#}
+} -result "one\nthree"
+
+test tused-1.5 {process rule list} -body {
+    set rules [list [list s foo bar g] [list d {^#}]]
+    ::tclutils::tused::process "foo foo\n# skip\nkeep foo" $rules
+} -result "bar bar\nkeep bar"
+
+test tused-1.6 {simple script syntax} -body {
+    ::tclutils::tused::script "foo foo\n# skip\nFoo" "s/foo/bar/g\nd/^#/"
+} -result "bar bar\nFoo"
+
+test tused-1.7 {processFile writes output file} -body {
+    set dir [makeDirectory tused-file]
+    set in [file join $dir in.txt]
+    set out [file join $dir out.txt]
+    set fh [open $in w]
+    puts $fh "foo"
+    puts $fh "# skip"
+    close $fh
+    ::tclutils::tused::processFile $in $out [list [list s foo bar] [list d {^#}]]
+    set fh [open $out r]
+    set data [read $fh]
+    close $fh
+    set data
+} -result "bar\n"
+
+test tused-1.8 {processFile inplace backup} -body {
+    set dir [makeDirectory tused-inplace]
+    set in [file join $dir in.txt]
+    set fh [open $in w]
+    puts -nonewline $fh "foo"
+    close $fh
+    ::tclutils::tused::processFile $in ignored [list [list s foo bar]] -inplace 1 -backup .bak
+    set fh [open $in r]
+    set data [read $fh]
+    close $fh
+    list $data [file exists ${in}.bak]
+} -result [list bar 1]
+
+
+# Additional address tests for 0.23.0
+test tused-2.1 {line address substitute} -body {
+    ::tclutils::tused::script "a\nfoo\nfoo" {2s/foo/bar/}
+} -result "a\nbar\nfoo"
+
+test tused-2.2 {numeric range delete} -body {
+    ::tclutils::tused::script "a\nb\nc\nd" {2,3d}
+} -result "a\nd"
+
+test tused-2.3 {regex range substitute} -body {
+    ::tclutils::tused::script "pre\nBEGIN\nfoo\nEND\nfoo" {/BEGIN/,/END/s/foo/bar/}
+} -result "pre\nBEGIN\nbar\nEND\nfoo"
+
+test tused-2.4 {last line address} -body {
+    ::tclutils::tused::script "a\nb\nc" {$d}
+} -result "a\nb"
+
+cleanupTests

@@ -1,0 +1,10 @@
+.TH tuini n 0.32.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tuini \- INI file reader/writer
+.SH SYNOPSIS
+package require tclutils::tuini
+.SH DESCRIPTION
+Parses INI text into a dict of sections and serializes it back, preserving order.
+See docs/tuini.md.
+.SH KEYWORDS
+ini, config, parser

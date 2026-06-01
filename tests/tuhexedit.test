@@ -1,0 +1,41 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuhexedit 0.1
+package require tclutils::tubin 0.1
+
+set binFile [makeFile "ABCD content.xml EFG PK\x03\x04 END" tuhexedit-input.bin]
+
+test tuhexedit-1.1 {read bytes} -body {
+    ::tclutils::tubin::bytesToHex [::tclutils::tuhexedit::readBytes $binFile 0 4]
+} -result {41 42 43 44}
+
+test tuhexedit-1.2 {find string} -body {
+    ::tclutils::tuhexedit::findString $binFile content.xml
+} -result {5}
+
+test tuhexedit-1.3 {find hex} -body {
+    ::tclutils::tuhexedit::findHex $binFile {50 4B 03 04}
+} -result {21}
+
+test tuhexedit-1.4 {patch with backup} -body {
+    set f [makeFile "ABCDEFGH" tuhexedit-patch.bin]
+    ::tclutils::tuhexedit::patch $f 2 {58 59}
+    list [::tclutils::tuhexedit::readBytes $f 0 8] [file exists $f.bak]
+} -result {ABXYEFGH 1}
+
+test tuhexedit-1.5 {write bytes without backup} -body {
+    set f [makeFile "ABCDEFGH" tuhexedit-write.bin]
+    ::tclutils::tuhexedit::writeBytes $f 4 ZZ 0
+    list [::tclutils::tuhexedit::readBytes $f 0 8] [file exists $f.bak]
+} -result {ABCDZZGH 0}
+
+test tuhexedit-1.6 {dump delegates to tuhexdump} -body {
+    set f [makeFile "ABC" tuhexedit-dump.bin]
+    ::tclutils::tuhexedit::dump $f -width 8
+} -result {00000000  41 42 43 0a              |ABC.|}
+
+foreach b [glob -nocomplain [file join [temporaryDirectory] *.bak]] { file delete -force $b }
+cleanupTests

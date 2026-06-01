@@ -1,0 +1,87 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tupatch 0.1
+package require tclutils::tudiff 0.1
+
+set old "alpha\nbeta\ngamma\ndelta\n"
+set new "alpha\nBETA\ngamma\ndelta\nepsilon\n"
+
+# Round-trip against tudiff's own unified output.
+test tupatch-1.1 {apply tudiff unified output reproduces new text} -body {
+    set patch [::tclutils::tudiff::unifiedText $old $new]
+    ::tclutils::tupatch::text $old $patch
+} -result "alpha\nBETA\ngamma\ndelta\nepsilon"
+
+test tupatch-1.2 {empty patch leaves source unchanged} -body {
+    ::tclutils::tupatch::text $old ""
+} -result $old
+
+test tupatch-1.3 {reverse undoes the patch} -body {
+    set patch [::tclutils::tudiff::unifiedText $old $new]
+    ::tclutils::tupatch::text \
+        [::tclutils::tupatch::text $old $patch] $patch -reverse 1
+} -result "alpha\nbeta\ngamma\ndelta"
+
+test tupatch-1.4 {context mismatch is reported, not silently applied} -body {
+    set patch [::tclutils::tudiff::unifiedText $old $new]
+    catch {::tclutils::tupatch::text "totally\ndifferent\n" $patch} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUPATCH CONTEXT}
+
+test tupatch-1.5 {strict 0 ignores context mismatch and follows the patch} -body {
+    set patch [::tclutils::tudiff::unifiedText $old $new]
+    # source has same length so positional application stays in range
+    set src "one\ntwo\nthree\nfour\n"
+    ::tclutils::tupatch::text $src $patch -strict 0
+} -result "one\nBETA\nthree\nfour\nepsilon"
+
+# Hand-written multi-hunk patch (git/diff -u style, line numbers matter).
+set base "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n"
+set multi "--- a
++++ b
+@@ -1,2 +1,2 @@
+ l1
+-l2
++L2
+@@ -6,3 +6,3 @@
+ l6
+-l7
++L7
+ l8"
+
+test tupatch-2.1 {multi-hunk patch applies at correct line offsets} -body {
+    ::tclutils::tupatch::text $base $multi
+} -result "l1\nL2\nl3\nl4\nl5\nl6\nL7\nl8"
+
+test tupatch-2.2 {parse extracts the expected number of hunks} -body {
+    llength [::tclutils::tupatch::parse $multi]
+} -result 2
+
+# Pure insertion (@@ -0,0 +1,n @@ style) and pure deletion.
+test tupatch-3.1 {insertion only} -body {
+    set p "@@ -1,1 +1,3 @@\n a\n+b\n+c"
+    ::tclutils::tupatch::text "a\n" $p
+} -result "a\nb\nc"
+
+test tupatch-3.2 {deletion only} -body {
+    set p "@@ -1,3 +1,1 @@\n a\n-b\n-c"
+    ::tclutils::tupatch::text "a\nb\nc\n" $p
+} -result a
+
+test tupatch-3.3 {unknown option rejected} -body {
+    catch {::tclutils::tupatch::text $old "" -bogus 1} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON OPTION -bogus}
+
+# File variant.
+set tmp [makeDirectory tupatch]
+set srcFile [makeFile $old [file join $tmp src.txt]]
+test tupatch-4.1 {fromFile reads source and applies patch} -body {
+    set patch [::tclutils::tudiff::unifiedText $old $new]
+    ::tclutils::tupatch::fromFile $srcFile $patch
+} -result "alpha\nBETA\ngamma\ndelta\nepsilon"
+
+cleanupTests

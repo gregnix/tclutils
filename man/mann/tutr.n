@@ -1,0 +1,45 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tutr n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tutr \- Small tr\-like text transformation helpers.
+.SH COMMANDS
+.PP
+.nf
+::tclutils::tutr::translate {abc cab} abc xyz
+::tclutils::tutr::delete {a1b2c3} 0\-9
+::tclutils::tutr::squeeze {aaabccc} ac
+.fi
+.PP
+Commands:
+.IP
+\fBtranslate text set1 set2\fR
+.IP
+\fBdelete text set1\fR
+.IP
+\fBsqueeze text set1\fR
+.IP
+\fBfile path set1 set2 ?\-delete bool? ?\-squeeze bool?\fR
+.PP
+Character sets support literal characters and simple ranges like \fBa\-z\fR or \fB0\-9\fR.
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

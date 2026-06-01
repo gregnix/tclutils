@@ -1,0 +1,26 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tupr 0.1
+
+test tupr-1.1 {single page header and body layout} {
+    set out [::tclutils::tupr::text "L1\nL2\nL3" -date "2026-05-31 10:00" -header DOC -width 30 -length 16]
+    set L [split $out \n]
+    list [llength $L] [lindex $L 0] [lindex $L 1] [lindex $L 2] [lindex $L 5] [lindex $L 6] [lindex $L 7]
+} {16 {} {} {2026-05-31 10:00   DOC  Page 1} L1 L2 L3}
+test tupr-1.2 {page length governs total lines} {
+    llength [split [::tclutils::tupr::text "a\nb\nc" -date D -length 16] \n]
+} 16
+test tupr-1.3 {multiple pages} {
+    set out [::tclutils::tupr::text "1\n2\n3\n4\n5\n6\n7\n8" -date D -length 13]
+    regexp -all {Page } $out
+} 3
+test tupr-1.4 {line numbering} {
+    set out [::tclutils::tupr::text "x\ny" -date D -length 16 -number 1]
+    string match "*    1\tx*    2\ty*" $out
+} 1
+test tupr-1.5 {too-small page length rejected} {
+    catch {::tclutils::tupr::text foo -length 8} m o; dict get $o -errorcode
+} {TCLUTILS TUPR LENGTH}
+cleanupTests

@@ -1,0 +1,24 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tucolumn 1 0.29.0 tclutils "Tcl Utility Command"
+.SH NAME
+tucolumn \- thin CLI wrapper for tclutils::tucolumn
+.SH SYNOPSIS
+.nf
+tucolumn ?table|fill? ?-separator S? ?-output S? ?-right 0|1? ?-width N? ?-gap N? ?file?
+.fi
+.SH DESCRIPTION
+.PP
+The tucolumn command is a thin wrapper around the Tcl package tclutils::tucolumn. It is intended for interactive and scripting use when tclutils is installed from source. The primary API remains the Tcl library; see tucolumn(n) for procedures, options, and semantics.
+.PP
+Run the script with tclsh:
+.PP
+.nf
+tclsh bin/tucolumn.tcl ...
+.fi

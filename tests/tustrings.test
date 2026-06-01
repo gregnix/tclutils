@@ -1,0 +1,18 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tustrings 0.1
+
+test tustrings-1.1 {extract printable strings} -body {
+    ::tclutils::tustrings::extract "abc\x00hello\x01xy" -minlength 3
+} -result {abc hello}
+
+set stringsFile [makeFile "xx\x00PDF-1.7\x00short\x00" tustrings-input.bin]
+
+test tustrings-1.2 {file extraction} -body {
+    ::tclutils::tustrings::file $stringsFile -minlength 5
+} -result {PDF-1.7 short}
+
+cleanupTests

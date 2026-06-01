@@ -1,0 +1,65 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file join [file dirname $here] lib tm]
+package require tclutils::tuldif 0.1
+
+set ldif "dn: cn=Alice,dc=ex\ncn: Alice\nsn: Smith\nmail: alice@ex.com\nmail: a@ex.com\n\ndn: cn=Bob,dc=ex\ncn: Bob\n"
+
+test tuldif-1.1 {parse entry count} -body {
+    llength [::tclutils::tuldif::parse $ldif]
+} -result 2
+
+test tuldif-1.2 {dn of first entry} -body {
+    ::tclutils::tuldif::dn [lindex [::tclutils::tuldif::parse $ldif] 0]
+} -result {cn=Alice,dc=ex}
+
+test tuldif-1.3 {multi-valued attribute} -body {
+    ::tclutils::tuldif::get [lindex [::tclutils::tuldif::parse $ldif] 0] mail
+} -result {alice@ex.com a@ex.com}
+
+test tuldif-1.4 {attribute names in order} -body {
+    ::tclutils::tuldif::attributes [lindex [::tclutils::tuldif::parse $ldif] 0]
+} -result {dn cn sn mail}
+
+test tuldif-1.5 {toDict groups values} -body {
+    set d [::tclutils::tuldif::toDict [lindex [::tclutils::tuldif::parse $ldif] 0]]
+    list [dict get $d cn] [llength [dict get $d mail]]
+} -result {Alice 2}
+
+test tuldif-1.6 {base64 value is decoded} -body {
+    set e [lindex [::tclutils::tuldif::parse "dn: x\ndescription:: SGVsbG8=\n"] 0]
+    ::tclutils::tuldif::get $e description
+} -result Hello
+
+test tuldif-1.7 {continuation lines are unfolded} -body {
+    set e [lindex [::tclutils::tuldif::parse "dn: x\ncn: Hello\n World\n"] 0]
+    ::tclutils::tuldif::get $e cn
+} -result HelloWorld
+
+test tuldif-1.8 {round-trip parse -> toLdif -> parse} -body {
+    set a [::tclutils::tuldif::parse $ldif]
+    set b [::tclutils::tuldif::parse [::tclutils::tuldif::toLdif $a]]
+    expr {$a eq $b}
+} -result 1
+
+test tuldif-1.9 {non-safe value emitted and decoded as base64} -body {
+    set entry [list {dn x} [list description "H\u00e4llo"]]
+    set out [::tclutils::tuldif::toLdif [list $entry]]
+    set roundtrip [::tclutils::tuldif::get \
+        [lindex [::tclutils::tuldif::parse $out] 0] description]
+    list [string match "*description:: *" $out] [expr {$roundtrip eq "H\u00e4llo"}]
+} -result {1 1}
+
+test tuldif-2.1 {addAttr / setAttr / removeAttr} -body {
+    set e [list {dn cn=A} {cn A}]
+    set e [::tclutils::tuldif::addAttr $e mail a@x.com]
+    set v1 [::tclutils::tuldif::get $e mail]
+    set e [::tclutils::tuldif::setAttr $e 2 mail b@x.com]
+    set v2 [::tclutils::tuldif::get $e mail]
+    set e [::tclutils::tuldif::removeAttr $e 2]
+    list $v1 $v2 [::tclutils::tuldif::attributes $e]
+} -result {a@x.com b@x.com {dn cn}}
+
+cleanupTests

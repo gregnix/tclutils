@@ -1,0 +1,24 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH turev 1 0.29.0 tclutils "Tcl Utility Command"
+.SH NAME
+turev \- thin CLI wrapper for tclutils::turev
+.SH SYNOPSIS
+.nf
+turev ?file?
+.fi
+.SH DESCRIPTION
+.PP
+The turev command is a thin wrapper around the Tcl package tclutils::turev. It is intended for interactive and scripting use when tclutils is installed from source. The primary API remains the Tcl library; see turev(n) for procedures, options, and semantics.
+.PP
+Run the script with tclsh:
+.PP
+.nf
+tclsh bin/turev.tcl ...
+.fi

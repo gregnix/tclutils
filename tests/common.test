@@ -1,0 +1,46 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+
+package require tclutils::common 0.1
+
+set tmp [file join $here tmp_common]
+file delete -force $tmp
+file mkdir $tmp
+
+test common-1.1 {splitDelimited single char} -body {
+    ::tclutils::common::splitDelimited "a;b;c" ";"
+} -result {a b c}
+
+test common-1.2 {splitDelimited multi char} -body {
+    ::tclutils::common::splitDelimited "a--b--c" "--"
+} -result {a b c}
+
+test common-1.3 {splitDelimited rejects empty delimiter} -body {
+    catch {::tclutils::common::splitDelimited abc ""} msg opts
+    list $msg [dict get $opts -errorcode]
+} -result {{delimiter must not be empty} {TCLUTILS COMMON DELIMITER}}
+
+test common-1.4 {readFile closes on normal path} -body {
+    set p [file join $tmp data.txt]
+    set f [open $p w]
+    puts -nonewline $f "abc"
+    close $f
+    ::tclutils::common::readFile $p
+} -result {abc}
+
+test common-1.5 {writeFile returns path and writes content} -body {
+    set p [file join $tmp out.txt]
+    list [file tail [::tclutils::common::writeFile $p "xyz"]] [::tclutils::common::readFile $p]
+} -result {out.txt xyz}
+
+test common-1.6 {splitLines drops final empty line only when text ends in newline} -body {
+    list [::tclutils::common::splitLines "a\nb\n"] [::tclutils::common::splitLines "a\nb"]
+} -result {{a b} {a b}}
+
+file delete -force $tmp
+cleanupTests

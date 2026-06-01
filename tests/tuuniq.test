@@ -1,0 +1,41 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuuniq 0.1
+
+set tmp [file join [temporaryDirectory] tuuniq-[pid].txt]
+set f [open $tmp w]; puts $f "a\na\nb\na"; close $f
+
+test tuuniq-1.1 {adjacent unique list} {
+    ::tclutils::tuuniq::uniqList {a a b a}
+} {a b a}
+
+test tuuniq-1.2 {nocase adjacent unique list} {
+    ::tclutils::tuuniq::uniqList {A a b B a} -nocase 1
+} {A b a}
+
+test tuuniq-1.3 {adjacent counts} {
+    ::tclutils::tuuniq::adjacentCount {a a b a}
+} {{2 a} {1 b} {1 a}}
+
+test tuuniq-1.4 {global counts} {
+    dict get [::tclutils::tuuniq::count {a a b a}] a
+} 3
+
+test tuuniq-1.5 {file unique} {
+    ::tclutils::tuuniq::file $tmp
+} "a\nb\na"
+
+test tuuniq-1.6 {count file} {
+    dict get [::tclutils::tuuniq::countFile $tmp] a
+} 3
+
+test tuuniq-1.7 {unknown option errors} {
+    catch {::tclutils::tuuniq::uniqList {a b} -bad 1} msg
+    string match {unknown option*} $msg
+} 1
+
+file delete -force $tmp
+cleanupTests

@@ -1,0 +1,16 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\"
+.TH tusize n 0.39.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tusize \- Recursive byte sizes and human-readable formatting (du-like).
+.SH COMMANDS
+.PP
+.nf
+::tclutils::tusize::bytes path
+::tclutils::tusize::human n ?-si 0|1?
+::tclutils::tusize::entries dir
+.fi

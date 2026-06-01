@@ -1,0 +1,44 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tuxargs n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tuxargs \- tuxargs provides xargs\-like batching and command\-prefix application in pure Tcl.
+.SH SYNOPSIS
+.PP
+.nf
+package require tclutils::tuxargs 0.1
+.fi
+.SH COMMANDS
+.PP
+.nf
+::tclutils::tuxargs::batches items ?\-n count? ?\-skipempty bool?
+::tclutils::tuxargs::apply items commandPrefix ?\-n count? ?\-collect bool? ?\-skipempty bool?
+::tclutils::tuxargs::command items commandPrefix ?options?
+.fi
+.SH EXAMPLE
+.PP
+.nf
+set batches [::tclutils::tuxargs::batches $files \-n 20]
+::tclutils::tuxargs::apply $files {puts} \-n 1
+.fi
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

@@ -1,0 +1,55 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tupath 0.1
+
+test tupath-clean-1 {dot and dotdot} -body {::tclutils::tupath::clean a/./b/../c} -result a/c
+test tupath-clean-2 {absolute} -body {::tclutils::tupath::clean /x/../y//z} -result /y/z
+test tupath-clean-3 {leading dotdot kept} -body {::tclutils::tupath::clean ../../q} -result ../../q
+test tupath-clean-4 {empty} -body {::tclutils::tupath::clean {}} -result .
+test tupath-clean-5 {root} -body {::tclutils::tupath::clean /a/..} -result /
+
+test tupath-abs-1 {absolute} -body {::tclutils::tupath::isAbsolute /a} -result 1
+test tupath-abs-2 {relative} -body {::tclutils::tupath::isAbsolute a/b} -result 0
+
+test tupath-common-1 {shared dir} -body {
+    ::tclutils::tupath::commonPath {/a/b/c /a/b/d /a/b/e/f}
+} -result /a/b
+test tupath-common-2 {only root} -body {::tclutils::tupath::commonPath {/a /b}} -result /
+test tupath-common-3 {single path} -body {::tclutils::tupath::commonPath {/a/b/c}} -result /a/b/c
+test tupath-common-4 {no args} -body {
+    catch {::tclutils::tupath::commonPath {}} e
+    set e
+} -result {commonPath needs at least one path}
+
+test tupath-rel-1 {descend} -body {::tclutils::tupath::relative /a/b /a/b/c/d} -result c/d
+test tupath-rel-2 {sideways} -body {::tclutils::tupath::relative /a/b/c /a/x} -result ../../x
+test tupath-rel-3 {same} -body {::tclutils::tupath::relative /a/b /a/b} -result .
+test tupath-rel-4 {type mismatch} -body {
+    catch {::tclutils::tupath::relative /a b} e
+    set e
+} -result {base and target must both be absolute or both relative}
+
+test tupath-comp-1 {components/join roundtrip} -body {
+    ::tclutils::tupath::join {*}[::tclutils::tupath::components /a/b/c]
+} -result /a/b/c
+
+testConstraint symlink [expr {![catch {
+    set d [makeDirectory tupathlinkC]
+    set t [makeFile x [file join $d real]]
+    file link -symbolic [file join $d l] $t
+}]}]
+test tupath-link-1 {readlink resolves symlink target} -constraints symlink -body {
+    set d [makeDirectory tupathlink2]
+    set tgt [makeFile "x" [file join $d target.txt]]
+    file link -symbolic [file join $d ln] $tgt
+    string equal [::tclutils::tupath::readlink [file join $d ln]] $tgt
+} -result 1
+test tupath-link-2 {not a link} -body {
+    catch {::tclutils::tupath::readlink [info script]} e
+    string match {not a symbolic link:*} $e
+} -result 1
+
+cleanupTests

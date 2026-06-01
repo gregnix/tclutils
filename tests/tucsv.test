@@ -1,0 +1,63 @@
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucsv 0.1
+
+test tucsv-1.1 {parse simple line} {
+    ::tclutils::tucsv::parseLine {a,b,c}
+} {a b c}
+
+test tucsv-1.2 {parse quoted comma and escaped quote} {
+    set row [::tclutils::tucsv::parseLine {a,"b,c","d""e"}]
+    list [llength $row] [lindex $row 1] [lindex $row 2]
+} [list 3 {b,c} {d"e}]
+
+test tucsv-1.3 {join quotes where needed} {
+    ::tclutils::tucsv::joinLine [list a {b,c} {d"e}]
+} {a,"b,c","d""e"}
+
+test tucsv-1.4 {parse multi-line quoted field} {
+    set rows [::tclutils::tucsv::parse "name,note\nAlice,\"hello\nworld\"\n"]
+    list [llength $rows] [lindex $rows 1 1]
+} [list 2 "hello\nworld"]
+
+test tucsv-1.5 {parse semicolon delimiter} {
+    ::tclutils::tucsv::parseLine {a;b;c} -delimiter {;}
+} {a b c}
+
+test tucsv-1.6 {dict conversion uses first row as headers} {
+    set rows [::tclutils::tucsv::parse "name;city\nAlice;Berlin" -delimiter {;}]
+    ::tclutils::tucsv::dicts $rows
+} {{name Alice city Berlin}}
+
+test tucsv-1.7 {file roundtrip} {
+    set tmp [file join [temporaryDirectory] tucsv-[pid].csv]
+    ::tclutils::tucsv::writeFile $tmp [list [list a b] [list 1 {x,y}]]
+    set result [::tclutils::tucsv::file $tmp]
+    file delete -force $tmp
+    list [llength $result] [lindex $result 1 1]
+} [list 2 {x,y}]
+
+test tucsv-1.8 {unterminated quote errors} -body {
+    ::tclutils::tucsv::parseLine {a,"b}
+} -returnCodes error -match glob -result {*unterminated*}
+
+test tucsv-bom-1 {leading UTF-8 BOM is stripped} -body {
+    set rows [::tclutils::tucsv::parse "\uFEFFid,name\n1,Alice\n"]
+    lindex [lindex $rows 0] 0
+} -result id
+
+test tucsv-strict-1 {strict (default) errors on unterminated quote} -body {
+    catch {::tclutils::tucsv::parse "a,\"open\n1,2\n"} e
+    set e
+} -result {unterminated quoted field}
+
+test tucsv-strict-2 {lenient recovers instead of erroring} -body {
+    set rows [::tclutils::tucsv::parse "a,b\n1,\"open and no close\n" -strict 0]
+    expr {[llength $rows] >= 1}
+} -result 1
+
+cleanupTests

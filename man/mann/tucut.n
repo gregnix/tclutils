@@ -1,0 +1,46 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tucut n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tucut \-  tclutils::tucut  provides small cut\-like helpers for simple delimited text.
+.SH SYNOPSIS
+.PP
+.nf
+package require tclutils::tucut
+.fi
+.SH EXAMPLES
+.PP
+.nf
+::tclutils::tucut::field "a;b;c" ";" 2
+# \-> b
+
+::tclutils::tucut::fields "a;b;c;d" ";" {1 3}
+# \-> a;c
+
+::tclutils::tucut::text $text \-delimiter ";" \-fields {1 3}
+
+::tclutils::tucut::file kunden.csv \-delimiter ";" \-fields {1 3 5}
+.fi
+.PP
+Field numbers are 1\-based. Simple ranges like \fB2\-4\fR are supported.
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

@@ -1,0 +1,49 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tutee 0.1
+package require tclutils::common 0.1
+
+set tmp [makeDirectory tutee]
+
+test tutee-1.1 {write to two files} -body {
+    set a [file join $tmp a.txt]
+    set b [file join $tmp b.txt]
+    ::tclutils::tutee::write "hello" [list $a $b]
+    list [string trim [::tclutils::common::readFile $a]] [string trim [::tclutils::common::readFile $b]]
+} -result {hello hello}
+
+test tutee-1.2 {append mode} -body {
+    set a [file join $tmp append.txt]
+    ::tclutils::tutee::write "one" [list $a]
+    ::tclutils::tutee::write "two" [list $a] -append 1
+    string trim [::tclutils::common::readFile $a]
+} -result "one\ntwo"
+
+test tutee-1.3 {writeFile copies input to outputs without extra newline} -body {
+    set in [file join $tmp in.txt]
+    set out [file join $tmp out.txt]
+    ::tclutils::common::writeFile $in "abc\nxyz"
+    ::tclutils::tutee::writeFile $in [list $out]
+    ::tclutils::common::readFile $out
+} -result "abc\nxyz"
+
+test tutee-1.4 {copyChannel returns byte count} -body {
+    set in [file join $tmp chan-in.txt]
+    set out [file join $tmp chan-out.txt]
+    ::tclutils::common::writeFile $in "abcdef"
+    set fi [open $in r]
+    set fo [open $out w]
+    try {
+        set n [::tclutils::tutee::copyChannel $fi [list $fo] -chunksize 2]
+    } finally {
+        close $fi
+        close $fo
+    }
+    list $n [::tclutils::common::readFile $out]
+} -result {6 abcdef}
+
+cleanupTests

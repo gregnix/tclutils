@@ -1,0 +1,80 @@
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucal 0.1
+
+if {![catch {clock format 0 -format %B -locale de_DE -timezone :UTC}]} {
+    testConstraint haveDeLocale 1
+} else {
+    testConstraint haveDeLocale 0
+}
+
+test tucal-1.1 {May 2026 contains title and last day} -body {
+    set out [::tclutils::tucal::render 2026 5]
+    expr {[string match *May*2026* $out] && [string match *31* $out]}
+} -result 1
+
+test tucal-1.2 {May 2026 starts on Friday with Sunday-first grid} -body {
+    set out [::tclutils::tucal::render 2026 5]
+    expr {[string match *Fr*Sa* $out] && [regexp {\m1\M.*\m2\M} $out]}
+} -result 1
+
+test tucal-1.3 {year view contains January and December} -body {
+    set out [::tclutils::tucal::year 2026]
+    expr {[string match *January* $out] && [string match *December* $out]}
+} -result 1
+
+test tucal-1.4 {three month view has three month titles} -body {
+    set out [::tclutils::tucal::three 5 2026]
+    expr {[regexp -all {2026} $out] >= 3}
+} -result 1
+
+test tucal-1.5 {invalid month rejected} -body {
+    catch {::tclutils::tucal::render 2026 13} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUCAL MONTH}
+
+test tucal-1.6 {mondayfirst changes header order} -body {
+    set out [::tclutils::tucal::render 2026 5 -mondayfirst 1]
+    string match *Mo*Tu*We* $out
+} -result 1
+
+test tucal-1.7 {week numbers with ISO week for May 2026} -body {
+    set out [::tclutils::tucal::render 2026 5 -iso 1]
+    set lines [split $out \n]
+    set idx [lsearch -glob $lines *Mo*Tu*We*]
+    set row [lindex $lines [expr {$idx + 1}]]
+    regexp {^\s*(\d+)\s+} $row -> wn
+    expr {$wn eq "18"}
+} -result 1
+
+test tucal-1.8 {-weeknumbers adds leading column} -body {
+    set weeks [::tclutils::tucal::render 2026 5 -weeknumbers 1 -mondayfirst 1]
+    regexp {\m18\M.*\m1\M} $weeks
+} -result 1
+
+test tucal-1.9 {German locale month title when available} -constraints haveDeLocale -body {
+    set out [::tclutils::tucal::render 2026 5 -locale de_DE]
+    string match *Mai*2026* $out
+} -result 1
+
+test tucal-1.10 {German locale weekday headers when available} -constraints haveDeLocale -body {
+    set out [::tclutils::tucal::render 2026 5 -locale de_DE -iso 1]
+    expr {[string match {*Di*} $out] || [string match {*Mi*} $out]}
+} -result 1
+
+test tucal-1.11 {weekday header aligns with day columns} -body {
+    set lines [split [::tclutils::tucal::render 2026 6] \n]
+    # line 1 = weekday header, line 3 = a full 7-day week row; same width
+    expr {[string length [lindex $lines 1]] == [string length [lindex $lines 3]]}
+} -result 1
+
+test tucal-1.12 {weeknumber header aligns with day columns} -body {
+    set lines [split [::tclutils::tucal::render 2026 6 -weeknumbers 1] \n]
+    expr {[string length [lindex $lines 1]] == [string length [lindex $lines 3]]}
+} -result 1
+
+cleanupTests

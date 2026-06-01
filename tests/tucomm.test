@@ -1,0 +1,37 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucomm 0.1
+
+set tmp [makeDirectory tucomm]
+set a [makeFile "apple\nbanana\npear\n" [file join $tmp a.txt]]
+set b [makeFile "banana\ncherry\npear\n" [file join $tmp b.txt]]
+
+test tucomm-1.1 {compare sorted line lists} -body {
+    set r [::tclutils::tucomm::compareLines {apple banana pear} {banana cherry pear}]
+    list [dict get $r onlyA] [dict get $r onlyB] [dict get $r both]
+} -result {apple cherry {banana pear}}
+
+test tucomm-1.2 {files comparison} -body {
+    set r [::tclutils::tucomm::files $a $b]
+    dict get $r onlyB
+} -result {cherry}
+
+test tucomm-1.3 {sort option sorts input before comparing} -body {
+    set r [::tclutils::tucomm::compareLines {pear apple banana} {cherry pear banana} -sort 1]
+    dict get $r both
+} -result {banana pear}
+
+test tucomm-1.4 {nocase option} -body {
+    set r [::tclutils::tucomm::compareLines {Alpha beta} {alpha gamma} -nocase 1]
+    dict get $r both
+} -result {Alpha}
+
+test tucomm-1.5 {format columns} -body {
+    set r [dict create onlyA {a} onlyB {b} both {c}]
+    ::tclutils::tucomm::formatColumns $r -separator |
+} -result "a\n|b\n||c"
+
+cleanupTests

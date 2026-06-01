@@ -1,0 +1,37 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tusort 0.1
+
+set tmp [file join [temporaryDirectory] tusort-[pid].txt]
+set f [open $tmp w]; puts $f "banana\napple\ncherry"; close $f
+
+test tusort-1.1 {sort list alphabetically} {
+    ::tclutils::tusort::sortList {banana apple cherry}
+} {apple banana cherry}
+
+test tusort-1.2 {sort numeric} {
+    ::tclutils::tusort::sortList {10 2 1} -numeric 1
+} {1 2 10}
+
+test tusort-1.3 {sort reverse} {
+    ::tclutils::tusort::sortList {a c b} -reverse 1
+} {c b a}
+
+test tusort-1.4 {sort unique} {
+    ::tclutils::tusort::sortList {b a b a} -unique 1
+} {a b}
+
+test tusort-1.5 {sort file} {
+    ::tclutils::tusort::file $tmp
+} "apple\nbanana\ncherry"
+
+test tusort-1.6 {unknown option errors} {
+    catch {::tclutils::tusort::sortList {a b} -bad 1} msg
+    string match {unknown option*} $msg
+} 1
+
+file delete -force $tmp
+cleanupTests

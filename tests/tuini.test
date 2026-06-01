@@ -1,0 +1,63 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file join [file dirname $here] lib tm]
+package require tclutils::tuini 0.1
+
+set ini "global1 = g1\n; a comment\n# another\n\[server\]\nhost = localhost\nport = 8080\n\n\[db\]\nname=test\n"
+
+test tuini-1.1 {sections and global key} -body {
+    set d [::tclutils::tuini::parse $ini]
+    list [::tclutils::tuini::sections $d] [::tclutils::tuini::get $d "" global1]
+} -result {{{} server db} g1}
+
+test tuini-1.2 {get a section value} -body {
+    ::tclutils::tuini::get [::tclutils::tuini::parse $ini] server host
+} -result localhost
+
+test tuini-1.3 {keys of a section} -body {
+    ::tclutils::tuini::keys [::tclutils::tuini::parse $ini] server
+} -result {host port}
+
+test tuini-1.4 {has} -body {
+    set d [::tclutils::tuini::parse $ini]
+    list [::tclutils::tuini::has $d db name] [::tclutils::tuini::has $d db missing]
+} -result {1 0}
+
+test tuini-1.5 {comments are dropped} -body {
+    set d [::tclutils::tuini::parse $ini]
+    expr {[::tclutils::tuini::has $d "" "; a comment"] ? "bad" : "ok"}
+} -result ok
+
+test tuini-1.6 {round-trip parse -> toIni -> parse} -body {
+    set a [::tclutils::tuini::parse $ini]
+    set b [::tclutils::tuini::parse [::tclutils::tuini::toIni $a]]
+    expr {$a eq $b}
+} -result 1
+
+test tuini-1.7 {setValue adds a key} -body {
+    set d [::tclutils::tuini::parse $ini]
+    set d [::tclutils::tuini::setValue $d server timeout 30]
+    ::tclutils::tuini::get $d server timeout
+} -result 30
+
+test tuini-1.8 {get default for missing} -body {
+    ::tclutils::tuini::get [::tclutils::tuini::parse $ini] db missing "N/A"
+} -result N/A
+
+test tuini-2.1 {addSection / removeSection} -body {
+    set d [::tclutils::tuini::parse "\[a\]\nx=1\n"]
+    set d [::tclutils::tuini::addSection $d b]
+    set has1 [::tclutils::tuini::sections $d]
+    set d [::tclutils::tuini::removeSection $d a]
+    list $has1 [::tclutils::tuini::sections $d]
+} -result {{a b} b}
+
+test tuini-2.2 {removeKey} -body {
+    set d [::tclutils::tuini::parse "\[a\]\nx=1\ny=2\n"]
+    set d [::tclutils::tuini::removeKey $d a x]
+    ::tclutils::tuini::keys $d a
+} -result y
+
+cleanupTests

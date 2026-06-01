@@ -1,0 +1,33 @@
+\'
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+.TH tupatch 1 0.29.0 tclutils "User Commands"
+.SH NAME
+tupatch \- apply unified diffs with tclutils.
+.SH SYNOPSIS
+.PP
+.nf
+tclsh bin/tupatch.tcl ?options? sourceFile ?outputFile?
+tclsh bin/tupatch.tcl ?options? -patch patchFile sourceFile ?outputFile?
+.fi
+.SH DESCRIPTION
+.PP
+Btupatch.tclR is a thin command-line wrapper around
+Btclutils::tupatchR. Without B-patchR it reads the patch from standard
+input.
+.SH OPTIONS
+.PP
+.nf
+-reverse 0|1        apply patch in reverse
+-strict 0|1         verify context lines
+-patch file         read patch from file instead of stdin
+.fi
+.SH EXAMPLES
+.PP
+.nf
+tclsh bin/tupatch.tcl source.txt < change.diff
+tclsh bin/tupatch.tcl -patch change.diff source.txt out.txt
+tclsh bin/tupatch.tcl -reverse 1 new.txt < change.diff
+.fi
+.SH SEE ALSO
+tupatch(n), tudiff(n)

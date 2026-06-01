@@ -1,0 +1,15 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucat 0.1
+
+set tmp [file join [temporaryDirectory] tucat-[pid].txt]
+set f [open $tmp w]; puts $f "a\nb\n"; close $f
+
+test tucat-1.1 {text returns input} {::tclutils::tucat::text "a\nb"} "a\nb"
+test tucat-1.2 {file returns input} {string trimright [::tclutils::tucat::file $tmp]} "a\nb"
+test tucat-1.3 {number lines} {::tclutils::tucat::text "a\nb" -number 1} "     1\ta\n     2\tb"
+file delete -force $tmp
+cleanupTests

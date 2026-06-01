@@ -1,0 +1,12 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tutac 0.1
+
+test tutac-1.1 {reverse line order, trailing nl} { ::tclutils::tutac::text "a\nb\nc\n" } "c\nb\na\n"
+test tutac-1.2 {reverse line order, no trailing nl} { ::tclutils::tutac::text "a\nb\nc" } "c\nb\na"
+test tutac-1.3 {single line} { ::tclutils::tutac::text "only\n" } "only\n"
+test tutac-1.4 {empty} { ::tclutils::tutac::text "" } ""
+test tutac-1.5 {lines helper} { ::tclutils::tutac::lines {1 2 3} } {3 2 1}
+cleanupTests

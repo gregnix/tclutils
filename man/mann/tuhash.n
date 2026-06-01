@@ -1,0 +1,19 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\"
+.TH tuhash n 0.39.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tuhash \- Pure-Tcl SHA-256, SHA-1 and MD5 digests.
+.SH COMMANDS
+.PP
+.nf
+::tclutils::tuhash::sha256 data ?-encoding utf-8|binary?
+::tclutils::tuhash::sha1   data ?-encoding ...?
+::tclutils::tuhash::md5    data ?-encoding ...?
+::tclutils::tuhash::sha256File path
+::tclutils::tuhash::sha1File   path
+::tclutils::tuhash::md5File    path
+.fi

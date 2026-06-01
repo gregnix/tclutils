@@ -1,0 +1,92 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuzip 0.1
+
+set tmp [makeDirectory tuzipmembers]
+
+test createMembers-1.1 {round-trip in-memory members} -body {
+    set zip [file join $tmp a.zip]
+    ::tclutils::tuzip::createMembers $zip [list \
+        [dict create name a.txt content "hello"] \
+        [dict create name dir/b.txt content "world" method stored]]
+    list [::tclutils::tuzip::names $zip] \
+         [::tclutils::tuzip::readMember $zip a.txt] \
+         [::tclutils::tuzip::readMember $zip dir/b.txt]
+} -result {{a.txt dir/b.txt} hello world}
+
+test createMembers-1.2 {order is preserved} -body {
+    set zip [file join $tmp order.zip]
+    ::tclutils::tuzip::createMembers $zip [list \
+        [dict create name zzz content z] \
+        [dict create name aaa content a] \
+        [dict create name mmm content m]]
+    ::tclutils::tuzip::names $zip
+} -result {zzz aaa mmm}
+
+test createMembers-1.3 {per-entry method: stored vs deflate} -body {
+    set zip [file join $tmp methods.zip]
+    set big [string repeat "ABCD" 500]
+    ::tclutils::tuzip::createMembers $zip [list \
+        [dict create name raw.bin content $big method stored] \
+        [dict create name zip.bin content $big method deflate]]
+    set e [::tclutils::tuzip::entries $zip]
+    set m0 [dict get [lindex $e 0] method]
+    set m1 [dict get [lindex $e 1] method]
+    # stored keeps size, deflate shrinks the highly-repetitive payload
+    set c0 [dict get [lindex $e 0] compressedSize]
+    set c1 [dict get [lindex $e 1] compressedSize]
+    list $m0 $m1 [expr {$c0 == [string length $big]}] [expr {$c1 < $c0}]
+} -result {0 8 1 1}
+
+test createMembers-1.4 {readback survives deflate} -body {
+    set zip [file join $tmp rt.zip]
+    set data [string repeat "Lorem ipsum " 50]
+    ::tclutils::tuzip::createMembers $zip \
+        [list [dict create name x.txt content $data method deflate]]
+    expr {[::tclutils::tuzip::readMember $zip x.txt] eq $data}
+} -result 1
+
+test createMembers-1.5 {unknown method rejected} -body {
+    catch {::tclutils::tuzip::createMembers [file join $tmp e.zip] \
+        [list [dict create name a content b method squeeze]]} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUZIP METHOD}
+
+test createMembers-1.6 {member missing content rejected} -body {
+    catch {::tclutils::tuzip::createMembers [file join $tmp e2.zip] \
+        [list [dict create name a]]} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUZIP MEMBER}
+
+# ODF scenario: mimetype STORED first, content.xml DEFLATE -- valid .odt in one
+# call, with compression for the XML.
+test createMembers-2.1 {ODF-style container: mimetype first/stored, parts deflated} -body {
+    set odt [file join $tmp doc.odt]
+    set mime "application/vnd.oasis.opendocument.text"
+    set content "<?xml version=\"1.0\"?>[string repeat {<text:p>x</text:p>} 100]"
+    ::tclutils::tuzip::createMembers $odt [list \
+        [dict create name mimetype content $mime method stored] \
+        [dict create name content.xml content $content method deflate]] \
+        -mtime 1262304000
+    set e0 [lindex [::tclutils::tuzip::entries $odt] 0]
+    set e1 [lindex [::tclutils::tuzip::entries $odt] 1]
+    list [dict get $e0 name] [dict get $e0 method] \
+         [::tclutils::tuzip::readMember $odt mimetype] \
+         [expr {[dict get $e1 compressedSize] < [dict get $e1 uncompressedSize]}]
+} -result [list mimetype 0 "application/vnd.oasis.opendocument.text" 1]
+
+test createMembers-2.2 {deterministic with fixed -mtime} -body {
+    set z1 [file join $tmp d1.zip]
+    set z2 [file join $tmp d2.zip]
+    set mem [list [dict create name a.txt content "same"]]
+    ::tclutils::tuzip::createMembers $z1 $mem -mtime 1262304000
+    ::tclutils::tuzip::createMembers $z2 $mem -mtime 1262304000
+    set r1 [open $z1 rb]; set b1 [read $r1]; close $r1
+    set r2 [open $z2 rb]; set b2 [read $r2]; close $r2
+    expr {$b1 eq $b2}
+} -result 1
+
+cleanupTests

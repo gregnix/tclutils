@@ -1,0 +1,52 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH common n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+common \- Internal shared helper package for tclutils.
+.SH COMMANDS
+.PP
+.nf
+::tclutils::common::readFile path
+::tclutils::common::readBinaryFile path
+::tclutils::common::writeFile path data ?mode?
+::tclutils::common::splitLines text
+::tclutils::common::splitDelimited line delimiter
+::tclutils::common::parseOptions defaults ?option value ...?
+.fi
+.SH DESCRIPTION
+.PP
+The file helpers use Tcl 8.6 \fBtry ... finally\fR, so opened channels are closed
+.PP
+again even if \fBread\fR, \fBwrite\fR, or later processing fails.
+.PP
+\fBreadBinaryFile\fR explicitly configures binary translation and binary encoding.
+.PP
+This matters for modules such as \fBtustrings\fR and \fBtuhexdump\fR.
+.SH DESCRIPTION
+.PP
+\fBsplitDelimited\fR supports both one\-character and multi\-character delimiters.
+.PP
+It is used by \fBtucut\fR and \fBtujoin\fR, replacing duplicated private \fB_split\fR
+.PP
+implementations.
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

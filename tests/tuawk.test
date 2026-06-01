@@ -1,0 +1,77 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuawk 0.1
+
+test tuawk-1.1 {print second field of each record} -body {
+    ::tclutils::tuawk::run "a b c\nd e f" {{} {emit $2}}
+} -result "b\ne\n"
+
+test tuawk-1.2 {whole record via $0} -body {
+    ::tclutils::tuawk::run "x y\nz" {{} {emit $0}}
+} -result "x y\nz\n"
+
+test tuawk-1.3 {empty action defaults to printing the record} -body {
+    ::tclutils::tuawk::run "keep\ndrop" {/keep/ {}}
+} -result "keep\n"
+
+test tuawk-2.1 {numeric expr pattern} -body {
+    ::tclutils::tuawk::run "1 a\n3 b\n5 c" {{$1 > 2} {emit $2}}
+} -result "b\nc\n"
+
+test tuawk-2.2 {regex pattern on $0} -body {
+    ::tclutils::tuawk::run "apple\nbanana\ncherry" {/an/ {emit $0}}
+} -result "banana\n"
+
+test tuawk-2.3 {NR and NF available} -body {
+    ::tclutils::tuawk::run "a b\nc d e" {{} {emit $NR $NF}}
+} -result "1 2\n2 3\n"
+
+test tuawk-3.1 {BEGIN/END and state across records} -body {
+    ::tclutils::tuawk::run "10\n20\n30" \
+        {BEGIN {set s 0} {} {set s [expr {$s + $1}]} END {emit "sum: $s"}}
+} -result "sum: 60\n"
+
+test tuawk-3.2 {multiple rules per record both fire} -body {
+    ::tclutils::tuawk::run "5" {{$1 > 0} {emit positive} {$1 < 10} {emit small}}
+} -result "positive\nsmall\n"
+
+test tuawk-4.1 {custom field separator} -body {
+    ::tclutils::tuawk::run "a:b:c\nd:e:f" {{} {emit $1 $3}} -fs :
+} -result "a c\nd f\n"
+
+test tuawk-4.2 {custom OFS and ORS} -body {
+    ::tclutils::tuawk::run "a b" {{} {emit $1 $2}} -ofs - -ors |
+} -result "a-b|"
+
+test tuawk-4.3 {regex multi-char FS} -body {
+    ::tclutils::tuawk::run "aXXbXXc" {{} {emit $2}} -fs XX
+} -result "b\n"
+
+test tuawk-5.1 {field beyond NF errors (missing shows itself)} -body {
+    catch {::tclutils::tuawk::run "a b" {{} {emit $5}}} err
+    expr {$err ne ""}
+} -result 1
+
+test tuawk-5.2 {unknown option rejected} -body {
+    catch {::tclutils::tuawk::run "a" {{} {emit $0}} -bogus 1} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUAWK OPTION}
+
+test tuawk-5.3 {odd rules list rejected} -body {
+    catch {::tclutils::tuawk::run "a" {{}}} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUAWK RULES}
+
+# File variant + a small word-count style aggregation
+set tmp [makeDirectory tuawk]
+set f [makeFile "one two\nthree\nfour five six\n" [file join $tmp data.txt]]
+
+test tuawk-6.1 {file: count fields across all records} -body {
+    ::tclutils::tuawk::file $f \
+        {BEGIN {set t 0} {} {set t [expr {$t + $NF}]} END {emit $t}}
+} -result "6\n"
+
+cleanupTests

@@ -1,0 +1,25 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tutsort 0.1
+
+test tutsort-1.1 {simple chain} { ::tclutils::tutsort::pairs {a b b c} } {a b c}
+test tutsort-1.2 {diamond} { ::tclutils::tutsort::pairs {a b a c b d c d} } {a b c d}
+test tutsort-1.3 {self-pair declares isolated node} {
+    ::tclutils::tutsort::pairs {a b x x}
+} {a x b}
+test tutsort-1.4 {text input, newline output} {
+    ::tclutils::tutsort::text "a b\nb c\n"
+} "a\nb\nc"
+test tutsort-1.5 {cycle detected} {
+    catch {::tclutils::tutsort::pairs {a b b a}} m o; dict get $o -errorcode
+} {TCLUTILS TUTSORT CYCLE}
+test tutsort-1.6 {odd token count rejected} {
+    catch {::tclutils::tutsort::pairs {a b c}} m o; dict get $o -errorcode
+} {TCLUTILS TUTSORT ODD}
+test tutsort-1.7 {empty input} { ::tclutils::tutsort::pairs {} } {}
+test tutsort-1.8 {result is a permutation of all nodes} {
+    lsort [::tclutils::tutsort::pairs {a b a c b d c d}]
+} {a b c d}
+cleanupTests

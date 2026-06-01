@@ -1,0 +1,31 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tupaste 0.1
+
+set tmp1 [file join [temporaryDirectory] tupaste-a-[pid].txt]
+set tmp2 [file join [temporaryDirectory] tupaste-b-[pid].txt]
+set f [open $tmp1 w]; puts $f "a\nb"; close $f
+set f [open $tmp2 w]; puts $f "1\n2\n3"; close $f
+
+test tupaste-1.1 {paste line lists} {
+    ::tclutils::tupaste::lines {{a b} {1 2 3}} -delimiter ";"
+} "a;1\nb;2\n;3"
+
+test tupaste-1.2 {paste texts} {
+    ::tclutils::tupaste::texts [list "a\nb\n" "1\n2\n"] -delimiter ","
+} "a,1\nb,2"
+
+test tupaste-1.3 {paste files} {
+    ::tclutils::tupaste::files [list $tmp1 $tmp2] -delimiter ":"
+} "a:1\nb:2\n:3"
+
+test tupaste-1.4 {unknown option errors} {
+    catch {::tclutils::tupaste::lines {{a} {b}} -bad 1} msg
+    string match {unknown option*} $msg
+} 1
+
+file delete -force $tmp1 $tmp2
+cleanupTests

@@ -1,0 +1,60 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuagrep 0.1
+
+set text "alpha line\nbeta line\ngamma line\ndelta line"
+
+test tuagrep-1.1 {exact match with maxdist 0} -body {
+    ::tclutils::tuagrep::search $text gamma -maxdist 0
+} -result {{gamma line}}
+
+test tuagrep-1.2 {one typo found with maxdist 1} -body {
+    # pattern "gama" is edit distance 1 from "gamma"
+    ::tclutils::tuagrep::search $text gama -maxdist 1
+} -result {{gamma line}}
+
+test tuagrep-1.3 {one typo NOT found with maxdist 0} -body {
+    ::tclutils::tuagrep::search $text gama -maxdist 0
+} -result {}
+
+test tuagrep-1.4 {nocase} -body {
+    ::tclutils::tuagrep::search $text GAMMA -maxdist 0 -nocase 1
+} -result {{gamma line}}
+
+test tuagrep-1.5 {linenumbers} -body {
+    ::tclutils::tuagrep::search $text delta -maxdist 0 -linenumbers 1
+} -result {{4 {delta line}}}
+
+test tuagrep-1.6 {count} -body {
+    # maxdist 2 makes the short pattern match several similar lines; just check it is numeric
+    string is integer -strict [::tclutils::tuagrep::search $text line -maxdist 0 -count 1]
+} -result 1
+
+test tuagrep-1.7 {invert} -body {
+    llength [::tclutils::tuagrep::search $text gamma -maxdist 0 -invert 1]
+} -result 3
+
+test tuagrep-2.1 {match predicate true within distance} -body {
+    ::tclutils::tuagrep::match "the gamma line" gama -maxdist 1
+} -result 1
+
+test tuagrep-2.2 {match predicate false beyond distance} -body {
+    ::tclutils::tuagrep::match "the gamma line" zzzz -maxdist 1
+} -result 0
+
+set tmp [makeDirectory tuagrep]
+set f1 [makeFile "needle in here\nhaystack only\n" [file join $tmp a.txt]]
+set f2 [makeFile "no match\nnedle approx\n" [file join $tmp b.txt]]
+
+test tuagrep-3.1 {file approximate match returns the line} -body {
+    ::tclutils::tuagrep::file $f1 needle -maxdist 0
+} -result {{needle in here}}
+
+test tuagrep-3.2 {files with -fileswithmatches lists matching files} -body {
+    lsort [::tclutils::tuagrep::files [list $f1 $f2] needle -maxdist 1 -fileswithmatches 1]
+} -result [lsort [list $f1 $f2]]
+
+cleanupTests

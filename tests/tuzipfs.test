@@ -1,0 +1,67 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuzipfs 0.1
+package require tclutils::tuzip 0.1
+
+testConstraint haveZipfs [::tclutils::tuzipfs::available]
+
+test tuzipfs-1.1 {available returns boolean} -body {
+    string is boolean -strict [::tclutils::tuzipfs::available]
+} -result 1
+
+test tuzipfs-1.2 {requireAvailable throws clear error without zipfs} -constraints {!haveZipfs} -body {
+    catch {::tclutils::tuzipfs::requireAvailable} msg opts
+    list $msg [dict get $opts -errorcode]
+} -result {{zipfs is not available in this Tcl interpreter; Tcl 9 is required} {TCLUTILS TUZIPFS UNAVAILABLE}}
+
+set tuzipfsTmpRoot [file normalize [file join $here .tmp]]
+file mkdir $tuzipfsTmpRoot
+tcltest::configure -tmpdir $tuzipfsTmpRoot
+set tmp [makeDirectory tuzipfs]
+set a [file join $tmp a.txt]
+set sub [file join $tmp sub]
+file mkdir $sub
+set b [file join $sub b.txt]
+set f [open $a w]; puts -nonewline $f alpha; close $f
+set f [open $b w]; puts -nonewline $f beta; close $f
+set zip [file join $tmp test.zip]
+::tclutils::tuzip::create $zip [list $a $b] -base $tmp
+
+test tuzipfs-2.1 {mount list read and unmount when zipfs is available} -constraints haveZipfs -body {
+    set mp [::tclutils::tuzipfs::mount $zip]
+    try {
+        set files [::tclutils::tuzipfs::listFiles $mp -glob *.txt]
+        set data [::tclutils::tuzipfs::readFile [file join $mp a.txt]]
+        list [expr {[llength $files] >= 2}] $data [::tclutils::tuzipfs::exists [file join $mp sub b.txt]]
+    } finally {
+        ::tclutils::tuzipfs::unmount $mp
+    }
+} -result {1 alpha 1}
+
+test tuzipfs-2.2 {withMounted unmounts automatically} -constraints haveZipfs -body {
+    ::tclutils::tuzipfs::withMounted $zip mp {
+        list [::tclutils::tuzipfs::exists [file join $mp a.txt]] [::tclutils::tuzipfs::readFile [file join $mp sub b.txt]]
+    }
+} -result {1 beta}
+
+proc rmTree {path} {
+    if {![file exists $path]} { return }
+    foreach child [glob -nocomplain -directory $path * .*] {
+        set tail [file tail $child]
+        if {$tail in {. ..}} { continue }
+        if {[file isdirectory $child]} {
+            rmTree $child
+        } else {
+            file delete $child
+        }
+    }
+    file delete $path
+}
+rmTree $tmp
+catch {rmTree $tuzipfsTmpRoot}
+cleanupTests

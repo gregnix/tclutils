@@ -1,0 +1,126 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tupdf 0.1
+
+set tmp [makeDirectory tupdf]
+
+# Minimal hand-built PDF. Title is a UTF-16BE hex string <FEFF 0048 0069> = "Hi".
+set pdfText "%PDF-1.5
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields \[\] >> >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids \[3 0 R\] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox \[0 0 612 792\] >>
+endobj
+4 0 obj
+<< /Producer (tclutils test) /Title <FEFF00480069> >>
+endobj
+xref
+0 5
+0000000000 65535 f 
+trailer
+<< /Size 5 /Root 1 0 R /Info 4 0 R >>
+startxref
+0
+%%EOF
+"
+set pdf [makeFile $pdfText [file join $tmp doc.pdf]]
+
+test tupdf-1.1 {header version} -body {
+    ::tclutils::tupdf::version $pdf
+} -result 1.5
+
+test tupdf-1.2 {object ids} -body {
+    ::tclutils::tupdf::objects $pdf
+} -result {1 2 3 4}
+
+test tupdf-1.3 {object dump contains its body} -body {
+    string match {*/Type /Page */MediaBox*} [::tclutils::tupdf::object $pdf 3]
+} -result 1
+
+test tupdf-1.4 {missing object reports clear errorcode} -body {
+    catch {::tclutils::tupdf::object $pdf 99} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUPDF NOTFOUND}
+
+test tupdf-1.5 {non-integer object id rejected} -body {
+    catch {::tclutils::tupdf::object $pdf foo} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUPDF ARG}
+
+test tupdf-2.1 {trailer has Root and Info refs} -body {
+    set tr [::tclutils::tupdf::trailer $pdf]
+    list [string match {*/Root 1 0 R*} $tr] [string match {*/Info 4 0 R*} $tr]
+} -result {1 1}
+
+test tupdf-3.1 {metadata: literal Producer} -body {
+    dict get [::tclutils::tupdf::metadata $pdf] Producer
+} -result {tclutils test}
+
+test tupdf-3.2 {metadata: UTF-16BE hex Title decodes} -body {
+    dict get [::tclutils::tupdf::metadata $pdf] Title
+} -result Hi
+
+test tupdf-4.1 {summary fields} -body {
+    set s [::tclutils::tupdf::summary $pdf]
+    list [dict get $s version] [dict get $s pages] [dict get $s objects] \
+         [dict get $s encrypted] [dict get $s acroform] [dict get $s linearized]
+} -result {1.5 1 4 0 1 0}
+
+test tupdf-5.1 {non-PDF reports FORMAT error} -body {
+    set bad [makeFile "not a pdf" [file join $tmp bad.txt]]
+    catch {::tclutils::tupdf::version $bad} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUPDF FORMAT}
+
+set zfText {%PDF-1.7
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /AF [5 0 R] >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>
+endobj
+5 0 obj
+<< /Type /Filespec /F (ZUGFeRD-invoice.xml) /EF << /F 6 0 R >> /AFRelationship /Alternative >>
+endobj
+6 0 obj
+<< /Type /EmbeddedFile /Subtype (application/vnd.zugferd+xml;version=2.1) /Length 44 >>
+stream
+<?xml version="1.0"?><CrossIndustryInvoice/>
+endstream
+endobj
+xref
+0 7
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+0
+%%EOF
+}
+set zfpdf [makeFile $zfText [file join $tmp zugferd.pdf]]
+
+test tupdf-6.1 {zugferd heuristic detects embedded invoice xml} -body {
+    set z [::tclutils::tupdf::zugferd $zfpdf]
+    list [dict get $z detected] [dict get $z profile] \
+         [lindex [dict get $z attachmentNames] 0]
+} -result {1 zugferd ZUGFeRD-invoice.xml}
+
+test tupdf-6.2 {plain pdf is not zugferd} -body {
+    dict get [::tclutils::tupdf::zugferd $pdf] detected
+} -result 0
+
+test tupdf-6.3 {summary includes zugferdDetected} -body {
+    list [dict get [::tclutils::tupdf::summary $pdf] zugferdDetected] \
+         [dict get [::tclutils::tupdf::summary $zfpdf] zugferdDetected]
+} -result {0 1}
+
+cleanupTests

@@ -1,0 +1,82 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuodf 0.1
+package require tclutils::tuzip 0.1
+
+set tmp [makeDirectory tuodf]
+set odt [file join $tmp doc.odt]
+
+test tuodf-1.1 {createText returns the path and writes a file} -body {
+    ::tclutils::tuodf::createText $odt {{Hello world} {Second paragraph}}
+    file exists $odt
+} -result 1
+
+test tuodf-1.2 {mimetype is the FIRST member and STORED text mimetype} -body {
+    set names [::tclutils::tuzip::names $odt]
+    set first [lindex $names 0]
+    set mime [::tclutils::tuzip::readMember $odt mimetype]
+    list $first $mime
+} -result {mimetype application/vnd.oasis.opendocument.text}
+
+test tuodf-1.3 {mimetype entry is stored (method 0)} -body {
+    set e [lindex [::tclutils::tuzip::entries $odt] 0]
+    list [dict get $e name] [dict get $e method]
+} -result {mimetype 0}
+
+test tuodf-1.4 {container has the expected parts} -body {
+    lsort [::tclutils::tuodf::parts $odt]
+} -result {META-INF/manifest.xml content.xml meta.xml mimetype styles.xml}
+
+test tuodf-2.1 {paragraphs round-trip} -body {
+    ::tclutils::tuodf::createText $odt {{Hello world} {Second paragraph}}
+    ::tclutils::tuodf::paragraphs $odt
+} -result {{Hello world} {Second paragraph}}
+
+test tuodf-2.2 {text joins paragraphs by newline} -body {
+    ::tclutils::tuodf::text $odt
+} -result "Hello world\nSecond paragraph"
+
+test tuodf-2.3 {XML special characters round-trip} -body {
+    ::tclutils::tuodf::createText $odt {{a < b & c > d "q" 'x'}}
+    ::tclutils::tuodf::paragraphs $odt
+} -result {{a < b & c > d "q" 'x'}}
+
+test tuodf-2.4 {empty paragraph list still yields a valid document} -body {
+    ::tclutils::tuodf::createText $odt {}
+    list [lindex [::tclutils::tuzip::names $odt] 0] [::tclutils::tuodf::paragraphs $odt]
+} -result {mimetype {{}}}
+
+test tuodf-2.5 {empty paragraph between two paragraphs preserved} -body {
+    ::tclutils::tuodf::createText $odt {one {} three}
+    ::tclutils::tuodf::paragraphs $odt
+} -result {one {} three}
+
+test tuodf-3.1 {meta title is written} -body {
+    ::tclutils::tuodf::createText $odt {"x"} -title "My Title" -creator "Me"
+    set meta [::tclutils::tuodf::part $odt meta.xml]
+    list [string match {*<dc:title>My Title</dc:title>*} $meta] \
+         [string match {*<dc:creator>Me</dc:creator>*} $meta]
+} -result {1 1}
+
+test tuodf-3.2 {content.xml binds office and text namespaces at the root} -body {
+    set c [::tclutils::tuodf::part $odt content.xml]
+    list [string match {*xmlns:office=*} $c] [string match {*xmlns:text=*} $c]
+} -result {1 1}
+
+test tuodf-3.3 {deterministic output: two builds are byte-identical} -body {
+    set a [file join $tmp a.odt]
+    set b [file join $tmp b.odt]
+    ::tclutils::tuodf::createText $a {"same" "content"}
+    ::tclutils::tuodf::createText $b {"same" "content"}
+    expr {[::tclutils::common::readBinaryFile $a] eq [::tclutils::common::readBinaryFile $b]}
+} -result 1
+
+test tuodf-4.1 {unknown option rejected} -body {
+    catch {::tclutils::tuodf::createText $odt {"x"} -bogus 1} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON OPTION -bogus}
+
+cleanupTests

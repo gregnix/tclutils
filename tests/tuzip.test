@@ -1,0 +1,95 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuzip 0.1
+
+# Keep all generated ZIP test scratch under tests/.tmp, never in the project root.
+set tuzipTmpRoot [file normalize [file join $here .tmp]]
+file mkdir $tuzipTmpRoot
+tcltest::configure -tmpdir $tuzipTmpRoot
+
+set tmp [makeDirectory tuzip]
+set a [file join $tmp a.txt]
+set b [file join $tmp b.txt]
+set sub [file join $tmp sub]
+file mkdir $sub
+set c [file join $sub c.txt]
+set f [open $a w]; puts $f "hello"; close $f
+set f [open $b w]; puts $f "banana"; close $f
+set f [open $c w]; puts $f "inside"; close $f
+set zip [file join $tmp test.zip]
+
+test tuzip-1.1 {create zip with relative names} -body {
+    ::tclutils::tuzip::create $zip [list $a $b $c] -base $tmp
+    lsort [::tclutils::tuzip::names $zip]
+} -result {a.txt b.txt sub/c.txt}
+
+test tuzip-1.2 {read member} -body {
+    string trim [::tclutils::tuzip::readMember $zip a.txt]
+} -result {hello}
+
+test tuzip-1.3 {extract member} -body {
+    set out [file join $tmp out c.txt]
+    ::tclutils::tuzip::extract $zip sub/c.txt $out
+    set f [open $out r]
+    set data [string trim [read $f]]
+    close $f
+    set data
+} -result {inside}
+
+test tuzip-1.4 {stored zip no compression} -body {
+    set zip2 [file join $tmp stored.zip]
+    ::tclutils::tuzip::create $zip2 [list $a] -base $tmp -compress 0
+    set e [lindex [::tclutils::tuzip::entries $zip2] 0]
+    list [dict get $e name] [dict get $e method] [string trim [::tclutils::tuzip::readMember $zip2 a.txt]]
+} -result {a.txt 0 hello}
+
+test tuzip-1.5 {missing member throws error} -body {
+    catch {::tclutils::tuzip::readMember $zip missing.txt} msg opts
+    list $msg [lrange [dict get $opts -errorcode] 0 2]
+} -result {{member not found: missing.txt} {TCLUTILS TUZIP MEMBER}}
+
+
+test tuzip-1.6 {DosTime handles zero-padded 08 and 09 fields} -body {
+    # 2026-05-30 19:08:09 local time: minute=08, second=09.
+    # This used to trigger Tcl expr's octal parsing trap.
+    lassign [::tclutils::tuzip::DosTime [clock scan {2026-05-30 19:08:09} -format {%Y-%m-%d %H:%M:%S}]] time date
+    expr {$time > 0 && $date > 0}
+} -result 1
+
+test tuzip-1.7 {ODT-style smoke test: mimetype and content.xml readable} -body {
+    set odtdir [file join $tmp odt]
+    file mkdir $odtdir
+    set mimetype [file join $odtdir mimetype]
+    set content [file join $odtdir content.xml]
+    set f [open $mimetype w]
+    puts -nonewline $f {application/vnd.oasis.opendocument.text}
+    close $f
+    set f [open $content w]
+    puts -nonewline $f {<?xml version="1.0" encoding="UTF-8"?><office:document-content/>}
+    close $f
+    set odt [file join $tmp smoke.odt]
+    ::tclutils::tuzip::create $odt [list $mimetype $content] -base $odtdir -compress 0
+    list [lrange [::tclutils::tuzip::names $odt] 0 1]         [::tclutils::tuzip::readMember $odt mimetype]         [string match {*office:document-content*} [::tclutils::tuzip::readMember $odt content.xml]]
+} -result {{mimetype content.xml} application/vnd.oasis.opendocument.text 1}
+
+proc rmTree {path} {
+    if {![file exists $path]} { return }
+    foreach child [glob -nocomplain -directory $path * .*] {
+        set tail [file tail $child]
+        if {$tail in {. ..}} { continue }
+        if {[file isdirectory $child]} {
+            rmTree $child
+        } else {
+            file delete $child
+        }
+    }
+    file delete $path
+}
+rmTree $tmp
+catch {file delete $tuzipTmpRoot}
+cleanupTests

@@ -1,0 +1,15 @@
+[manpage_begin tuagrep n 0.1]
+[moddesc {tclutils}]
+[titledesc {Approximate grep}]
+[require Tcl 8.6]
+[require tclutils::tuagrep 0.1]
+[description]
+[para]The [package tclutils::tuagrep] package searches lines approximately using [package tclutils::tufuzzy].
+[section COMMANDS]
+[list_begin definitions]
+[call [cmd ::tclutils::tuagrep::search] [arg text] [arg pattern] [opt options]]
+Searches text for approximate matches.
+[call [cmd ::tclutils::tuagrep::file] [arg filename] [arg pattern] [opt options]]
+Searches a file.
+[list_end]
+[manpage_end]

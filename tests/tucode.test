@@ -1,0 +1,57 @@
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucode 0.1
+
+test tucode-1.1 {ascii contains NUL and DEL names} -body {
+    set out [::tclutils::tucode::ascii]
+    expr {[string match *NUL* $out] && [string match *DEL* $out]}
+} -result 1
+
+test tucode-1.2 {latin1 contains ssharp} -body {
+    string match *ssharp* [::tclutils::tucode::latin1]
+} -result 1
+
+test tucode-1.3 {lookup decimal} -body {
+    dict get [::tclutils::tucode::lookup 65] char
+} -result A
+
+test tucode-1.4 {lookup hex string} -body {
+    dict get [::tclutils::tucode::lookup "0xDF"] name
+} -result ssharp
+
+test tucode-1.5 {signs german group} -body {
+    string match *ssharp* [::tclutils::tucode::signs german]
+} -result 1
+
+test tucode-1.6 {table range} -body {
+    regexp {32.*33.*34} [::tclutils::tucode::table 32 34]
+} -result 1
+
+test tucode-1.7 {out of range rejected} -body {
+    catch {::tclutils::tucode::table 0 300} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUCODE RANGE}
+
+test tucode-1.8 {compact hex matrix} -body {
+    set out [::tclutils::tucode::render 0 31 -compact 1]
+    expr {[string match *0123456789ABCDEF* $out] && [string match *00* $out]}
+} -result 1
+
+test tucode-1.9 {signs arrows unicode} -body {
+    string match {*U+2192*right*} [::tclutils::tucode::signs arrows]
+} -result 1
+
+test tucode-1.10 {signs boxdraw unicode} -body {
+    string match {*U+2500*hline*} [::tclutils::tucode::signs boxdraw]
+} -result 1
+
+test tucode-1.11 {groups lists new sign groups} -body {
+    set g [::tclutils::tucode::groups]
+    expr {"arrows" in $g && "boxdraw" in $g}
+} -result 1
+
+cleanupTests

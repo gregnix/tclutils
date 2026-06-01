@@ -1,0 +1,44 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tubin 0.1
+
+test tubin-1.1 {hex roundtrip} -body {
+    set bytes [::tclutils::tubin::hexToBytes {50 4B 03 04}]
+    ::tclutils::tubin::bytesToHex $bytes
+} -result {50 4B 03 04}
+
+test tubin-1.2 {little endian unsigned values} -body {
+    set data [binary format csi 255 0x1234 0x89abcdef]
+    list [::tclutils::tubin::u8 $data 0] \
+         [format %x [::tclutils::tubin::u16le $data 1]] \
+         [format %x [::tclutils::tubin::u32le $data 3]]
+} -result {255 1234 89abcdef}
+
+test tubin-1.3 {big endian unsigned values} -body {
+    set data [binary format cSI 255 0x1234 0x89abcdef]
+    list [::tclutils::tubin::u8 $data 0] \
+         [format %x [::tclutils::tubin::u16be $data 1]] \
+         [format %x [::tclutils::tubin::u32be $data 3]]
+} -result {255 1234 89abcdef}
+
+test tubin-1.4 {pack little endian} -body {
+    ::tclutils::tubin::bytesToHex [::tclutils::tubin::packU32LE 0x12345678]
+} -result {78 56 34 12}
+
+test tubin-1.5 {pack big endian} -body {
+    ::tclutils::tubin::bytesToHex [::tclutils::tubin::packU32BE 0x12345678]
+} -result {12 34 56 78}
+
+test tubin-1.6 {ascii printable mapping} -body {
+    ::tclutils::tubin::ascii "A\x00B\nC"
+} -result {A.B.C}
+
+test tubin-1.7 {bad hex rejected} -body {
+    catch {::tclutils::tubin::hexToBytes {5XZ}} msg
+    set msg
+} -match glob -result {*hex*}
+
+cleanupTests

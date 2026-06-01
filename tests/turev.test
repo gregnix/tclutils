@@ -1,0 +1,12 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::turev 0.1
+
+test turev-1.1 {reverse a line} { ::tclutils::turev::line "abc" } "cba"
+test turev-1.2 {reverse each line} { ::tclutils::turev::text "abc\ndef" } "cba\nfed"
+test turev-1.3 {trailing newline preserved} { ::tclutils::turev::text "abc\n" } "cba\n"
+test turev-1.4 {empty text} { ::tclutils::turev::text "" } ""
+test turev-1.5 {unicode reversed by codepoint} { ::tclutils::turev::line "a\u00e4b" } "b\u00e4a"
+cleanupTests

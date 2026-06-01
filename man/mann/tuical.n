@@ -1,0 +1,10 @@
+.TH tuical n 0.31.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tuical \- iCalendar (RFC 5545) reader/writer
+.SH SYNOPSIS
+package require tclutils::tuical
+.SH DESCRIPTION
+Parses iCalendar text into a component tree and serializes it back with proper
+line folding. See docs/tuical.md.
+.SH KEYWORDS
+icalendar, ics, calendar, parser

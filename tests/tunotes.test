@@ -1,0 +1,203 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tunotes 0.1
+
+# Build a small tree. Returns {store idmap}. Ids are dynamic (clock-based) so
+# tests compare via titles, which are stable.
+proc mkstore {} {
+    set s [dict create]
+    set A   [::tclutils::tunotes::create s "Root A" "content a" {work}]
+    set B   [::tclutils::tunotes::create s "Root B" "content b" {home}]
+    set A1  [::tclutils::tunotes::create s "Child A1" "alpha" {} $A]
+    set A2  [::tclutils::tunotes::create s "Child A2" "beta" {work} $A]
+    set A1a [::tclutils::tunotes::create s "Grandchild" "deep text" {} $A1]
+    return [list $s [dict create A $A B $B A1 $A1 A2 $A2 A1a $A1a]]
+}
+proc titlesOf {store idlist} {
+    set r {}
+    foreach i $idlist { lappend r [dict get [::tclutils::tunotes::get $store $i] title] }
+    return $r
+}
+
+test tunotes-1.1 {create + count} -body {
+    lassign [mkstore] s m
+    ::tclutils::tunotes::count $s
+} -result 5
+
+test tunotes-1.2 {roots in insertion order} -body {
+    lassign [mkstore] s m
+    titlesOf $s [::tclutils::tunotes::roots $s]
+} -result {{Root A} {Root B}}
+
+test tunotes-1.3 {children} -body {
+    lassign [mkstore] s m
+    titlesOf $s [::tclutils::tunotes::children $s [dict get $m A]]
+} -result {{Child A1} {Child A2}}
+
+test tunotes-1.4 {descendants depth-first} -body {
+    lassign [mkstore] s m
+    titlesOf $s [::tclutils::tunotes::descendants $s [dict get $m A]]
+} -result {{Child A1} Grandchild {Child A2}}
+
+test tunotes-1.5 {path root..node} -body {
+    lassign [mkstore] s m
+    titlesOf $s [::tclutils::tunotes::path $s [dict get $m A1a]]
+} -result {{Root A} {Child A1} Grandchild}
+
+test tunotes-1.6 {get fields} -body {
+    lassign [mkstore] s m
+    set n [::tclutils::tunotes::get $s [dict get $m A1]]
+    list [dict get $n title] [dict get $n content] \
+         [expr {[dict get $n parent_id] eq [dict get $m A]}]
+} -result {{Child A1} alpha 1}
+
+test tunotes-1.7 {get unknown errors with errorcode} -body {
+    lassign [mkstore] s m
+    catch {::tclutils::tunotes::get $s 999} -> opt
+    dict get $opt -errorcode
+} -result {TCLUTILS TUNOTES NOTFOUND}
+
+test tunotes-1.8 {create under missing parent errors} -body {
+    lassign [mkstore] s m
+    catch {::tclutils::tunotes::create s "x" "y" {} 999} -> opt
+    dict get $opt -errorcode
+} -result {TCLUTILS TUNOTES NOTFOUND}
+
+test tunotes-1.9 {update changes fields, keeps parent by default} -body {
+    lassign [mkstore] s m
+    ::tclutils::tunotes::update s [dict get $m A1] "A1 new" "newtext" {x y}
+    set n [::tclutils::tunotes::get $s [dict get $m A1]]
+    list [dict get $n title] [dict get $n tags] \
+         [expr {[dict get $n parent_id] eq [dict get $m A]}]
+} -result {{A1 new} {x y} 1}
+
+test tunotes-1.10 {move reparents} -body {
+    lassign [mkstore] s m
+    ::tclutils::tunotes::move s [dict get $m A2] [dict get $m B]
+    titlesOf $s [list [::tclutils::tunotes::parent $s [dict get $m A2]]]
+} -result {{Root B}}
+
+test tunotes-1.11 {move under own descendant refused} -body {
+    lassign [mkstore] s m
+    catch {::tclutils::tunotes::move s [dict get $m A] [dict get $m A1a]} -> opt
+    dict get $opt -errorcode
+} -result {TCLUTILS TUNOTES CYCLE}
+
+test tunotes-1.12 {delete cascade removes subtree} -body {
+    lassign [mkstore] s m
+    ::tclutils::tunotes::delete s [dict get $m A] 1
+    list [::tclutils::tunotes::count $s] \
+         [::tclutils::tunotes::exists $s [dict get $m A1a]]
+} -result {1 0}
+
+test tunotes-1.13 {delete keep-children reparents to root} -body {
+    lassign [mkstore] s m
+    ::tclutils::tunotes::delete s [dict get $m A] 0
+    list [::tclutils::tunotes::parent $s [dict get $m A1]] \
+         [::tclutils::tunotes::parent $s [dict get $m A2]]
+} -result {{} {}}
+
+test tunotes-1.14 {search title and content, case-insensitive} -body {
+    lassign [mkstore] s m
+    list [llength [::tclutils::tunotes::search $s "child"]] \
+         [llength [::tclutils::tunotes::search $s "DEEP"]]
+} -result {3 1}
+
+test tunotes-1.15 {tags collected sorted-unique} -body {
+    lassign [mkstore] s m
+    ::tclutils::tunotes::tags $s
+} -result {home work}
+
+test tunotes-1.16 {byTag} -body {
+    lassign [mkstore] s m
+    lsort [titlesOf $s [::tclutils::tunotes::byTag $s work]]
+} -result {{Child A2} {Root A}}
+
+test tunotes-1.17 {round-trip via JSON preserves structure} -body {
+    lassign [mkstore] s m
+    set s2 [::tclutils::tunotes::fromJson [::tclutils::tunotes::toJson $s]]
+    list [::tclutils::tunotes::count $s2] \
+         [titlesOf $s2 [::tclutils::tunotes::children $s2 [dict get $m A]]]
+} -result {5 {{Child A1} {Child A2}}}
+
+test tunotes-1.18 {save/load file round-trip} -body {
+    lassign [mkstore] s m
+    set f [file join [makeDirectory n] notes.json]
+    ::tclutils::tunotes::save $s $f
+    set s2 [::tclutils::tunotes::load $f]
+    list [file exists $f] [::tclutils::tunotes::count $s2] \
+         [titlesOf $s2 [::tclutils::tunotes::path $s2 [dict get $m A1a]]]
+} -result {1 5 {{Root A} {Child A1} Grandchild}}
+
+test tunotes-1.19 {load missing file -> empty store} -body {
+    ::tclutils::tunotes::count [::tclutils::tunotes::load /nonexistent/x.json]
+} -result 0
+
+test tunotes-1.20 {special characters survive JSON round-trip} -body {
+    set s [dict create]
+    set id [::tclutils::tunotes::create s "Quote \"q\" & back\\slash" "l1\nl2\ttab" {}]
+    set s2 [::tclutils::tunotes::fromJson [::tclutils::tunotes::toJson $s]]
+    set n [::tclutils::tunotes::get $s2 $id]
+    list [dict get $n title] [dict get $n content]
+} -result [list "Quote \"q\" & back\\slash" "l1\nl2\ttab"]
+
+test tunotes-2.1 {setTitle / setContent} -body {
+    set store {}
+    set a [::tclutils::tunotes::create store "A" "ca"]
+    ::tclutils::tunotes::setTitle store $a "A2"
+    ::tclutils::tunotes::setContent store $a "new"
+    set n [::tclutils::tunotes::get $store $a]
+    list [dict get $n title] [dict get $n content]
+} -result {A2 new}
+
+test tunotes-2.2 {addTag / hasTag idempotent} -body {
+    set store {}
+    set a [::tclutils::tunotes::create store "A" "ca"]
+    ::tclutils::tunotes::addTag store $a x
+    ::tclutils::tunotes::addTag store $a x
+    ::tclutils::tunotes::addTag store $a y
+    list [::tclutils::tunotes::hasTag $store $a x] \
+         [dict get [::tclutils::tunotes::get $store $a] tags]
+} -result {1 {x y}}
+
+test tunotes-2.3 {removeTag} -body {
+    set store {}
+    set a [::tclutils::tunotes::create store "A" "ca" {x y}]
+    ::tclutils::tunotes::removeTag store $a x
+    list [::tclutils::tunotes::hasTag $store $a x] \
+         [dict get [::tclutils::tunotes::get $store $a] tags]
+} -result {0 y}
+
+test tunotes-2.4 {ancestors / depth} -body {
+    set store {}
+    set r  [::tclutils::tunotes::create store "r" ""]
+    set c1 [::tclutils::tunotes::create store "c1" "" {} $r]
+    set g  [::tclutils::tunotes::create store "g" "" {} $c1]
+    list [expr {[::tclutils::tunotes::ancestors $store $g] eq [list $r $c1]}] \
+         [::tclutils::tunotes::depth $store $g]
+} -result {1 2}
+
+test tunotes-2.5 {siblings} -body {
+    set store {}
+    set r  [::tclutils::tunotes::create store "r" ""]
+    set c1 [::tclutils::tunotes::create store "c1" "" {} $r]
+    set c2 [::tclutils::tunotes::create store "c2" "" {} $r]
+    expr {[::tclutils::tunotes::siblings $store $c1] eq [list $c2]}
+} -result 1
+
+test tunotes-2.6 {subtree is re-rooted and complete} -body {
+    set store {}
+    set r  [::tclutils::tunotes::create store "r" ""]
+    set c1 [::tclutils::tunotes::create store "c1" "" {} $r]
+    set g  [::tclutils::tunotes::create store "g" "" {} $c1]
+    set sub [::tclutils::tunotes::subtree $store $c1]
+    list [dict size $sub] [dict get [dict get $sub $c1] parent_id] \
+         [::tclutils::tunotes::exists $sub $g]
+} -result {2 {} 1}
+
+cleanupTests

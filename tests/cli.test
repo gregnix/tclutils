@@ -1,0 +1,191 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuodf 0.1
+package require tclutils::tupdf 0.1
+
+set bin [file join $root bin]
+set tmp [makeDirectory cli]
+set data [file join $tmp data.txt]
+set f [open $data w]
+puts $f "banana"
+puts $f "apple"
+puts $f "apple"
+puts $f "cherry"
+close $f
+
+proc runcli {script args} {
+    global bin
+    return [exec [info nameofexecutable] [file join $bin $script] {*}$args]
+}
+
+proc runcliStatus {script args} {
+    global bin
+    set code [catch {exec [info nameofexecutable] [file join $bin $script] {*}$args} out opts]
+    return [list $code $out [dict get $opts -errorcode]]
+}
+
+test cli-1.1 {tuhead command} -body {
+    runcli tuhead.tcl -n 2 $data
+} -result "banana\napple"
+
+test cli-1.2 {tutail command} -body {
+    runcli tutail.tcl -n 1 $data
+} -result "cherry"
+
+test cli-1.3 {tusort command} -body {
+    runcli tusort.tcl $data
+} -result "apple\napple\nbanana\ncherry"
+
+test cli-1.4 {tuuniq command} -body {
+    runcli tuuniq.tcl $data
+} -result "banana\napple\ncherry"
+
+test cli-1.5 {tugrep command} -body {
+    runcli tugrep.tcl app $data
+} -match glob -result "*apple*"
+
+test cli-1.6 {tuwc command} -body {
+    runcli tuwc.tcl $data
+} -match glob -result "*4*4*26*26*$data"
+
+test cli-1.7 {tufind command} -body {
+    set found [split [runcli tufind.tcl $tmp *.txt] 
+]
+    expr {[lsearch -exact [lmap p $found {file normalize $p}] [file normalize $data]] >= 0}
+} -result 1
+
+set sourceFile [makeFile "alpha\nbeta\ngamma\n" [file join $tmp source.txt]]
+set patchFile [makeFile "@@ -1,3 +1,3 @@\n alpha\n-beta\n+BETA\n gamma" [file join $tmp change.diff]]
+
+test cli-1.8 {tupatch command with -patch file} -body {
+    runcli tupatch.tcl -patch $patchFile $sourceFile
+} -result "alpha\nBETA\ngamma"
+
+test cli-1.9 {tucat command} -body {
+    runcli tucat.tcl $data
+} -result "banana\napple\napple\ncherry"
+
+test cli-1.10 {tucmp command equal files} -body {
+    set fh [open $data r]
+    set copyData [read $fh]
+    close $fh
+    set copy [makeFile $copyData [file join $tmp copy.txt]]
+    runcli tucmp.tcl $data $copy
+} -result "equal"
+
+test cli-1.11 {tuagrep command approximate match} -body {
+    runcli tuagrep.tcl -maxdist 1 appl $data
+} -match glob -result "*apple*"
+
+test cli-1.12 {tuzipfs available command} -body {
+    runcli tuzipfs.tcl available
+} -match regexp -result {^[01]$}
+
+set odt [file join $tmp doc.odt]
+::tclutils::tuodf::createText $odt {First Second}
+
+test cli-1.13 {tuodf text command} -body {
+    runcli tuodf.tcl text $odt
+} -result "First\nSecond"
+
+test cli-1.14 {tuodf parts command includes content.xml} -body {
+    expr {[lsearch -exact [split [runcli tuodf.tcl parts $odt] \n] content.xml] >= 0}
+} -result 1
+
+set pdfText "%PDF-1.5
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields \[\] >> >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids \[3 0 R\] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox \[0 0 612 792\] >>
+endobj
+4 0 obj
+<< /Producer (tclutils test) /Title <FEFF00480069> >>
+endobj
+xref
+0 5
+0000000000 65535 f 
+trailer
+<< /Size 5 /Root 1 0 R /Info 4 0 R >>
+startxref
+0
+%%EOF
+"
+set pdf [makeFile $pdfText [file join $tmp doc.pdf]]
+
+test cli-1.15 {tupdf version command} -body {
+    runcli tupdf.tcl version $pdf
+} -result 1.5
+
+test cli-1.16 {tupdf summary command includes pages} -body {
+    runcli tupdf.tcl summary $pdf
+} -match glob -result "*pages: 1*"
+
+set md [makeFile "---\ntitle: Demo\n---\n# Title\n\nBody" [file join $tmp doc.md]]
+
+test cli-1.17 {tumd headings command} -body {
+    runcli tumd.tcl headings $md
+} -result "1\tTitle"
+
+test cli-1.18 {tumd toc command} -body {
+    runcli tumd.tcl toc $md
+} -result {- [Title](#title)}
+
+set jsonFile [makeFile {{"name":"Gregor","items":[1,2]}} [file join $tmp doc.json]]
+
+test cli-1.19 {tujson parse command} -body {
+    runcli tujson.tcl parse $jsonFile
+} -result "name Gregor items {1 2}"
+
+test cli-1.20 {tujson validate command} -body {
+    runcli tujson.tcl validate $jsonFile
+} -result "valid"
+
+test cli-1.21 {tuseq command} -body {
+    runcli tuseq.tcl 1 3
+} -result "1\n2\n3"
+
+test cli-1.22 {tunl command numbers nonempty lines} -body {
+    runcli tunl.tcl -width 1 -separator " " $data
+} -result "1 banana\n2 apple\n3 apple\n4 cherry"
+
+test cli-1.23 {turev command reverses characters} -body {
+    runcli turev.tcl $data
+} -result "ananab\nelppa\nelppa\nyrrehc"
+
+test cli-1.24 {tutac command reverses line order} -body {
+    runcli tutac.tcl $data
+} -result "cherry\napple\napple\nbanana"
+
+test cli-1.25 {tuexpand command expands tabs} -body {
+    runcli tuexpand.tcl -tabs 4 [makeFile "a\tb" [file join $tmp tabs.txt]]
+} -result "a   b"
+
+test cli-1.26 {tushuf command is a permutation} -body {
+    lsort [split [runcli tushuf.tcl -seed 5 $data] \n]
+} -result {apple apple banana cherry}
+
+test cli-1.27 {tucolumn table aligns columns} -body {
+    runcli tucolumn.tcl table [makeFile "a bb\nccc d" [file join $tmp col.txt]]
+} -result "a    bb\nccc  d"
+
+test cli-1.28 {tupr command produces a page} -body {
+    runcli tupr.tcl -date D -header H -length 16 $data
+} -match glob -result "*H*Page 1*banana*cherry*"
+
+test cli-1.29 {tutsort command orders a graph} -body {
+    runcli tutsort.tcl [makeFile "a b\nb c\n" [file join $tmp graph.txt]]
+} -result "a\nb\nc"
+
+test cli-1.30 {tunumfmt command formats numbers} -body {
+    runcli tunumfmt.tcl [makeFile "1500\n1048576\n" [file join $tmp nums.txt]]
+} -result "1.5K\n1.0M"
+
+cleanupTests

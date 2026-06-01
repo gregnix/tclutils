@@ -1,0 +1,21 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\"
+.TH tupath n 0.39.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tupath \- Path helpers: normalize, clean, relative, commonPath, readlink.
+.SH COMMANDS
+.PP
+.nf
+::tclutils::tupath::normalize path
+::tclutils::tupath::clean path
+::tclutils::tupath::isAbsolute path
+::tclutils::tupath::components path
+::tclutils::tupath::join args...
+::tclutils::tupath::relative base target
+::tclutils::tupath::commonPath {paths}
+::tclutils::tupath::readlink path
+.fi

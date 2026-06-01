@@ -1,0 +1,29 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucolumn 0.1
+
+test tucolumn-1.1 {table aligns whitespace columns, no trailing space} {
+    ::tclutils::tucolumn::table "name age\nAda 36\nGrace 85"
+} "name   age\nAda    36\nGrace  85"
+test tucolumn-1.2 {custom separator} {
+    ::tclutils::tucolumn::table "a:bb:c\nddd:e:f" -separator :
+} "a    bb  c\nddd  e   f"
+test tucolumn-1.3 {custom output separator} {
+    ::tclutils::tucolumn::table "a b\ncc d" -output " | "
+} "a  | b\ncc | d"
+test tucolumn-1.4 {right align} {
+    ::tclutils::tucolumn::table "a 1\nbb 22" -right 1
+} " a   1\nbb  22"
+test tucolumn-1.5 {fill column-major} {
+    ::tclutils::tucolumn::fill {one two three four five six} -width 20
+} "one    three  five\ntwo    four   six"
+test tucolumn-1.6 {fill single column when narrow} {
+    ::tclutils::tucolumn::fill {alpha beta} -width 3
+} "alpha\nbeta"
+test tucolumn-1.7 {fill empty} { ::tclutils::tucolumn::fill {} } ""
+test tucolumn-1.8 {invalid mode rejected} {
+    catch {::tclutils::tucolumn::file /dev/null -mode bogus} m o; dict get $o -errorcode
+} {TCLUTILS TUCOLUMN MODE}
+cleanupTests

@@ -1,0 +1,24 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tupr 1 0.29.0 tclutils "Tcl Utility Command"
+.SH NAME
+tupr \- thin CLI wrapper for tclutils::tupr
+.SH SYNOPSIS
+.nf
+tupr ?-length N? ?-header S? ?-width N? ?-number 0|1? ?-date S? ?file?
+.fi
+.SH DESCRIPTION
+.PP
+The tupr command is a thin wrapper around the Tcl package tclutils::tupr. It is intended for interactive and scripting use when tclutils is installed from source. The primary API remains the Tcl library; see tupr(n) for procedures, options, and semantics.
+.PP
+Run the script with tclsh:
+.PP
+.nf
+tclsh bin/tupr.tcl ...
+.fi

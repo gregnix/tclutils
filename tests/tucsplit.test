@@ -1,0 +1,48 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucsplit 0.1
+package require tclutils::common 0.1
+
+proc readText {path} { ::tclutils::common::readFile $path }
+
+test tucsplit-1.1 {split text by regexp keeping matching line} -body {
+    set out [makeDirectory chapters]
+    set text "Intro\n# One\na\n# Two\nb"
+    set files [::tclutils::tucsplit::splitText $text {^# } -outdir $out -prefix ch -suffix .md]
+    list [llength $files] [readText [lindex $files 1]] [readText [lindex $files 2]]
+} -result {3 {# One
+a} {# Two
+b}}
+
+test tucsplit-1.2 {drop matching delimiter line} -body {
+    set out [makeDirectory drop]
+    set files [::tclutils::tucsplit::splitText "a\n--\nb\n--\nc" {^--$} -keepmatch 0 -outdir $out]
+    list [llength $files] [readText [lindex $files 0]] [readText [lindex $files 1]] [readText [lindex $files 2]]
+} -result {3 a b c}
+
+test tucsplit-1.3 {glob matching mode} -body {
+    set out [makeDirectory glob]
+    set files [::tclutils::tucsplit::splitText "a\nCHAPTER 1\nb" {CHAPTER*} -regexp 0 -outdir $out]
+    readText [lindex $files 1]
+} -result {CHAPTER 1
+b}
+
+test tucsplit-1.4 {file command} -body {
+    set in [makeFile "a\n## x\nb" book.md]
+    set out [makeDirectory file]
+    set files [::tclutils::tucsplit::file $in {^## } -outdir $out -prefix sec -suffix .md]
+    file tail [lindex $files 1]
+} -result sec01.md
+
+test tucsplit-1.5 {no match produces one file} -body {
+    set out [makeDirectory nomatch]
+    set files [::tclutils::tucsplit::splitText "a\nb" {^#} -outdir $out]
+    list [llength $files] [readText [lindex $files 0]]
+} -result {1 {a
+b}}
+
+cleanupTests

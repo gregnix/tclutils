@@ -1,0 +1,30 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tushuf 0.1
+
+set input {a b c d e f g h i j}
+
+test tushuf-1.1 {permutation: same elements} {
+    lsort [::tclutils::tushuf::lines $input -seed 42]
+} [lsort $input]
+test tushuf-1.2 {deterministic for a given seed} {
+    expr {[::tclutils::tushuf::lines $input -seed 7] eq [::tclutils::tushuf::lines $input -seed 7]}
+} 1
+test tushuf-1.3 {different seeds usually differ} {
+    expr {[::tclutils::tushuf::lines $input -seed 1] ne [::tclutils::tushuf::lines $input -seed 2]}
+} 1
+test tushuf-1.4 {count limits output} {
+    llength [::tclutils::tushuf::lines $input -seed 42 -count 3]
+} 3
+test tushuf-1.5 {seeded shuffle is not the identity for this input} {
+    expr {[::tclutils::tushuf::lines $input -seed 42] ne $input}
+} 1
+test tushuf-1.6 {text variant returns same count of lines} {
+    llength [split [::tclutils::tushuf::text "a\nb\nc\nd" -seed 3] \n]
+} 4
+test tushuf-1.7 {non-integer seed rejected} {
+    catch {::tclutils::tushuf::lines $input -seed xx} m o; dict get $o -errorcode
+} {TCLUTILS TUSHUF SEED}
+cleanupTests

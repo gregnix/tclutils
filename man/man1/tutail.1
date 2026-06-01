@@ -1,0 +1,39 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tutail 1 0.29.0 tclutils "Tcl Utility Command"
+.SH NAME
+tutail \- thin CLI wrapper for tclutils::tutail
+.SH SYNOPSIS
+.nf
+tutail ?\-n count? file
+.fi
+.SH DESCRIPTION
+.PP
+The tutail command is a thin wrapper around the Tcl package tclutils::tutail. It is intended for interactive and scripting use when tclutils is installed from source. The primary API remains the Tcl library; see tutail(n) for procedures, options, and semantics.
+.PP
+Run the script with tclsh:
+.PP
+.nf
+tclsh bin/tutail.tcl ...
+.fi
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tutail(n), tclutils(n)

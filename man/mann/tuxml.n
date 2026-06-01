@@ -1,0 +1,39 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tuxml n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tuxml \- Small XML text helper in pure Tcl 8.6+.
+.SH EXAMPLE
+.PP
+.nf
+package require tclutils::tuxml
+
+puts [::tclutils::tuxml::declaration]
+puts [::tclutils::tuxml::textElement title {} {A < B & C}]
+.fi
+.SH NOTES
+.PP
+Use \fBtextElement\fR when content is plain text. Use \fBelement\fR only when the
+.PP
+content is already XML markup.
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

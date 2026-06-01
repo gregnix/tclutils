@@ -1,0 +1,68 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tufind 0.1
+
+proc DeleteTree {path} {
+    if {![file exists $path]} { return }
+    if {[file isdirectory $path]} {
+        foreach child [glob -nocomplain -directory $path * .*] {
+            set tail [file tail $child]
+            if {$tail eq "." || $tail eq ".."} { continue }
+            DeleteTree $child
+        }
+        file delete -- $path
+    } else {
+        file delete -- $path
+    }
+}
+
+set tmp [file join [temporaryDirectory] tufind-[pid]]
+DeleteTree $tmp
+file mkdir [file join $tmp sub]
+set f [open [file join $tmp a.txt] w]; puts -nonewline $f alpha; close $f
+set f [open [file join $tmp sub b.md] w]; puts -nonewline $f beta; close $f
+set f [open [file join $tmp .hidden] w]; puts -nonewline $f hidden; close $f
+
+test tufind-1.1 {find txt files} -body {
+    llength [::tclutils::tufind::files $tmp *.txt]
+} -result 1
+
+test tufind-1.2 {recursive default finds nested file} -body {
+    set r [::tclutils::tufind::files $tmp *.md]
+    expr {[llength $r] == 1 && [string match *b.md [lindex $r 0]]}
+} -result 1
+
+test tufind-1.3 {maxdepth stops recursion} -body {
+    llength [::tclutils::tufind::files $tmp *.md -maxdepth 0]
+} -result 0
+
+test tufind-1.4 {hidden skipped by default} -body {
+    llength [::tclutils::tufind::files $tmp .hidden]
+} -result 0
+
+test tufind-1.5 {hidden can be included} -body {
+    llength [::tclutils::tufind::files $tmp .hidden -hidden 1]
+} -result 1
+
+test tufind-1.6 {mindepth skips root-level files} -body {
+    llength [::tclutils::tufind::files $tmp *.txt -mindepth 2]
+} -result 0
+
+test tufind-1.7 {directories alias type dir} -body {
+    set r [::tclutils::tufind::all $tmp * -type dir -tails 1]
+    expr {[lsearch -exact $r sub] >= 0}
+} -result 1
+
+test tufind-1.8 {size greater than one byte} -body {
+    llength [::tclutils::tufind::files $tmp *.txt -size +1]
+} -result 1
+
+test tufind-1.9 {tails option} -body {
+    ::tclutils::tufind::files $tmp *.txt -tails 1
+} -result {a.txt}
+
+DeleteTree $tmp
+cleanupTests

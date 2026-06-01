@@ -1,0 +1,59 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tujoin 0.1
+
+set left "1;Ada\n2;Linus\n3;Grace\n"
+set right "1;Berlin\n2;Helsinki\n4;Paris\n"
+set tmp1 [file join [temporaryDirectory] tujoin-a-[pid].txt]
+set tmp2 [file join [temporaryDirectory] tujoin-b-[pid].txt]
+set f [open $tmp1 w]; puts -nonewline $f $left; close $f
+set f [open $tmp2 w]; puts -nonewline $f $right; close $f
+
+test tujoin-1.1 {join texts on first field} {
+    ::tclutils::tujoin::texts $left $right -delimiter ";"
+} "1;Ada;Berlin\n2;Linus;Helsinki"
+
+test tujoin-1.2 {join with different fields} {
+    set l "Ada;1\nLinus;2\n"
+    set r "1;Berlin\n2;Helsinki\n"
+    ::tclutils::tujoin::texts $l $r -delimiter ";" -leftfield 2 -rightfield 1
+} "1;Ada;Berlin\n2;Linus;Helsinki"
+
+test tujoin-1.3 {join files} {
+    ::tclutils::tujoin::files $tmp1 $tmp2 -delimiter ";"
+} "1;Ada;Berlin\n2;Linus;Helsinki"
+
+test tujoin-1.4 {header join} {
+    set l "id;name\n1;Ada\n"
+    set r "id;city\n1;Berlin\n"
+    ::tclutils::tujoin::texts $l $r -delimiter ";" -header 1
+} "id;name;city\n1;Ada;Berlin"
+
+test tujoin-1.5 {invalid field errors} {
+    catch {::tclutils::tujoin::texts $left $right -leftfield 0} msg
+    string match {*positive integer*} $msg
+} 1
+
+
+test tujoin-2.1 {left outer join} {
+    ::tclutils::tujoin::texts $left $right -delimiter ";" -outer left
+} "1;Ada;Berlin\n2;Linus;Helsinki\n3;Grace;"
+
+test tujoin-2.2 {right outer join} {
+    ::tclutils::tujoin::texts $left $right -delimiter ";" -outer right
+} "1;Ada;Berlin\n2;Linus;Helsinki\n4;;Paris"
+
+test tujoin-2.3 {full outer join} {
+    ::tclutils::tujoin::texts $left $right -delimiter ";" -outer full
+} "1;Ada;Berlin\n2;Linus;Helsinki\n3;Grace;\n4;;Paris"
+
+test tujoin-2.4 {invalid outer mode} {
+    catch {::tclutils::tujoin::texts $left $right -delimiter ";" -outer bad} msg
+    string match {*-outer must be one of*} $msg
+} 1
+
+file delete -force $tmp1 $tmp2
+cleanupTests

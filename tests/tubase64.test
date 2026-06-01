@@ -1,0 +1,27 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tubase64 0.1
+
+set tmp [makeDirectory tubase64]
+set f [makeFile "hello" [file join $tmp hello.txt]]
+
+test tubase64-1.1 {encode} -body {
+    ::tclutils::tubase64::encode hello
+} -result aGVsbG8=
+
+test tubase64-1.2 {decode} -body {
+    ::tclutils::tubase64::decode aGVsbG8=
+} -result hello
+
+test tubase64-1.3 {file encode} -body {
+    ::tclutils::tubase64::encodeFile $f
+} -result aGVsbG8K
+
+test tubase64-1.4 {roundtrip with newline wrapping} -body {
+    ::tclutils::tubase64::decode [::tclutils::tubase64::encode "abcdef" -maxlen 4]
+} -result abcdef
+
+cleanupTests

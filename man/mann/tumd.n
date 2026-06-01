@@ -1,0 +1,27 @@
+'" Copyright (c) 2026 Gregor Ebbing
+'" SPDX-License-Identifier: MIT
+.TH tumd n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tumd \- small dependency-free Markdown helpers.
+.SH SYNOPSIS
+.nf
+package require tclutils::tumd
+.fi
+.SH COMMANDS
+.nf
+::tclutils::tumd::toHtml markdown
+::tclutils::tumd::headings markdown
+::tclutils::tumd::toc markdown
+::tclutils::tumd::frontmatter markdown
+.fi
+.SH DESCRIPTION
+.PP
+Converts a practical CommonMark subset to an HTML fragment, extracts ATX
+headings, creates a Markdown table of contents, and splits YAML front matter.
+.SH LIMITS
+.PP
+This is not a full Markdown parser. Nested lists, Setext headings, GFM tables,
+reference-style links, raw HTML passthrough, and a full AST are intentionally
+outside the scope.
+.SH SEE ALSO
+tclutils(n), tucsv(n), tujson(n), tuxml(n)

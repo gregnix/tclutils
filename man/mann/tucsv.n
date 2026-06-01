@@ -1,0 +1,81 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tucsv n 0.23.0 tclutils "Tcl Library Procedures"
+.SH NAME
+tucsv \- Small CSV helpers written in pure Tcl.
+.SH SYNOPSIS
+.PP
+.nf
+tcl::tm::path add /path/to/tclutils/lib/tm
+package require tclutils::tucsv
+.fi
+.SH PARSE ONE LINE
+.PP
+.nf
+set row [::tclutils::tucsv::parseLine {a,"b,c","d""e"}]
+# \-> a {b,c} {d"e}
+.fi
+.PP
+Options:
+.PP
+.nf
+\-delimiter ,
+\-quote "
+\-trim 0
+.fi
+.SH JOIN ONE LINE
+.PP
+.nf
+set line [::tclutils::tucsv::joinLine [list a {b,c} {d"e}]]
+# \-> a,"b,c","d""e"
+.fi
+.PP
+Options:
+.PP
+.nf
+\-delimiter ,
+\-quote "
+\-alwaysQuote 0
+.fi
+.SH PARSE TEXT
+.PP
+.nf
+set rows [::tclutils::tucsv::parse "name,city\enAlice,Berlin"]
+# \-> {name city} {Alice Berlin}
+.fi
+.PP
+Quoted fields may contain newlines.
+.SH CONVERT ROWS TO DICTS
+.PP
+.nf
+set rows [::tclutils::tucsv::parse "name;city\enAlice;Berlin" \-delimiter {;}]
+set dictRows [::tclutils::tucsv::dicts $rows]
+# \-> {name Alice city Berlin}
+.fi
+.SH FILES
+.PP
+.nf
+set rows [::tclutils::tucsv::file data.csv \-delimiter {;}]
+::tclutils::tucsv::writeFile out.csv $rows
+.fi
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2026 Gregor Ebbing.
+.PP
+Permission is granted to use, copy, modify, and distribute this
+documentation under the same terms as the tclutils software (MIT License).
+See the file \fILICENSE\fR in the tclutils source distribution.
+.PP
+\fBtclutils\fR is an independent Tcl implementation of common
+Unix-style utilities. It does not incorporate source code or manual text
+from GNU coreutils or other GPL-licensed projects.
+
+.SH SEE ALSO
+tclutils(n)

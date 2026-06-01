@@ -1,0 +1,52 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tucmp 0.1
+
+proc writeBin {path data} {
+    set fh [open $path wb]
+    try {
+        fconfigure $fh -translation binary -encoding iso8859-1
+        puts -nonewline $fh $data
+    } finally { close $fh }
+}
+
+set tmp [file join [temporaryDirectory] tucmp]
+file delete -force $tmp
+file mkdir $tmp
+
+test tucmp-1.1 {equal data} -body {
+    dict get [::tclutils::tucmp::data abc abc] equal
+} -result 1
+
+test tucmp-1.2 {different data reports first offset and bytes} -body {
+    set r [::tclutils::tucmp::data abc axc]
+    list [dict get $r equal] [dict get $r offset] [dict get $r byte1] [dict get $r byte2]
+} -result {0 1 98 120}
+
+test tucmp-1.3 {different length reports first missing offset} -body {
+    set r [::tclutils::tucmp::data abc abcd]
+    list [dict get $r equal] [dict get $r offset] [dict get $r byte1] [dict get $r byte2]
+} -result {0 3 {} 100}
+
+test tucmp-1.4 {file equality} -body {
+    set a [file join $tmp a.bin]
+    set b [file join $tmp b.bin]
+    writeBin $a "ABC"
+    writeBin $b "ABC"
+    ::tclutils::tucmp::equal $a $b
+} -result 1
+
+test tucmp-1.5 {file first difference} -body {
+    set a [file join $tmp c.bin]
+    set b [file join $tmp d.bin]
+    writeBin $a "ABC"
+    writeBin $b "AXC"
+    ::tclutils::tucmp::firstDifference $a $b
+} -result 1
+
+file delete -force $tmp
+cleanupTests

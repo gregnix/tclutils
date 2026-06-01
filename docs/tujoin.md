@@ -1,0 +1,38 @@
+# tclutils::tujoin
+
+` tclutils::tujoin ` joins two simple delimited text sources on a selected
+field. It is inspired by Unix `join`, but intentionally small.
+
+## Load
+
+```tcl
+package require tclutils::tujoin
+```
+
+## Examples
+
+```tcl
+set left  "1;Ada\n2;Linus\n"
+set right "1;Berlin\n2;Helsinki\n"
+
+::tclutils::tujoin::texts $left $right -delimiter ";"
+# -> 1;Ada;Berlin
+# -> 2;Linus;Helsinki
+```
+
+Options:
+
+```tcl
+-delimiter ";"
+-leftfield 1
+-rightfield 1
+-joiner ";"
+-header 0
+```
+
+Field numbers are 1-based. The joined result contains the key once, then the
+remaining left fields, then the remaining right fields.
+## 0.24.0
+
+Outer joins are available through `-outer left`, `-outer right`, and `-outer full`. The default remains the existing inner join behavior (`-outer none`).
+

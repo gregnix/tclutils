@@ -1,0 +1,15 @@
+[manpage_begin tufuzzy n 0.1]
+[moddesc {tclutils}]
+[titledesc {Fuzzy matching primitives}]
+[require Tcl 8.6]
+[require tclutils::tufuzzy 0.1]
+[description]
+[para]The [package tclutils::tufuzzy] package provides edit-distance based fuzzy matching primitives.
+[section COMMANDS]
+[list_begin definitions]
+[call [cmd ::tclutils::tufuzzy::distance] [arg a] [arg b]]
+Returns the Levenshtein distance.
+[call [cmd ::tclutils::tufuzzy::searchDistance] [arg pattern] [arg text]]
+Returns the minimum distance to a substring of text.
+[list_end]
+[manpage_end]

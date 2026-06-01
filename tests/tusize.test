@@ -1,0 +1,59 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tusize 0.1
+
+proc writeBytes {path s} {
+    set ch [open $path wb]; fconfigure $ch -translation binary
+    puts -nonewline $ch $s; close $ch
+}
+
+test tusize-bytes-1 {single file} -setup {
+    set tmp [makeDirectory tusz1]
+    writeBytes [file join $tmp a.txt] "aaaa"
+} -body {
+    ::tclutils::tusize::bytes [file join $tmp a.txt]
+} -result 4
+
+test tusize-bytes-2 {recursive directory total} -setup {
+    set tmp [makeDirectory tusz2]
+    file mkdir [file join $tmp sub]
+    writeBytes [file join $tmp a.txt] "aaaa"
+    writeBytes [file join $tmp sub b.txt] "bbbbbbbb"
+} -body {
+    ::tclutils::tusize::bytes $tmp
+} -result 12
+
+test tusize-bytes-3 {missing path} -body {
+    catch {::tclutils::tusize::bytes /no/such/path/xyz} e
+    string match {no such path:*} $e
+} -result 1
+
+test tusize-human-1 {binary KiB} -body {::tclutils::tusize::human 1536} -result {1.5 KiB}
+test tusize-human-2 {si kB}      -body {::tclutils::tusize::human 1500 -si 1} -result {1.5 kB}
+test tusize-human-3 {bytes}      -body {::tclutils::tusize::human 500} -result {500 B}
+test tusize-human-4 {GiB}        -body {::tclutils::tusize::human 5368709120} -result {5.0 GiB}
+test tusize-human-5 {non-integer rejected} -body {
+    catch {::tclutils::tusize::human 1.5} e
+    set e
+} -result {byte count must be an integer}
+
+test tusize-entries-1 {immediate children with sizes, sorted} -setup {
+    set tmp [makeDirectory tusz3]
+    file mkdir [file join $tmp sub]
+    writeBytes [file join $tmp a.txt] "aaaa"
+    writeBytes [file join $tmp sub b.txt] "bbbbbbbb"
+} -body {
+    set e [::tclutils::tusize::entries $tmp]
+    list [llength $e] [lindex [lindex $e 0] 0] [file tail [lindex [lindex $e 0] 1]] \
+                      [lindex [lindex $e 1] 0] [file tail [lindex [lindex $e 1] 1]]
+} -result {2 4 a.txt 8 sub}
+
+test tusize-entries-2 {not a directory} -body {
+    catch {::tclutils::tusize::entries [info script]} e
+    string match {not a directory:*} $e
+} -result 1
+
+cleanupTests
