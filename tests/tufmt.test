@@ -1,0 +1,35 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tufmt 0.1
+
+test tufmt-1.1 {greedy wrap to width} -body {
+    ::tclutils::tufmt::reflow "the quick brown fox jumps" -width 10
+} -result "the quick\nbrown fox\njumps"
+
+test tufmt-1.2 {collapse inner whitespace and joins wrapped lines} -body {
+    ::tclutils::tufmt::reflow "a   b\nc" -width 80
+} -result "a b c"
+
+test tufmt-2.1 {paragraphs separated by blank line survive} -body {
+    ::tclutils::tufmt::reflow "para one here\n\npara two here" -width 80
+} -result "para one here\n\npara two here"
+
+test tufmt-2.2 {multiple blank lines collapse to one} -body {
+    ::tclutils::tufmt::reflow "one\n\n\n\ntwo" -width 80
+} -result "one\n\ntwo"
+
+test tufmt-3.1 {leading indent is preserved per line} -body {
+    ::tclutils::tufmt::reflow "    indented words here" -width 12
+} -result "    indented\n    words\n    here"
+
+test tufmt-4.1 {empty input} -body { ::tclutils::tufmt::reflow "" } -result ""
+
+test tufmt-4.2 {width must be positive} -body {
+    catch {::tclutils::tufmt::reflow "x" -width 0} e o
+    dict get $o -errorcode
+} -result {TCLUTILS COMMON INTEGER -width}
+
+cleanupTests

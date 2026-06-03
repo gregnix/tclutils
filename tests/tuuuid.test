@@ -1,0 +1,48 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuuuid 0.1
+
+test tuuuid-1.1 {nil is valid} -body {
+    ::tclutils::tuuuid::validate [::tclutils::tuuuid::nil]
+} -result 1
+test tuuuid-1.2 {validate rejects garbage} -body {
+    ::tclutils::tuuuid::validate "not-a-uuid"
+} -result 0
+
+test tuuuid-2.1 {version of a v4 literal} -body {
+    ::tclutils::tuuuid::version "550e8400-e29b-41d4-a716-446655440000"
+} -result 4
+test tuuuid-2.2 {version of a v7 literal} -body {
+    ::tclutils::tuuuid::version "017f22e2-79b0-7cc3-98c4-dc0c0c07398f"
+} -result 7
+test tuuuid-2.3 {version of invalid errors} -body {
+    catch {::tclutils::tuuuid::version "xxx"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUUUID INVALID}
+
+test tuuuid-3.1 {generate v4 is valid and version 4} -body {
+    set u [::tclutils::tuuuid::generate]
+    list [::tclutils::tuuuid::validate $u] [::tclutils::tuuuid::version $u]
+} -result {1 4}
+test tuuuid-3.2 {generate v7 is valid and version 7} -body {
+    set u [::tclutils::tuuuid::generate -version 7]
+    list [::tclutils::tuuuid::validate $u] [::tclutils::tuuuid::version $u]
+} -result {1 7}
+test tuuuid-3.3 {bad version errors} -body {
+    catch {::tclutils::tuuuid::generate -version 5} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUUUID VERSION}
+test tuuuid-3.4 {generated UUIDs are unique} -body {
+    expr {[::tclutils::tuuuid::v4] ne [::tclutils::tuuuid::v4]}
+} -result 1
+test tuuuid-3.5 {v7 values increase with time} -body {
+    set a [::tclutils::tuuuid::v7]
+    after 5
+    set b [::tclutils::tuuuid::v7]
+    expr {$a < $b}
+} -result 1
+
+cleanupTests

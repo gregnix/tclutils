@@ -30,6 +30,7 @@ This file maps common Unix commands to the corresponding `tclutils` modules.
 | csplit | `tclutils::tucsplit` | implemented |
 | comm | `tclutils::tucomm` | implemented |
 | fold | `tclutils::tufold` | implemented |
+| fmt | `tclutils::tufmt` | implemented |
 | nl | `tclutils::tunl` | implemented |
 | seq | `tclutils::tuseq` | implemented |
 | rev | `tclutils::turev` | implemented |
@@ -40,9 +41,12 @@ This file maps common Unix commands to the corresponding `tclutils` modules.
 | pr | `tclutils::tupr` | implemented basis |
 | tsort | `tclutils::tutsort` | implemented |
 | numfmt | `tclutils::tunumfmt` | implemented SI and IEC |
+| date | `tclutils::tudate` | implemented subset (parse/format/arithmetic) |
+| uuidgen | `tclutils::tuuuid` | implemented (util-linux tool; v4/v7) |
 | stat | `tclutils::tustat` | implemented basis |
 | tr | `tclutils::tutr` | implemented basis |
 | base64 | `tclutils::tubase64` | implemented basis |
+| base32 | `tclutils::tubase32` | implemented (incl. base32hex) |
 | cksum | `tclutils::tucrc` | implemented basis |
 | md5sum | `tclutils::tuhash` | implemented |
 | sha256sum | `tclutils::tuhash` | implemented |

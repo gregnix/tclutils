@@ -24,6 +24,7 @@ full GNU or format-standard replacements.
 | `tucomm` | basis complete | Three-way comparison of sorted line sets. |
 | `tufold` | basis complete | Width-based folding for text. |
 | `tutr` | subset | Translate/delete/squeeze helpers; no POSIX character classes yet. |
+| `tufmt` | filter | `fmt`-like paragraph reflow to a width; collapses whitespace, keeps per-paragraph indent. |
 
 ## Compare and patch
 
@@ -46,6 +47,7 @@ full GNU or format-standard replacements.
 | `tuiconv` | subset | Tcl encoding conversion helper; not full iconv clone. |
 | `tubase64` / `tucrc` | basis complete | Thin wrappers over Tcl core binary/zlib facilities. |
 | `tuhash` | basis complete | Pure-Tcl SHA-256, SHA-1, MD5 (string and file); verified against standard vectors. |
+| `tubase32` | basis complete | RFC 4648 base32 and base32hex encode/decode (pure Tcl; core has only base64). |
 
 ## Data, stream, and filesystem
 
@@ -83,6 +85,14 @@ full GNU or format-standard replacements.
 | `tupr` | filter | `pr`-like page formatting with a date/title/page header and optional line numbering. |
 | `tutsort` | algorithm | `tsort`-like topological sort of token pairs; stable first-seen order; detects cycles and odd input. |
 | `tunumfmt` | filter | `numfmt`-like human-readable number formatting (SI/IEC) and parsing back; line-wise text mode. |
+
+## Date, web, and identifiers
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tudate` | helper | Flexible date parse/format/arithmetic on `clock`; ISO, day diff, relative phrases. Local time. |
+| `tuurl` | basis complete | RFC 3986 percent-encoding/decoding and query strings (UTF-8). |
+| `tuuuid` | basis complete | UUID v4 and v7 generate/validate/version; `/dev/urandom` with `rand()` fallback. |
 
 ## Highest-priority improvements
 

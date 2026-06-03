@@ -1,0 +1,35 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuurl 0.1
+
+test tuurl-1.1 {encode reserved} -body { ::tclutils::tuurl::encode "a b/c" } -result {a%20b%2Fc}
+test tuurl-1.2 {encode plus} -body { ::tclutils::tuurl::encode "a b" -plus 1 } -result {a+b}
+test tuurl-1.3 {unreserved pass through} -body {
+    ::tclutils::tuurl::encode "AZaz09-._~"
+} -result {AZaz09-._~}
+test tuurl-1.4 {utf-8 encode} -body { ::tclutils::tuurl::encode "\u00e4" } -result {%C3%A4}
+
+test tuurl-2.1 {decode} -body { ::tclutils::tuurl::decode "a%20b%2Fc" } -result {a b/c}
+test tuurl-2.2 {decode plus} -body { ::tclutils::tuurl::decode "a+b" -plus 1 } -result {a b}
+test tuurl-2.3 {utf-8 decode} -body { ::tclutils::tuurl::decode "%C3%A4" } -result "\u00e4"
+test tuurl-2.4 {roundtrip unicode} -body {
+    ::tclutils::tuurl::decode [::tclutils::tuurl::encode "\u00e4\u00f6\u00fc"]
+} -result "\u00e4\u00f6\u00fc"
+
+test tuurl-3.1 {buildQuery} -body {
+    ::tclutils::tuurl::buildQuery [dict create q "hello world" p 2]
+} -result {q=hello+world&p=2}
+test tuurl-3.2 {parseQuery values} -body {
+    set d [::tclutils::tuurl::parseQuery "q=hello+world&p=2"]
+    list [dict get $d q] [dict get $d p]
+} -result {{hello world} 2}
+test tuurl-3.3 {query roundtrip} -body {
+    set d [dict create name "a&b" city "M\u00fcnchen"]
+    set d2 [::tclutils::tuurl::parseQuery [::tclutils::tuurl::buildQuery $d]]
+    list [dict get $d2 name] [dict get $d2 city]
+} -result "a&b M\u00fcnchen"
+
+cleanupTests

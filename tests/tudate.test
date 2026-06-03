@@ -1,0 +1,63 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tudate 0.1
+
+test tudate-1.1 {parse ISO -> iso} -body {
+    ::tclutils::tudate::iso [::tclutils::tudate::parse "2024-03-15"]
+} -result 2024-03-15
+test tudate-1.2 {parse day-first dotted} -body {
+    ::tclutils::tudate::iso [::tclutils::tudate::parse "15.03.2024"]
+} -result 2024-03-15
+test tudate-1.3 {parse datetime, iso -time} -body {
+    ::tclutils::tudate::iso [::tclutils::tudate::parse "2024-03-15T13:45:00"] -time 1
+} -result 2024-03-15T13:45:00
+test tudate-1.4 {parse with explicit -format} -body {
+    ::tclutils::tudate::iso [::tclutils::tudate::parse "03/2024/15" -format "%m/%Y/%d"]
+} -result 2024-03-15
+test tudate-1.5 {parse garbage errors} -body {
+    catch {::tclutils::tudate::parse "not a date!!"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDATE PARSE}
+
+test tudate-2.1 {add days} -body {
+    ::tclutils::tudate::iso [::tclutils::tudate::add [::tclutils::tudate::parse "2024-03-15"] 10 days]
+} -result 2024-03-25
+test tudate-2.2 {add years} -body {
+    ::tclutils::tudate::iso [::tclutils::tudate::add [::tclutils::tudate::parse "2024-03-15"] 1 year]
+} -result 2025-03-15
+test tudate-2.3 {add singular unit form} -body {
+    ::tclutils::tudate::iso [::tclutils::tudate::add [::tclutils::tudate::parse "2024-03-15"] -1 day]
+} -result 2024-03-14
+test tudate-2.4 {bad unit errors} -body {
+    catch {::tclutils::tudate::add 0 1 fortnights} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDATE UNIT}
+
+test tudate-3.1 {diff days} -body {
+    ::tclutils::tudate::diff [::tclutils::tudate::parse "2024-03-20"] [::tclutils::tudate::parse "2024-03-15"]
+} -result 5
+test tudate-3.2 {diff hours} -body {
+    ::tclutils::tudate::diff [::tclutils::tudate::parse "2024-03-20"] [::tclutils::tudate::parse "2024-03-15"] -unit hours
+} -result 120
+
+test tudate-4.1 {relative today/tomorrow/yesterday} -body {
+    set b [::tclutils::tudate::parse "2024-03-15"]
+    list \
+        [::tclutils::tudate::relative [::tclutils::tudate::parse "2024-03-15"] -base $b] \
+        [::tclutils::tudate::relative [::tclutils::tudate::parse "2024-03-16"] -base $b] \
+        [::tclutils::tudate::relative [::tclutils::tudate::parse "2024-03-14"] -base $b]
+} -result {today tomorrow yesterday}
+test tudate-4.2 {relative N days} -body {
+    set b [::tclutils::tudate::parse "2024-03-15"]
+    list \
+        [::tclutils::tudate::relative [::tclutils::tudate::parse "2024-03-20"] -base $b] \
+        [::tclutils::tudate::relative [::tclutils::tudate::parse "2024-03-10"] -base $b]
+} -result {{in 5 days} {5 days ago}}
+test tudate-5.1 {today matches clock} -body {
+    expr {[::tclutils::tudate::today] eq [clock format [clock seconds] -format %Y-%m-%d]}
+} -result 1
+
+cleanupTests

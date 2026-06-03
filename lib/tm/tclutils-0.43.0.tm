@@ -64,4 +64,9 @@ package require tclutils::tuvcard 0.1
 package require tclutils::tuhash 0.1
 package require tclutils::tupath 0.1
 package require tclutils::tusize 0.1
-package provide tclutils 0.41.0
+package require tclutils::tubase32 0.1
+package require tclutils::tuuuid 0.1
+package require tclutils::tufmt 0.1
+package require tclutils::tudate 0.1
+package require tclutils::tuurl 0.1
+package provide tclutils 0.43.0

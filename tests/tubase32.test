@@ -1,0 +1,42 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tubase32 0.1
+
+# RFC 4648 test vectors
+test tubase32-1.1 {encode empty} -body { ::tclutils::tubase32::encode "" } -result ""
+test tubase32-1.2 {encode f}      -body { ::tclutils::tubase32::encode "f" } -result MY======
+test tubase32-1.3 {encode fo}     -body { ::tclutils::tubase32::encode "fo" } -result MZXQ====
+test tubase32-1.4 {encode foo}    -body { ::tclutils::tubase32::encode "foo" } -result MZXW6===
+test tubase32-1.5 {encode foob}   -body { ::tclutils::tubase32::encode "foob" } -result MZXW6YQ=
+test tubase32-1.6 {encode fooba}  -body { ::tclutils::tubase32::encode "fooba" } -result MZXW6YTB
+test tubase32-1.7 {encode foobar} -body { ::tclutils::tubase32::encode "foobar" } -result MZXW6YTBOI======
+
+test tubase32-2.1 {decode foobar} -body { ::tclutils::tubase32::decode "MZXW6YTBOI======" } -result foobar
+test tubase32-2.2 {decode ignores case and whitespace} -body {
+    ::tclutils::tubase32::decode "mzxw6 ytboi"
+} -result foobar
+test tubase32-2.3 {invalid char errors} -body {
+    catch {::tclutils::tubase32::decode "!!!"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUBASE32 CHAR}
+
+test tubase32-3.1 {-pad 0 omits padding} -body {
+    ::tclutils::tubase32::encode "foo" -pad 0
+} -result MZXW6
+
+test tubase32-4.1 {base32hex encode} -body {
+    ::tclutils::tubase32::encode "foobar" -hex 1
+} -result CPNMUOJ1E8======
+test tubase32-4.2 {base32hex roundtrip} -body {
+    ::tclutils::tubase32::decode [::tclutils::tubase32::encode "foobar" -hex 1] -hex 1
+} -result foobar
+
+test tubase32-5.1 {binary roundtrip} -body {
+    set data [binary format c* {0 1 2 253 254 255 127 128}]
+    expr {[::tclutils::tubase32::decode [::tclutils::tubase32::encode $data]] eq $data}
+} -result 1
+
+cleanupTests
