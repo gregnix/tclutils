@@ -1,0 +1,7 @@
+.TH tustr n 0.50.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tustr \- string helper procedures
+.SH SYNOPSIS
+package require tclutils::tustr
+.SH DESCRIPTION
+See docs/tustr.md.

@@ -1,0 +1,7 @@
+.TH tulist n 0.51.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tulist \- functional list helpers
+.SH SYNOPSIS
+package require tclutils::tulist
+.SH DESCRIPTION
+See docs/tulist.md.

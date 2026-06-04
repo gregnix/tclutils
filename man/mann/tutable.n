@@ -1,0 +1,7 @@
+.TH tutable n 0.52.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tutable \- text table renderer
+.SH SYNOPSIS
+package require tclutils::tutable
+.SH DESCRIPTION
+See docs/tutable.md.

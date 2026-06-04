@@ -1,0 +1,33 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tudict 0.1
+namespace import ::tclutils::tudict::*
+
+set CFG {server {host localhost port 5232} debug 0}
+
+test tudict-getor-1 {nested get with default} -body {
+    list [getOr $CFG "" server host] [getOr $CFG 80 server timeout] [getOr $CFG ? missing]
+} -result {localhost 80 ?}
+test tudict-getor-2 {no keys errors} -body {
+    catch {getOr $CFG x} e o; dict get $o -errorcode
+} -result {TCLUTILS TUDICT ARG}
+test tudict-paths-1 {leaf paths} -body {
+    lsort [paths {a {b {c 1} d 2} e 3}]
+} -result {{a b c} {a d} e}
+test tudict-flatten-1 {dotted flatten} -body {
+    flatten {a {b {c 1}} x 2}
+} -result {a.b.c 1 x 2}
+test tudict-flatten-2 {custom separator} -body {
+    flatten {a {b 1}} /
+} -result {a/b 1}
+test tudict-merge-1 {deep merge overrides scalars, merges subdicts} -body {
+    set d [mergeDeep {a {x 1 y 2} b 9} {a {y 20 z 3} c 7}]
+    list [dict get $d a x] [dict get $d a y] [dict get $d a z] [dict get $d b] [dict get $d c]
+} -result {1 20 3 9 7}
+test tudict-invert-1 {invert} -body {
+    dict get [invert {a 1 b 2}] 2
+} -result b
+
+cleanupTests

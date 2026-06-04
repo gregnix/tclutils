@@ -1,4 +1,4 @@
-# tclutils 0.49.0
+# tclutils 0.52.0
 
 `tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
 text filters, data-format parsers/encoders, binary and checksum helpers, and a
@@ -14,7 +14,7 @@ Put the library's module directory on the Tcl module path, then require the
 umbrella package (loads all core modules) or a single module:
 
 ```tcl
-::tcl::tm::path add /path/to/tclutils-0.49.0/lib/tm
+::tcl::tm::path add /path/to/tclutils-0.52.0/lib/tm
 package require tclutils          ;# umbrella: all core modules
 package require tclutils::tucsv    ;# or just one module
 ```
@@ -39,6 +39,9 @@ the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping
 | Date / web / IDs | `tudate` `tuurl` `tuuuid` `tudav` |
 | Calendar / recurrence | `tuical` `turrule` `tuholiday` `tucal` |
 | Events / registry | `tuevent` `turegistry` `tulog` |
+| Strings / validation | `tustr` `tuvalidate` |
+| Lists / dicts | `tulist` `tudict` |
+| Math / tables | `tumath` `tutable` |
 | Archive | `tuzip` `tuzipfs` |
 | Core | `common` |
 

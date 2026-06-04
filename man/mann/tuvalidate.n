@@ -1,0 +1,7 @@
+.TH tuvalidate n 0.50.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tuvalidate \- format/type validation predicates
+.SH SYNOPSIS
+package require tclutils::tuvalidate
+.SH DESCRIPTION
+See docs/tuvalidate.md.

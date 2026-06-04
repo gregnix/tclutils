@@ -79,4 +79,10 @@ package require tclutils::tubookmark 0.1
 package require tclutils::tulog 0.1
 package require tclutils::tuimage 0.1
 package require tclutils::tupng 0.1
-package provide tclutils 0.49.0
+package require tclutils::tustr 0.1
+package require tclutils::tuvalidate 0.1
+package require tclutils::tulist 0.1
+package require tclutils::tudict 0.1
+package require tclutils::tumath 0.1
+package require tclutils::tutable 0.1
+package provide tclutils 0.52.0

@@ -1,0 +1,40 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tustr 0.1
+namespace import ::tclutils::tustr::*
+
+test tustr-empty-1 {isEmpty} -body { list [isEmpty ""] [isEmpty x] } -result {1 0}
+test tustr-truncate-1 {truncate} -body {
+    list [truncate "hello" 10] [truncate "hello world" 8] [truncate "hello world" 8 ">"]
+} -result {hello hello... {hello w>}}
+test tustr-truncate-2 {bad maxlen} -body {
+    catch {truncate x -1} e o; dict get $o -errorcode
+} -result {TCLUTILS TUSTR ARG}
+test tustr-pad-1 {pad/center} -body {
+    list [padLeft 7 4 0] [padRight ab 4 .] [center x 5 -]
+} -result {0007 ab.. --x--}
+test tustr-affix-1 {starts/ends/remove} -body {
+    list [startsWith foobar foo] [startsWith foobar bar] \
+         [endsWith foobar bar] [endsWith ab abcd] \
+         [removePrefix foobar foo] [removeSuffix foobar bar]
+} -result {1 0 1 0 bar foo}
+test tustr-splittrim-1 {splitTrim drops empties} -body {
+    splitTrim " a , b ,, c " ,
+} -result {a b c}
+test tustr-camel-1 {toCamel} -body {
+    list [toCamel "my-cool_var name"] [toCamel ""]
+} -result {myCoolVarName {}}
+test tustr-snake-1 {toSnake} -body {
+    list [toSnake myCoolVar] [toSnake "My Cool-Var"]
+} -result {my_cool_var my_cool_var}
+test tustr-slug-1 {slugify} -body {
+    list [slugify "Hello, World!"] [slugify "  --x--  "]
+} -result {hello-world x}
+test tustr-cap-1 {capitalize} -body { list [capitalize hello] [capitalize ""] } -result {Hello {}}
+test tustr-count-1 {count non-overlapping} -body {
+    list [count "abababa" "ab"] [count aaaa aa] [count x ""]
+} -result {3 2 0}
+
+cleanupTests

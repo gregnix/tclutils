@@ -1,0 +1,7 @@
+.TH tumath n 0.52.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tumath \- small numeric helpers
+.SH SYNOPSIS
+package require tclutils::tumath
+.SH DESCRIPTION
+See docs/tumath.md.

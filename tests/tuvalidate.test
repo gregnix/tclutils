@@ -1,0 +1,51 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuvalidate 0.1
+
+test tuvalidate-email-1 {valid emails} -body {
+    list [::tclutils::tuvalidate::email a.b+c@example.co.uk] \
+         [::tclutils::tuvalidate::email "no-at-sign"] \
+         [::tclutils::tuvalidate::email "x@y"]
+} -result {1 0 0}
+test tuvalidate-url-1 {valid urls} -body {
+    list [::tclutils::tuvalidate::url https://a.com/x?y=1] \
+         [::tclutils::tuvalidate::url ftp://a.com] \
+         [::tclutils::tuvalidate::url "http://"]
+} -result {1 0 0}
+test tuvalidate-ipv4-1 {ipv4 range checks} -body {
+    list [::tclutils::tuvalidate::ipv4 10.0.0.1] \
+         [::tclutils::tuvalidate::ipv4 10.0.0.256] \
+         [::tclutils::tuvalidate::ipv4 1.2.3] \
+         [::tclutils::tuvalidate::ipv4 a.b.c.d]
+} -result {1 0 0 0}
+test tuvalidate-port-1 {port range} -body {
+    list [::tclutils::tuvalidate::port 80] [::tclutils::tuvalidate::port 0] \
+         [::tclutils::tuvalidate::port 65535] [::tclutils::tuvalidate::port 70000]
+} -result {1 0 1 0}
+test tuvalidate-alpha-1 {alpha/alnum} -body {
+    list [::tclutils::tuvalidate::alpha abcXYZ] [::tclutils::tuvalidate::alpha ab3] \
+         [::tclutils::tuvalidate::alnum ab3] [::tclutils::tuvalidate::alnum "a b"]
+} -result {1 0 1 0}
+test tuvalidate-num-1 {numeric/integer} -body {
+    list [::tclutils::tuvalidate::numeric 3.14] [::tclutils::tuvalidate::integer 3.14] \
+         [::tclutils::tuvalidate::integer -7]
+} -result {1 0 1}
+test tuvalidate-length-1 {length within bounds} -body {
+    list [::tclutils::tuvalidate::length abc 1 5] [::tclutils::tuvalidate::length abcdef 1 5]
+} -result {1 0}
+test tuvalidate-length-2 {bad bound errors} -body {
+    catch {::tclutils::tuvalidate::length abc x 5} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUVALIDATE ARG}
+test tuvalidate-pattern-1 {pattern match + bad regex} -body {
+    set a [::tclutils::tuvalidate::pattern foo123 {^[a-z]+[0-9]+$}]
+    catch {::tclutils::tuvalidate::pattern x {[}} e o
+    list $a [dict get $o -errorcode]
+} -result {1 {TCLUTILS TUVALIDATE REGEX}}
+test tuvalidate-inlist-1 {membership} -body {
+    list [::tclutils::tuvalidate::inList b {a b c}] [::tclutils::tuvalidate::inList z {a b c}]
+} -result {1 0}
+
+cleanupTests

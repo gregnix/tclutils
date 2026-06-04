@@ -1,0 +1,29 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tumath 0.1
+namespace import ::tclutils::tumath::*
+
+test tumath-clamp-1 {clamp} -body { list [clamp -1 0 10] [clamp 5 0 10] [clamp 99 0 10] } -result {0 5 10}
+test tumath-clamp-2 {clamp lo>hi errors} -body {
+    catch {clamp 1 10 0} e o; dict get $o -errorcode
+} -result {TCLUTILS TUMATH ARG}
+test tumath-inrange-1 {inRange} -body { list [inRange 5 1 10] [inRange 0 1 10] [inRange 10 1 10] } -result {1 0 1}
+test tumath-percent-1 {percent} -body { percent 30 200 } -result 15.0
+test tumath-percent-2 {percent div zero} -body {
+    catch {percent 1 0} e o; dict get $o -errorcode
+} -result {TCLUTILS TUMATH DIVZERO}
+test tumath-sign-1 {sign} -body { list [sign 5] [sign -5] [sign 0] } -result {1 -1 0}
+test tumath-gcd-1 {gcd} -body { list [gcd 24 36] [gcd -12 8] [gcd 7 0] } -result {12 4 7}
+test tumath-gcd-2 {gcd needs ints} -body {
+    catch {gcd 1.5 2} e o; dict get $o -errorcode
+} -result {TCLUTILS TUMATH ARG}
+test tumath-lcm-1 {lcm} -body { list [lcm 4 6] [lcm 0 5] } -result {12 0}
+test tumath-fact-1 {factorial} -body { list [factorial 0] [factorial 5] } -result {1 120}
+test tumath-fact-2 {factorial negative errors} -body {
+    catch {factorial -1} e o; dict get $o -errorcode
+} -result {TCLUTILS TUMATH ARG}
+test tumath-round-1 {roundTo} -body { list [roundTo 3.14159 2] [roundTo 2.5 0] } -result {3.14 3.0}
+
+cleanupTests

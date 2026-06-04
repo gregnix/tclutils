@@ -1,0 +1,7 @@
+.TH tudict n 0.51.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tudict \- nested dict helpers
+.SH SYNOPSIS
+package require tclutils::tudict
+.SH DESCRIPTION
+See docs/tudict.md.

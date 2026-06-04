@@ -44,6 +44,12 @@ full GNU or format-standard replacements.
 | `tuhexdump` / `tuod` | subset | Practical dump helpers; not full hexdump/od format language. |
 | `tuhexedit` | helper | Read/write/search/patch/dump helpers; GUI is separate future work. |
 | `tustrings` | basis complete | ASCII string extraction from binary data. |
+| `tustr` | helper | String helpers: case conversion (camel/snake), slugify, pad/center/truncate, prefix/suffix, splitTrim, count. |
+| `tuvalidate` | helper | Format/type validation predicates: email/url/ipv4/port/alpha/alnum/length/pattern/inList. |
+| `tulist` | helper | Functional list helpers: unique/flatten/chunk/zip/sum/avg/min/max/reduce/map/filter/all/any/take/drop. |
+| `tudict` | helper | Nested-dict helpers beyond core: getOr/paths/flatten/mergeDeep/invert. |
+| `tumath` | helper | Numeric helpers beyond core expr: clamp/inRange/percent/sign/gcd/lcm/factorial/roundTo. |
+| `tutable` | helper | Render markdown / ASCII-box text tables from headers+rows, with alignment. |
 | `tuiconv` | subset | Tcl encoding conversion helper; not full iconv clone. |
 | `tubase64` / `tucrc` | basis complete | Thin wrappers over Tcl core binary/zlib facilities. |
 | `tuhash` | basis complete | Pure-Tcl SHA-256, SHA-1, MD5 (string and file); verified against standard vectors. |

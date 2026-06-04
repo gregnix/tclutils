@@ -1,0 +1,45 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tutable 0.1
+
+test tutable-md-1 {markdown default} -body {
+    ::tclutils::tutable::render {Name Age} {{Alice 30} {Bob 7}}
+} -result {| Name  | Age |
+| :---- | :-- |
+| Alice | 30  |
+| Bob   | 7   |}
+
+test tutable-md-2 {right alignment markers and padding} -body {
+    ::tclutils::tutable::render {Item Qty} {{Apples 12} {Pears 3}} -align {l r}
+} -result {| Item   | Qty |
+| :----- | --: |
+| Apples |  12 |
+| Pears  |   3 |}
+
+test tutable-box-1 {ascii box style} -body {
+    ::tclutils::tutable::render {A B} {{x 1} {yy 22}} -style box
+} -result {+----+----+
+| A  | B  |
++----+----+
+| x  | 1  |
+| yy | 22 |
++----+----+}
+
+test tutable-ragged-1 {missing cells render empty} -body {
+    ::tclutils::tutable::render {A B C} {{1 2}}
+} -result {| A | B | C |
+| :-- | :-- | :-- |
+| 1 | 2 |   |}
+
+test tutable-opt-1 {bad style errors} -body {
+    catch {::tclutils::tutable::render {A} {{1}} -style fancy} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTABLE OPT}
+test tutable-opt-2 {bad alignment errors} -body {
+    catch {::tclutils::tutable::render {A} {{1}} -align {x}} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTABLE OPT}
+
+cleanupTests

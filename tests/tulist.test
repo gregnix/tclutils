@@ -1,0 +1,41 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tulist 0.1
+namespace import ::tclutils::tulist::*
+
+test tulist-unique-1 {order-preserving unique} -body { unique {a b a c b a} } -result {a b c}
+test tulist-flatten-1 {flatten one level / depth} -body {
+    list [flatten {{1 2} {3 4} 5}] [flatten {{1 {2 3}} {4}} 2]
+} -result {{1 2 3 4 5} {1 2 3 4}}
+test tulist-chunk-1 {chunk} -body { chunk {1 2 3 4 5} 2 } -result {{1 2} {3 4} 5}
+test tulist-chunk-2 {bad size} -body {
+    catch {chunk {1 2} 0} e o; dict get $o -errorcode
+} -result {TCLUTILS TULIST SIZE}
+test tulist-zip-1 {zip stops at shortest} -body { zip {a b c} {1 2} } -result {{a 1} {b 2}}
+test tulist-num-1 {sum/avg/min/max} -body {
+    set l {3 1 4 1 5}
+    list [sum $l] [avg $l] [min $l] [max $l]
+} -result {14 2.8 1 5}
+test tulist-empty-1 {avg empty errors} -body {
+    catch {avg {}} e o; dict get $o -errorcode
+} -result {TCLUTILS TULIST EMPTY}
+test tulist-reduce-1 {reduce with mathop} -body {
+    reduce {1 2 3 4} 0 ::tcl::mathop::+
+} -result 10
+test tulist-map-1 {map with callback} -body {
+    map {1 2 3} {apply {{x} {expr {$x * $x}}}}
+} -result {1 4 9}
+test tulist-filter-1 {filter with callback} -body {
+    filter {1 2 3 4 5 6} {apply {{x} {expr {$x % 2 == 0}}}}
+} -result {2 4 6}
+test tulist-allany-1 {all / any} -body {
+    set even {apply {{x} {expr {$x % 2 == 0}}}}
+    list [all {2 4 6} $even] [all {2 3} $even] [any {1 3 4} $even] [any {1 3 5} $even]
+} -result {1 0 1 0}
+test tulist-takedrop-1 {take / drop} -body {
+    list [take {a b c d} 2] [drop {a b c d} 2] [take {a b} 0] [drop {a b} 5]
+} -result {{a b} {c d} {} {}}
+
+cleanupTests
