@@ -1,0 +1,9 @@
+.TH tuholiday n 0.45.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tuholiday \- Easter computus and public holidays
+.SH SYNOPSIS
+package require tclutils::tuholiday
+.SH DESCRIPTION
+See docs/tuholiday.md.
+.SH KEYWORDS
+holiday, easter, computus, calendar

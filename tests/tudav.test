@@ -1,0 +1,290 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tudav 0.1
+
+# ---- pure helpers ----
+test tudav-1.1 {basic auth header} -body {
+    ::tclutils::tudav::_basicAuth u p
+} -result {Basic dTpw}
+
+test tudav-2.1 {resolve relative against dir base} -body {
+    ::tclutils::tudav::_resolve http://h/a/b/ x.vcf
+} -result http://h/a/b/x.vcf
+test tudav-2.2 {resolve absolute-path href} -body {
+    ::tclutils::tudav::_resolve http://h/a/b/ /c/d.vcf
+} -result http://h/c/d.vcf
+test tudav-2.3 {resolve full url href} -body {
+    ::tclutils::tudav::_resolve http://h/a/b/ http://o/z
+} -result http://o/z
+test tudav-2.4 {resolve relative against file base} -body {
+    ::tclutils::tudav::_resolve http://h/a/coll x.vcf
+} -result http://h/a/x.vcf
+test tudav-2.5 {resolve empty href targets base root} -body {
+    list [::tclutils::tudav::_resolve http://h:5232 ""] [::tclutils::tudav::_resolve http://h/radicale/ ""]
+} -result {http://h:5232/ http://h/radicale/}
+
+test tudav-3.1 {parse multistatus} -body {
+    set xml {<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/contacts/</D:href>
+    <D:propstat><D:prop><D:resourcetype><D:collection/></D:resourcetype></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status></D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/contacts/a.vcf</D:href>
+    <D:propstat><D:prop>
+      <D:getetag>"abc123"</D:getetag>
+      <D:getcontenttype>text/vcard</D:getcontenttype>
+    </D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat>
+  </D:response>
+</D:multistatus>}
+    set res [::tclutils::tudav::_parseMultistatus $xml]
+    list [llength $res] \
+         [dict get [lindex $res 0] collection] \
+         [dict get [lindex $res 1] href] \
+         [dict get [lindex $res 1] etag] \
+         [dict get [lindex $res 1] contenttype] \
+         [dict get [lindex $res 1] code] \
+         [dict get [lindex $res 1] collection]
+} -result {2 1 /contacts/a.vcf abc123 text/vcard 200 0}
+
+test tudav-3.2 {propfind body contains requested props} -body {
+    set b [::tclutils::tudav::_propfindBody {getetag getcontenttype}]
+    expr {[string match {*<D:propfind*} $b] && [string match {*<D:getetag/>*} $b] \
+        && [string match {*<D:getcontenttype/>*} $b]}
+} -result 1
+
+test tudav-3.3 {multistatus captures inline calendar-data} -body {
+    set xml {<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+      <d:response><d:href>/cal/x.ics</d:href><d:propstat><d:prop>
+        <d:getetag>"e9"</d:getetag>
+        <c:calendar-data>BEGIN:VCALENDAR&#13;
+END:VCALENDAR</c:calendar-data>
+      </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
+    </d:multistatus>}
+    set r [lindex [::tclutils::tudav::_parseMultistatus $xml] 0]
+    list [dict get $r etag] [string match {*BEGIN:VCALENDAR*} [dict get $r data]]
+} -result {e9 1}
+
+test tudav-3.4 {caldav time formatting} -body {
+    list [::tclutils::tudav::_caldavTime 2025-10-01T09:00:00]          [::tclutils::tudav::_caldavTime 2025-10-01]
+} -result {20251001T090000Z 20251001T000000Z}
+
+# ---- collection provisioning (stub _request to inspect what is sent) ----
+proc captureRequest {} {
+    rename ::tclutils::tudav::_request ::tclutils::tudav::_request_orig
+    proc ::tclutils::tudav::_request {c method path args} {
+        set ::cap [list $method $path $args]
+        return [dict create code {HTTP/1.1 201 Created} ncode 201 body ""]
+    }
+}
+proc restoreRequest {} {
+    rename ::tclutils::tudav::_request ""
+    rename ::tclutils::tudav::_request_orig ::tclutils::tudav::_request
+    unset -nocomplain ::cap
+}
+
+test tudav-4.1 {mkAddressbook -> extended MKCOL with carddav resourcetype} -setup {
+    captureRequest
+} -body {
+    ::tclutils::tudav::mkAddressbook c0 /alice/contacts/ -displayname Contacts
+    lassign $::cap m p a
+    set q [dict get $a -query]
+    list $m $p \
+        [string match {*urn:ietf:params:xml:ns:carddav*} $q] \
+        [string match {*<C:addressbook/>*} $q] \
+        [string match {*<D:displayname>Contacts</D:displayname>*} $q]
+} -cleanup { restoreRequest } -result {MKCOL /alice/contacts/ 1 1 1}
+
+test tudav-4.2 {mkCalendar -> MKCALENDAR with caldav body} -setup {
+    captureRequest
+} -body {
+    ::tclutils::tudav::mkCalendar c0 /alice/cal/ -displayname Cal
+    lassign $::cap m p a
+    set q [dict get $a -query]
+    list $m $p \
+        [string match {*<C:mkcalendar*urn:ietf:params:xml:ns:caldav*} $q] \
+        [string match {*<D:displayname>Cal</D:displayname>*} $q]
+} -cleanup { restoreRequest } -result {MKCALENDAR /alice/cal/ 1 1}
+
+test tudav-4.3 {mkCollection -> plain MKCOL, no caldav/carddav ns} -setup {
+    captureRequest
+} -body {
+    ::tclutils::tudav::mkCollection c0 /alice/files/
+    lassign $::cap m p a
+    set q [dict get $a -query]
+    list $m $p \
+        [string match {*<D:collection/>*} $q] \
+        [string match {*<C:*} $q]
+} -cleanup { restoreRequest } -result {MKCOL /alice/files/ 1 0}
+
+test tudav-3.5 {kind + displayname from resourcetype} -body {
+    set xml {<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:carddav">
+      <d:response><d:href>/alice/contacts/</d:href><d:propstat><d:prop>
+        <d:resourcetype><d:collection/><c:addressbook/></d:resourcetype>
+        <d:displayname>Contacts</d:displayname>
+      </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
+    </d:multistatus>}
+    set r [lindex [::tclutils::tudav::_parseMultistatus $xml] 0]
+    list [dict get $r kind] [dict get $r displayname] [dict get $r collection]
+} -result {addressbook Contacts 1}
+
+test tudav-5.1 {listCollections keeps sub-collections, drops self and resources} -setup {
+    rename ::tclutils::tudav::propfind ::tclutils::tudav::propfind_orig
+    proc ::tclutils::tudav::propfind {c args} {
+        return [list \
+            [dict create href /alice/          collection 1 kind collection  displayname ""] \
+            [dict create href /alice/contacts/ collection 1 kind addressbook displayname Contacts] \
+            [dict create href /alice/cal/      collection 1 kind calendar    displayname Cal] \
+            [dict create href /alice/contacts/a.vcf collection 0 kind "" displayname ""]]
+    }
+} -body {
+    set r [::tclutils::tudav::listCollections c0 -path /alice/]
+    list [llength $r] [dict get [lindex $r 0] kind] [dict get [lindex $r 0] displayname] \
+         [dict get [lindex $r 1] kind]
+} -cleanup {
+    rename ::tclutils::tudav::propfind ""
+    rename ::tclutils::tudav::propfind_orig ::tclutils::tudav::propfind
+} -result {2 addressbook Contacts calendar}
+
+test tudav-6.1 {put returns ETag from response headers} -setup {
+    rename ::tclutils::tudav::_request ::tclutils::tudav::_req6
+    proc ::tclutils::tudav::_request {c method path args} {
+        return [dict create code {HTTP/1.1 201 Created} ncode 201 body "" meta {ETag {"xyz"}}]
+    }
+} -body {
+    ::tclutils::tudav::put c0 /a.vcf DATA -type text/vcard
+} -cleanup {
+    rename ::tclutils::tudav::_request ""
+    rename ::tclutils::tudav::_req6 ::tclutils::tudav::_request
+} -result xyz
+
+test tudav-6.2 {calendarMultiget builds a caldav calendar-multiget body} -setup {
+    rename ::tclutils::tudav::_request ::tclutils::tudav::_req6
+    proc ::tclutils::tudav::_request {c method path args} {
+        set ::cap6 [list $method $args]
+        return [dict create code {HTTP/1.1 207 Multi-Status} ncode 207 meta {} \
+            body {<d:multistatus xmlns:d="DAV:"></d:multistatus>}]
+    }
+} -body {
+    ::tclutils::tudav::calendarMultiget c0 /cal/ {/cal/a.ics}
+    set q [dict get [lindex $::cap6 1] -query]
+    list [lindex $::cap6 0] \
+        [string match {*calendar-multiget*} $q] \
+        [string match {*urn:ietf:params:xml:ns:caldav*} $q] \
+        [string match {*/cal/a.ics*} $q]
+} -cleanup {
+    rename ::tclutils::tudav::_request ""
+    rename ::tclutils::tudav::_req6 ::tclutils::tudav::_request
+    unset -nocomplain ::cap6
+} -result {REPORT 1 1 1}
+
+test tudav-6.3 {syncCollection returns token and changes (200 + 404)} -setup {
+    rename ::tclutils::tudav::_request ::tclutils::tudav::_req6
+    proc ::tclutils::tudav::_request {c method path args} {
+        return [dict create code {HTTP/1.1 207 Multi-Status} ncode 207 meta {} body {<d:multistatus xmlns:d="DAV:">
+  <d:response><d:href>/c/a.ics</d:href><d:propstat><d:prop><d:getetag>"e1"</d:getetag></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
+  <d:response><d:href>/c/gone.ics</d:href><d:status>HTTP/1.1 404 Not Found</d:status></d:response>
+  <d:sync-token>http://radicale.org/ns/sync/42</d:sync-token>
+</d:multistatus>}]
+    }
+} -body {
+    set s [::tclutils::tudav::syncCollection c0 /c/ -token ""]
+    set ch [dict get $s changes]
+    list [dict get $s token] [llength $ch] \
+         [dict get [lindex $ch 0] code] [dict get [lindex $ch 0] etag] \
+         [dict get [lindex $ch 1] code]
+} -cleanup {
+    rename ::tclutils::tudav::_request ""
+    rename ::tclutils::tudav::_req6 ::tclutils::tudav::_request
+} -result {http://radicale.org/ns/sync/42 2 200 e1 404}
+
+test tudav-6.4 {_syncToken extracts the token} -body {
+    ::tclutils::tudav::_syncToken {<d:multistatus xmlns:d="DAV:"><d:sync-token>tok-99</d:sync-token></d:multistatus>}
+} -result tok-99
+
+test tudav-7.1 {_hrefIn extracts href from a named element} -body {
+    ::tclutils::tudav::_hrefIn {<d:multistatus xmlns:d="DAV:"><d:response><d:propstat><d:prop><d:current-user-principal><d:href>/alice/</d:href></d:current-user-principal></d:prop></d:propstat></d:response></d:multistatus>} current-user-principal
+} -result /alice/
+
+test tudav-7.2 {currentUserPrincipal} -setup {
+    rename ::tclutils::tudav::_request ::tclutils::tudav::_req7
+    proc ::tclutils::tudav::_request {c method path args} {
+        return [dict create code {HTTP/1.1 207 Multi-Status} ncode 207 meta {} body {<d:multistatus xmlns:d="DAV:"><d:response><d:propstat><d:prop><d:current-user-principal><d:href>/alice/</d:href></d:current-user-principal></d:prop></d:propstat></d:response></d:multistatus>}]
+    }
+} -body {
+    ::tclutils::tudav::currentUserPrincipal c0
+} -cleanup {
+    rename ::tclutils::tudav::_request ""
+    rename ::tclutils::tudav::_req7 ::tclutils::tudav::_request
+} -result /alice/
+
+test tudav-7.3 {calendarHomeSet} -setup {
+    rename ::tclutils::tudav::_request ::tclutils::tudav::_req7
+    proc ::tclutils::tudav::_request {c method path args} {
+        return [dict create code {HTTP/1.1 207 Multi-Status} ncode 207 meta {} body {<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:response><d:propstat><d:prop><c:calendar-home-set><d:href>/alice/</d:href></c:calendar-home-set></d:prop></d:propstat></d:response></d:multistatus>}]
+    }
+} -body {
+    ::tclutils::tudav::calendarHomeSet c0 /alice/
+} -cleanup {
+    rename ::tclutils::tudav::_request ""
+    rename ::tclutils::tudav::_req7 ::tclutils::tudav::_request
+} -result /alice/
+
+test tudav-7.4 {addressbookHomeSet} -setup {
+    rename ::tclutils::tudav::_request ::tclutils::tudav::_req7
+    proc ::tclutils::tudav::_request {c method path args} {
+        return [dict create code {HTTP/1.1 207 Multi-Status} ncode 207 meta {} body {<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:carddav"><d:response><d:propstat><d:prop><c:addressbook-home-set><d:href>/alice/</d:href></c:addressbook-home-set></d:prop></d:propstat></d:response></d:multistatus>}]
+    }
+} -body {
+    ::tclutils::tudav::addressbookHomeSet c0 /alice/
+} -cleanup {
+    rename ::tclutils::tudav::_request ""
+    rename ::tclutils::tudav::_req7 ::tclutils::tudav::_request
+} -result /alice/
+
+test tudav-8.1 {proppatch builds a propertyupdate body} -setup {
+    rename ::tclutils::tudav::_request ::tclutils::tudav::_req8
+    proc ::tclutils::tudav::_request {c method path args} {
+        set ::cap8 [list $method [dict get $args -query]]
+        return [dict create code {HTTP/1.1 207 Multi-Status} ncode 207 meta {} \
+            body {<d:multistatus xmlns:d="DAV:"></d:multistatus>}]
+    }
+} -body {
+    ::tclutils::tudav::proppatch c0 /alice/cal/ {displayname "My Cal" calendar-color "#ff0000ff"}
+    lassign $::cap8 m q
+    list $m \
+        [string match {*<D:propertyupdate*} $q] \
+        [string match {*<D:displayname>My Cal</D:displayname>*} $q] \
+        [string match {*<I:calendar-color>#ff0000ff</I:calendar-color>*} $q] \
+        [string match {*apple.com/ns/ical/*} $q]
+} -cleanup {
+    rename ::tclutils::tudav::_request ""
+    rename ::tclutils::tudav::_req8 ::tclutils::tudav::_request
+    unset -nocomplain ::cap8
+} -result {PROPPATCH 1 1 1 1}
+
+test tudav-8.2 {proppatch rejects the read-only component set} -body {
+    catch {::tclutils::tudav::proppatch c0 /x/ {supported-calendar-component-set VEVENT}} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDAV PROP}
+
+test tudav-8.3 {getProperties parses text values and the component set} -setup {
+    rename ::tclutils::tudav::_request ::tclutils::tudav::_req8
+    proc ::tclutils::tudav::_request {c method path args} {
+        return [dict create code {HTTP/1.1 207 Multi-Status} ncode 207 meta {} body {<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:i="http://apple.com/ns/ical/"><d:response><d:propstat><d:prop><d:displayname>Cal</d:displayname><i:calendar-color>#112233ff</i:calendar-color><c:calendar-description>desc</c:calendar-description><c:supported-calendar-component-set><c:comp name="VEVENT"/><c:comp name="VTODO"/></c:supported-calendar-component-set></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>}]
+    }
+} -body {
+    set p [::tclutils::tudav::getProperties c0 -path /alice/cal/ \
+        -props {displayname calendar-color calendar-description supported-calendar-component-set}]
+    list [dict get $p displayname] [dict get $p calendar-color] \
+         [dict get $p calendar-description] [dict get $p supported-calendar-component-set]
+} -cleanup {
+    rename ::tclutils::tudav::_request ""
+    rename ::tclutils::tudav::_req8 ::tclutils::tudav::_request
+} -result {Cal #112233ff desc {VEVENT VTODO}}
+
+cleanupTests

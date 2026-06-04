@@ -1,0 +1,9 @@
+.TH tupng n 0.49.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tupng \- pure-Tcl PNG encoder (indexed/RGB/RGBA/grayscale)
+.SH SYNOPSIS
+package require tclutils::tupng
+.SH DESCRIPTION
+See docs/tupng.md.
+.SH KEYWORDS
+png, image, encode, zlib, rgb, rgba, palette, grayscale

@@ -68,4 +68,49 @@ test tuical-2.1 {setProperty replaces or appends; removeProperty} -body {
          [llength [::tclutils::tuical::properties $ev]]
 } -result {B Room {} 1}
 
+# --- VTODO / VJOURNAL accessors ---
+set ::TUICAL_MIX "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:e1\r\nSUMMARY:Meeting\r\nDTSTART:20260101T100000Z\r\nDTEND:20260101T110000Z\r\nLOCATION:Room A\r\nEND:VEVENT\r\nBEGIN:VTODO\r\nUID:t1\r\nSUMMARY:Buy milk\\, bread\r\nSTATUS:NEEDS-ACTION\r\nPRIORITY:5\r\nPERCENT-COMPLETE:0\r\nDUE:20260102T000000Z\r\nEND:VTODO\r\nBEGIN:VJOURNAL\r\nUID:j1\r\nSUMMARY:Notes\r\nDESCRIPTION:Today\r\nEND:VJOURNAL\r\nEND:VCALENDAR\r\n"
+
+test tuical-todos-1 {todos finds VTODO} -body {
+    set c [::tclutils::tuical::parse $::TUICAL_MIX]
+    set t [::tclutils::tuical::todos $c]
+    list [llength $t] [::tclutils::tuical::property [lindex $t 0] UID]
+} -result {1 t1}
+
+test tuical-todos-2 {journals finds VJOURNAL; events unchanged} -body {
+    set c [::tclutils::tuical::parse $::TUICAL_MIX]
+    list [llength [::tclutils::tuical::journals $c]] [llength [::tclutils::tuical::events $c]]
+} -result {1 1}
+
+test tuical-todos-3 {todoInfo decodes fields and unescapes text} -body {
+    set c [::tclutils::tuical::parse $::TUICAL_MIX]
+    set i [::tclutils::tuical::todoInfo [lindex [::tclutils::tuical::todos $c] 0]]
+    list [dict get $i summary] [dict get $i status] [dict get $i percentComplete] [dict get $i due]
+} -result {{Buy milk, bread} NEEDS-ACTION 0 20260102T000000Z}
+
+test tuical-todos-4 {eventInfo decodes fields} -body {
+    set c [::tclutils::tuical::parse $::TUICAL_MIX]
+    set i [::tclutils::tuical::eventInfo [lindex [::tclutils::tuical::events $c] 0]]
+    list [dict get $i summary] [dict get $i location] [dict get $i dtend]
+} -result {Meeting {Room A} 20260101T110000Z}
+
+test tuical-todos-5 {journalInfo and missing fields default to ""} -body {
+    set c [::tclutils::tuical::parse $::TUICAL_MIX]
+    set i [::tclutils::tuical::journalInfo [lindex [::tclutils::tuical::journals $c] 0]]
+    list [dict get $i summary] [dict get $i categories]
+} -result {Notes {}}
+
+test tuical-todos-6 {newComponent builds a VTODO that round-trips} -body {
+    set todo [::tclutils::tuical::newComponent VTODO {UID x9 SUMMARY {Call Bob} STATUS COMPLETED}]
+    set ics [::tclutils::tuical::toIcs [list $todo]]
+    set back [lindex [::tclutils::tuical::todos [::tclutils::tuical::parse $ics]] 0]
+    set i [::tclutils::tuical::todoInfo $back]
+    list [dict get $i uid] [dict get $i summary] [dict get $i status]
+} -result {x9 {Call Bob} COMPLETED}
+
+test tuical-todos-7 {newComponent rejects odd props} -body {
+    catch {::tclutils::tuical::newComponent VTODO {UID}} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUICAL ARG}
+
 cleanupTests

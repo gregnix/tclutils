@@ -1,0 +1,9 @@
+.TH turrule n 0.45.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::turrule \- iCalendar RRULE recurrence expansion
+.SH SYNOPSIS
+package require tclutils::turrule
+.SH DESCRIPTION
+See docs/turrule.md.
+.SH KEYWORDS
+rrule, recurrence, ical, calendar

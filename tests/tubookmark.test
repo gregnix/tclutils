@@ -1,0 +1,71 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tubookmark 0.1
+
+set ::SAMPLE {<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+    <DT><A HREF="https://tcl.tk/" ADD_DATE="1700000000" TAGS="tcl,lang">Tcl &amp; Tk</A>
+    <DT><H3>Dev</H3>
+    <DL><p>
+        <DT><A HREF="https://core.tcl-lang.org/">Fossil</A>
+        <DT><H3>Docs</H3>
+        <DL><p>
+            <DT><A HREF="https://www.tcl-lang.org/man/">Manual</A>
+        </DL><p>
+    </DL><p>
+</DL><p>}
+
+test tubookmark-1.1 {parse count} -body {
+    llength [::tclutils::tubookmark::parse $::SAMPLE]
+} -result 3
+
+test tubookmark-1.2 {top-level bookmark: title entity, tags} -body {
+    set b [lindex [::tclutils::tubookmark::parse $::SAMPLE] 0]
+    list [dict get $b title] [dict get $b url] [dict get $b folder] [dict get $b tags] [dict get $b adddate]
+} -result {{Tcl & Tk} https://tcl.tk/ {} {tcl lang} 1700000000}
+
+test tubookmark-1.3 {nested folder path} -body {
+    set all [::tclutils::tubookmark::parse $::SAMPLE]
+    set manual [lindex $all end]
+    list [dict get $manual title] [dict get $manual folder]
+} -result {Manual Dev/Docs}
+
+test tubookmark-1.4 {mid folder} -body {
+    set all [::tclutils::tubookmark::parse $::SAMPLE]
+    set fossil [lindex $all 1]
+    list [dict get $fossil url] [dict get $fossil folder]
+} -result {https://core.tcl-lang.org/ Dev}
+
+test tubookmark-2.1 {serialize contains entries and folder} -body {
+    set bms [list \
+        [dict create title "A & B" url http://a.test folder "" tags {x} adddate ""] \
+        [dict create title Deep url http://b.test folder "Work/Sub" tags {} adddate ""]]
+    set html [::tclutils::tubookmark::serialize $bms]
+    list [string match {*HREF="http://a.test"*} $html] \
+         [string match {*TAGS="x"*} $html] \
+         [string match {*<H3>Work</H3>*} $html] \
+         [string match {*<H3>Sub</H3>*} $html] \
+         [string match {*A &amp; B*} $html]
+} -result {1 1 1 1 1}
+
+test tubookmark-3.1 {round-trip (normalized, sorted by url)} -body {
+    set bms [list \
+        [dict create title One url http://1.test folder "" tags {a b} adddate "111"] \
+        [dict create title Two url http://2.test folder "F1" tags {} adddate ""] \
+        [dict create title Three url http://3.test folder "F1/F2" tags {z} adddate ""]]
+    set rt [::tclutils::tubookmark::parse [::tclutils::tubookmark::serialize $bms]]
+    proc norm {lst} {
+        set o {}
+        foreach b $lst {
+            lappend o [list [dict get $b title] [dict get $b url] [dict get $b folder] [dict get $b tags]]
+        }
+        return [lsort -index 1 $o]
+    }
+    expr {[norm $rt] eq [norm $bms]}
+} -result 1
+
+cleanupTests

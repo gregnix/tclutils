@@ -1,0 +1,79 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tulog 0.1
+
+# capture output by logging to a temp file channel
+proc capture {level script} {
+    set ch [file tempfile path]
+    uplevel 1 [list set ::CH $ch]
+    uplevel 1 $script
+    flush $ch; seek $ch 0; set out [read $ch]; close $ch; file delete $path
+    return $out
+}
+
+test tulog-1.1 {info/warn emitted, debug suppressed at level info; format} -body {
+    capture info {
+        set log [::tclutils::tulog::new -channel $::CH -timestamp 0 -name app -level info]
+        $log debug "d"; $log info "i"; $log warn "w"; $log destroy
+    }
+} -result "\[INFO\] app: i\n\[WARN\] app: w\n"
+
+test tulog-1.2 {setLevel debug enables debug} -body {
+    capture debug {
+        set log [::tclutils::tulog::new -channel $::CH -timestamp 0 -level info]
+        $log setLevel debug
+        $log debug "x"
+        $log destroy
+    }
+} -result "\[DEBUG\]: x\n"
+
+test tulog-1.3 {error always shown; no name -> no name segment} -body {
+    capture e {
+        set log [::tclutils::tulog::new -channel $::CH -timestamp 0 -level error]
+        $log info "skip"; $log error "boom"; $log destroy
+    }
+} -result "\[ERROR\]: boom\n"
+
+test tulog-1.4 {log subcommand mirrors level methods} -body {
+    capture l {
+        set log [::tclutils::tulog::new -channel $::CH -timestamp 0 -name n -level debug]
+        $log log warn "via log"
+        $log destroy
+    }
+} -result "\[WARN\] n: via log\n"
+
+test tulog-2.1 {level query} -body {
+    set log [::tclutils::tulog::new -level warn]
+    set r [$log level]; $log destroy; set r
+} -result warn
+
+test tulog-2.2 {unknown level errors} -body {
+    catch {::tclutils::tulog::new -level verbose} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TULOG LEVEL}
+
+test tulog-2.3 {bad -timestamp errors via common} -body {
+    catch {::tclutils::tulog::new -timestamp maybe} e o
+    lrange [dict get $o -errorcode] 0 1
+} -result {TCLUTILS COMMON}
+
+test tulog-2.4 {destroy removes the command} -body {
+    set log [::tclutils::tulog::new]
+    $log destroy
+    expr {$log in [info commands $log]}
+} -result 0
+
+test tulog-3.1 {assert passes silently} -body {
+    set x 5
+    ::tclutils::tulog::assert {$x > 0}
+} -result {}
+
+test tulog-3.2 {assert fails with errorcode and sees caller scope} -body {
+    set x -1
+    catch {::tclutils::tulog::assert {$x > 0} "x must be positive"} e o
+    list [dict get $o -errorcode] $e
+} -result {{TCLUTILS TULOG ASSERT} {x must be positive}}
+
+cleanupTests

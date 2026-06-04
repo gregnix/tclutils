@@ -1,0 +1,63 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuevent 0.1
+
+test tuevent-1.1 {create returns distinct tokens} -body {
+    set a [::tclutils::tuevent::create]; set b [::tclutils::tuevent::create]
+    expr {$a ne $b}
+} -result 1
+test tuevent-1.2 {subscribe + emit calls handler with args; returns count} -body {
+    set bus [::tclutils::tuevent::create]
+    set ::got {}
+    ::tclutils::tuevent::subscribe $bus saved {apply {{id} {lappend ::got $id}}}
+    set n [::tclutils::tuevent::emit $bus saved 42]
+    list $n $::got
+} -result {1 42}
+test tuevent-1.3 {subscribe is idempotent per handler} -body {
+    set bus [::tclutils::tuevent::create]
+    set h {apply {{} {}}}
+    ::tclutils::tuevent::subscribe $bus e $h
+    ::tclutils::tuevent::subscribe $bus e $h
+    llength [::tclutils::tuevent::handlers $bus e]
+} -result 1
+test tuevent-1.4 {multiple handlers fire in order} -body {
+    set bus [::tclutils::tuevent::create]
+    set ::got {}
+    ::tclutils::tuevent::subscribe $bus e {apply {{} {lappend ::got A}}}
+    ::tclutils::tuevent::subscribe $bus e {apply {{} {lappend ::got B}}}
+    ::tclutils::tuevent::emit $bus e
+    set ::got
+} -result {A B}
+test tuevent-1.5 {unsubscribe removes} -body {
+    set bus [::tclutils::tuevent::create]
+    set h {apply {{} {}}}
+    ::tclutils::tuevent::subscribe $bus e $h
+    ::tclutils::tuevent::unsubscribe $bus e $h
+    ::tclutils::tuevent::handlers $bus e
+} -result {}
+test tuevent-1.6 {events lists subscribed events} -body {
+    set bus [::tclutils::tuevent::create]
+    ::tclutils::tuevent::subscribe $bus beta  {apply {{} {}}}
+    ::tclutils::tuevent::subscribe $bus alpha {apply {{} {}}}
+    ::tclutils::tuevent::events $bus
+} -result {alpha beta}
+test tuevent-1.7 {emit unknown event returns 0} -body {
+    set bus [::tclutils::tuevent::create]
+    ::tclutils::tuevent::emit $bus nope
+} -result 0
+test tuevent-1.8 {clear one event} -body {
+    set bus [::tclutils::tuevent::create]
+    ::tclutils::tuevent::subscribe $bus a {apply {{} {}}}
+    ::tclutils::tuevent::subscribe $bus b {apply {{} {}}}
+    ::tclutils::tuevent::clear $bus a
+    ::tclutils::tuevent::events $bus
+} -result {b}
+test tuevent-2.1 {destroyed bus errors} -body {
+    set bus [::tclutils::tuevent::create]
+    ::tclutils::tuevent::destroy $bus
+    catch {::tclutils::tuevent::emit $bus e} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUEVENT BUS}
+cleanupTests

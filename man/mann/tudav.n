@@ -1,0 +1,9 @@
+.TH tudav n 0.44.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tudav \- minimal WebDAV/CardDAV/CalDAV client
+.SH SYNOPSIS
+package require tclutils::tudav
+.SH DESCRIPTION
+See docs/tudav.md.
+.SH KEYWORDS
+dav, webdav, carddav, caldav, http

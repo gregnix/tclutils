@@ -1,0 +1,35 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuholiday 0.1
+
+test tuholiday-1.1 {easter dates} -body {
+    list [::tclutils::tuholiday::easter 2024] [::tclutils::tuholiday::easter 2025] \
+         [::tclutils::tuholiday::easter 2026]
+} -result {2024-03-31 2025-04-20 2026-04-05}
+test tuholiday-1.2 {movable feasts derived from easter 2025} -body {
+    set h [::tclutils::tuholiday::holidays 2025]
+    list [dict get $h 2025-04-18] [dict get $h 2025-04-21] \
+         [dict get $h 2025-05-29] [dict get $h 2025-06-09]
+} -result {Karfreitag Ostermontag {Christi Himmelfahrt} Pfingstmontag}
+test tuholiday-1.3 {fixed days present} -body {
+    set h [::tclutils::tuholiday::holidays 2025]
+    list [dict get $h 2025-01-01] [dict get $h 2025-05-01] \
+         [dict get $h 2025-10-03] [dict get $h 2025-12-25] [dict get $h 2025-12-26]
+} -result {Neujahr {Tag der Arbeit} {Tag der Deutschen Einheit} {1. Weihnachtstag} {2. Weihnachtstag}}
+test tuholiday-1.4 {count of nationwide holidays} -body {
+    dict size [::tclutils::tuholiday::holidays 2025]
+} -result 11
+test tuholiday-2.1 {isHoliday hit and miss} -body {
+    list [::tclutils::tuholiday::isHoliday 2025-12-25] [::tclutils::tuholiday::isHoliday 2025-07-04]
+} -result {{1. Weihnachtstag} {}}
+test tuholiday-2.2 {unknown region errors} -body {
+    catch {::tclutils::tuholiday::holidays 2025 -region xx} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUHOLIDAY REGION}
+test tuholiday-2.3 {keys are date-sorted} -body {
+    set k [dict keys [::tclutils::tuholiday::holidays 2025]]
+    expr {$k eq [lsort $k]}
+} -result 1
+cleanupTests

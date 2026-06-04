@@ -69,4 +69,14 @@ package require tclutils::tuuuid 0.1
 package require tclutils::tufmt 0.1
 package require tclutils::tudate 0.1
 package require tclutils::tuurl 0.1
-package provide tclutils 0.43.0
+package require tclutils::tuevent 0.1
+package require tclutils::turegistry 0.1
+package require tclutils::tudav 0.1
+package require tclutils::tuholiday 0.1
+package require tclutils::turrule 0.1
+package require tclutils::tuopen 0.1
+package require tclutils::tubookmark 0.1
+package require tclutils::tulog 0.1
+package require tclutils::tuimage 0.1
+package require tclutils::tupng 0.1
+package provide tclutils 0.49.0

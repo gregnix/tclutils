@@ -1,0 +1,9 @@
+.TH tuevent n 0.44.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tuevent \- publish/subscribe event bus
+.SH SYNOPSIS
+package require tclutils::tuevent
+.SH DESCRIPTION
+See docs/tuevent.md.
+.SH KEYWORDS
+event, pubsub, observer

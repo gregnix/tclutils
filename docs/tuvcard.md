@@ -14,3 +14,21 @@ tuvcard::names      card         ;# property names
 tuvcard::fullName   card         ;# FN
 ```
 Error code: `{TCLUTILS TUVCARD SYNTAX}`.
+
+## Photos
+
+```tcl
+set ph [tuvcard::photo $card]
+#  -> {kind none}
+#  -> {kind uri    uri <url>   mime <type-or-"">}
+#  -> {kind inline bytes <raw> mime <type>}
+
+set card [tuvcard::setPhoto    $card image/png $bytes]          ;# 4.0 data: URI
+set card [tuvcard::setPhoto    $card image/jpeg $bytes -version 3] ;# 3.0 ENCODING=b
+set card [tuvcard::setPhotoUri $card https://example.com/me.jpg]
+```
+
+`photo` decodes inline photos (vCard 3.0 `ENCODING=b;TYPE=...` and 4.0 `data:` URIs)
+to raw bytes and reports the MIME type (from the `TYPE` parameter, the data URI,
+or sniffed via `tuimage`). `setPhoto`/`setPhotoUri` replace any existing PHOTO.
+Reuses `tclutils::tubase64` and `tclutils::tuimage`.

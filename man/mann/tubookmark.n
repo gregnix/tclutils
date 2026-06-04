@@ -1,0 +1,9 @@
+.TH tubookmark n 0.46.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tubookmark \- read/write Netscape bookmark HTML
+.SH SYNOPSIS
+package require tclutils::tubookmark
+.SH DESCRIPTION
+See docs/tubookmark.md.
+.SH KEYWORDS
+bookmark, netscape, html, favorites

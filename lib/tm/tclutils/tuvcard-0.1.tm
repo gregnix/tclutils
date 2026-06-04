@@ -5,6 +5,8 @@
 # Property values are kept raw for exact round-tripping.
 
 package require Tcl 8.6-
+package require tclutils::tubase64 0.1
+package require tclutils::tuimage 0.1
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tuvcard {
@@ -169,6 +171,103 @@ proc ::tclutils::tuvcard::removeProperty {card index} {
 proc ::tclutils::tuvcard::setProperty {card index name value {params {}}} {
     return [lreplace $card $index $index \
         [dict create name $name value $value params $params]]
+}
+
+# --- PHOTO convenience --------------------------------------------------
+
+proc ::tclutils::tuvcard::_param {params key} {
+    foreach {k v} $params {
+        if {[string equal -nocase $k $key]} { return $v }
+    }
+    return ""
+}
+proc ::tclutils::tuvcard::_typeToMime {subtype} {
+    switch -- [string tolower $subtype] {
+        jpeg - jpg { return image/jpeg }
+        png        { return image/png }
+        gif        { return image/gif }
+        webp       { return image/webp }
+        bmp        { return image/bmp }
+        default    { return "" }
+    }
+}
+proc ::tclutils::tuvcard::_mimeToType {mimetype} {
+    switch -- [string tolower $mimetype] {
+        image/jpeg { return JPEG }
+        image/png  { return PNG }
+        image/gif  { return GIF }
+        image/webp { return WEBP }
+        image/bmp  { return BMP }
+        default    { return "" }
+    }
+}
+proc ::tclutils::tuvcard::_removePhoto {card} {
+    set out {}
+    foreach p $card {
+        if {![string equal -nocase [dict get $p name] PHOTO]} { lappend out $p }
+    }
+    return $out
+}
+
+# Return the card's PHOTO as a dict:
+#   {kind none}
+#   {kind uri    uri <url>   mime <type-or-"">}
+#   {kind inline bytes <raw> mime <type>}
+# Handles vCard 3.0 (ENCODING=b;TYPE=...) and 4.0 (data: URI or plain URI).
+proc ::tclutils::tuvcard::photo {card} {
+    set ps [properties $card PHOTO]
+    if {![llength $ps]} { return [dict create kind none] }
+    set p [lindex $ps 0]
+    set val [dict get $p value]
+    set params [dict get $p params]
+    set enc [string tolower [_param $params ENCODING]]
+    set valtype [string tolower [_param $params VALUE]]
+    set typ [_param $params TYPE]
+
+    if {[string match -nocase data:* $val]} {
+        set d [::tclutils::tuimage::fromDataUri $val]
+        set bytes [dict get $d bytes]
+        set mime [dict get $d mime]
+        if {$mime eq ""} { set mime [::tclutils::tuimage::mime $bytes] }
+        return [dict create kind inline bytes $bytes mime $mime]
+    }
+    if {$enc in {b base64}} {
+        set bytes [::tclutils::tubase64::decode $val]
+        set mime [_typeToMime $typ]
+        if {$mime eq ""} { set mime [::tclutils::tuimage::mime $bytes] }
+        return [dict create kind inline bytes $bytes mime $mime]
+    }
+    if {$valtype eq "uri" || [regexp {^[a-zA-Z][a-zA-Z0-9+.-]*://} $val]} {
+        return [dict create kind uri uri $val mime [_typeToMime $typ]]
+    }
+    return [dict create kind uri uri $val mime ""]
+}
+
+# Set (replacing any existing) an inline PHOTO from raw bytes + MIME type.
+# Option -version 3 (ENCODING=b;TYPE=) or 4 (data: URI, default).
+proc ::tclutils::tuvcard::setPhoto {card mimetype bytes args} {
+    set version 4
+    foreach {k v} $args { if {$k eq "-version"} { set version $v } }
+    set card [_removePhoto $card]
+    if {$version == 3} {
+        set sub [_mimeToType $mimetype]
+        set params [list ENCODING b]
+        if {$sub ne ""} { lappend params TYPE $sub }
+        return [addProperty $card PHOTO [::tclutils::tubase64::encode $bytes] $params]
+    }
+    return [addProperty $card PHOTO [::tclutils::tuimage::dataUri $mimetype $bytes] {}]
+}
+
+# Set (replacing any existing) a PHOTO that references a URL.
+# Option -version 3 (adds VALUE=uri) or 4 (plain value, default).
+proc ::tclutils::tuvcard::setPhotoUri {card url args} {
+    set version 4
+    foreach {k v} $args { if {$k eq "-version"} { set version $v } }
+    set card [_removePhoto $card]
+    if {$version == 3} {
+        return [addProperty $card PHOTO $url {VALUE uri}]
+    }
+    return [addProperty $card PHOTO $url {}]
 }
 
 package provide tclutils::tuvcard 0.1

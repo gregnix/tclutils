@@ -1,0 +1,9 @@
+.TH tulog n 0.47.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tulog \- small leveled logger
+.SH SYNOPSIS
+package require tclutils::tulog
+.SH DESCRIPTION
+See docs/tulog.md.
+.SH KEYWORDS
+log, logging, debug, level, assert

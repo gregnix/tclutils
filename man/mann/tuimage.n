@@ -1,0 +1,9 @@
+.TH tuimage n 0.48.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tuimage \- detect image format, MIME and dimensions from bytes
+.SH SYNOPSIS
+package require tclutils::tuimage
+.SH DESCRIPTION
+See docs/tuimage.md.
+.SH KEYWORDS
+image, png, jpeg, gif, webp, bmp, dimensions, data-uri

@@ -1,0 +1,61 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuimage 0.1
+package require tclutils::tupng 0.1
+
+# --- synthesize minimal valid headers ---
+set png [binary format a8 "\x89PNG\r\n\x1a\n"]
+append png [binary format I 13] IHDR [binary format II 320 240]
+set gif "GIF89a"; append gif [binary format ss 320 240]
+set bmp "BM"; append bmp [binary format a16 [string repeat \x00 16]] [binary format ii 320 240]
+set jpg [binary format H* ffd8ffc0]; append jpg [binary format Sc 17 8] [binary format SS 240 320] [binary format c3 {3 0 0}]
+set webp "RIFF"; append webp [binary format i 0] WEBP VP8X [binary format i 10] [binary format c4 {0 0 0 0}] [binary format c3 {63 1 0}] [binary format c3 {239 0 0}]
+
+test tuimage-1.1 {type detection} -body {
+    list [::tclutils::tuimage::type $png] [::tclutils::tuimage::type $gif] \
+         [::tclutils::tuimage::type $bmp] [::tclutils::tuimage::type $jpg] \
+         [::tclutils::tuimage::type $webp] [::tclutils::tuimage::type "nope"]
+} -result {png gif bmp jpeg webp {}}
+
+test tuimage-1.2 {mime} -body {
+    list [::tclutils::tuimage::mime $png] [::tclutils::tuimage::mime $jpg] [::tclutils::tuimage::mime "x"]
+} -result {image/png image/jpeg {}}
+
+test tuimage-2.1 {dimensions PNG} -body { ::tclutils::tuimage::dimensions $png } -result {320 240}
+test tuimage-2.2 {dimensions GIF} -body { ::tclutils::tuimage::dimensions $gif } -result {320 240}
+test tuimage-2.3 {dimensions BMP} -body { ::tclutils::tuimage::dimensions $bmp } -result {320 240}
+test tuimage-2.4 {dimensions JPEG} -body { ::tclutils::tuimage::dimensions $jpg } -result {320 240}
+test tuimage-2.5 {dimensions WEBP VP8X} -body { ::tclutils::tuimage::dimensions $webp } -result {320 240}
+test tuimage-2.6 {dimensions unknown -> empty} -body { ::tclutils::tuimage::dimensions "nope" } -result {}
+
+test tuimage-3.1 {inspect} -body {
+    ::tclutils::tuimage::inspect $png
+} -result {type png mime image/png width 320 height 240}
+
+test tuimage-4.1 {dataUri round-trip} -body {
+    set raw "rawphoto-bytes"
+    set uri [::tclutils::tuimage::dataUri image/png $raw]
+    set back [::tclutils::tuimage::fromDataUri $uri]
+    list [string match {data:image/png;base64,*} $uri] [dict get $back mime] [expr {[dict get $back bytes] eq $raw}]
+} -result {1 image/png 1}
+
+test tuimage-4.2 {fromDataUri non-data errors} -body {
+    catch {::tclutils::tuimage::fromDataUri "http://x"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUIMAGE DATAURI}
+
+# --- cross-check against real PNGs from tupng (still Tk-free) ---
+test tuimage-real-1 {inspect a real tupng RGB PNG} -body {
+    ::tclutils::tuimage::inspect [::tclutils::tupng::encodeRGB \
+        {{FF0000 00FF00 0000FF} {000000 FFFFFF 808080}}]
+} -result {type png mime image/png width 3 height 2}
+test tuimage-real-2 {dimensions of real RGBA/gray/indexed PNGs} -body {
+    list \
+        [::tclutils::tuimage::dimensions [::tclutils::tupng::encodeRGBA {{FF0000FF 00FF0000}}]] \
+        [::tclutils::tuimage::dimensions [::tclutils::tupng::encodeGray {{0 128 255}}]] \
+        [::tclutils::tuimage::dimensions [::tclutils::tupng::encodeIndexed {FF0000 00FF00} {{0 1 0 1}}]]
+} -result {{2 1} {3 1} {4 1}}
+
+cleanupTests

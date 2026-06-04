@@ -1,0 +1,45 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::turegistry 0.1
+
+test turegistry-1.1 {put/get} -body {
+    set r [::tclutils::turegistry::create]
+    ::tclutils::turegistry::put $r db conn1
+    ::tclutils::turegistry::get $r db
+} -result conn1
+test turegistry-1.2 {has} -body {
+    set r [::tclutils::turegistry::create]
+    ::tclutils::turegistry::put $r x 1
+    list [::tclutils::turegistry::has $r x] [::tclutils::turegistry::has $r y]
+} -result {1 0}
+test turegistry-1.3 {get missing errors} -body {
+    set r [::tclutils::turegistry::create]
+    catch {::tclutils::turegistry::get $r nope} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUREGISTRY KEY}
+test turegistry-1.4 {get with default} -body {
+    set r [::tclutils::turegistry::create]
+    ::tclutils::turegistry::get $r nope fallback
+} -result fallback
+test turegistry-1.5 {keys with pattern} -body {
+    set r [::tclutils::turegistry::create]
+    ::tclutils::turegistry::put $r svc.a 1
+    ::tclutils::turegistry::put $r svc.b 2
+    ::tclutils::turegistry::put $r other 3
+    ::tclutils::turegistry::keys $r svc.*
+} -result {svc.a svc.b}
+test turegistry-1.6 {remove} -body {
+    set r [::tclutils::turegistry::create]
+    ::tclutils::turegistry::put $r x 1
+    list [::tclutils::turegistry::remove $r x] [::tclutils::turegistry::remove $r x] \
+         [::tclutils::turegistry::has $r x]
+} -result {1 0 0}
+test turegistry-2.1 {destroyed registry errors} -body {
+    set r [::tclutils::turegistry::create]
+    ::tclutils::turegistry::destroy $r
+    catch {::tclutils::turegistry::get $r x} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUREGISTRY REG}
+cleanupTests

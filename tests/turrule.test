@@ -1,0 +1,60 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::turrule 0.1
+
+proc occ {args} { ::tclutils::turrule::occurrences {*}$args }
+
+test turrule-1.1 {parse} -body {
+    ::tclutils::turrule::parse "FREQ=WEEKLY;BYDAY=TU,TH;COUNT=4"
+} -result {FREQ WEEKLY BYDAY TU,TH COUNT 4}
+
+test turrule-2.1 {weekly BYDAY, COUNT} -body {
+    occ -dtstart 2025-10-01 -rule "FREQ=WEEKLY;BYDAY=TU,TH;COUNT=4" -from 2025-01-01 -to 2025-12-31
+} -result {2025-10-02 2025-10-07 2025-10-09 2025-10-14}
+
+test turrule-2.2 {daily interval, -count cap} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=DAILY;INTERVAL=2" -from 2025-01-01 -to 2025-12-31 -count 3
+} -result {2025-01-01 2025-01-03 2025-01-05}
+
+test turrule-2.3 {monthly BYMONTHDAY} -body {
+    occ -dtstart 2025-01-10 -rule "FREQ=MONTHLY;BYMONTHDAY=15;COUNT=3" -from 2025-01-01 -to 2025-12-31
+} -result {2025-01-15 2025-02-15 2025-03-15}
+
+test turrule-2.4 {monthly default day} -body {
+    occ -dtstart 2025-01-15 -rule "FREQ=MONTHLY;COUNT=3" -from 2025-01-01 -to 2025-12-31
+} -result {2025-01-15 2025-02-15 2025-03-15}
+
+test turrule-2.5 {monthly BYDAY ordinal (first Monday)} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=MONTHLY;BYDAY=1MO;COUNT=2" -from 2025-01-01 -to 2025-12-31
+} -result {2025-01-06 2025-02-03}
+
+test turrule-2.6 {weekly UNTIL} -body {
+    occ -dtstart 2025-01-06 -rule "FREQ=WEEKLY;BYDAY=MO;UNTIL=20250120T235959Z" -from 2025-01-01 -to 2025-12-31
+} -result {2025-01-06 2025-01-13 2025-01-20}
+
+test turrule-2.7 {yearly anniversary} -body {
+    occ -dtstart 2025-03-15 -rule "FREQ=YEARLY;COUNT=3" -from 2020-01-01 -to 2030-12-31
+} -result {2025-03-15 2026-03-15 2027-03-15}
+
+test turrule-3.1 {time of day preserved} -body {
+    occ -dtstart 2025-10-01T09:00:00 -rule "FREQ=WEEKLY;BYDAY=TH;COUNT=1" -from 2025-01-01 -to 2025-12-31
+} -result {2025-10-02T09:00:00}
+
+test turrule-3.2 {COUNT counts from DTSTART, window only filters output} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=DAILY;COUNT=5" -from 2025-01-03 -to 2025-01-31
+} -result {2025-01-03 2025-01-04 2025-01-05}
+
+test turrule-4.1 {unbounded errors} -body {
+    catch {occ -dtstart 2025-01-01 -rule "FREQ=DAILY"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TURRULE UNBOUNDED}
+
+test turrule-5.1 {eventsInRange via tuical} -body {
+    set ics "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:r1\r\nDTSTART:20251001T090000Z\r\nSUMMARY:Standup\r\nRRULE:FREQ=WEEKLY;BYDAY=TU,TH;COUNT=4\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    set evs [::tclutils::turrule::eventsInRange $ics 2025-01-01 2025-12-31]
+    list [llength $evs] [dict get [lindex $evs 0] summary] [dict get [lindex $evs 0] start]
+} -result {4 Standup 2025-10-02T09:00:00}
+
+cleanupTests

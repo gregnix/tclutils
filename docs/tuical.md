@@ -19,3 +19,24 @@ tuical::escapeText / unescapeText  ;# RFC 5545 TEXT escaping
 Folded lines (continuation starting with space/tab) are unfolded automatically.
 Property values are kept raw for exact round-tripping.
 Error code: `{TCLUTILS TUICAL SYNTAX}`.
+
+## VTODO / VJOURNAL accessors
+
+```tcl
+set comps [tuical::parse $ics]
+tuical::todos    $comps     ;# list of VTODO components (recursive, like events)
+tuical::journals $comps     ;# list of VJOURNAL components
+
+tuical::eventInfo   $vevent   ;# {uid summary description dtstart dtend location status categories}
+tuical::todoInfo    $vtodo    ;# {uid summary description status priority percentComplete due dtstart completed categories}
+tuical::journalInfo $vjournal ;# {uid summary description dtstart status categories}
+
+# build a component (e.g. to PUT a task via tudav)
+set todo [tuical::newComponent VTODO {UID x9 SUMMARY {Call Bob} STATUS NEEDS-ACTION}]
+set ics  [tuical::toIcs [list $todo]]
+```
+
+The `*Info` helpers return a flat dict; missing properties are `""` and text
+fields (summary/description/location) are unescaped. `newComponent` seeds
+properties from a flat `{NAME value ...}` list and yields a component usable
+with `addProperty`/`setProperty`/`toIcs`.

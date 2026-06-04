@@ -14,6 +14,7 @@ package require Tcl 8.6-
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tuical {
     namespace export parse toIcs components properties property find events \
+        todos journals eventInfo todoInfo journalInfo newComponent \
         setProperty addProperty removeProperty \
         escapeText unescapeText
 }
@@ -230,6 +231,62 @@ proc ::tclutils::tuical::removeProperty {comp name} {
         if {![string equal -nocase [dict get $p name] $name]} { lappend out $p }
     }
     dict set comp props $out
+    return $comp
+}
+
+# --- component convenience: todos / journals (symmetric with events) ---
+proc ::tclutils::tuical::todos {comps} {
+    return [find $comps VTODO]
+}
+proc ::tclutils::tuical::journals {comps} {
+    return [find $comps VJOURNAL]
+}
+
+# Extract a flat dict from a component per a spec of {key PROP ?text?} items;
+# missing properties yield "" and text properties are unescaped.
+proc ::tclutils::tuical::_info {comp spec} {
+    set out [dict create]
+    foreach item $spec {
+        lassign $item key prop isText
+        set v [property $comp $prop]
+        if {$isText eq "1" && $v ne ""} { set v [unescapeText $v] }
+        dict set out $key $v
+    }
+    return $out
+}
+proc ::tclutils::tuical::eventInfo {comp} {
+    return [_info $comp {
+        {uid UID} {summary SUMMARY 1} {description DESCRIPTION 1}
+        {dtstart DTSTART} {dtend DTEND} {location LOCATION 1}
+        {status STATUS} {categories CATEGORIES}
+    }]
+}
+proc ::tclutils::tuical::todoInfo {comp} {
+    return [_info $comp {
+        {uid UID} {summary SUMMARY 1} {description DESCRIPTION 1}
+        {status STATUS} {priority PRIORITY} {percentComplete PERCENT-COMPLETE}
+        {due DUE} {dtstart DTSTART} {completed COMPLETED} {categories CATEGORIES}
+    }]
+}
+proc ::tclutils::tuical::journalInfo {comp} {
+    return [_info $comp {
+        {uid UID} {summary SUMMARY 1} {description DESCRIPTION 1}
+        {dtstart DTSTART} {status STATUS} {categories CATEGORIES}
+    }]
+}
+
+# Build a new component dict of the given type, optionally seeding properties
+# from a flat {NAME value NAME value ...} list. Returns a component usable with
+# addProperty/setProperty/toIcs (e.g. to PUT a VTODO via tudav).
+proc ::tclutils::tuical::newComponent {type {props {}}} {
+    if {[llength $props] % 2} {
+        return -code error -errorcode {TCLUTILS TUICAL ARG} \
+            "props must be a {name value ...} list"
+    }
+    set comp [dict create type $type props {} components {}]
+    foreach {name value} $props {
+        set comp [addProperty $comp $name $value]
+    }
     return $comp
 }
 

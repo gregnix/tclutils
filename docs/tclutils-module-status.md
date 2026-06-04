@@ -93,7 +93,7 @@ full GNU or format-standard replacements.
 | `tudate` | helper | Flexible date parse/format/arithmetic on `clock`; ISO, day diff, relative phrases. Local time. |
 | `tuurl` | basis complete | RFC 3986 percent-encoding/decoding and query strings (UTF-8). |
 | `tuuuid` | basis complete | UUID v4 and v7 generate/validate/version; `/dev/urandom` with `rand()` fallback. |
-| `tudav` | basis complete | Minimal WebDAV/CardDAV/CalDAV client (PROPFIND/REPORT/GET/PUT/DELETE, calendarQuery/addressbookMultiget); core `http`, https via `tls`. Collection provisioning (mkCalendar/mkAddressbook) added; verified vs Radicale 3.7. |
+| `tudav` | basis complete | Minimal WebDAV/CardDAV/CalDAV client (PROPFIND/REPORT/GET/PUT/DELETE, calendarQuery/addressbookMultiget); core `http`, https via `tls`. |
 | `turrule` | basis complete | iCalendar RRULE expansion (FREQ/INTERVAL/COUNT/UNTIL/BYDAY/BYMONTHDAY subset); pairs with `tuical`. |
 | `tuholiday` | basis complete | Easter computus + German nationwide public holidays. |
 
@@ -103,9 +103,6 @@ full GNU or format-standard replacements.
 |---|---|---|
 | `tuopen` | basis complete | Open URL/file with the OS default app (xdg-open/open/cmd start). |
 | `tubookmark` | basis complete | Read/write Netscape bookmark HTML (folders, tags); reuses `tuxml`. |
-| `tulog` | basis complete | Small leveled logger (callable object) + assert; dependency-free. |
-| `tuimage` | basis complete | Detect format/MIME/dimensions from image bytes + data: URIs; pure-Tcl. |
-| `tupng` | basis complete | Pure-Tcl PNG encoder (indexed/RGB/RGBA/gray) via core zlib; encode-side companion to `tuimage`. |
 
 ## Events and app glue
 

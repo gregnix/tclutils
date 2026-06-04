@@ -1,0 +1,9 @@
+.TH turegistry n 0.44.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::turegistry \- keyed value registry / service locator
+.SH SYNOPSIS
+package require tclutils::turegistry
+.SH DESCRIPTION
+See docs/turegistry.md.
+.SH KEYWORDS
+registry, locator, di

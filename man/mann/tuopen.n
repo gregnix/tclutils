@@ -1,0 +1,9 @@
+.TH tuopen n 0.46.0 tclutils "Tcl Utility Library"
+.SH NAME
+tclutils::tuopen \- open a URL or file with the default application
+.SH SYNOPSIS
+package require tclutils::tuopen
+.SH DESCRIPTION
+See docs/tuopen.md.
+.SH KEYWORDS
+open, url, xdg-open, browser
