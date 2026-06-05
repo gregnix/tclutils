@@ -1,4 +1,4 @@
-# tclutils 0.52.0
+# tclutils 0.53.0
 
 `tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
 text filters, data-format parsers/encoders, binary and checksum helpers, and a
@@ -14,7 +14,7 @@ Put the library's module directory on the Tcl module path, then require the
 umbrella package (loads all core modules) or a single module:
 
 ```tcl
-::tcl::tm::path add /path/to/tclutils-0.52.0/lib/tm
+::tcl::tm::path add /path/to/tclutils-0.53.0/lib/tm
 package require tclutils          ;# umbrella: all core modules
 package require tclutils::tucsv    ;# or just one module
 ```
@@ -31,12 +31,12 @@ the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping
 | Text / coreutils filters | `tucat` `tutac` `turev` `tunl` `tuseq` `tuhead` `tutail` `tuwc` `tusort` `tutsort` `tuuniq` `tucut` `tupaste` `tujoin` `tucomm` `tucsplit` `tusplit` `tufold` `tuexpand` `tushuf` `tucolumn` `tupr` `tutr` `tused` `tugrep` `tuawk` `tuxargs` `tufmt` |
 | Compare / patch | `tucmp` `tudiff` `tupatch` |
 | Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` |
-| Data / serialization | `tucsv` `tujson` `tuxml` `tunumfmt` |
+| Data / serialization | `tucsv` `tujson` `tuxml` `tunumfmt` `tusqlite` |
 | Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` |
 | Fuzzy search | `tufuzzy` `tuagrep` |
 | Records / PIM | `tunotes` `tuical` `tuini` `tuvcard` `tuldif` `tubookmark` |
 | Document helpers | `tumd` `tupdf` `tuodf` `tucal` |
-| Date / web / IDs | `tudate` `tuurl` `tuuuid` `tudav` |
+| Date / web / IDs | `tudate` `tuurl` `tuuuid` `tudav` `tufetch` `tusparql` |
 | Calendar / recurrence | `tuical` `turrule` `tuholiday` `tucal` |
 | Events / registry | `tuevent` `turegistry` `tulog` |
 | Strings / validation | `tustr` `tuvalidate` |
@@ -49,6 +49,11 @@ Highlights: `tucsv` (RFC-4180 quoting, multiline, BOM strip, lenient `-strict 0`
 `tujson` (parse/`parseTyped`/`fromJson` **and** the `toJson` encoder with
 `str`/`num`/`bool`/`null`/`obj`/`arr` builders), `tuhash` (pure-Tcl
 SHA-256/SHA-1/MD5 verified against the standard vectors).
+
+The optional net/data helpers `tudav`, `tufetch`, `tusparql` and `tusqlite` are
+the exception to "no external dependencies": they need the `tls` package (or a
+`curl`/`wget` binary) for HTTPS, respectively an `sqlite3` build — only at the
+point of use, so the umbrella still loads without them.
 
 ## Command-line wrappers
 

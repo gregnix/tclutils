@@ -1,0 +1,108 @@
+# tusqlite.test -- tests for tclutils::tusqlite.
+#
+# tusqlite is fully testable wherever the sqlite3 package is available (the
+# `sqlite3` constraint guards the DB-backed tests; the rest run anywhere).
+#
+# Module search path: TCLUTILS_TM (a tclutils tm tree that also holds common),
+# then the add-on layout (<root>/tclutils/*.tm) and a full-tree layout.
+
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tusqlite 0.1
+
+testConstraint sqlite3 [expr {![catch {package require sqlite3}]}]
+
+# ---------------------------------------------------------------------------
+# pure helpers (no database needed)
+# ---------------------------------------------------------------------------
+test tusqlite-1.1 {null is a stable, non-empty sentinel} -body {
+    set s [::tclutils::tusqlite::null]
+    list [expr {$s eq [::tclutils::tusqlite::null]}] [expr {$s ne ""}]
+} -result {1 1}
+
+test tusqlite-1.2 {quoteId wraps in double quotes and doubles embedded ones} -body {
+    list [::tclutils::tusqlite::quoteId foo] [::tclutils::tusqlite::quoteId {a"b}]
+} -result {{"foo"} {"a""b"}}
+
+test tusqlite-1.3 {insert with an empty dict raises a clear error} -body {
+    ::tclutils::tusqlite::insert nodb t {}
+} -returnCodes error -result {insert needs at least one column}
+
+test tusqlite-1.4 {insert empty dict uses the documented errorcode} -body {
+    catch {::tclutils::tusqlite::insert nodb t {}} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUSQLITE EMPTY}
+
+# ---------------------------------------------------------------------------
+# database-backed behaviour
+# ---------------------------------------------------------------------------
+if {[testConstraint sqlite3]} {
+    set DB [file join [temporaryDirectory] tusqlite-[pid].db]
+    file delete -force $DB
+    sqlite3 db $DB
+    db eval {CREATE TABLE t(id INTEGER PRIMARY KEY, a, b)}
+    db eval {CREATE TABLE t2("select" INTEGER, "a b" TEXT)}
+}
+
+test tusqlite-2.1 {insert returns the new rowid and stores the values} -constraints sqlite3 -body {
+    set rid [::tclutils::tusqlite::insert db t {a 10 b hello}]
+    list $rid [db eval {SELECT a || '/' || b FROM t WHERE id = :rid}]
+} -result {1 10/hello}
+
+test tusqlite-2.2 {an omitted column is stored as SQL NULL} -constraints sqlite3 -body {
+    set rid [::tclutils::tusqlite::insert db t {a 20}]
+    db eval {SELECT b IS NULL FROM t WHERE id = :rid}
+} -result 1
+
+test tusqlite-2.3 {the null sentinel is stored as SQL NULL} -constraints sqlite3 -body {
+    set rid [::tclutils::tusqlite::insert db t [list a 30 b [::tclutils::tusqlite::null]]]
+    db eval {SELECT b IS NULL FROM t WHERE id = :rid}
+} -result 1
+
+test tusqlite-2.4 {an empty string stays an empty string, not NULL} -constraints sqlite3 -body {
+    set rid [::tclutils::tusqlite::insert db t {a 40 b {}}]
+    list [db eval {SELECT b IS NULL FROM t WHERE id = :rid}] \
+         [db eval {SELECT b = '' FROM t WHERE id = :rid}]
+} -result {0 1}
+
+test tusqlite-2.5 {values come from the dict, not from same-named caller variables} -constraints sqlite3 -body {
+    # guards against the classic sqlite3 ":var binds a Tcl var in scope" trap
+    set c0 HACKED; set c1 HACKED
+    set rid [::tclutils::tusqlite::insert db t {a 55 b safe}]
+    db eval {SELECT a || '/' || b FROM t WHERE id = :rid}
+} -result {55/safe}
+
+test tusqlite-2.6 {rows returns an ordered list of column->value dicts} -constraints sqlite3 -body {
+    db eval {DELETE FROM t}
+    ::tclutils::tusqlite::insert db t {a 1 b x}
+    ::tclutils::tusqlite::insert db t {a 2 b y}
+    ::tclutils::tusqlite::rows db {SELECT a, b FROM t ORDER BY a}
+} -result {{a 1 b x} {a 2 b y}}
+
+test tusqlite-2.7 {rows on an empty result is the empty list} -constraints sqlite3 -body {
+    ::tclutils::tusqlite::rows db {SELECT a FROM t WHERE a = 999}
+} -result {}
+
+test tusqlite-2.8 {value returns the first column of the first row} -constraints sqlite3 -body {
+    ::tclutils::tusqlite::value db {SELECT b FROM t ORDER BY a}
+} -result x
+
+test tusqlite-2.9 {value returns the default on an empty result} -constraints sqlite3 -body {
+    ::tclutils::tusqlite::value db {SELECT b FROM t WHERE a = 999} DEFLT
+} -result DEFLT
+
+test tusqlite-2.10 {quoted identifiers (reserved word, spaces) work end to end} -constraints sqlite3 -body {
+    ::tclutils::tusqlite::insert db t2 [list select 7 {a b} hi]
+    ::tclutils::tusqlite::rows db {SELECT "select" AS s, "a b" AS ab FROM t2}
+} -result {{s 7 ab hi}}
+
+if {[testConstraint sqlite3]} {
+    db close
+    file delete -force $DB
+}
+cleanupTests

@@ -4,6 +4,12 @@ For the per-module scope status see [`module-status.md`](module-status.md);
 the wishlist/backlog detail lives with the reviews. This file is the
 high-level history and forward view.
 
+## Recently shipped
+
+- Optional net/data helpers (the only **not dependency-free** modules):
+  `tufetch` (HTTP(S) `get`/`download`, GET/POST; native `http`+`tls` else
+  curl/wget), `tusparql` (thin SPARQL client over `tufetch`/`tuurl`/`tujson`),
+  and `tusqlite` (NULL-safe `sqlite3` `insert`/`rows`/`value` helpers).
 
 ## Planned / backlog
 
@@ -25,7 +31,6 @@ Output/export bridges (text/csv/json/pdf/odf) — see
 `odfinspect`, `mdview`) are tracked in the **tkutils** roadmap.
 
 ## Deliberately out of scope
-
 
 - A full PDF parser, full ODF implementation, or full CommonMark engine —
   inspectors/helpers only.

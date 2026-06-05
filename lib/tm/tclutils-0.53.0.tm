@@ -85,4 +85,8 @@ package require tclutils::tulist 0.1
 package require tclutils::tudict 0.1
 package require tclutils::tumath 0.1
 package require tclutils::tutable 0.1
-package provide tclutils 0.52.0
+# HTTP / SPARQL / SQLite helpers (optional, not dependency-free)
+package require tclutils::tufetch 0.2
+package require tclutils::tusqlite 0.1
+package require tclutils::tusparql 0.1
+package provide tclutils 0.53.0
