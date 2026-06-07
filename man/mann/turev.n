@@ -1,0 +1,16 @@
+.TH turev n 0.1 tclutils
+.SH tclutils::turev
+.PP
+\fBrev\fR\-like reversal of the characters within each line (pure Tcl, Unicode by code point).
+.SS API
+.CS
+::tclutils::turev::line str
+::tclutils::turev::text text
+::tclutils::turev::file path
+.CE
+.PP
+A trailing newline is preserved.
+.SS CLI
+.CS
+tclsh bin/turev.tcl file.txt
+.CE

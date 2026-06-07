@@ -1,0 +1,16 @@
+.TH tutsort n 0.1 tclutils
+.SH tclutils::tutsort
+.PP
+\fBtsort\fR\-like topological sort in pure Tcl.
+.SS API
+.CS
+::tclutils::tutsort::pairs tokenList
+::tclutils::tutsort::text  text
+::tclutils::tutsort::file  path
+.CE
+.PP
+Tokens are read in pairs: each pair \fBu v\fR means "u must come before v". A self\-pair \fBu u\fR declares an isolated node with no ordering. Nodes that become free are emitted in first\-seen order (stable). A cycle raises \fBTCLUTILS TUTSORT CYCLE\fR; an odd token count raises \fBTCLUTILS TUTSORT ODD\fR.
+.SS CLI
+.CS
+printf 'a b\nb c\n' | tclsh bin/tutsort.tcl
+.CE

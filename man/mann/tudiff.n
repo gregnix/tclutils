@@ -1,98 +1,56 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tudiff n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tudiff \- provides small, portable, line based diff tools in pure Tcl.
-.SH SYNOPSIS
+.TH tudiff n 0.1 tclutils
+.SH tclutils::tudiff
 .PP
-.nf
+\fBtclutils::tudiff\fR provides small, portable, line based diff tools in pure Tcl.
+.SS Load
+.CS
 package require tclutils::tudiff
-.fi
-.SH COMMANDS
-.PP
-.nf
+.CE
+.SS API
+.CS
 ::tclutils::tudiff::text oldText newText
 ::tclutils::tudiff::files oldFile newFile
 ::tclutils::tudiff::unified oldFile newFile ?options?
 ::tclutils::tudiff::unifiedText oldText newText ?options?
-.fi
+.CE
 .PP
 \fBtext\fR and \fBfiles\fR return a list of operations:
-.PP
-.nf
+.CS
 {equal line}
 {delete line}
 {insert line}
-.fi
-.SH EXAMPLES
-.PP
-.nf
+.CE
+.SS "Unified diff"
+.CS
 puts [::tclutils::tudiff::unified old.txt new.txt]
-.fi
+.CE
 .PP
 Options:
+.CS
+-fromlabel label
+-tolabel label
+.CE
 .PP
-.nf
-\-fromlabel label
-\-tolabel label
-.fi
+The first implementation intentionally uses a simple LCS based line diff. It is stable and portable, but not yet optimized for very large files.
+.SS "Robustness: \fB\-maxcells\fR"
 .PP
-The first implementation intentionally uses a simple LCS based line diff. It is
+\fBtudiff\fR currently uses a simple dynamic\-programming LCS table. This is fine for small and medium reference files, but has O(n*m) memory/time behavior. To avoid accidental large\-file blow\-ups, \fBtext\fR, \fBfiles\fR, \fBunifiedText\fR and \fBunified\fR accept \fB\-maxcells\fR:
+.CS
+::tclutils::tudiff::text $old $new -maxcells 2000000
+::tclutils::tudiff::unified old.txt new.txt -maxcells 5000000
+.CE
 .PP
-stable and portable, but not yet optimized for very large files.
-.SH OPTIONS
-.PP
-\fBtudiff\fR currently uses a simple dynamic\-programming LCS table. This is fine
-.PP
-for small and medium reference files, but has O(n*m) memory/time behavior.
-.PP
-To avoid accidental large\-file blow\-ups, \fBtext\fR, \fBfiles\fR, \fBunifiedText\fR and
-.PP
-\fBunified\fR accept \fB\-maxcells\fR:
-.PP
-.nf
-::tclutils::tudiff::text $old $new \-maxcells 2000000
-::tclutils::tudiff::unified old.txt new.txt \-maxcells 5000000
-.fi
-.PP
-If the product of old\-line\-count and new\-line\-count exceeds the limit, the
-.PP
-command raises an error with error code:
-.PP
-.nf
+If the product of old\-line\-count and new\-line\-count exceeds the limit, the command raises an error with error code:
+.CS
 TCLUTILS TUDIFF TOO_LARGE
-.fi
+.CE
 .PP
-A future version may add a streaming or patience\-style algorithm for very large
-.PP
-files.
-.SH COMMANDS
-.PP
-.nf
+A future version may add a streaming or patience\-style algorithm for very large files.
+.SS "Context and directory diff"
+.CS
 ::tclutils::tudiff::contextText $old $new
 ::tclutils::tudiff::context old.txt new.txt
 ::tclutils::tudiff::directory olddir newdir
-.fi
+.CE
 .PP
 \fBdirectory\fR returns records such as \fBequal\fR, \fBdifferent\fR, \fBonly\-old\fR, and \fBonly\-new\fR.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)

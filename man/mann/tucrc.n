@@ -1,44 +1,21 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tucrc n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tucrc \- Checksum helpers using Tcl core zlib.
-.SH COMMANDS
+.TH tucrc n 0.1 tclutils
+.SH tclutils::tucrc
 .PP
-.nf
+Checksum helpers using Tcl core \fBzlib\fR.
+.SS API
+.CS
 set crc [::tclutils::tucrc::crc32 $bytes]
 puts [::tclutils::tucrc::hex32 $crc]
-.fi
+.CE
 .PP
 Commands:
-.IP
+.IP \(bu
 \fBcrc32 data ?initValue?\fR
-.IP
+.IP \(bu
 \fBadler32 data ?initValue?\fR
-.IP
+.IP \(bu
 \fBcrc32File path\fR
-.IP
+.IP \(bu
 \fBadler32File path\fR
-.IP
+.IP \(bu
 \fBhex32 value\fR
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)

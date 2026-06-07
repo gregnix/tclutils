@@ -1,0 +1,42 @@
+.TH tupngpad n 0.1 tclutils
+.SH tclutils::tupngpad
+.PP
+Normalise a set of (transparent) PNGs to a uniform size. Typical use: object cut\-outs saved as transparent PNGs, each cropped to its own tight bounding box. \fBtupngpad\fR brings them all to one common size, centres each one, keeps a margin around the content, and flattens transparency onto a background colour (e.g. white). Pure Tcl, no Tk and no external packages; the pixel work pairs with \fBtclutils::tupng\fR / \fBtclutils::tupngdraw\fR.
+.SS API
+.CS
+package require tclutils::tupngpad
+
+# normalise every PNG in $files into /out, all the same size
+tclutils::tupngpad::batch $files /out -margin 4 -background white
+.CE
+.SS File\-level
+.PP
+\fBtupngpad::batch files outdir ?options?\fR — read each PNG in \fBfiles\fR, optionally trim it to its content, then pad every image to one common size and write the result into \fBoutdir\fR (same base name). Returns the list of written paths.
+.PP
+Options:
+.IP \(bu
+\fB\-margin N\fR — empty space kept around the content, in pixels (default \fB4\fR).
+.IP \(bu
+\fB\-background COLOR\fR — colour the formerly transparent area is flattened onto (default \fBwhite\fR; same colour forms as \fBtupngdraw\fR).
+.IP \(bu
+\fB\-trim BOOL\fR — crop each input to its content bounding box first (default \fB1\fR).
+.IP \(bu
+\fB\-align A\fR — placement of the content in the padded canvas: \fBcenter\fR (default), \fBnw\fR, \fBn\fR, \fBne\fR, \fBw\fR, \fBe\fR, \fBsw\fR, \fBs\fR, \fBse\fR.
+.IP \(bu
+\fB\-square BOOL\fR — force a square output (default \fB0\fR).
+.IP \(bu
+\fB\-size {W H}\fR — force the inner content area; default is the maximum content size found across all inputs.
+.SS "Pixel\-level primitives"
+.PP
+These operate on an RGBA pixel buffer (\fBrgba\fR) of width \fBw\fR and height \fBh\fR, as produced/consumed by the \fBtupng\fR layer:
+.IP \(bu
+\fBtupngpad::bbox rgba w h\fR — return the content bounding box \fB{x0 y0 x1 y1}\fR (the non\-transparent extent).
+.IP \(bu
+\fBtupngpad::trim rgba w h\fR — crop the buffer to its bounding box.
+.IP \(bu
+\fBtupngpad::padTo rgba w h tw th ?options?\fR — centre/place the content inside a \fBtw\fR×\fBth\fR canvas. Options: \fB\-background COLOR\fR (default \fBwhite\fR), \fB\-align A\fR (as above), \fB\-filter {}\fR.
+.SS Notes
+.IP \(bu
+Pure Tcl, no Tk, no external dependencies (TclOO/\fBclock\fR/core only).
+.IP \(bu
+Designed to chain with \fBtupng\fR/\fBtupngdraw\fR: decode → \fBtrim\fR/\fBpadTo\fR → encode.

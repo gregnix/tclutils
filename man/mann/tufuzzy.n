@@ -1,15 +1,20 @@
-[manpage_begin tufuzzy n 0.1]
-[moddesc {tclutils}]
-[titledesc {Fuzzy matching primitives}]
-[require Tcl 8.6]
-[require tclutils::tufuzzy 0.1]
-[description]
-[para]The [package tclutils::tufuzzy] package provides edit-distance based fuzzy matching primitives.
-[section COMMANDS]
-[list_begin definitions]
-[call [cmd ::tclutils::tufuzzy::distance] [arg a] [arg b]]
-Returns the Levenshtein distance.
-[call [cmd ::tclutils::tufuzzy::searchDistance] [arg pattern] [arg text]]
-Returns the minimum distance to a substring of text.
-[list_end]
-[manpage_end]
+.TH tufuzzy n 0.1 tclutils
+.SH tclutils::tufuzzy
+.PP
+Fuzzy matching primitives in pure Tcl.
+.SS Commands
+.CS
+::tclutils::tufuzzy::distance a b ?-nocase 0|1?
+::tclutils::tufuzzy::searchDistance pattern text ?-nocase 0|1?
+::tclutils::tufuzzy::similarity a b ?-nocase 0|1?
+::tclutils::tufuzzy::subsequence pattern text ?-nocase 0|1?
+::tclutils::tufuzzy::bestMatch pattern candidates ?-nocase 0|1?
+.CE
+.PP
+\fBdistance\fR computes Levenshtein edit distance. \fBsearchDistance\fR computes the minimum edit distance from a pattern to any substring of a text. \fBsubsequence\fR implements fzf\-style ordered subsequence matching.
+.SS Examples
+.CS
+package require tclutils::tufuzzy
+::tclutils::tufuzzy::distance kitten sitting
+::tclutils::tufuzzy::bestMatch colour {color flavour}
+.CE

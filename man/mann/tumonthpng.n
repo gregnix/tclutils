@@ -1,0 +1,37 @@
+.TH tumonthpng n 0.4 tclutils
+.SH tclutils::tumonthpng
+.PP
+Render a month calendar to a PNG image, mirroring the look of the \fBmonthcanvas\fR Tk widget (themes, week numbers, weekday header, and today / weekend / holiday / note / other\-month cell states). Pure Tcl: the month grid is computed with the core \fBclock\fR command (no Tk, no \fBgel::calendar\fR); drawing uses \fBtclutils::tupngdraw\fR.
+.SS API
+.CS
+package require tclutils::tumonthpng
+
+::tclutils::tumonthpng::render year month ?options?   ;# -> PNG bytes
+::tclutils::tumonthpng::write  file year month ?options?  ;# -> file
+.CE
+.PP
+Options (defaults): \fB\-theme default\fR (\fBdefault|dark|light\fR), \fB\-scale 2\fR, \fB\-today {}\fR (ISO \fByyyy\-mm\-dd\fR; empty = system date), \fB\-holidays {}\fR (dict date\->name), \fB\-notes {}\fR (dict date\->text), \fB\-firstweekday 1\fR (1 = Monday), \fB\-showweeks 1\fR (ISO week\-number column), \fB\-weekdays {Mo Di Mi Do Fr Sa So}\fR, \fB\-monthnames {Januar ... Dezember}\fR, \fB\-title {}\fR (override the "Month Year" title). Cell colours follow the chosen theme, ported from monthcanvas.
+.PP
+A selection overlay (for interactive front\-ends) is also available: \fB\-select {}\fR (list of ISO dates to highlight), \fB\-selectstyle outline\fR (default), \fB\-selectcolor {}\fR, \fB\-selectwidth {}\fR, \fB\-selectalpha 0.3\fR.
+.CS
+tclutils::tumonthpng::write june.png 2026 6 \
+    -today 2026-06-06 \
+    -holidays {2026-06-08 "Pfingstmontag"} \
+    -notes    {2026-06-15 "Zahnarzt"} \
+    -theme default -scale 2
+.CE
+.SS CLI
+.CS
+tclsh bin/tumonthpng.tcl june.png 2026 6 -theme dark -scale 2 -today 2026-06-06
+.CE
+.PP
+(The CLI exposes \fB\-theme \-scale \-today \-showweeks\fR; holidays and notes are library options.)
+.SS "Outline fonts (\-textcmd, 0.2)"
+.PP
+By default labels use the built\-in 6x8 bitmap font. Pass \fB\-textcmd CMD\fR to draw every centred label yourself: tumonthpng calls \fB{*}$CMD img x y w h text color\fR for the title, weekday header, KW label, week numbers and day numbers, leaving layout, themes, cell colours and the note markers to tumonthpng. A renderer that fills real TTF/OTF glyph outlines via \fBtupngdraw fillcontours\fR (e.g. driven by the Glyphs package) gives proper umlauts and scalable type \-\- see examples/generate\-month\-glyphs\-demo.tcl. tumonthpng itself stays dependency\-free; the font backend is the caller's.
+.SS "Quarter and year (0.3, ported from monthcanvas)"
+.PP
+\fBrenderQuarter year month ?opts?\fR / \fBwriteQuarter file year month ?opts?\fR lay three consecutive months side by side in one image (year rollover handled). \fBrenderYear year ?opts?\fR / \fBwriteYear file year ?opts?\fR tile all twelve months; \fB\-cols N\fR sets the column count (default 3). All single\-month options (\fB\-theme\fR, \fB\-scale\fR, \fB\-today\fR, \fB\-holidays\fR, \fB\-notes\fR, \fB\-showweeks\fR, \fB\-textcmd\fR, \fB\-weekdays\fR, \fB\-monthnames\fR, \fB\-firstweekday\fR) apply; holidays/notes/today are matched per date across every month. Each block carries its own "<Month> <year>" heading. Mirrors monthcanvas drawQuarter/drawYear.
+.SS Notes
+.PP
+The built\-in 6x8 bitmap font covers ASCII plus the German umlauts and eszett (ä ö ü Ä Ö Ü ß), so the default month names (including "März") render correctly; other non\-ASCII characters render as blanks. Pass ASCII \fB\-monthnames\fR/\fB\-weekdays\fR if you need them, or supply a \fB\-textcmd\fR for real outline glyphs. Week numbers are ISO\-8601 (\fB%V\fR); the grid math uses UTC (\fB\-gmt 1\fR) so output is deterministic and timezone\-free. Holiday computation is the caller's job \-\- pass a \fB\-holidays\fR dict.

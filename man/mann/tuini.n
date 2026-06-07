@@ -1,10 +1,15 @@
-.TH tuini n 0.32.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tuini \- INI file reader/writer
-.SH SYNOPSIS
-package require tclutils::tuini
-.SH DESCRIPTION
-Parses INI text into a dict of sections and serializes it back, preserving order.
-See docs/tuini.md.
-.SH KEYWORDS
-ini, config, parser
+.TH tuini n 0.1 tclutils
+.SH tclutils::tuini
+.PP
+INI reader/writer. Parses into a dict section \-> (dict key \-> value); keys before any \fB[section]\fR live in the global section "". Order is preserved. Comments (\fB;\fR or \fB#\fR) are dropped.
+.CS
+tuini::parse iniText            ;# -> data dict
+tuini::toIni data               ;# -> INI text
+tuini::sections data
+tuini::keys data ?section?
+tuini::get  data section key ?default?
+tuini::has  data section key
+tuini::setValue data section key value   ;# -> new data dict
+.CE
+.PP
+Error code: \fB{TCLUTILS TUINI SYNTAX}\fR.

@@ -1,0 +1,36 @@
+.TH tusparql n 0.1 tclutils
+.SH tclutils::tusparql
+.PP
+A thin SPARQL client. It composes existing modules rather than reimplementing anything: transport via \fBtclutils::tufetch\fR (GET, or POST \fBapplication/sparql\-query\fR for long queries), query\-string building via \fBtclutils::tuurl\fR, and parsing of the SPARQL 1.1 Results JSON via \fBtclutils::tujson\fR. The only SPARQL\-specific work is flattening the result bindings into plain \fB{var value ...}\fR dicts.
+.PP
+Not dependency\-free (inherits \fBtufetch\fR's http+tls / curl|wget requirement).
+.SS API
+.CS
+set ep https://query.wikidata.org/sparql
+set q {SELECT ?item ?itemLabel WHERE {
+    ?item wdt:P31 wd:Q476028 .
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+} LIMIT 10}
+foreach row [::tclutils::tusparql::query $ep $q] {
+    puts "[dict get $row item] -> [dict get $row itemLabel]"
+}
+set yes [::tclutils::tusparql::ask $ep {ASK { wd:Q1 wdt:P31 ?x }}]
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBquery endpoint sparql ?opts?\fR — run a SELECT; returns a list of row dicts, one per result, each mapping a bound variable → its value. Variables that are unbound in a row (e.g. behind \fBOPTIONAL\fR) are simply absent from that dict.
+.IP \(bu
+\fBask endpoint sparql ?opts?\fR — run an ASK; returns 1 or 0.
+.PP
+Options:
+.IP \(bu
+\fB\-method get|post\fR (default get; use post for long queries that would overflow a GET URL).
+.IP \(bu
+\fB\-timeout ms\fR (default 30000).
+.IP \(bu
+\fB\-headers {k v ...}\fR — extra request headers (\fBAccept\fR is set automatically).
+.PP
+Localized labels come from the \fBwikibase:label\fR service (\fBbd:serviceParam wikibase:language "..."\fR). When matching by Wikipedia article, remember Wikidata stores sitelink IRIs in Unicode while a captured URL is usually percent\-encoded — decode (UTF\-8 aware) before building a \fBVALUES\fR block.
+.PP
+Errors: the ASK helper on a non\-ASK response → \fB{TCLUTILS TUSPARQL NOTASK}\fR; transport/HTTP errors propagate from \fBtufetch\fR. The flattening / ASK / URL logic is verified on Tcl 8.6 and 9.x, and a live \fBquery.wikidata.org\fR round\-trip was confirmed.

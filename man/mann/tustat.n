@@ -1,42 +1,19 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tustat n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tustat \-  tustat  provides stat\-like file metadata helpers around Tcl's file stat.
-.SH COMMANDS
+.TH tustat n 0.1 tclutils
+.SH tclutils::tustat
 .PP
-.nf
+\fB tustat \fR provides stat\-like file metadata helpers around Tcl's \fBfile stat\fR.
+.SS API
+.CS
 package require tclutils::tustat
 set d [::tclutils::tustat::file README.md]
 puts [dict get $d size]
 puts [::tclutils::tustat::render $d]
-.fi
+.CE
 .PP
 Commands:
-.IP
+.IP \(bu
 \fBfile path\fR returns metadata as a dict.
-.IP
+.IP \(bu
 \fBfiles paths\fR returns one metadata dict per path.
-.IP
-\fBrender statDict ?\-timeformat fmt?\fR renders selected fields.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+.IP \(bu
+\fBformat statDict ?\-timeformat fmt?\fR formats selected fields.

@@ -1,0 +1,15 @@
+.TH tupr n 0.1 tclutils
+.SH tclutils::tupr
+.PP
+\fBpr\fR\-like simple page formatting in pure Tcl.
+.SS API
+.CS
+::tclutils::tupr::text text ?options?
+::tclutils::tupr::file path ?options?
+.CE
+.PP
+Options: \fB\-length N\fR (lines per page, default 66; 5\-line header + 5\-line footer), \fB\-header S\fR (title), \fB\-width N\fR (header layout width, default 72), \fB\-number 0|1\fR (number body lines), \fB\-date S\fR (header date; default current date/time). \fBfile\fR uses the file name as the default header.
+.SS CLI
+.CS
+tclsh bin/tupr.tcl -header "Report" -number 1 file.txt
+.CE

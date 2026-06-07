@@ -1,80 +1,51 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tused n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tused \- tused ist ein kleines sed\-aehnliches Modul fuer portable Text\-Ersetzungen und Zeilenfilter in reinem Tcl.
-.SH LADEN
+.TH tused n 0.1 tclutils
+.SH tclutils::tused
 .PP
-.nf
+\fBtused\fR ist ein kleines sed\-aehnliches Modul fuer portable Text\-Ersetzungen und Zeilenfilter in reinem Tcl.
+.SS Laden
+.CS
 package require tclutils::tused
-.fi
-.SH TEXT ERSETZEN
-.PP
-.nf
+.CE
+.SS "Text ersetzen"
+.CS
 set out [::tclutils::tused::replace $text {foo} bar]
-set out [::tclutils::tused::replace $text {foo} bar \-all 1]
-.fi
+set out [::tclutils::tused::replace $text {foo} bar -all 1]
+.CE
 .PP
 Optionen:
-.IP
+.IP \(bu
 \fB\-all 1\fR ersetzt alle Treffer pro Zeile
-.IP
+.IP \(bu
 \fB\-nocase 1\fR sucht ohne Gross\-/Kleinschreibung
-.IP
+.IP \(bu
 \fB\-fixed 1\fR nutzt einfache Zeichenkettensuche statt Regex
-.SH ZEILEN LOESCHEN
-.PP
-.nf
+.SS "Zeilen loeschen"
+.CS
 set out [::tclutils::tused::delete $text {^#}]
-.fi
-.SH REGEL\-LISTE
-.PP
-.nf
-set rules [list \e
-    [list s foo bar g] \e
+.CE
+.SS Regel\-Liste
+.CS
+set rules [list \
+    [list s foo bar g] \
     [list d {^#}]]
 
 set out [::tclutils::tused::process $text $rules]
-.fi
-.SH DATEIEN
-.PP
-.nf
+.CE
+.SS Dateien
+.CS
 ::tclutils::tused::processFile in.txt out.txt $rules
-.fi
+.CE
 .PP
 Inplace mit Backup:
-.PP
-.nf
-::tclutils::tused::processFile in.txt ignored $rules \-inplace 1 \-backup .bak
-.fi
-.SH EINFACHES SCRIPTFORMAT
-.PP
-.nf
+.CS
+::tclutils::tused::processFile in.txt ignored $rules -inplace 1 -backup .bak
+.CE
+.SS "Einfaches Scriptformat"
+.CS
 set out [::tclutils::tused::script $text {
     s/foo/bar/g
     d/^#/
 }]
-.fi
+.CE
 .PP
 Hinweis: Das Scriptformat ist bewusst klein und noch kein vollstaendiger sed\-Ersatz.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)

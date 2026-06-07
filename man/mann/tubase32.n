@@ -1,0 +1,21 @@
+.TH tubase32 n 0.1 tclutils
+.SH tclutils::tubase32
+.PP
+RFC 4648 base32 (and base32hex) encode/decode in pure Tcl. Tcl core provides base64 but not base32, so this fills the gap with a matching API.
+.SS API
+.CS
+set b32  [::tclutils::tubase32::encode $bytes]
+set data [::tclutils::tubase32::decode $b32]
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBencode data ?\-pad bool? ?\-hex bool?\fR — base32 string. \fB\-pad 0\fR omits the trailing \fB=\fR; \fB\-hex 1\fR uses the base32hex alphabet (RFC 4648 §7). Default \fB\-pad 1 \-hex 0\fR.
+.IP \(bu
+\fBdecode text ?\-hex bool?\fR — back to a binary string. Whitespace and \fB=\fR padding are ignored; input is case\-insensitive.
+.IP \(bu
+\fBencodeFile path ?\-pad bool? ?\-hex bool?\fR — encode a file's bytes.
+.IP \(bu
+\fBdecodeFile path ?\-hex bool?\fR — decode a file's text.
+.PP
+Errors use error code \fB{TCLUTILS TUBASE32 CHAR}\fR for an invalid input character.

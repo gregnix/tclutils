@@ -1,81 +1,70 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tucsv n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tucsv \- Small CSV helpers written in pure Tcl.
-.SH SYNOPSIS
+.TH tucsv n 0.1 tclutils
+.SH tclutils::tucsv
 .PP
-.nf
+Small CSV helpers written in pure Tcl.
+.PP
+\fBtuCSV\fR handles common CSV tasks:
+.IP \(bu
+parse one CSV line into a Tcl list
+.IP \(bu
+join a Tcl list into one CSV line
+.IP \(bu
+parse CSV text into rows
+.IP \(bu
+read/write CSV files
+.IP \(bu
+convert rows into dictionaries using a header row
+.PP
+It is intentionally small and dependency\-free. It is not intended to replace a full CSV/database import framework.
+.SS Load
+.CS
 tcl::tm::path add /path/to/tclutils/lib/tm
 package require tclutils::tucsv
-.fi
-.SH PARSE ONE LINE
-.PP
-.nf
+.CE
+.SS "Parse one line"
+.CS
 set row [::tclutils::tucsv::parseLine {a,"b,c","d""e"}]
-# \-> a {b,c} {d"e}
-.fi
+# -> a {b,c} {d"e}
+.CE
 .PP
 Options:
-.PP
-.nf
-\-delimiter ,
-\-quote "
-\-trim 0
-.fi
-.SH JOIN ONE LINE
-.PP
-.nf
+.CS
+-delimiter ,
+-quote "
+-trim 0
+.CE
+.SS "Join one line"
+.CS
 set line [::tclutils::tucsv::joinLine [list a {b,c} {d"e}]]
-# \-> a,"b,c","d""e"
-.fi
+# -> a,"b,c","d""e"
+.CE
 .PP
 Options:
-.PP
-.nf
-\-delimiter ,
-\-quote "
-\-alwaysQuote 0
-.fi
-.SH PARSE TEXT
-.PP
-.nf
-set rows [::tclutils::tucsv::parse "name,city\enAlice,Berlin"]
-# \-> {name city} {Alice Berlin}
-.fi
+.CS
+-delimiter ,
+-quote "
+-alwaysQuote 0
+.CE
+.SS "Parse text"
+.CS
+set rows [::tclutils::tucsv::parse "name,city\nAlice,Berlin"]
+# -> {name city} {Alice Berlin}
+.CE
 .PP
 Quoted fields may contain newlines.
-.SH CONVERT ROWS TO DICTS
-.PP
-.nf
-set rows [::tclutils::tucsv::parse "name;city\enAlice;Berlin" \-delimiter {;}]
+.SS "Convert rows to dicts"
+.CS
+set rows [::tclutils::tucsv::parse "name;city\nAlice;Berlin" -delimiter {;}]
 set dictRows [::tclutils::tucsv::dicts $rows]
-# \-> {name Alice city Berlin}
-.fi
-.SH FILES
-.PP
-.nf
-set rows [::tclutils::tucsv::file data.csv \-delimiter {;}]
+# -> {name Alice city Berlin}
+.CE
+.SS Files
+.CS
+set rows [::tclutils::tucsv::file data.csv -delimiter {;}]
 ::tclutils::tucsv::writeFile out.csv $rows
-.fi
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+.CE
+.SS "Options (0.37.0)"
+.IP \(bu
+A leading UTF\-8 BOM is stripped automatically on \fBparse\fR.
+.IP \(bu
+\fB\-strict 0\fR recovers from an unterminated quoted field instead of raising \fB{TCLUTILS TUCSV QUOTE}\fR (useful for loading messy real\-world exports). The default \fB\-strict 1\fR keeps the previous strict behaviour.

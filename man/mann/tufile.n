@@ -1,0 +1,45 @@
+.TH tufile n 0.1 tclutils
+.SH tclutils::tufile
+.PP
+Magic\-signature file type detection in pure Tcl, like Unix \fBfile\fR, with a user\-extensible signature table and extension\-mismatch checking. Reads only the file header.
+.SS Package
+.CS
+package require tclutils::tufile 0.1
+.CE
+.SS API
+.IP \(bu
+\fBtufile::detect path\fR        \-> dict of the most specific match, or empty dict
+.IP \(bu
+\fBtufile::type path\fR          \-> short name (\fBpng\fR, \fBpdf\fR, \fBodt\fR, ...) or \fB""\fR
+.IP \(bu
+\fBtufile::mime path\fR          \-> MIME type or \fB""\fR
+.IP \(bu
+\fBtufile::describe path\fR      \-> human\-readable description or \fB"data"\fR
+.IP \(bu
+\fBtufile::checkExtension path\fR\-> dict \fB{path detected declared expected status}\fR with \fBstatus\fR in \fBok | mismatch | noext | unknown | unknownext\fR
+.IP \(bu
+\fBtufile::register name \-offset N (\-hex HEX | \-ascii STR) \-mime M \-ext {e ...} \-desc D\fR
+.IP \(bu
+\fBtufile::loadFile path\fR      \-> load signatures from a text file (returns count)
+.IP \(bu
+\fBtufile::forget name\fR / \fBtufile::reset\fR
+.IP \(bu
+\fBtufile::signatures\fR         \-> list of signature names
+.PP
+Signature file format (one per line, \fB#\fR comments, \fB|\fR\-separated):
+.CS
+# name | offset | marker | mime | ext1,ext2 | description
+foofmt | 0 | @FOO!   | application/x-foo | foo,fo | Foo format
+barfmt | 4 | CAFE    | application/x-bar | bar    | Bar format
+.CE
+.PP
+A leading \fB@\fR marks the marker as ASCII text; otherwise it is hex.
+.SS CLI
+.CS
+tclsh bin/tufile.tcl file                 # describe, like Unix file
+tclsh bin/tufile.tcl check *.jpg          # extension vs content
+tclsh bin/tufile.tcl -sigs my.txt type x.bin
+.CE
+.SS Scope
+.PP
+Offset + exact byte pattern match model (no masks, ranges, or nested rules like libmagic). ODT/ODS/ODP are recognized via the offset\-30 \fBmimetype\fR marker; DOCX/XLSX/PPTX share only the ZIP magic and are reported as \fBzip\fR.

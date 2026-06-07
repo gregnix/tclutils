@@ -1,0 +1,24 @@
+.TH tucodepng n 0.1 tclutils
+.SH tclutils::tucodepng
+.PP
+Render a character\-code table (a classic code\-page grid) to a PNG. Data comes from \fBtclutils::tucode\fR (\fBlookup\fR); drawing from \fBtclutils::tupngdraw\fR. Pure Tcl.
+.CS
+package require tclutils::tucodepng
+tclutils::tucodepng::write ascii.png 0 127 -title "ASCII 0-127" -shownames 1
+set png [tclutils::tucodepng::latin1 -shownames 1]   ;# 128..255 -> PNG bytes
+.CE
+.SS API
+.IP \(bu
+\fBrender from to ?opts?\fR \-> PNG bytes (range within 0..255).
+.IP \(bu
+\fBwrite file from to ?opts?\fR \-> writes the PNG, returns the filename.
+.IP \(bu
+\fBascii ?opts?\fR (0..127), \fBlatin1 ?opts?\fR (128..255), \fBall ?opts?\fR (0..255).
+.PP
+Each cell shows the hex code (top), the glyph (centre) and, with \fB\-shownames\fR, the name (bottom). Control codes (0..31, 127) show their abbreviation (NUL, ESC, ...); 32 shows "SP".
+.SS Options
+.PP
+\fB\-columns N\fR (default 16), \fB\-scale N\fR (default 2), \fB\-theme default|dark|light\fR, \fB\-showcode 0|1\fR (default 1), \fB\-shownames 0|1\fR (default 0), \fB\-title TEXT\fR, \fB\-textcmd CMD\fR.
+.SS "Real glyphs for Latin\-1 (\-textcmd)"
+.PP
+The built\-in 6x8 bitmap font covers ASCII (and German umlauts), so 0..127 renders fully dependency\-free. For the real Latin\-1 glyphs (128..255) pass a \fB\-textcmd\fR that fills outline glyphs from a real font (Glyphs + tupngdraw \fBfillcontours\fR); hex codes, names and control abbreviations always use the bitmap font. The command is called \fB{*}$CMD img x y w h char color\fR per printable cell \-\- same hook as tumonthpng. See examples/generate\-codepage\-glyphs\-demo.tcl.

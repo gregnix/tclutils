@@ -1,9 +1,21 @@
-.TH turegistry n 0.44.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::turegistry \- keyed value registry / service locator
-.SH SYNOPSIS
-package require tclutils::turegistry
-.SH DESCRIPTION
-See docs/turegistry.md.
-.SH KEYWORDS
-registry, locator, di
+.TH turegistry n 0.1 tclutils
+.SH tclutils::turegistry
+.PP
+A small keyed value registry (service locator / bag). Store values under keys and fetch them with a required\-get that errors on a missing key.
+.SS API
+.CS
+set reg [::tclutils::turegistry::create]
+::tclutils::turegistry::put $reg db $conn
+::tclutils::turegistry::get $reg db            ;# -> $conn
+::tclutils::turegistry::get $reg cache {}       ;# -> "" (default)
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBcreate\fR → registry token.
+.IP \(bu
+\fBput reg key value\fR → value.
+.IP \(bu
+\fBget reg key ?default?\fR — missing key errors \fB{TCLUTILS TUREGISTRY KEY}\fR unless a default is supplied.
+.IP \(bu
+\fBhas reg key\fR, \fBkeys reg ?pattern?\fR, \fBremove reg key\fR, \fBdestroy reg\fR.

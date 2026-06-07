@@ -1,9 +1,28 @@
-.TH tuevent n 0.44.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tuevent \- publish/subscribe event bus
-.SH SYNOPSIS
-package require tclutils::tuevent
-.SH DESCRIPTION
-See docs/tuevent.md.
-.SH KEYWORDS
-event, pubsub, observer
+.TH tuevent n 0.1 tclutils
+.SH tclutils::tuevent
+.PP
+A small publish/subscribe event bus. Create independent bus tokens, subscribe command prefixes to named events, and emit events with arguments.
+.SS API
+.CS
+set bus [::tclutils::tuevent::create]
+::tclutils::tuevent::subscribe $bus saved {apply {{id} {puts "saved $id"}}}
+::tclutils::tuevent::emit      $bus saved 42      ;# -> handler runs, returns 1
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBcreate\fR → bus token.
+.IP \(bu
+\fBsubscribe bus event handler\fR — idempotent per handler.
+.IP \(bu
+\fBunsubscribe bus event handler\fR.
+.IP \(bu
+\fBemit bus event ?arg ...?\fR — calls each handler at global level with the args appended (subscription order); returns the count. A handler error propagates.
+.IP \(bu
+\fBhandlers bus event\fR / \fBevents bus\fR.
+.IP \(bu
+\fBclear bus ?event?\fR — drop one event's handlers or all.
+.IP \(bu
+\fBdestroy bus\fR.
+.PP
+Unknown bus → \fB{TCLUTILS TUEVENT BUS}\fR.

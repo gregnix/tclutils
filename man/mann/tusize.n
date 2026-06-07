@@ -1,16 +1,21 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\"
-.TH tusize n 0.39.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tusize \- Recursive byte sizes and human-readable formatting (du-like).
-.SH COMMANDS
+.TH tusize n 0.1 tclutils
+.SH tusize
 .PP
-.nf
-::tclutils::tusize::bytes path
-::tclutils::tusize::human n ?-si 0|1?
-::tclutils::tusize::entries dir
-.fi
+A small \fBdu\fR: recursive byte totals and human\-readable formatting. Symlinks are not followed (their own entry size is counted), so cyclic links cannot loop.
+.SS Commands
+.TS
+l l.
+Command	Result
+\fBbytes path\fR	size of a file, or recursive total of a directory (incl. dotfiles)
+`human n ?\-si 0\e	1?`
+\fBentries dir\fR	list of \fB{bytes path}\fR for each immediate child, sorted by path
+.TE
+.CS
+package require tclutils::tusize
+tusize::bytes   ./project          ;# 1048576
+tusize::human   1536               ;# 1.5 KiB
+tusize::human   1500 -si 1         ;# 1.5 kB
+tusize::entries ./project          ;# {4096 ./project/docs} {2048 ./project/src} ...
+.CE
+.PP
+Errors use \fB{TCLUTILS TUSIZE ...}\fR (\fBNOTFOUND\fR, \fBNOTDIR\fR, \fBVALUE\fR).

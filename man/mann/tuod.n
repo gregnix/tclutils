@@ -1,44 +1,26 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tuod n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tuod \- tuod provides small od\-like binary dump helpers in pure Tcl.
-.SH COMMANDS
+.TH tuod n 0.1 tclutils
+.SH tclutils::tuod
 .PP
-.nf
+\fBtuod\fR provides small \fBod\fR\-like binary dump helpers in pure Tcl.
+.CS
+package require tclutils::tuod
+
+puts [::tclutils::tuod::file test.bin]
+puts [::tclutils::tuod::data $bytes -format hex -width 16]
+.CE
+.SS Commands
+.CS
 ::tclutils::tuod::bytes data ?options?
 ::tclutils::tuod::data data ?options?
 ::tclutils::tuod::file filename ?options?
-.fi
-.SH OPTIONS
-.PP
-.nf
-\-format   octal|hex|decimal|char   default: octal
-\-width    number                    default: 16
-\-offset   number                    default: 0
-\-length   number                    default: \-1
-\-address  hex|octal|decimal|none    default: hex
-.fi
+.CE
+.SS Options
+.CS
+-format   octal|hex|decimal|char   default: octal
+-width    number                    default: 16
+-offset   number                    default: 0
+-length   number                    default: -1
+-address  hex|octal|decimal|none    default: hex
+.CE
 .PP
 \fBbytes\fR returns unsigned byte values. This avoids Tcl's signed\-byte pitfall when using \fBbinary scan\fR with \fBc\fR.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)

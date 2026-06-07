@@ -1,13 +1,44 @@
-.TH tunotes n 0.30.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tunotes \- hierarchical note store
-.SH SYNOPSIS
-package require tclutils::tunotes
-.SH DESCRIPTION
-A dependency-light store for a tree of notes (id, parent_id, title, content,
-created, modified, tags). Mutators take a store variable name; queries take the
-store value. Persistence uses tclutils::tujson. See docs/tunotes.md.
-.SH "SEE ALSO"
-tclutils(n), tujson
-.SH KEYWORDS
-notes, tree, hierarchy, json
+.TH tunotes n 0.1 tclutils
+.SH tclutils::tunotes
+.PP
+A small hierarchical note store. A note is a dict with the fields \fBid parent_id title content created modified tags\fR. The whole collection ("store") is a dict mapping id \-> note, so it is just a value.
+.PP
+Mutating commands take the NAME of a store variable; query commands take the store value. Persistence uses \fBtclutils::tujson\fR (no external packages).
+.SS Commands
+.CS
+tunotes::create  storeVar title content ?tags? ?parentId?   ;# -> new id
+tunotes::update  storeVar id title content ?tags? ?parentId|KEEP?
+tunotes::delete  storeVar id ?cascade?      ;# cascade=1 subtree; 0 reparent to root
+tunotes::move    storeVar id newParentId    ;# "" = root; refuses cycles
+tunotes::get     store id                   ;# -> note dict
+tunotes::exists  store id
+tunotes::roots   store                      ;# -> ids (insertion order)
+tunotes::children store parentId            ;# -> ids
+tunotes::descendants store id               ;# -> ids (depth-first)
+tunotes::parent  store id                   ;# -> parent id ("" if root)
+tunotes::path    store id                   ;# -> ids root..id
+tunotes::search  store query                ;# -> ids (title/content, nocase)
+tunotes::byTag   store tag                  ;# -> ids
+tunotes::tags    store                      ;# -> sorted unique tags
+tunotes::ids     store
+tunotes::count   store
+tunotes::toJson  store                      ;# -> pretty JSON
+tunotes::fromJson json                      ;# -> store
+tunotes::load    path                       ;# missing file -> empty store
+tunotes::save    store path
+.CE
+.SS "Error codes"
+.PP
+\fB{TCLUTILS TUNOTES NOTFOUND}\fR (unknown id / parent), \fB{TCLUTILS TUNOTES CYCLE}\fR (move under self or descendant).
+.SS "Added in 0.33.0"
+.CS
+tunotes::setTitle   storeVar id title
+tunotes::setContent storeVar id content
+tunotes::addTag     storeVar id tag
+tunotes::removeTag  storeVar id tag
+tunotes::hasTag     store id tag
+tunotes::ancestors  store id        ;# root..parent (excl. self)
+tunotes::siblings   store id
+tunotes::depth      store id        ;# root = 0
+tunotes::subtree    store id        ;# standalone store of branch (re-rooted)
+.CE

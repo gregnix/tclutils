@@ -27,7 +27,8 @@ common  (Core: shared layer)
 |-- binary / encoding / checksums
 |   |-- tubin   |-- tuhexdump |-- tuod   |-- tuhexedit |-- tubase64
 |   |-- tucrc   |-- tuhash    |-- tustrings |-- tuiconv |-- tucode
-|   |-- tubase32|-- tuimage   `-- tupng
+|   |-- tubase32|-- tuimage   |-- tupng   |-- tupngdraw  |-- tutablepng
+|   |-- tumonthpng |-- tucodepng `-- tupngpad
 |
 |-- data / serialization
 |   |-- tucsv   |-- tujson  |-- tuxml   |-- tunumfmt `-- tusqlite
@@ -96,7 +97,12 @@ and `tupatch` (apply/reverse unified diffs).
 ASCII-safe rendering, byte-list helpers); `tuhexdump`, `tuod`, `tuhexedit`, and
 `tuzip` build on it. The encode/checksum wrappers (`tubase64`, `tubase32`,
 `tucrc`, `tuhash`, `tuiconv`), the byte-table reference `tucode`, and the image
-detector/encoder (`tuimage`, `tupng`) live here too.
+detector/encoder (`tuimage`, `tupng`) live here too. On top of `tupng` sits a
+small pure-Tcl PNG drawing/generation layer: `tupngdraw` (a 2D surface — shapes,
+text, glyph fills) and the export adapters built on it — `tutablepng` (tabular
+data → table image), `tumonthpng` (month/quarter/year calendar → PNG, mirroring
+the monthcanvas look), `tucodepng` (ASCII/Latin-1 code-page chart → PNG), plus
+`tupngpad` (normalise transparent PNG cut-outs to a uniform, padded size).
 
 ## Data and serialization
 

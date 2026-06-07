@@ -1,22 +1,15 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tuuniq n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tuuniq \- Uniq helpers similar to Unix uniq, implemented in pure Tcl.
-.SH SYNOPSIS
+.TH tuuniq n 0.1 tclutils
+.SH tclutils::tuuniq
 .PP
-.nf
+Uniq helpers similar to Unix \fBuniq\fR, implemented in pure Tcl.
+.PP
+Important: \fBuniq\fR removes only adjacent duplicate lines. Sort first if you want to remove all duplicates independent of position.
+.SS Package
+.CS
 package require tclutils::tuuniq 0.1
-.fi
-.SH COMMANDS
-.PP
-.nf
+.CE
+.SS Commands
+.CS
 ::tclutils::tuuniq::uniqList items ?options...?
 ::tclutils::tuuniq::text text ?options...?
 ::tclutils::tuuniq::file path ?options...?
@@ -24,30 +17,14 @@ package require tclutils::tuuniq 0.1
 ::tclutils::tuuniq::count items ?options...?
 ::tclutils::tuuniq::countText text ?options...?
 ::tclutils::tuuniq::countFile path ?options...?
-.fi
-.SH OPTIONS
-.IP
+.CE
+.SS Options
+.IP \(bu
 \fB\-nocase 1\fR compare case\-insensitively
-.SH EXAMPLES
-.PP
-.nf
+.SS Examples
+.CS
 set unique [::tclutils::tuuniq::uniqList {a a b a}]
-# \-> a b a
+# -> a b a
 
 set counts [::tclutils::tuuniq::countFile names.txt]
-.fi
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+.CE

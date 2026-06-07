@@ -1,9 +1,17 @@
-.TH tubookmark n 0.46.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tubookmark \- read/write Netscape bookmark HTML
-.SH SYNOPSIS
-package require tclutils::tubookmark
-.SH DESCRIPTION
-See docs/tubookmark.md.
-.SH KEYWORDS
-bookmark, netscape, html, favorites
+.TH tubookmark n 0.1 tclutils
+.SH tclutils::tubookmark
+.PP
+Read and write the \fBNetscape bookmark file format\fR — the HTML interchange format browsers use to import/export bookmarks. A bookmark is a dict \fB{title url folder tags adddate}\fR; \fBfolder\fR is a \fB/\fR\-joined path ("" = top level) and \fBtags\fR is a list. Entity (un)escaping reuses \fBtclutils::tuxml\fR.
+.SS API
+.CS
+set bms [::tclutils::tubookmark::parse $html]          ;# -> list of dicts
+set html [::tclutils::tubookmark::serialize $bms -title "My Bookmarks"]
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBparse html\fR → flat list of bookmark dicts (folder paths reconstructed from the nested \fB<H3>\fR/\fB<DL>\fR structure).
+.IP \(bu
+\fBserialize bookmarks ?\-title T?\fR → Netscape bookmark HTML, grouping bookmarks into nested folders by their \fBfolder\fR path.
+.PP
+Parsing targets the standard export layout (one \fB<DT>\fR per line).

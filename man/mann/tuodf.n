@@ -1,28 +1,33 @@
-'" Copyright (c) 2026 Gregor Ebbing
-'" SPDX-License-Identifier: MIT
-.TH tuodf n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tuodf \- create and read simple OpenDocument Text files.
-.SH SYNOPSIS
-.nf
-package require tclutils::tuodf
-.fi
-.SH COMMANDS
-.nf
-::tclutils::tuodf::createText odtFile paragraphs ?options?
+.TH tuodf n 0.1 tclutils
+.SH tclutils::tuodf
+.PP
+Minimal OpenDocument Text (\fB.odt\fR) helpers in pure Tcl.
+.PP
+\fBtuodf\fR creates and reads simple paragraph\-based ODF text documents. It is not a full ODF toolkit; for rich styles, tables, images, spreadsheets, and Draw content use a dedicated ODF library.
+.SS Package
+.CS
+package require tclutils::tuodf 0.1
+.CE
+.SS API
+.CS
+::tclutils::tuodf::createText odtFile paragraphs ?-title T? ?-creator C?
 ::tclutils::tuodf::text odtFile
 ::tclutils::tuodf::paragraphs odtFile
 ::tclutils::tuodf::part odtFile name
 ::tclutils::tuodf::parts odtFile
-.fi
-.SH DESCRIPTION
+.CE
+.SS Example
+.CS
+package require tclutils::tuodf
+
+::tclutils::tuodf::createText demo.odt \
+    {{First paragraph} {Second with äöüß} {} {Fourth}} \
+    -title Demo -creator Tcl
+
+puts [::tclutils::tuodf::text demo.odt]
+.CE
+.SS Notes
 .PP
-Creates and reads simple paragraph based ODT files using pure Tcl and tuzip.
-The generated container stores mimetype first and uncompressed.
-.SH OPTIONS
-.nf
--title text       write dc:title into meta.xml
--creator text     write dc:creator into meta.xml
-.fi
-.SH SEE ALSO
-tclutils(n), tuzip(n), tuxml(n)
+The generated container keeps \fBmimetype\fR as the first entry and stored (uncompressed). Output uses a fixed valid timestamp for deterministic builds. All entries are currently stored, not deflated, so generated files are valid but larger than compressed ODTs.
+.PP
+The reader is a lightweight paragraph extractor, not a complete XML/ODF parser.

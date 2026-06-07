@@ -1,49 +1,24 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tufold n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tufold \- tufold folds long lines to a fixed width, similar to Unix fold.
-.SH USAGE
+.TH tufold n 0.1 tclutils
+.SH tclutils::tufold
 .PP
-.nf
+\fBtufold\fR folds long lines to a fixed width, similar to Unix \fBfold\fR.
+.SS Usage
+.CS
 package require tclutils::tufold
 
-puts [::tclutils::tufold::text $text \-width 80]
-puts [::tclutils::tufold::file README.md \-width 72 \-words 1]
-.fi
-.SH COMMANDS
-.PP
-.nf
+puts [::tclutils::tufold::text $text -width 80]
+puts [::tclutils::tufold::file README.md -width 72 -words 1]
+.CE
+.SS Commands
+.CS
 ::tclutils::tufold::foldLine line ?options?
 ::tclutils::tufold::text text ?options?
 ::tclutils::tufold::file path ?options?
-.fi
-.SH OPTIONS
-.PP
-.nf
-\-width n           maximum line width, default 80
-\-words boolean     prefer breaking at blanks when possible
-.fi
+.CE
+.SS Options
+.CS
+-width n           maximum line width, default 80
+-words boolean     prefer breaking at blanks when possible
+.CE
 .PP
 \fB\-words 1\fR is a small convenience mode. It is not a full formatter.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)

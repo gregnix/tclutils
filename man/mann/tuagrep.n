@@ -1,15 +1,28 @@
-[manpage_begin tuagrep n 0.1]
-[moddesc {tclutils}]
-[titledesc {Approximate grep}]
-[require Tcl 8.6]
-[require tclutils::tuagrep 0.1]
-[description]
-[para]The [package tclutils::tuagrep] package searches lines approximately using [package tclutils::tufuzzy].
-[section COMMANDS]
-[list_begin definitions]
-[call [cmd ::tclutils::tuagrep::search] [arg text] [arg pattern] [opt options]]
-Searches text for approximate matches.
-[call [cmd ::tclutils::tuagrep::file] [arg filename] [arg pattern] [opt options]]
-Searches a file.
-[list_end]
-[manpage_end]
+.TH tuagrep n 0.1 tclutils
+.SH tclutils::tuagrep
+.PP
+Approximate grep built on \fBtclutils::tufuzzy\fR.
+.SS Commands
+.CS
+::tclutils::tuagrep::search text pattern ?options?
+::tclutils::tuagrep::file filename pattern ?options?
+::tclutils::tuagrep::files fileList pattern ?options?
+::tclutils::tuagrep::match line pattern ?options?
+.CE
+.SS Options
+.CS
+-maxdist N
+-nocase 0|1
+-invert 0|1
+-linenumbers 0|1
+-count 0|1
+-fileswithmatches 0|1
+-filenames 0|1
+.CE
+.PP
+A line matches when \fBtufuzzy::searchDistance pattern line <= \-maxdist\fR.
+.SS Example
+.CS
+package require tclutils::tuagrep
+::tclutils::tuagrep::search "gamma line\nbeta line" gama -maxdist 1
+.CE

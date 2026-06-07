@@ -1,0 +1,47 @@
+.TH tucal n 0.1 tclutils
+.SH tclutils::tucal
+.PP
+\fBcal\fR\-like calendar output in pure Tcl.
+.SS Package
+.CS
+package require tclutils::tucal 0.1
+.CE
+.SS API
+.CS
+::tclutils::tucal::month ?month? ?year? ?options?
+::tclutils::tucal::now ?options?
+::tclutils::tucal::render year month ?options?
+::tclutils::tucal::year year ?options?
+::tclutils::tucal::three ?month? ?year? ?options?
+.CE
+.SS Options
+.CS
+-mondayfirst 0|1   week starts on Monday (default: Sunday)
+-weeknumbers 0|1   show week numbers in the left column
+-iso 0|1           ISO week numbers (sets -mondayfirst 1 and -weeknumbers 1)
+-locale name       Tcl clock locale, e.g. de_DE, fr_FR (month/day names)
+.CE
+.PP
+With \fB\-locale\fR, month titles and weekday headers use Tcl's \fBclock format \-locale\fR. Default (empty \fB\-locale\fR) keeps English abbreviations \fBMo Tu We …\fR.
+.PP
+With \fB\-weeknumbers 1\fR and \fB\-mondayfirst 1\fR, Tcl's \fB%V\fR gives ISO week numbers. With Sunday\-first weeks, \fB%U\fR is used instead.
+.SS Examples
+.CS
+puts [::tclutils::tucal::month 5 2026 -locale de_DE -iso 1]
+puts [::tclutils::tucal::month 5 2026 -locale fr_FR]
+.CE
+.CS
+tclsh tucal.tcl 5 2026 -locale de_DE -w
+.CE
+.SS Scope
+.PP
+This module prints text calendars. It is not a scheduling or iCal library. Locale support uses Tcl \fBclock format \-locale\fR and depends on OS locale data.
+.SS "More examples"
+.CS
+puts [::tclutils::tucal::month]
+puts [::tclutils::tucal::month 5 2026 -iso 1]
+puts [::tclutils::tucal::year 2026 -locale de_DE]
+.CE
+.CS
+tclsh tucal.tcl -y 2026 -locale de_DE
+.CE

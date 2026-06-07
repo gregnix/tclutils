@@ -1,19 +1,85 @@
-.TH tujson n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
- tujson \- small JSON helper and parser
-.SH SYNOPSIS
- package require tclutils::tujson
-.br
- ::tclutils::tujson::parse json
-.br
- ::tclutils::tujson::pretty json ?-indent string?
-.br
- ::tclutils::tujson::minify json
-.br
- ::tclutils::tujson::validate json
-.SH DESCRIPTION
- tujson provides dependency-free JSON helpers in pure Tcl.  It can quote,
-escape, minify, pretty-print, validate, and parse JSON text.  Parsed JSON
-objects become Tcl dictionaries and JSON arrays become Tcl lists.
-.SH SEE ALSO
- tucsv(n), tuxml(n)
+.TH tujson n 0.1 tclutils
+.SH tclutils::tujson
+.PP
+Small dependency\-free JSON helpers in pure Tcl.
+.SS API
+.CS
+package require tclutils::tujson
+
+::tclutils::tujson::quote text
+::tclutils::tujson::escape text
+::tclutils::tujson::minify json
+::tclutils::tujson::pretty json ?-indent string?
+::tclutils::tujson::validate json
+::tclutils::tujson::parse json
+::tclutils::tujson::fromJson json
+.CE
+.PP
+\fBparse\fR maps JSON objects to Tcl dictionaries and JSON arrays to Tcl lists. Strings are returned as Tcl strings, numbers as their original numeric text, \fBtrue\fR as \fB1\fR, \fBfalse\fR as \fB0\fR, and \fBnull\fR as the empty string.
+.SS Example
+.CS
+set d [::tclutils::tujson::parse {{"name":"Gregor","items":[1,2]}}]
+dict get $d name      ;# Gregor
+dict get $d items     ;# 1 2
+.CE
+.SS CLI
+.CS
+tclsh bin/tujson.tcl validate data.json
+tclsh bin/tujson.tcl minify data.json
+tclsh bin/tujson.tcl pretty data.json
+tclsh bin/tujson.tcl parse data.json
+.CE
+.SS Scope
+.PP
+The parser supports standard JSON values: objects, arrays, strings, numbers, \fBtrue\fR, \fBfalse\fR, and \fBnull\fR, including common string escapes and Unicode escapes. It intentionally does not implement JSON5, comments, trailing commas, JSONPath, or a streaming parser.
+.SS parseTyped
+.PP
+\fB::tclutils::tujson::parseTyped json\fR parses JSON into a \fItyped\fR tree, unlike \fBparse\fR/\fBfromJson\fR which return native Tcl values and lose the object/array/scalar distinction. Each node is a two\-element list \fB{type value}\fR:
+.TS
+l l.
+type	value
+\fBobject\fR	dict mapping key \-> typed node (insertion order preserved)
+\fBarray\fR	list of typed nodes
+\fBstring\fR	the unescaped string
+\fBnumber\fR	the number in its source spelling
+\fBboolean\fR	\fBtrue\fR or \fBfalse\fR
+\fBnull\fR	empty string
+.TE
+.CS
+% ::tclutils::tujson::parseTyped {{"tags":["x"],"n":1}}
+object {tags {array {{string x}}} n {number 1}}
+.CE
+.SS "Encoding: toJson"
+.PP
+\fBtoJson\fR is the inverse of \fBparseTyped\fR; it serialises a \fItyped value\fR back to JSON text, so \fBtoJson [parseTyped $json]\fR round\-trips \fB$json\fR.
+.PP
+A typed value is the tagged form \fBparseTyped\fR returns:
+.TS
+l l.
+JSON	Typed value
+string \fB"x"\fR	\fB{string x}\fR
+number \fB1\fR	\fB{number 1}\fR
+\fBtrue\fR/\fBfalse\fR	\fB{boolean true}\fR
+\fBnull\fR	\fB{null {}}\fR
+object	\fB{object {key {typed} ...}}\fR
+array	\fB{array {{typed} ...}}\fR
+.TE
+.PP
+Build values by hand with the constructors \fBstr\fR, \fBnum\fR, \fBbool\fR, \fBnull\fR, \fBobj\fR, \fBarr\fR:
+.CS
+package require tclutils::tujson
+set doc [tujson::obj [list \
+    name [tujson::str "Alice"] \
+    age  [tujson::num 30] \
+    ok   [tujson::bool 1] \
+    tags [tujson::arr [list [tujson::str x] [tujson::str y]]] \
+    note [tujson::null]]]
+
+tujson::toJson $doc
+# {"name":"Alice","age":30,"ok":true,"tags":["x","y"],"note":null}
+
+tujson::toJson $doc -indent 2
+# pretty-printed with 2 spaces per level
+.CE
+.PP
+\fB\-indent N\fR (N > 0) pretty\-prints; the default (0) is compact. Strings are escaped via \fBquote\fR; numbers are validated; unknown tags raise \fB{TCLUTILS TUJSON TYPE}\fR.

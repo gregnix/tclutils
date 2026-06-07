@@ -1,67 +1,38 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tugrep n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tugrep \- Portable grep\-like routines in pure Tcl.
-.SH SYNOPSIS
+.TH tugrep n 0.1 tclutils
+.SH tclutils::tugrep
 .PP
-.nf
+Portable grep\-like routines in pure Tcl.
+.SS Load
+.CS
 package require tclutils::tugrep
-.fi
-.SH COMMANDS
-.PP
-.nf
+.CE
+.SS "Main commands"
+.CS
 ::tclutils::tugrep::search text pattern ?options?
 ::tclutils::tugrep::file filename pattern ?options?
 ::tclutils::tugrep::files fileList pattern ?options?
 ::tclutils::tugrep::match line pattern ?options?
-.fi
-.SH OPTIONS
-.PP
-.nf
-\-nocase 0|1             case\-insensitive search
-\-linenumbers 0|1        return {lineNumber line}
-\-invert 0|1             return non\-matching lines
-\-fixed 0|1              use literal substring search instead of regexp
-\-count 0|1              return match count
-\-fileswithmatches 0|1   return only filenames with matches
-\-filenames 0|1          prefix matches with filename in multi\-file style
-.fi
-.SH EXAMPLES
-.PP
-.nf
+.CE
+.SS Options
+.CS
+-nocase 0|1             case-insensitive search
+-linenumbers 0|1        return {lineNumber line}
+-invert 0|1             return non-matching lines
+-fixed 0|1              use literal substring search instead of regexp
+-count 0|1              return match count
+-fileswithmatches 0|1   return only filenames with matches
+-filenames 0|1          prefix matches with filename in multi-file style
+.CE
+.SS Examples
+.CS
 set lines [::tclutils::tugrep::file app.log {ERROR}]
-.fi
-.PP
-.nf
-set lines [::tclutils::tugrep::file app.log {error} \-nocase 1 \-linenumbers 1]
-.fi
-.PP
-.nf
-set count [::tclutils::tugrep::file app.log {ORA\-} \-count 1]
-.fi
-.PP
-.nf
-set matchingFiles [::tclutils::tugrep::files $files {TODO} \-fileswithmatches 1]
-.fi
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+.CE
+.CS
+set lines [::tclutils::tugrep::file app.log {error} -nocase 1 -linenumbers 1]
+.CE
+.CS
+set count [::tclutils::tugrep::file app.log {ORA-} -count 1]
+.CE
+.CS
+set matchingFiles [::tclutils::tugrep::files $files {TODO} -fileswithmatches 1]
+.CE

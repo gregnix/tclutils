@@ -1,0 +1,15 @@
+.TH tunl n 0.1 tclutils
+.SH tclutils::tunl
+.PP
+\fBnl\fR\-like line numbering in pure Tcl.
+.SS API
+.CS
+::tclutils::tunl::text text ?options?
+::tclutils::tunl::file path ?options?
+.CE
+.PP
+Options: \fB\-style all|nonempty|none\fR (default \fBnonempty\fR), \fB\-start N\fR (default 1), \fB\-increment N\fR (default 1), \fB\-width N\fR (default 6), \fB\-separator S\fR (default tab). A trailing newline is preserved and is not numbered.
+.SS CLI
+.CS
+tclsh bin/tunl.tcl -width 3 -separator " " file.txt
+.CE

@@ -1,9 +1,32 @@
-.TH tuopen n 0.46.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tuopen \- open a URL or file with the default application
-.SH SYNOPSIS
-package require tclutils::tuopen
-.SH DESCRIPTION
-See docs/tuopen.md.
-.SH KEYWORDS
-open, url, xdg-open, browser
+.TH tuopen n 0.1 tclutils
+.SH tclutils::tuopen
+.PP
+Open a URL or file path with the operating system's default application (\fBxdg\-open\fR on Linux/BSD, \fBopen\fR on macOS, \fBcmd /c start\fR on Windows).
+.SS API
+.CS
+::tclutils::tuopen::launch https://tcl.tk/     ;# opens in the default browser
+::tclutils::tuopen::launch /path/to/report.pdf  ;# opens in the default viewer
+::tclutils::tuopen::command http://x -platform windows
+#  -> cmd.exe /c start {} http://x
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBlaunch target ?\-platform p? ?\-os o?\fR — open \fBtarget\fR (runs detached); returns the command used. Errors \fB{TCLUTILS TUOPEN LAUNCH}\fR on failure, \fB{TCLUTILS TUOPEN TARGET}\fR on an empty target.
+.IP \(bu
+\fBcommand target ?\-platform p? ?\-os o?\fR — return the opener command without running it (handy for inspection and tests). \fB\-platform\fR/\fB\-os\fR override the autodetected \fBtcl_platform\fR values.
+.SS "Editing, folders and config paths"
+.CS
+::tclutils::tuopen::edit /path/to/notes.txt        ;# open in $EDITOR / notepad / TextEdit
+::tclutils::tuopen::openDir /path/to/file.pdf      ;# open the containing folder
+::tclutils::tuopen::configDir myapp                ;# per-user config directory
+::tclutils::tuopen::configFile myapp settings.ini  ;# a file inside it
+.CE
+.IP \(bu
+\fBedit target ?\-editor cmd? ?\-platform p? ?\-os o?\fR / \fBeditCommand ...\fR — open in a text editor; \fBeditCommand\fR returns the command without running it.
+.IP \(bu
+\fBopenDir target ?\-platform p? ?\-os o?\fR — open a directory in the file manager; if given an existing file, opens its containing folder.
+.IP \(bu
+\fBconfigDir app ?\-platform p? ?\-os o?\fR — per\-user config directory: \fB%APPDATA%\e<app>\fR (Windows), \fB~/Library/Application Support/<app>\fR (macOS), \fB$XDG_CONFIG_HOME/<app>\fR else \fB~/.config/<app>\fR (Unix).
+.IP \(bu
+\fBconfigFile app filename ?...?\fR — a path inside \fBconfigDir\fR.

@@ -1,70 +1,41 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tufind n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tufind \- Portable file finder in pure Tcl.
-.SH SYNOPSIS
+.TH tufind n 0.1 tclutils
+.SH tclutils::tufind
 .PP
-.nf
+Portable file finder in pure Tcl.
+.SS Load
+.CS
 package require tclutils::tufind
-.fi
-.SH COMMANDS
-.PP
-.nf
+.CE
+.SS "Main commands"
+.CS
 ::tclutils::tufind::files root pattern ?options?
 ::tclutils::tufind::directories root pattern ?options?
 ::tclutils::tufind::all root pattern ?options?
 ::tclutils::tufind::walk root patterns callback ?options?
-.fi
-.SH OPTIONS
-.PP
-.nf
-\-recursive 0|1       recurse into subdirectories, default 1
-\-mindepth N          only accept paths at depth N or deeper, default 0
-\-maxdepth N          stop recursion at depth N, \-1 means unlimited
-\-type file|dir|directory|any|all
-\-hidden 0|1          include hidden dot\-files, default 0
-\-fullpath 0|1        match pattern against full path as well as tail, default 1
-\-tails 0|1           return file tails instead of full paths
-\-followlinks 0|1     follow symbolic links to directories, default 0
-\-size SPEC           file size filter: N, +N, \-N, optional k/m/g suffix
-\-mtime SPEC          modification age in days: N, +N older than N, \-N newer than N
-.fi
-.SH EXAMPLES
-.PP
-.nf
+.CE
+.SS Options
+.CS
+-recursive 0|1       recurse into subdirectories, default 1
+-mindepth N          only accept paths at depth N or deeper, default 0
+-maxdepth N          stop recursion at depth N, -1 means unlimited
+-type file|dir|directory|any|all
+-hidden 0|1          include hidden dot-files, default 0
+-fullpath 0|1        match pattern against full path as well as tail, default 1
+-tails 0|1           return file tails instead of full paths
+-followlinks 0|1     follow symbolic links to directories, default 0
+-size SPEC           file size filter: N, +N, -N, optional k/m/g suffix
+-mtime SPEC          modification age in days: N, +N older than N, -N newer than N
+.CE
+.SS Examples
+.CS
 set pdfs [::tclutils::tufind::files . *.pdf]
-.fi
-.PP
-.nf
-set largeTxt [::tclutils::tufind::files . *.txt \-size +1k]
-.fi
-.PP
-.nf
-set recent [::tclutils::tufind::files . *.log \-mtime \-2]
-.fi
-.PP
-.nf
-set dirs [::tclutils::tufind::directories . * \-maxdepth 2]
-.fi
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+.CE
+.CS
+set largeTxt [::tclutils::tufind::files . *.txt -size +1k]
+.CE
+.CS
+set recent [::tclutils::tufind::files . *.log -mtime -2]
+.CE
+.CS
+set dirs [::tclutils::tufind::directories . * -maxdepth 2]
+.CE

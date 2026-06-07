@@ -1,0 +1,34 @@
+.TH tutablepng n 0.1 tclutils
+.SH tclutils::tutablepng
+.PP
+Render tabular data to a PNG table image using the pure\-Tcl drawing layer \fBtclutils::tupngdraw\fR (no Tk, no external packages). An export adapter: data in, a styled table image out.
+.SS API
+.CS
+package require tclutils::tutablepng
+
+::tclutils::tutablepng::render rows ?options?   ;# -> PNG bytes
+::tclutils::tutablepng::write  file rows ?options?  ;# -> file
+.CE
+.PP
+\fBrows\fR is a list of rows; each row is a list of cell strings. Short rows are padded with empty cells; the column count is the widest row.
+.PP
+Options (defaults): \fB\-header 1\fR (style the first row), \fB\-align l\fR (a single \fBl|c|r\fR or a per\-column list), \fB\-scale 1\fR (font scale), \fB\-padding 6\fR (cell padding px), \fB\-spacing 1\fR (px between glyphs), \fB\-background white\fR, \fB\-gridcolor {180 180 185}\fR, \fB\-textcolor {25 25 25}\fR, \fB\-headerbg {230 230 238}\fR, \fB\-headertext {0 0 0}\fR, \fB\-zebra {}\fR (alt\-row colour, empty = off), \fB\-border 1\fR (grid lines). Colours take any tupngdraw form (name, \fB#rrggbb\fR, \fBRRGGBB\fR, \fB{r g b}\fR, \fB{r g b a}\fR).
+.CS
+set rows {
+    {Name      Qty Price}
+    {Apples     12  3.40}
+    {Pears        4  2.10}
+}
+tclutils::tutablepng::write table.png $rows \
+    -header 1 -align {l r r} -zebra {245 245 248}
+.CE
+.SS CLI
+.CS
+tclsh bin/tutablepng.tcl out.png -d , -header 1 -align "l r r" data.csv
+cat data.tsv | tclsh bin/tutablepng.tcl out.png
+.CE
+.PP
+Reads delimited rows (default delimiter: tab) from a file or stdin and writes a PNG table.
+.SS Notes
+.PP
+Column widths are derived from the fixed 6x8 font, so they are exact for the embedded glyphs. Grid lines are drawn crisp (no antialiasing); cell text is the bitmap font. For large tables prefer a modest \fB\-scale\fR.

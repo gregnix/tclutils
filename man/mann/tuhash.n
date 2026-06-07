@@ -1,19 +1,23 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\"
-.TH tuhash n 0.39.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tuhash \- Pure-Tcl SHA-256, SHA-1 and MD5 digests.
-.SH COMMANDS
+.TH tuhash n 0.1 tclutils
+.SH tuhash
 .PP
-.nf
-::tclutils::tuhash::sha256 data ?-encoding utf-8|binary?
-::tclutils::tuhash::sha1   data ?-encoding ...?
-::tclutils::tuhash::md5    data ?-encoding ...?
-::tclutils::tuhash::sha256File path
-::tclutils::tuhash::sha1File   path
-::tclutils::tuhash::md5File    path
-.fi
+Pure\-Tcl cryptographic digests: \fBSHA\-256\fR, \fBSHA\-1\fR, \fBMD5\fR. Clean\-room implementations of FIPS 180\-4 / RFC 1321, so no tcllib or binary extension is required. All outputs are verified against the standard test vectors.
+.SS Commands
+.TS
+l l.
+Command	Result
+`sha256 data ?\-encoding utf\-8\e	binary?`
+\fBsha1   data ?\-encoding ...?\fR	hex SHA\-1
+\fBmd5    data ?\-encoding ...?\fR	hex MD5
+\fBsha256File path\fR / \fBsha1File path\fR / \fBmd5File path\fR	digest of a file's bytes
+.TE
+.PP
+\fB\-encoding utf\-8\fR (default) hashes the UTF\-8 bytes of the string, matching what \fBsha256sum\fR/\fBmd5sum\fR produce in a UTF\-8 locale. \fB\-encoding binary\fR treats the argument as raw bytes (each character a byte 0\-255). The \fB*File\fR variants read the exact bytes on disk.
+.CS
+package require tclutils::tuhash
+tuhash::sha256 "abc"          ;# ba7816bf...f20015ad
+tuhash::md5    "abc"          ;# 900150983cd24fb0d6963f7d28e17f72
+tuhash::sha256File config.tcl ;# digest of the file
+.CE
+.PP
+Errors use \fB{TCLUTILS TUHASH ...}\fR.

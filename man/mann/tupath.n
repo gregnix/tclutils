@@ -1,21 +1,25 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\"
-.TH tupath n 0.39.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tupath \- Path helpers: normalize, clean, relative, commonPath, readlink.
-.SH COMMANDS
+.TH tupath n 0.1 tclutils
+.SH tupath
 .PP
-.nf
-::tclutils::tupath::normalize path
-::tclutils::tupath::clean path
-::tclutils::tupath::isAbsolute path
-::tclutils::tupath::components path
-::tclutils::tupath::join args...
-::tclutils::tupath::relative base target
-::tclutils::tupath::commonPath {paths}
-::tclutils::tupath::readlink path
-.fi
+Predictable path helpers around Tcl's \fBfile\fR command, plus a purely lexical \fBclean\fR (works on non\-existent paths) and \fBcommonPath\fR.
+.SS Commands
+.TS
+l l.
+Command	Result
+\fBnormalize path\fR	absolute path, resolves \fB.\fR/\fB..\fR and symlinks (\fBfile normalize\fR)
+\fBclean path\fR	lexical cleanup of \fB.\fR/\fB..\fR/\fB//\fR \fBwithout\fR touching the filesystem
+\fBisAbsolute path\fR	1/0
+\fBcomponents path\fR	list of path parts (\fBfile split\fR)
+\fBjoin args...\fR	join parts (\fBfile join\fR)
+\fBrelative base target\fR	lexical path of \fBtarget\fR relative to \fBbase\fR
+\fBcommonPath {paths}\fR	longest shared directory prefix, or \fB""\fR if none
+\fBreadlink path\fR	symlink target (\fB{TCLUTILS TUPATH NOTLINK}\fR if not a link)
+.TE
+.CS
+package require tclutils::tupath
+tupath::clean      a/./b/../c           ;# a/c
+tupath::commonPath {/a/b/c /a/b/d}      ;# /a/b
+tupath::relative   /a/b /a/b/c/d        ;# c/d
+.CE
+.PP
+\fBclean\fR and \fBrelative\fR are purely lexical, so they are safe for paths that do not exist; \fBnormalize\fR and \fBreadlink\fR consult the filesystem.

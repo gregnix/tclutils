@@ -1,0 +1,16 @@
+.TH tushuf n 0.1 tclutils
+.SH tclutils::tushuf
+.PP
+\fBshuf\fR\-like line shuffling in pure Tcl. Uses a small self\-contained PRNG so a given \fB\-seed\fR yields the same permutation on every platform and Tcl version.
+.SS API
+.CS
+::tclutils::tushuf::lines lineList ?-seed N? ?-count N?
+::tclutils::tushuf::text  text     ?-seed N? ?-count N?
+::tclutils::tushuf::file  path     ?-seed N? ?-count N?
+.CE
+.PP
+\fB\-seed N\fR makes output reproducible (default: time\-based). \fB\-count N\fR outputs at most N lines.
+.SS CLI
+.CS
+tclsh bin/tushuf.tcl -seed 42 file.txt
+.CE

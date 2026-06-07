@@ -1,0 +1,64 @@
+.TH tufetch n 0.3 tclutils
+.SH tclutils::tufetch
+.PP
+A tiny HTTP(S) helper: fetch a URL into memory (\fBget\fR) or to a file (\fBdownload\fR), byte\-safe. Transport order: native Tcl \fBhttp\fR + \fBtls\fR (the \fBtls\fR package is loaded lazily, like \fBtclutils::tudav\fR); if that is unavailable it falls back to \fBcurl\fR or \fBwget\fR located via \fBauto_execok\fR. Supports GET and POST with custom headers and a request body, so higher\-level clients (e.g. \fBtclutils::tusparql\fR) can build on it.
+.PP
+Not dependency\-free: needs the core \fBhttp\fR package and either \fBtls\fR or a \fBcurl\fR/\fBwget\fR binary. Meant as an optional helper module.
+.SS API
+.CS
+::tclutils::tufetch::get https://example.com/data.json          ;# -> text (UTF-8)
+::tclutils::tufetch::download https://example.com/f.bin /tmp/f  ;# -> native|curl|wget
+
+# POST with headers and a request body:
+::tclutils::tufetch::get $url -method post -data $body \
+    -type application/sparql-query \
+    -headers {Accept application/sparql-results+json}
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBget url ?opts?\fR — return the response body as UTF\-8 text.
+.IP \(bu
+\fBdownload url path ?opts?\fR — save the body to \fBpath\fR (raw bytes); returns the transport used (\fBnative\fR, \fBcurl\fR or \fBwget\fR).
+.PP
+Options (both commands):
+.IP \(bu
+\fB\-timeout ms\fR (default 30000), \fB\-redirects n\fR (default 5).
+.IP \(bu
+\fB\-method get|post\fR (default get).
+.IP \(bu
+\fB\-headers {k v k v ...}\fR — extra request headers.
+.IP \(bu
+\fB\-data <body>\fR — request body (pair with \fB\-method post\fR).
+.IP \(bu
+\fB\-type <content\-type>\fR — content type for the body.
+.SS Errors
+.PP
+Errors carry a structured errorcode (modelled on the \fBwww\fR package) so callers can match at the granularity they need with \fBtry\fR/\fBtrap\fR — errorcodes are prefix\-matched:
+.TS
+l l.
+errorcode	meaning
+\fB{TCLUTILS TUFETCH HTTP <class> <code>}\fR	HTTP status outside 2xx, e.g. \fB{… HTTP 4XX 404}\fR, \fB{… HTTP 5XX 503}\fR
+\fB{TCLUTILS TUFETCH URL}\fR	unsupported or invalid URL (only \fBhttp\fR/\fBhttps\fR)
+\fB{TCLUTILS TUFETCH TIMEOUT}\fR	the request timed out
+\fB{TCLUTILS TUFETCH CONNECT}\fR	connection/DNS/transport failure
+\fB{TCLUTILS TUFETCH REDIRECT}\fR	too many redirects
+\fB{TCLUTILS TUFETCH NOMETHOD}\fR	no transport available
+.TE
+.CS
+try {
+    set page [::tclutils::tufetch::get $url]
+} trap {TCLUTILS TUFETCH HTTP 4XX 404} {} {
+    # exactly 404
+} trap {TCLUTILS TUFETCH HTTP 4XX} {} {
+    # any client error
+} trap {TCLUTILS TUFETCH HTTP 5XX} {err} {
+    # any server error
+} trap {TCLUTILS TUFETCH} {err opts} {
+    # timeout, connect, redirect, bad URL, no transport ...
+}
+.CE
+.PP
+The HTTP and transport classification lives in pure helpers (\fB_httpClass\fR, \fB_statusReason\fR, \fB_curlExitReason\fR), so the taxonomy is tested without a network. The \fBwget\fR fallback does not translate HTTP status — a 4xx/5xx there surfaces as a \fBCHILDSTATUS\fR error. NOTE: as of 0.3 the HTTP errorcode gained the \fB<class>\fR element; code that trapped the old 3\-element \fB{TCLUTILS TUFETCH HTTP <code>}\fR exactly should use the prefix \fB{TCLUTILS TUFETCH HTTP}\fR.
+.PP
+The request\-line construction lives in pure helpers (\fB_nativeOpts\fR, \fB_curlArgs\fR, \fB_wgetArgs\fR), so it can be tested without a network. Verified on Tcl 8.6 and 9.x; the native \fBhttp\fR+\fBtls\fR path and the curl fallback were exercised against live endpoints.

@@ -1,7 +1,18 @@
-.TH tulist n 0.51.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tulist \- functional list helpers
-.SH SYNOPSIS
-package require tclutils::tulist
-.SH DESCRIPTION
-See docs/tulist.md.
+.TH tulist n 0.1 tclutils
+.SH tclutils::tulist
+.PP
+Functional list helpers the Tcl core does not provide directly. Pure Tcl, no dependencies. \fBmap\fR/\fBfilter\fR/\fBreduce\fR/\fBall\fR/\fBany\fR take a \fBcommand prefix\fR (invoked as \fB{*}$cmd $item\fR), complementing the core \fBlmap\fR (script body).
+.CS
+tulist::unique {a b a c}        ;# a b c        (order-preserving)
+tulist::flatten {{1 2} {3 4}}   ;# 1 2 3 4      (optional depth)
+tulist::chunk {1 2 3 4 5} 2     ;# {1 2} {3 4} 5
+tulist::zip {a b} {1 2}         ;# {a 1} {b 2}  (stops at shortest)
+tulist::sum/avg/min/max $list
+tulist::reduce {1 2 3} 0 ::tcl::mathop::+        ;# 6
+tulist::map    {1 2 3} {apply {{x} {expr {$x*$x}}}}
+tulist::filter {1 2 3 4} {apply {{x} {expr {$x%2==0}}}}
+tulist::all / any $list $cmd
+tulist::take $list n   /   tulist::drop $list n
+.CE
+.PP
+\fBchunk\fR with a non\-positive size raises \fB{TCLUTILS TULIST SIZE}\fR; \fBavg\fR/\fBmin\fR/\fBmax\fR of an empty list raise \fB{TCLUTILS TULIST EMPTY}\fR. Prefer the core where it fits: \fBlreverse\fR, \fBlsort \-unique\fR (if order does not matter), \fBlsearch\fR, \fBlmap\fR.

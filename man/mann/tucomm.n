@@ -1,52 +1,32 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tucomm n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tucomm \- tucomm provides a small comm\-like comparison for sorted line lists or files.
-.SH USAGE
+.TH tucomm n 0.1 tclutils
+.SH tclutils::tucomm
 .PP
-.nf
+\fBtucomm\fR provides a small \fBcomm\fR\-like comparison for sorted line lists or files. It returns a dictionary with three groups:
+.CS
+onlyA  ;# lines only in the first input
+onlyB  ;# lines only in the second input
+both   ;# lines present in both inputs
+.CE
+.SS Usage
+.CS
 package require tclutils::tucomm
 
 set result [::tclutils::tucomm::files a.txt b.txt]
 dict get $result onlyA
 dict get $result onlyB
 dict get $result both
-.fi
-.SH COMMANDS
-.PP
-.nf
+.CE
+.SS Commands
+.CS
 ::tclutils::tucomm::compareLines aLines bLines ?options?
 ::tclutils::tucomm::text aText bText ?options?
 ::tclutils::tucomm::files aFile bFile ?options?
-::tclutils::tucomm::formatColumns comparison ?\-separator sep?
-.fi
-.SH OPTIONS
-.PP
-.nf
-\-sort boolean      sort the inputs before comparing
-\-nocase boolean    compare case\-insensitively
-.fi
+::tclutils::tucomm::formatColumns comparison ?-separator sep?
+.CE
+.SS Options
+.CS
+-sort boolean      sort the inputs before comparing
+-nocase boolean    compare case-insensitively
+.CE
 .PP
 By default, \fBtucomm\fR expects sorted inputs, like Unix \fBcomm\fR.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)

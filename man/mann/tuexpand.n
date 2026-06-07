@@ -1,0 +1,17 @@
+.TH tuexpand n 0.1 tclutils
+.SH tclutils::tuexpand
+.PP
+\fBexpand\fR/\fBunexpand\fR\-like conversion between tabs and spaces in pure Tcl, with correct tab\-stop alignment.
+.SS API
+.CS
+::tclutils::tuexpand::expand   text ?-tabs N?
+::tclutils::tuexpand::unexpand text ?-tabs N? ?-all 0|1?
+::tclutils::tuexpand::file     path ?-mode expand|unexpand? ?-tabs N? ?-all 0|1?
+.CE
+.PP
+\fB\-tabs\fR sets the tab width (default 8). \fBunexpand\fR converts only leading blanks by default; \fB\-all 1\fR converts blank runs throughout. Single spaces are never turned into tabs.
+.SS CLI
+.CS
+tclsh bin/tuexpand.tcl -tabs 4 file.txt
+tclsh bin/tuexpand.tcl unexpand -all 1 file.txt
+.CE

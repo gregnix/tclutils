@@ -1,0 +1,25 @@
+.TH tuuuid n 0.1 tclutils
+.SH tclutils::tuuuid
+.PP
+UUID generation and inspection in pure Tcl. Supports version 4 (random) and version 7 (Unix\-time\-ordered, RFC 9562). Random bytes come from \fB/dev/urandom\fR when available, otherwise from \fBrand()\fR (non\-cryptographic fallback).
+.SS API
+.CS
+set id  [::tclutils::tuuuid::generate]            ;# v4 by default
+set id7 [::tclutils::tuuuid::generate -version 7] ;# time-ordered
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBgenerate ?\-version 4|7?\fR — a canonical UUID string (default 4).
+.IP \(bu
+\fBv4\fR — random version\-4 UUID.
+.IP \(bu
+\fBv7\fR — time\-ordered version\-7 UUID (sorts by creation time).
+.IP \(bu
+\fBnil\fR — the nil UUID \fB00000000\-0000\-0000\-0000\-000000000000\fR.
+.IP \(bu
+\fBvalidate uuid\fR — 1 if \fBuuid\fR is a canonical UUID string, else 0.
+.IP \(bu
+\fBversion uuid\fR — the version digit (1..8); errors on an invalid UUID.
+.PP
+Errors: \fB{TCLUTILS TUUUID VERSION}\fR (bad \fB\-version\fR), \fB{TCLUTILS TUUUID INVALID}\fR (not a UUID).

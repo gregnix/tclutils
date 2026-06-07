@@ -1,52 +1,23 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH common n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-common \- Internal shared helper package for tclutils.
-.SH COMMANDS
+.TH common n 0.1 tclutils
+.SH tclutils::common
 .PP
-.nf
+Internal shared helper package for \fBtclutils\fR.
+.PP
+This package is not meant as the main public API, but it keeps common behavior consistent across modules.
+.SS Commands
+.CS
 ::tclutils::common::readFile path
 ::tclutils::common::readBinaryFile path
 ::tclutils::common::writeFile path data ?mode?
 ::tclutils::common::splitLines text
 ::tclutils::common::splitDelimited line delimiter
 ::tclutils::common::parseOptions defaults ?option value ...?
-.fi
-.SH DESCRIPTION
+.CE
+.SS "File I/O"
 .PP
-The file helpers use Tcl 8.6 \fBtry ... finally\fR, so opened channels are closed
+The file helpers use Tcl 8.6 \fBtry ... finally\fR, so opened channels are closed again even if \fBread\fR, \fBwrite\fR, or later processing fails.
 .PP
-again even if \fBread\fR, \fBwrite\fR, or later processing fails.
+\fBreadBinaryFile\fR explicitly configures binary translation and uses \fBiso8859\-1\fR as byte\-preserving channel encoding. This avoids the removed Tcl 9 channel encoding name \fBbinary\fR and still preserves byte values for modules such as \fBtustrings\fR, \fBtuhexdump\fR, \fBtubase64\fR, and \fBtuzip\fR.
+.SS "Delimited text"
 .PP
-\fBreadBinaryFile\fR explicitly configures binary translation and binary encoding.
-.PP
-This matters for modules such as \fBtustrings\fR and \fBtuhexdump\fR.
-.SH DESCRIPTION
-.PP
-\fBsplitDelimited\fR supports both one\-character and multi\-character delimiters.
-.PP
-It is used by \fBtucut\fR and \fBtujoin\fR, replacing duplicated private \fB_split\fR
-.PP
-implementations.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+\fBsplitDelimited\fR supports both one\-character and multi\-character delimiters. It is used by \fBtucut\fR and \fBtujoin\fR, replacing duplicated private \fB_split\fR implementations.

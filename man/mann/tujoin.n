@@ -1,55 +1,31 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tujoin n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tujoin \-  tclutils::tujoin  joins two simple delimited text sources on a selected
-.SH SYNOPSIS
+.TH tujoin n 0.1 tclutils
+.SH tclutils::tujoin
 .PP
-.nf
+\fB tclutils::tujoin \fR joins two simple delimited text sources on a selected field. It is inspired by Unix \fBjoin\fR, but intentionally small.
+.SS Load
+.CS
 package require tclutils::tujoin
-.fi
-.SH EXAMPLES
-.PP
-.nf
-set left  "1;Ada\en2;Linus\en"
-set right "1;Berlin\en2;Helsinki\en"
+.CE
+.SS Examples
+.CS
+set left  "1;Ada\n2;Linus\n"
+set right "1;Berlin\n2;Helsinki\n"
 
-::tclutils::tujoin::texts $left $right \-delimiter ";"
-# \-> 1;Ada;Berlin
-# \-> 2;Linus;Helsinki
-.fi
+::tclutils::tujoin::texts $left $right -delimiter ";"
+# -> 1;Ada;Berlin
+# -> 2;Linus;Helsinki
+.CE
 .PP
 Options:
+.CS
+-delimiter ";"
+-leftfield 1
+-rightfield 1
+-joiner ";"
+-header 0
+.CE
 .PP
-.nf
-\-delimiter ";"
-\-leftfield 1
-\-rightfield 1
-\-joiner ";"
-\-header 0
-.fi
+Field numbers are 1\-based. The joined result contains the key once, then the remaining left fields, then the remaining right fields.
+.SS 0.24.0
 .PP
-Field numbers are 1\-based. The joined result contains the key once, then the
-.PP
-remaining left fields, then the remaining right fields.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+Outer joins are available through \fB\-outer left\fR, \fB\-outer right\fR, and \fB\-outer full\fR. The default remains the existing inner join behavior (\fB\-outer none\fR).

@@ -1,8 +1,8 @@
 # tclutils::tupng
 
-A pure-Tcl PNG **encoder** -- no Tk, no external packages, only the core `zlib`
-command. It is the encode-side companion to `tclutils::tuimage` (which inspects
-PNG headers). Writes 8-bit images in four colour types:
+A pure-Tcl PNG **encoder/decoder** -- no Tk, no external packages, only the core
+`zlib` command. It complements `tclutils::tuimage` (which inspects PNG headers).
+The encoder writes 8-bit images in four colour types:
 
 | Function | Colour type | Pixel syntax |
 |----------|-------------|--------------|
@@ -13,6 +13,8 @@ PNG headers). Writes 8-bit images in four colour types:
 
 The image model is a list of rows; each row is a list of pixels and all rows
 must have equal length. `encode*` return PNG bytes; `write*` write them to a file.
+Two raw helpers, `encodeRGBARaw` / `writeRGBARaw`, take pre-packed
+`width*height*4` RGBA bytes directly (the encode side of `decode`).
 
 ```tcl
 set png [tupng::encodeRGB {{FF0000 00FF00} {0000FF FFFFFF}}]
@@ -29,7 +31,7 @@ tupng::writeIndexed out.png {FF0000 0000FF00} {{0 1} {1 0}}   ;# entry 1 transpa
 
 ## Notes / limits
 
-Encode only (no decoder). 8-bit depth; no 16-bit and no interlacing. For
+8-bit depth only; no 16-bit and no interlacing. For
 indexed images the palette holds 1..256 entries; a palette entry with alpha
 < 255 emits a `tRNS` chunk. Truecolour alpha (RGBA) is stored inline (type 6).
 Reuses only `tclutils::common` (option parsing) and the core `zlib`.

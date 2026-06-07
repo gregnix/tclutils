@@ -1,22 +1,35 @@
-[manpage_begin tuzipfs n 0.1]
-[moddesc {Tcl utility modules}]
-[titledesc {Tcl 9 ZipFS convenience wrapper}]
-[require Tcl 8.6]
-[require tclutils::tuzipfs 0.1]
-[description]
-[para]
-The [package tclutils::tuzipfs] package provides a small wrapper around the
-Tcl 9 [cmd zipfs] ensemble. The package loads under Tcl 8.6, but commands that
-require ZipFS throw [const {TCLUTILS TUZIPFS UNAVAILABLE}].
-[section COMMANDS]
-[list_begin definitions]
-[call [cmd ::tclutils::tuzipfs::available]]
-Return a boolean indicating whether [cmd zipfs] is available.
-[call [cmd ::tclutils::tuzipfs::mount] [arg archive] [opt [arg mountName]]]
-Mount a ZIP archive and return the mount point.
-[call [cmd ::tclutils::tuzipfs::unmount] [arg mountpoint]]
-Unmount a mounted ZipFS tree.
-[call [cmd ::tclutils::tuzipfs::listFiles] [arg mountpoint] [opt {-glob pattern}] [opt {-recursive boolean}]]
-List paths below a mount point.
-[list_end]
-[manpage_end]
+.TH tuzipfs n 0.1 tclutils
+.SH tclutils::tuzipfs
+.PP
+\fBtclutils::tuzipfs\fR is a small Tcl 9 \fBzipfs\fR convenience wrapper.  The package loads under Tcl 8.6 as well, but commands that need \fBzipfs\fR throw a clear \fBTCLUTILS TUZIPFS UNAVAILABLE\fR error.
+.SS Commands
+.CS
+package require tclutils::tuzipfs
+
+::tclutils::tuzipfs::available
+::tclutils::tuzipfs::requireAvailable
+::tclutils::tuzipfs::root
+::tclutils::tuzipfs::mounts
+::tclutils::tuzipfs::mount archive.zip ?mountName?
+::tclutils::tuzipfs::unmount mountpoint
+::tclutils::tuzipfs::listFiles mountpoint ?-glob pattern? ?-recursive boolean?
+::tclutils::tuzipfs::find mountpoint ?options?
+::tclutils::tuzipfs::exists zipfsPath
+::tclutils::tuzipfs::readFile zipfsPath
+::tclutils::tuzipfs::withMounted archive.zip mountVar body ?-mount mountName?
+.CE
+.SS Example
+.CS
+tcl::tm::path add lib/tm
+package require tclutils::tuzipfs
+
+if {[::tclutils::tuzipfs::available]} {
+    ::tclutils::tuzipfs::withMounted document.odt mp {
+        puts [::tclutils::tuzipfs::listFiles $mp -glob *.xml]
+        puts [::tclutils::tuzipfs::readFile [file join $mp content.xml]]
+    }
+}
+.CE
+.SS Notes
+.PP
+\fBzipfs\fR is part of Tcl 9.  For Tcl 8.6 or for byte\-level ZIP creation and ODF container control, use \fBtclutils::tuzip\fR instead.

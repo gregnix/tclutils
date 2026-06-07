@@ -1,0 +1,16 @@
+.TH tuseq n 0.1 tclutils
+.SH tclutils::tuseq
+.PP
+\fBseq\fR\-like numeric sequence generation in pure Tcl.
+.SS API
+.CS
+::tclutils::tuseq::range ?first? ?incr? last ?options?
+::tclutils::tuseq::text  ?first? ?incr? last ?options?
+.CE
+.PP
+Positional forms: \fBlast\fR, \fBfirst last\fR, or \fBfirst incr last\fR (negative steps allowed). Options: \fB\-separator S\fR (text only, default newline), \fB\-format F\fR (printf format), \fB\-equalwidth 0|1\fR (pad numbers with leading zeros to equal width).
+.SS CLI
+.CS
+tclsh bin/tuseq.tcl 1 2 10
+tclsh bin/tuseq.tcl -equalwidth 1 8 11
+.CE

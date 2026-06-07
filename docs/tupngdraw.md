@@ -92,16 +92,17 @@ is the bare curve. `text` uses an embedded 6x8 bitmap font (printable ASCII);
 
 ## Scope and limits
 
-Version 0.6 covers `setpixel`, `line`, `rect`, `circle`, `ellipse`, `polygon`
+Version 0.11 covers `setpixel`, `line`, `rect`, `circle`, `ellipse`, `polygon`
 (even-odd scanline fill), `arc`/pie/chord and `text` (6x8 bitmap font), with
 stroke/fill colour, line width, source-over alpha compositing and antialiased,
 alpha-correct strokes. It is a 2D rasteriser: drawing is per-pixel
 pure Tcl, well suited to labels, calendars, simple charts and preview
 thumbnails, not to large photographic images.
 
-The 6x8 font is generated from Liberation Mono (SIL Open Font License) and
-embedded as glyph data. Planned for 0.3: antialiasing and alpha-aware thick
-strokes.
+The 6x8 font is an original, hand-authored bitmap set (95 ASCII glyphs plus the
+German umlauts and eszett), embedded as glyph data and MIT-licensed like the
+rest of the code. Antialiasing and alpha-correct thick strokes are implemented
+(see above).
 
 ## Notes
 

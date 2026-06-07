@@ -1,0 +1,20 @@
+.TH tuurl n 0.1 tclutils
+.SH tclutils::tuurl
+.PP
+URL percent\-encoding/decoding and query strings (RFC 3986). Unreserved characters \fBA\-Z a\-z 0\-9 \- . _ ~\fR pass through; everything else is encoded over the UTF\-8 bytes.
+.SS API
+.CS
+::tclutils::tuurl::encode "a b/c"        ;# a%20b%2Fc
+::tclutils::tuurl::decode "%C3%A4"        ;# (UTF-8 -> a-umlaut)
+::tclutils::tuurl::buildQuery {q "x y" p 2}   ;# q=x+y&p=2
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBencode str ?\-plus bool?\fR — percent\-encode. \fB\-plus 1\fR: space becomes \fB+\fR.
+.IP \(bu
+\fBdecode str ?\-plus bool?\fR — percent\-decode. \fB\-plus 1\fR: \fB+\fR becomes space.
+.IP \(bu
+\fBbuildQuery dict ?\-plus bool?\fR — \fBk=v&k2=v2\fR (default \fB\-plus 1\fR).
+.IP \(bu
+\fBparseQuery str ?\-plus bool?\fR — parse into a dict (default \fB\-plus 1\fR).

@@ -1,9 +1,15 @@
-.TH tuimage n 0.48.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tuimage \- detect image format, MIME and dimensions from bytes
-.SH SYNOPSIS
-package require tclutils::tuimage
-.SH DESCRIPTION
-See docs/tuimage.md.
-.SH KEYWORDS
-image, png, jpeg, gif, webp, bmp, dimensions, data-uri
+.TH tuimage n 0.1 tclutils
+.SH tclutils::tuimage
+.PP
+Pure\-Tcl image \fBinspection\fR: detect format, MIME type and pixel dimensions from an image's raw bytes, plus \fBdata:\fR URI helpers. It does \fBno\fR decoding or pixel processing \-\- that belongs to Tk's photo images or the \fBimgtools\fR extension. Reuses \fBtclutils::tubase64\fR.
+.SS API
+.CS
+tuimage::type $bytes          ;# png | jpeg | gif | bmp | webp | ""
+tuimage::mime $bytes          ;# image/png ...
+tuimage::dimensions $bytes    ;# {width height}  (or {} if unknown)
+tuimage::inspect $bytes       ;# {type .. mime .. width .. height ..}
+tuimage::dataUri image/png $bytes   ;# -> "data:image/png;base64,...."
+tuimage::fromDataUri $uri           ;# -> {mime image/png bytes <raw>}
+.CE
+.PP
+Dimensions are read straight from the header (PNG IHDR, GIF screen descriptor, BMP info header, JPEG SOFn scan, WEBP VP8/VP8L/VP8X). \fB$bytes\fR must be raw binary (e.g. a file read from a binary channel, or \fBtubase64::decode\fR of an embedded photo). Useful for vCard/CalDAV photos, thumbnails and validation without loading a full image toolkit.

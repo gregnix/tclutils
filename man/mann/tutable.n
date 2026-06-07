@@ -1,7 +1,10 @@
-.TH tutable n 0.52.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tutable \- text table renderer
-.SH SYNOPSIS
-package require tclutils::tutable
-.SH DESCRIPTION
-See docs/tutable.md.
+.TH tutable n 0.1 tclutils
+.SH tclutils::tutable
+.PP
+Render a text table from headers and rows. Two styles: \fBmarkdown\fR (GitHub pipe table, the default) and \fBbox\fR (ASCII \fB+\fR/\fB\-\fR/\fB|\fR borders). Per\-column alignment (\fBl\fR/\fBr\fR/\fBc\fR) is supported. Pure Tcl; uses \fBtclutils::common\fR for options.
+.CS
+tutable::render {Name Age} {{Alice 30} {Bob 7}}
+tutable::render {Item Qty} {{Apples 12} {Pears 3}} -align {l r} -style box
+.CE
+.PP
+Rows may be ragged: missing trailing cells render empty. \fB\-style\fR other than \fBmarkdown\fR/\fBbox\fR, or an alignment other than \fBl\fR/\fBr\fR/\fBc\fR, raises \fB{TCLUTILS TUTABLE OPT}\fR. This is a string renderer; for the Unix \fBcolumn\fR\-style filter use \fBtucolumn\fR.

@@ -1,0 +1,37 @@
+.TH tuawk n 0.1 tclutils
+.SH tclutils::tuawk
+.PP
+An awk\-style record/field processor in pure Tcl. Records map to fields, rules are \fB{pattern action}\fR pairs, with \fBBEGIN\fR/\fBEND\fR. It is not an awk\-language interpreter: patterns are Tcl expressions (or \fB/regex/\fR against \fB$0\fR) and actions are Tcl scripts.
+.SS Package
+.CS
+package require tclutils::tuawk 0.1
+.CE
+.SS API
+.IP \(bu
+\fBtuawk::run text rules ?\-fs SEP? ?\-ofs SEP? ?\-ors SEP?\fR \-> collected output
+.IP \(bu
+\fBtuawk::file path rules ...\fR                            \-> over a file
+.PP
+\fBrules\fR is a flat list of pattern/action pairs:
+.IP \(bu
+Pattern: empty matches always; \fB/regex/\fR matches \fB$0\fR; otherwise a Tcl \fBexpr\fR (e.g. \fB$3 > 100\fR, \fB$NF == 0\fR). Special \fBBEGIN\fR / \fBEND\fR run before/after records.
+.IP \(bu
+Action: a Tcl script. An empty action means \fBemit $0\fR.
+.IP \(bu
+Fields: \fB$0\fR (whole record), \fB$1\fR..\fB$NF\fR, \fB$NR\fR. Variables set in actions persist across records (like awk globals), ideal for aggregation with BEGIN/END.
+.IP \(bu
+\fBemit args...\fR prints (joined by OFS, terminated by ORS).
+.PP
+Options: \fB\-fs\fR (default whitespace runs; one char = \fBsplit\fR; multiple = regex), \fB\-ofs\fR (default \fB" "\fR), \fB\-ors\fR (default \fB"\en"\fR).
+.CS
+tuawk::run "a b c\nd e f" {{} {emit $2}}              ;# -> "b\ne\n"
+tuawk::run $data {BEGIN {set s 0} {} {set s [expr {$s+$1}]} END {emit "sum: $s"}}
+.CE
+.SS CLI
+.CS
+tclsh bin/tuawk.tcl -fs : '{$3 >= 1000} {emit $1 $3}' /etc/passwd
+cat log | tclsh bin/tuawk.tcl '/ERROR/ {emit $NR $0}'
+.CE
+.SS Scope
+.PP
+Records are lines; no custom record separator. A field access beyond \fBNF\fR is an error, not a silent empty value (intentional). For full awk programs use \fBexec awk\fR.

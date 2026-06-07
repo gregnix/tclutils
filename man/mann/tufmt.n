@@ -1,0 +1,16 @@
+.TH tufmt n 0.1 tclutils
+.SH tclutils::tufmt
+.PP
+Reflow text paragraphs to a target width, like \fBfmt(1)\fR. Paragraphs are separated by blank lines; within a paragraph whitespace is collapsed and words are greedily wrapped. Each paragraph keeps the leading indentation of its first line, and runs of blank lines collapse to a single separator.
+.SS API
+.CS
+set wrapped [::tclutils::tufmt::reflow $text -width 72]
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBreflow text ?\-width n?\fR — reflowed text (default width 75).
+.IP \(bu
+\fBreflowFile path ?\-width n?\fR — reflow a file's contents.
+.PP
+A tab in the leading indent counts as one column. The width must be a positive integer (\fB{TCLUTILS COMMON INTEGER \-width}\fR otherwise).

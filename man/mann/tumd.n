@@ -1,27 +1,57 @@
-'" Copyright (c) 2026 Gregor Ebbing
-'" SPDX-License-Identifier: MIT
-.TH tumd n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tumd \- small dependency-free Markdown helpers.
-.SH SYNOPSIS
-.nf
-package require tclutils::tumd
-.fi
-.SH COMMANDS
-.nf
+.TH tumd n 0.1 tclutils
+.SH tclutils::tumd
+.PP
+Small dependency\-free Markdown helpers for Tcl.
+.PP
+\fBtumd\fR is intentionally not a full Markdown system. It provides a practical CommonMark subset for scripts and CI: Markdown\-to\-HTML fragments, ATX heading extraction, table\-of\-contents generation, and YAML front matter splitting.
+.SS Package
+.CS
+package require tclutils::tumd 0.1
+.CE
+.SS API
+.CS
 ::tclutils::tumd::toHtml markdown
 ::tclutils::tumd::headings markdown
 ::tclutils::tumd::toc markdown
 ::tclutils::tumd::frontmatter markdown
-.fi
-.SH DESCRIPTION
+.CE
+.SS Example
+.CS
+package require tclutils::tumd
+
+set md {# Title
+
+A **short** paragraph.}
+puts [::tclutils::tumd::toHtml $md]
+puts [::tclutils::tumd::toc $md]
+.CE
+.SS "Supported subset"
 .PP
-Converts a practical CommonMark subset to an HTML fragment, extracts ATX
-headings, creates a Markdown table of contents, and splits YAML front matter.
-.SH LIMITS
+Blocks:
+.IP \(bu
+ATX headings (\fB#\fR to \fB######\fR)
+.IP \(bu
+paragraphs
+.IP \(bu
+fenced code blocks using backticks or tildes
+.IP \(bu
+blockquotes
+.IP \(bu
+flat ordered and unordered lists
+.IP \(bu
+horizontal rules
 .PP
-This is not a full Markdown parser. Nested lists, Setext headings, GFM tables,
-reference-style links, raw HTML passthrough, and a full AST are intentionally
-outside the scope.
-.SH SEE ALSO
-tclutils(n), tucsv(n), tujson(n), tuxml(n)
+Inline constructs:
+.IP \(bu
+code spans
+.IP \(bu
+bold and italic
+.IP \(bu
+links and images
+.IP \(bu
+autolinks
+.IP \(bu
+hard line breaks with two trailing spaces
+.SS Limits
+.PP
+\fBtumd\fR does not implement nested lists, Setext headings, GFM tables, reference\-style links, raw HTML passthrough, or a full Markdown AST. For larger Markdown workflows, use the mdstack/docir toolchain.

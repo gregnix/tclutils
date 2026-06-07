@@ -1,9 +1,22 @@
-.TH tulog n 0.47.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tulog \- small leveled logger
-.SH SYNOPSIS
-package require tclutils::tulog
-.SH DESCRIPTION
-See docs/tulog.md.
-.SH KEYWORDS
-log, logging, debug, level, assert
+.TH tulog n 0.1 tclutils
+.SH tclutils::tulog
+.PP
+A small, dependency\-free leveled logger. A logger is a \fBcallable command object\fR, so the level names \fBinfo\fR/\fBerror\fR are subcommands rather than procs that would shadow the Tcl built\-ins.
+.SS API
+.CS
+set log [::tclutils::tulog::new -name app -level info -channel stderr]
+$log info  "starting up"
+$log debug "x = $x"        ;# suppressed while the level is info
+$log warn  "low disk"
+$log error "request failed"
+$log log info "explicit level form"
+$log setLevel debug         ;# raise verbosity
+$log level                  ;# -> debug
+$log destroy
+.CE
+.PP
+Levels increase in severity: \fBdebug\fR < \fBinfo\fR < \fBwarn\fR < \fBerror\fR; a message is emitted only when its level is at least the logger's current level. Output is \fBTIMESTAMP [LEVEL] name: message\fR (timestamp and name optional).
+.PP
+Options to \fBnew\fR: \fB\-channel\fR (default \fBstderr\fR), \fB\-level\fR (default \fBinfo\fR), \fB\-name\fR (prefix, default \fB""\fR), \fB\-timestamp\fR (default \fB1\fR).
+.PP
+\fB::tclutils::tulog::assert exprStr ?msg?\fR evaluates \fBexprStr\fR in the caller's scope and raises \fB{TCLUTILS TULOG ASSERT}\fR if it is false \-\- a debug\-time check.

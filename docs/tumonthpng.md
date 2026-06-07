@@ -22,6 +22,10 @@ date->name), `-notes {}` (dict date->text), `-firstweekday 1` (1 = Monday),
 `-monthnames {Januar ... Dezember}`, `-title {}` (override the "Month Year"
 title). Cell colours follow the chosen theme, ported from monthcanvas.
 
+A selection overlay (for interactive front-ends) is also available:
+`-select {}` (list of ISO dates to highlight), `-selectstyle outline` (default),
+`-selectcolor {}`, `-selectwidth {}`, `-selectalpha 0.3`.
+
 ```tcl
 tclutils::tumonthpng::write june.png 2026 6 \
     -today 2026-06-06 \
@@ -64,8 +68,10 @@ heading. Mirrors monthcanvas drawQuarter/drawYear.
 
 ## Notes
 
-The embedded 6x8 bitmap font is ASCII only, so non-ASCII characters (e.g. the
-umlaut in "März") render as blanks. Pass ASCII `-monthnames`/`-weekdays` if you
-need umlaut-free labels (e.g. "Maerz"). Week numbers are ISO-8601 (`%V`); the
-grid math uses UTC (`-gmt 1`) so output is deterministic and timezone-free.
-Holiday computation is the caller's job -- pass a `-holidays` dict.
+The built-in 6x8 bitmap font covers ASCII plus the German umlauts and eszett
+(ä ö ü Ä Ö Ü ß), so the default month names (including "März") render correctly;
+other non-ASCII characters render as blanks. Pass ASCII `-monthnames`/`-weekdays`
+if you need them, or supply a `-textcmd` for real outline glyphs. Week numbers
+are ISO-8601 (`%V`); the grid math uses UTC (`-gmt 1`) so output is deterministic
+and timezone-free. Holiday computation is the caller's job -- pass a `-holidays`
+dict.

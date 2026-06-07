@@ -1,0 +1,32 @@
+.TH tusqlite n 0.1 tclutils
+.SH tclutils::tusqlite
+.PP
+Small, NULL\-safe helpers over an existing \fBsqlite3\fR database handle. The module does \fBnot\fR \fBpackage require sqlite3\fR itself — you pass it a handle you opened — so it loads anywhere, and only the calls that actually touch the database need the package present.
+.PP
+Why it exists: in \fBdb eval {INSERT ... VALUES(:x)}\fR the placeholder \fB:x\fR binds to the Tcl \fBvariable \fR\fBx\fR\fB in scope\fR, not to anything passed as an argument — a value you meant to pass as a dict silently becomes \fBNULL\fR. And an \fIomitted\fR bind variable yields SQL \fBNULL\fR, while a set\-but\-empty one yields \fB''\fR. \fBinsert\fR hides both traps.
+.SS API
+.CS
+sqlite3 db mydata.db
+::tclutils::tusqlite::insert db people {name Alice age 30}   ;# -> new rowid
+::tclutils::tusqlite::insert db people {name Bob}            ;# age omitted -> NULL
+::tclutils::tusqlite::insert db people \
+    [list name Carol age [::tclutils::tusqlite::null]]       ;# explicit NULL
+foreach row [::tclutils::tusqlite::rows db {SELECT name, age FROM people}] {
+    puts [dict get $row name]
+}
+set n [::tclutils::tusqlite::value db {SELECT count(*) FROM people} 0]
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBinsert db table dict\fR — INSERT a row from a column→value dict; returns the new rowid. A missing key, or a value equal to \fB[null]\fR, is stored as SQL \fBNULL\fR; an empty string stays \fB''\fR. Identifiers are quoted, so reserved words and spaces in column names work.
+.IP \(bu
+\fBrows db sql\fR — run a query, return a list of column→value dicts (empty list if there are no rows).
+.IP \(bu
+\fBvalue db sql ?default?\fR — the first column of the first row, or \fBdefault\fR (default empty string) if the result is empty.
+.IP \(bu
+\fBquoteId name\fR — quote an SQL identifier (wrap in double quotes, doubling any embedded ones).
+.IP \(bu
+\fBnull\fR — the sentinel value that \fBinsert\fR maps to SQL \fBNULL\fR.
+.PP
+Errors: an empty insert dict → \fB{TCLUTILS TUSQLITE EMPTY}\fR. Verified on Tcl 8.6 (sqlite3 3.45); loads on 9.x (the database\-backed calls need an sqlite3 build for that version).

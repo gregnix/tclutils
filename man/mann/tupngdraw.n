@@ -1,0 +1,80 @@
+.TH tupngdraw n 0.11 tclutils
+.SH tclutils::tupngdraw
+.PP
+A tiny pure\-Tcl 2D drawing layer that renders to a PNG via \fBtclutils::tupng\fR. No Tk and no external packages (TclOO is part of Tcl core). A surface is a TclOO object whose command is the handle, in the spirit of \fBpdf4tcl\fR \-\- but a PNG is a single surface, so there are no pages.
+.SS API
+.CS
+package require tclutils::tupngdraw
+
+set p [::tclutils::tupngdraw::new -width 320 -height 200 -background white]
+.CE
+.PP
+\fBnew\fR options: \fB\-width N\fR (default 100), \fB\-height N\fR (default 100), \fB\-background COLOR\fR (default \fBwhite\fR).
+.PP
+Colours are accepted in several forms, interchangeably: \fBred\fR (named), \fB#ff0000\fR, \fBFF0000\fR, \fBFF0000AA\fR (8\-digit = with alpha), \fB{r g b}\fR or \fB{r g b a}\fR (each 0..255). Alpha defaults to 255. Named colours: black, white, red, green, lime, blue, yellow, cyan, magenta, gray/grey, silver, orange, transparent/none.
+.PP
+Object methods:
+.CS
+$p width                          ;# -> width in pixels
+$p height                         ;# -> height in pixels
+$p pixel x y                      ;# -> {r g b a} at x,y
+
+$p setfill   COLOR                ;# fill colour for filled shapes
+$p setstroke COLOR                ;# stroke colour for outlines/lines/pixels
+$p setlinewidth N                 ;# stroke thickness (>=1)
+$p setantialias 0|1               ;# antialiased strokes (default 1)
+$p clear ?COLOR?                  ;# repaint whole surface (default: background)
+
+$p setpixel x y ?-color COLOR?
+$p line   x1 y1 x2 y2 ?-color COLOR? ?-width N?
+$p rect   x1 y1 x2 y2 ?-fill 0|1? ?-outline 0|1? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR?
+$p circle cx cy r     ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR?
+$p polygon {x0 y0 x1 y1 ...} ?-fill 0|1? ?-outline 0|1? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR?
+$p ellipse cx cy rx ry ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR?
+$p arc cx cy r a0 a1 ?-style arc|pie|chord? ?-fill 0|1? ?-join round|bevel|mitre? ?-color C? ?-width N? ?-fillcolor C?
+$p text x y string ?-color COLOR? ?-scale N? ?-spacing S?
+$p textwidth string ?-scale N? ?-spacing S?      ;# -> pixel width
+
+$p data  ?-compression 0..9? ?-filter best|none|sub|up|average|paeth?   ;# -> PNG bytes
+$p write file ?-compression ...? ?-filter ...?                          ;# -> file
+$p destroy
+.CE
+.PP
+For the shapes, \fB\-fill 1\fR fills the interior with the fill colour and (unless \fB\-outline 0\fR) draws the outline with the stroke colour and current line width. \fB\-color\fR overrides the stroke for that call; \fB\-fillcolor\fR overrides the fill.
+.PP
+Drawing composites \fBsource\-over\fR (straight alpha), so a semi\-transparent fill blends with whatever is underneath; an opaque colour replaces it.
+.PP
+Outline strokes (line, rect/polygon/circle/ellipse outline, arc) are \fBantialiased\fR by default and use a shared coverage buffer, so a thick semi\-transparent stroke stays alpha\-correct: overlapping segments and corners do not darken twice. Turn antialiasing off per surface with \fBsetantialias 0\fR or per call with \fB\-aa 0\fR (crisp, pixel\-exact). Fills (circle, ellipse, polygon, pie) are antialiased too (supersampled). Outline corners use \fB\-join\fR \fBround\fR (default), \fBbevel\fR or \fBmitre\fR (mitre falls back to bevel past a 4x\-width limit) on rect, polygon and arc.
+.CS
+$p setfill {255 0 0}
+$p rect 20 20 140 90 -fill 1
+$p setfill {0 0 255 128}          ;# 50% blue, blends over the red
+$p circle 110 70 40 -fill 1 -outline 0
+$p write out.png -compression 9
+$p destroy
+.CE
+.SS CLI
+.CS
+tclsh bin/tupngdraw.tcl demo out.png -width 320 -height 200
+.CE
+.PP
+Renders a self\-contained demo image (overlapping translucent discs, a filled triangle, strokes) and prints the output path.
+.PP
+\fBarc\fR angles are in degrees, 0 = +x (east); the sweep runs from \fBa0\fR to \fBa1\fR and, because y increases downward, appears clockwise on screen. \fB\-style pie\fR fills/closes through the centre, \fBchord\fR through the end\-to\-end chord, \fBarc\fR is the bare curve. \fBtext\fR uses an embedded 6x8 bitmap font (printable ASCII); \fB\-scale N\fR enlarges each font pixel to an NxN block.
+.SS "Scope and limits"
+.PP
+Version 0.11 covers \fBsetpixel\fR, \fBline\fR, \fBrect\fR, \fBcircle\fR, \fBellipse\fR, \fBpolygon\fR (even\-odd scanline fill), \fBarc\fR/pie/chord and \fBtext\fR (6x8 bitmap font), with stroke/fill colour, line width, source\-over alpha compositing and antialiased, alpha\-correct strokes. It is a 2D rasteriser: drawing is per\-pixel pure Tcl, well suited to labels, calendars, simple charts and preview thumbnails, not to large photographic images.
+.PP
+The 6x8 font is an original, hand\-authored bitmap set (95 ASCII glyphs plus the German umlauts and eszett), embedded as glyph data and MIT\-licensed like the rest of the code. Antialiasing and alpha\-correct thick strokes are implemented (see above).
+.SS Notes
+.PP
+The internal buffer is a flat list of bytes (R G B A per pixel) mutated in place; on \fBwrite\fR/\fBdata\fR it is packed once and handed to \fB::tclutils::tupng::encodeRGBARaw\fR, the packed\-bytes fast path added in tupng 0.2. Rendering is deterministic: the same drawing produces byte\-identical PNGs across runs and across Tcl 8.6 and 9.x.
+.SS "Vector paths"
+.PP
+\fB$p fillcontours {contour ...} ?\-color C? ?\-rule nonzero|evenodd? ?\-aa 0|1?\fR fills one shape made of one or more contours (each a flat \fB{x0 y0 x1 y1 ...}\fR), antialiased and alpha\-correct. The winding rule (\fBnonzero\fR default, or \fBevenodd\fR) decides holes for nested contours \-\- the hook for rendering glyph outlines or SVG\-style paths.
+.SS Glyphs
+.PP
+The embedded 6x8 font covers ASCII 32\-126 plus the German letters a/o/u and A/O/U with diaeresis and the eszett. Unknown code points render blank.
+.SS Compositing
+.PP
+\fBpaste px py rgba sw sh ?\-scale s?\fR alpha\-composites a packed\-RGBA block (e.g. from \fBtupng decode\fR) onto the image, nearest\-neighbour scaled. Useful for layering existing PNGs and for image compositing (used by tkutils::tkcanvaspng).

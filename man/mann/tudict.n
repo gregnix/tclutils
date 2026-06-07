@@ -1,7 +1,23 @@
-.TH tudict n 0.51.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tudict \- nested dict helpers
-.SH SYNOPSIS
-package require tclutils::tudict
-.SH DESCRIPTION
-See docs/tudict.md.
+.TH tudict n 0.1 tclutils
+.SH tclutils::tudict
+.PP
+Dict helpers beyond the Tcl core. Pure Tcl, no dependencies.
+.PP
+The core already does nested access and glob filtering natively \-\- use those, do not wrap them:
+.CS
+dict get    $d a b c          ;# nested get
+dict set    var a b c $value  ;# nested set
+dict exists $d a b c          ;# nested existence
+dict filter $d key <pattern>  ;# (and: value <pattern>)
+.CE
+.PP
+\fBtudict\fR adds only what the core lacks:
+.CS
+tudict::getOr $d $default k ?k ...?   ;# nested get, default if path missing
+tudict::paths $d                      ;# list of leaf key-paths
+tudict::flatten $d ?sep?              ;# {a {b {c 1}}} -> {a.b.c 1}
+tudict::mergeDeep $d1 $d2 ?...?       ;# recursive merge (core merge is shallow)
+tudict::invert $d                     ;# swap keys/values
+.CE
+.PP
+\fBgetOr\fR with no key path raises \fB{TCLUTILS TUDICT ARG}\fR. Because Tcl cannot truly distinguish a dict from a string, \fBpaths\fR/\fBflatten\fR/\fBmergeDeep\fR use a heuristic (a non\-empty, even\-length list is treated as a sub\-dict); a scalar that looks like an even\-length list (e.g. \fB"a b"\fR) may be seen as a dict.

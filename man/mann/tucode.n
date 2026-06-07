@@ -1,0 +1,42 @@
+.TH tucode n 0.1 tclutils
+.SH tclutils::tucode
+.PP
+Character code tables for bytes 0..255: ASCII, Latin\-1/ANSI, and curated sign groups. Pure Tcl, useful for scripts, docs, and terminal tools.
+.SS Package
+.CS
+package require tclutils::tucode 0.1
+.CE
+.SS API
+.CS
+::tclutils::tucode::ascii ?options?
+::tclutils::tucode::latin1 ?options?
+::tclutils::tucode::ansi ?options?          ;# alias for latin1
+::tclutils::tucode::table from to ?options?
+::tclutils::tucode::render from to ?options?
+::tclutils::tucode::signs ?group ...? ?options?
+::tclutils::tucode::groups
+::tclutils::tucode::lookup code|char|0xNN
+.CE
+.SS Options
+.CS
+-columns N     columns in full tables (default 4)
+-showName 0|1   show symbolic name (NUL, nbsp, ssharp, ...)
+-compact 1      16-column hex matrix (classic chart layout)
+.CE
+.SS "Sign groups"
+.PP
+Byte (Latin\-1): \fBcontrols\fR, \fBwhitespace\fR, \fBquotes\fR, \fBdashes\fR, \fBgerman\fR, \fBcurrency\fR, \fBmath\fR, \fBlatin1hi\fR
+.PP
+Unicode: \fBarrows\fR, \fBboxdraw\fR, \fBboxdraw2\fR
+.SS CLI
+.CS
+tclsh tucode.tcl ascii
+tclsh tucode.tcl latin1
+tclsh tucode.tcl ascii -compact 1
+tclsh tucode.tcl signs arrows boxdraw
+tclsh tucode.tcl groups
+tclsh tusign.tcl german quotes
+.CE
+.SS Scope
+.PP
+Byte\-oriented tables (0..255), not a full Unicode chart. For Unicode blocks use dedicated tools; \fBtucode\fR focuses on ASCII and Latin\-1/ANSI compatibility.

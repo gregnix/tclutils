@@ -1,10 +1,33 @@
-.TH tuical n 0.31.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tuical \- iCalendar (RFC 5545) reader/writer
-.SH SYNOPSIS
-package require tclutils::tuical
-.SH DESCRIPTION
-Parses iCalendar text into a component tree and serializes it back with proper
-line folding. See docs/tuical.md.
-.SH KEYWORDS
-icalendar, ics, calendar, parser
+.TH tuical n 0.1 tclutils
+.SH tclutils::tuical
+.PP
+iCalendar (RFC 5545) reader/writer. A component is a dict \fB{type T props {prop ...} components {component ...}}\fR; a property is \fB{name N value V params {k v ...}}\fR. parse returns the list of top\-level components (usually one VCALENDAR); toIcs serializes with 75\-char line folding.
+.SS Commands
+.CS
+tuical::parse icsText             ;# -> list of top-level components
+tuical::toIcs comp|comps           ;# -> iCalendar text (CRLF, folded)
+tuical::components comp ?type?     ;# direct children, optional type filter
+tuical::properties comp ?name?     ;# property dicts, optional name filter
+tuical::property   comp name       ;# first value of a property ("")
+tuical::find  comp|comps type      ;# all descendants of a type
+tuical::events comp|comps          ;# all VEVENT components
+tuical::escapeText / unescapeText  ;# RFC 5545 TEXT escaping
+.CE
+.PP
+Folded lines (continuation starting with space/tab) are unfolded automatically. Property values are kept raw for exact round\-tripping. Error code: \fB{TCLUTILS TUICAL SYNTAX}\fR.
+.SS "VTODO / VJOURNAL accessors"
+.CS
+set comps [tuical::parse $ics]
+tuical::todos    $comps     ;# list of VTODO components (recursive, like events)
+tuical::journals $comps     ;# list of VJOURNAL components
+
+tuical::eventInfo   $vevent   ;# {uid summary description dtstart dtend location status categories}
+tuical::todoInfo    $vtodo    ;# {uid summary description status priority percentComplete due dtstart completed categories}
+tuical::journalInfo $vjournal ;# {uid summary description dtstart status categories}
+
+# build a component (e.g. to PUT a task via tudav)
+set todo [tuical::newComponent VTODO {UID x9 SUMMARY {Call Bob} STATUS NEEDS-ACTION}]
+set ics  [tuical::toIcs [list $todo]]
+.CE
+.PP
+The \fB*Info\fR helpers return a flat dict; missing properties are \fB""\fR and text fields (summary/description/location) are unescaped. \fBnewComponent\fR seeds properties from a flat \fB{NAME value ...}\fR list and yields a component usable with \fBaddProperty\fR/\fBsetProperty\fR/\fBtoIcs\fR.

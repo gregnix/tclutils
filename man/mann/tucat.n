@@ -1,26 +1,23 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tucat n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tucat \- Small cat\-like helpers.
-
-.SH COPYRIGHT
+.TH tucat n 0.1 tclutils
+.SH tclutils::tucat
 .PP
-Copyright \(co 2026 Gregor Ebbing.
+Small \fBcat\fR\-like helpers.
+.CS
+package require tclutils::tucat
+puts [::tclutils::tucat::file README.md]
+puts [::tclutils::tucat::file README.md -number 1]
+.CE
 .PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
+Commands:
+.IP \(bu
+\fBtext text ?options?\fR
+.IP \(bu
+\fBfile path ?options?\fR
+.IP \(bu
+\fBfiles paths ?options?\fR
 .PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+Options:
+.IP \(bu
+\fB\-number 1\fR number all lines
+.IP \(bu
+\fB\-nonblank 1\fR number only non\-empty lines

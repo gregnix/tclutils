@@ -1,42 +1,24 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tucmp n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tucmp \- tucmp vergleicht zwei Datenströme oder Dateien byteweise.
-.SH BEFEHLE
+.TH tucmp n 0.1 tclutils
+.SH tclutils::tucmp
 .PP
-.nf
+\fBtucmp\fR vergleicht zwei Datenströme oder Dateien byteweise.
+.CS
+package require tclutils::tucmp
+
+set r [::tclutils::tucmp::files a.bin b.bin]
+dict get $r equal
+.CE
+.SS Befehle
+.CS
 ::tclutils::tucmp::data data1 data2
 ::tclutils::tucmp::files file1 file2
 ::tclutils::tucmp::equal file1 file2
 ::tclutils::tucmp::firstDifference file1 file2
-.fi
+.CE
 .PP
 \fBdata\fR und \fBfiles\fR liefern ein Dict:
-.PP
-.nf
+.CS
 equal  offset  byte1  byte2  size1  size2
-.fi
+.CE
 .PP
 \fBoffset\fR ist 0\-basiert. Bei identischen Daten ist \fBoffset\fR gleich \fB\-1\fR.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)

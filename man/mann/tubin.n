@@ -1,28 +1,20 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tubin n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tubin \- Binary helper primitives in pure Tcl.
-.SH SYNOPSIS
+.TH tubin n 0.1 tclutils
+.SH tclutils::tubin
 .PP
-.nf
+Binary helper primitives in pure Tcl.
+.PP
+\fBtubin\fR is the shared binary layer for modules such as \fBtuhexdump\fR, \fBtuhexedit\fR, and later byte\-oriented parsers.
+.SS Package
+.CS
 package require tclutils::tubin 0.1
-.fi
-.SH DESCRIPTION
-.PP
-.nf
+.CE
+.SS "Hex conversion"
+.CS
 set bytes [::tclutils::tubin::hexToBytes {50 4B 03 04}]
 set hex   [::tclutils::tubin::bytesToHex $bytes]
-.fi
-.SH DESCRIPTION
-.PP
-.nf
+.CE
+.SS "Unsigned integer readers"
+.CS
 ::tclutils::tubin::u8     $bytes ?offset?
 ::tclutils::tubin::u16le  $bytes ?offset?
 ::tclutils::tubin::u32le  $bytes ?offset?
@@ -30,12 +22,11 @@ set hex   [::tclutils::tubin::bytesToHex $bytes]
 ::tclutils::tubin::u16be  $bytes ?offset?
 ::tclutils::tubin::u32be  $bytes ?offset?
 ::tclutils::tubin::u64be  $bytes ?offset?
-.fi
+.CE
 .PP
 Offsets may be decimal or hex\-like strings such as \fB0x100\fR.
-.SH DESCRIPTION
-.PP
-.nf
+.SS "Unsigned integer packers"
+.CS
 ::tclutils::tubin::packU8     255
 ::tclutils::tubin::packU16LE  0x1234
 ::tclutils::tubin::packU32LE  0x12345678
@@ -43,37 +34,16 @@ Offsets may be decimal or hex\-like strings such as \fB0x100\fR.
 ::tclutils::tubin::packU16BE  0x1234
 ::tclutils::tubin::packU32BE  0x12345678
 ::tclutils::tubin::packU64BE  123456789
-.fi
-.SH DESCRIPTION
-.PP
-.nf
+.CE
+.SS "ASCII preview"
+.CS
 ::tclutils::tubin::ascii $bytes
-.fi
+.CE
 .PP
 Non\-printable bytes are rendered as \fB.\fR.
-.SH DESCRIPTION
-.PP
-.nf
+.SS "Unsigned byte lists"
+.CS
 ::tclutils::tubin::bytesToUnsignedList $bytes ?offset? ?length?
-.fi
+.CE
 .PP
-This returns a Tcl list of unsigned byte values in the range \fB0..255\fR. It is
-.PP
-useful for dump\-style modules that need to iterate over bytes without repeating
-.PP
-\fBbinary scan cu*\fR locally.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+This returns a Tcl list of unsigned byte values in the range \fB0..255\fR. It is useful for dump\-style modules that need to iterate over bytes without repeating \fBbinary scan cu*\fR locally.

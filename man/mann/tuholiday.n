@@ -1,9 +1,22 @@
-.TH tuholiday n 0.45.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tuholiday \- Easter computus and public holidays
-.SH SYNOPSIS
-package require tclutils::tuholiday
-.SH DESCRIPTION
-See docs/tuholiday.md.
-.SH KEYWORDS
-holiday, easter, computus, calendar
+.TH tuholiday n 0.1 tclutils
+.SH tclutils::tuholiday
+.PP
+German public holidays from the Easter computus. Computes Easter Sunday (Gregorian, Meeus/Jones/Butcher algorithm) and derives the movable feasts, then returns the \fBnationwide\fR German statutory holidays for a year. Pure Tcl on top of \fBclock\fR.
+.SS API
+.CS
+::tclutils::tuholiday::easter 2026             ;# -> 2026-04-05
+::tclutils::tuholiday::holidays 2026           ;# -> dict {ISO-date -> name}, sorted
+::tclutils::tuholiday::isHoliday 2026-01-01    ;# -> "Neujahr"  ("" if none)
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBeaster year\fR — Easter Sunday of \fByear\fR as an ISO date (\fBYYYY\-MM\-DD\fR).
+.IP \(bu
+\fBholidays year ?\-region de?\fR — the nationwide German holidays as a dict mapping ISO date → name, ordered by date (Neujahr, Karfreitag, Oster\-/Pfingst\-Tage, Christi Himmelfahrt, Tag der Arbeit, Tag der Deutschen Einheit, beide Weihnachtstage).
+.IP \(bu
+\fBisHoliday iso ?\-region de?\fR — the holiday name for an ISO date, or \fB""\fR if it is not a holiday.
+.PP
+Scope: only the nine/eleven days statutory in \fBall\fR German states. State\-specific days (Heilige Drei Könige, Fronleichnam, Allerheiligen, Reformationstag, …) are intentionally not in the base set; \fB\-region\fR currently accepts only \fBde\fR.
+.PP
+Errors: a non\-integer year → \fB{TCLUTILS TUHOLIDAY YEAR}\fR; an unknown region → \fB{TCLUTILS TUHOLIDAY REGION}\fR.

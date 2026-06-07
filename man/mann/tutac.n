@@ -1,0 +1,16 @@
+.TH tutac n 0.1 tclutils
+.SH tclutils::tutac
+.PP
+\fBtac\fR\-like reversal of line order (pure Tcl).
+.SS API
+.CS
+::tclutils::tutac::text text
+::tclutils::tutac::file path
+::tclutils::tutac::lines lineList
+.CE
+.PP
+A trailing newline is preserved (so \fBa\enb\en\fR becomes \fBb\ena\en\fR).
+.SS CLI
+.CS
+tclsh bin/tutac.tcl file.txt
+.CE

@@ -1,0 +1,23 @@
+.TH tudate n 0.1 tclutils
+.SH tclutils::tudate
+.PP
+Flexible date helpers built on the Tcl \fBclock\fR command: parse common formats, render ISO, do calendar arithmetic, day differences and human relative phrases. Works in local time.
+.SS API
+.CS
+set t [::tclutils::tudate::parse "15.03.2024"]    ;# epoch seconds
+::tclutils::tudate::iso $t                         ;# 2024-03-15
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBparse str ?\-format fmt?\fR — epoch seconds. Without \fB\-format\fR, common formats are tried (ISO, ISO date\-time, \fBd.m.Y\fR, \fBd/m/Y\fR, \fBY/m/d\fR) then a free\-form scan; errors \fB{TCLUTILS TUDATE PARSE}\fR.
+.IP \(bu
+\fBiso seconds ?\-time bool?\fR — \fByyyy\-mm\-dd\fR (or \fB...THH:MM:SS\fR).
+.IP \(bu
+\fBadd seconds count unit\fR — calendar add; unit second/minute/hour/day/week/ month/year (plural or singular). Errors \fB{TCLUTILS TUDATE UNIT}\fR.
+.IP \(bu
+\fBdiff a b ?\-unit days?\fR — integer difference (seconds/minutes/hours/days/weeks).
+.IP \(bu
+\fBrelative seconds ?\-base secs?\fR — "today", "yesterday", "in N days", etc.
+.IP \(bu
+\fBtoday\fR — today's ISO date.

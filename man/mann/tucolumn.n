@@ -1,0 +1,18 @@
+.TH tucolumn n 0.1 tclutils
+.SH tclutils::tucolumn
+.PP
+\fBcolumn\fR\-like columnation in pure Tcl.
+.SS API
+.CS
+::tclutils::tucolumn::table text  ?-separator S? ?-output S? ?-right 0|1?
+::tclutils::tucolumn::fill  items ?-width N? ?-gap N?
+::tclutils::tucolumn::text  text  ?...?           ;# alias for table
+::tclutils::tucolumn::file  path  ?-mode table|fill? ?...?
+.CE
+.PP
+Table mode aligns delimited columns (input separator defaults to whitespace runs; output separator defaults to two spaces). Fill mode arranges items column\-major into columns fitting \fB\-width\fR (default 80).
+.SS CLI
+.CS
+tclsh bin/tucolumn.tcl table file.txt
+tclsh bin/tucolumn.tcl fill -width 60 words.txt
+.CE

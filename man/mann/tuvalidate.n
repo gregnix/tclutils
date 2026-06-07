@@ -1,7 +1,19 @@
-.TH tuvalidate n 0.50.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tuvalidate \- format/type validation predicates
-.SH SYNOPSIS
-package require tclutils::tuvalidate
-.SH DESCRIPTION
-See docs/tuvalidate.md.
+.TH tuvalidate n 0.1 tclutils
+.SH tclutils::tuvalidate
+.PP
+Small format/type validation predicates. Each returns a boolean \fB1\fR/\fB0\fR and never throws on the value being checked (only on bad \fIarguments\fR, e.g. a non\-integer bound). Pure Tcl, no dependencies.
+.CS
+tuvalidate::email   $s            ;# pragmatic email shape
+tuvalidate::url     $s            ;# http/https URL
+tuvalidate::ipv4    $s            ;# dotted quad, each octet 0..255
+tuvalidate::port    $s            ;# integer 1..65535
+tuvalidate::alpha   $s            ;# ^[A-Za-z]+$   (ASCII)
+tuvalidate::alnum   $s            ;# ^[A-Za-z0-9]+$
+tuvalidate::numeric $s            ;# [string is double -strict]
+tuvalidate::integer $s            ;# [string is integer -strict]
+tuvalidate::length  $s $min $max  ;# min <= length <= max
+tuvalidate::pattern $s $regex     ;# regexp match
+tuvalidate::inList  $s $list      ;# membership
+.CE
+.PP
+These are pragmatic checks, not full RFC validators \-\- \fBemail\fR/\fBurl\fR accept the common shapes and reject the obviously broken ones. For Unicode letter classes use the core \fB[string is alpha]\fR; \fBalpha\fR/\fBalnum\fR here are ASCII\-only by design. Bad arguments raise \fB{TCLUTILS TUVALIDATE ARG}\fR (length) or \fB{TCLUTILS TUVALIDATE REGEX}\fR (pattern).

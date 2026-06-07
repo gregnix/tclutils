@@ -1,9 +1,65 @@
-.TH tudav n 0.44.0 tclutils "Tcl Utility Library"
-.SH NAME
-tclutils::tudav \- minimal WebDAV/CardDAV/CalDAV client
-.SH SYNOPSIS
-package require tclutils::tudav
-.SH DESCRIPTION
-See docs/tudav.md.
-.SH KEYWORDS
-dav, webdav, carddav, caldav, http
+.TH tudav n 0.1 tclutils
+.SH tclutils::tudav
+.PP
+A minimal WebDAV / CardDAV / CalDAV client. Create a client bound to a base URL and credentials, then run PROPFIND / REPORT / GET / PUT / DELETE. Multistatus responses are parsed into resource dicts (href, status, code, etag, contenttype, collection, displayname, and \fBdata\fR for inline calendar/address data).
+.PP
+Built on the Tcl core \fBhttp\fR package; \fBhttps uses the \fR\fBtls\fR\fB package\fR, loaded lazily on first https request. Basic auth uses \fBtclutils::tubase64\fR; entity text is decoded with \fBtclutils::tuxml\fR. The client does not parse resource bodies — feed a fetched vCard to \fBtclutils::tuvcard\fR or an iCalendar to \fBtclutils::tuical\fR.
+.SS API
+.CS
+set c [::tclutils::tudav::client https://dav.example.com/addressbooks/me/contacts/ \
+        -user alice -password secret]
+foreach r [::tclutils::tudav::listResources $c] {
+    set vcf  [::tclutils::tudav::get $c [dict get $r href]]
+    set card [::tclutils::tuvcard::parse $vcf]
+    # ...
+}
+::tclutils::tudav::destroy $c
+.CE
+.PP
+Commands:
+.IP \(bu
+\fBclient url ?\-user u? ?\-password p? ?\-headers {k v ...}?\fR → client token.
+.IP \(bu
+\fBpropfind c ?\-path p? ?\-depth 0|1|infinity? ?\-props {...}? ?\-body xml?\fR → list of resource dicts.
+.IP \(bu
+\fBreport c path xmlBody ?\-depth d?\fR → resource dicts (multiget / calendar\-query).
+.IP \(bu
+\fBlistResources c ?\-path p?\fR → non\-collection entries \fB{href etag contenttype}\fR.
+.IP \(bu
+\fBget c path\fR → body (errors on non\-2xx).
+.IP \(bu
+\fBput c path data ?\-type ct? ?\-etag e?\fR \-> returns the new ETag (if the server reports one); \fBdelete c path ?\-etag e?\fR.
+.IP \(bu
+\fBlastStatus c\fR → last HTTP status line ; \fBdestroy c\fR.
+.IP \(bu
+\fBcalendarQuery c path fromIso toIso\fR — CalDAV calendar\-query REPORT for VEVENTs in a time range; each resource dict's \fBdata\fR holds the inline iCal.
+.IP \(bu
+\fBaddressbookMultiget c path hrefs\fR — CardDAV multiget; \fBdata\fR holds vCards.
+.IP \(bu
+\fBmkCollection c path ?\-displayname n?\fR — create a plain WebDAV collection.
+.IP \(bu
+\fBmkAddressbook c path ?\-displayname n?\fR — create a CardDAV address book.
+.IP \(bu
+\fBmkCalendar c path ?\-displayname n?\fR — create a CalDAV calendar (MKCALENDAR).
+.IP \(bu
+\fBlistCollections c ?\-path p?\fR — discover child collections under \fBp\fR; dicts \fB{href displayname kind}\fR with \fBkind\fR in addressbook/calendar/collection.
+.IP \(bu
+\fBcalendarMultiget c path hrefs\fR — CalDAV multiget; \fBdata\fR holds iCalendar.
+.IP \(bu
+\fBcurrentUserPrincipal c ?\-path p?\fR — DAV:current\-user\-principal href.
+.IP \(bu
+\fBcalendarHomeSet c principal\fR / \fBaddressbookHomeSet c principal\fR — home hrefs.
+.IP \(bu
+\fBwellKnown c caldav|carddav\fR — RFC 6764 redirect target, or "".
+.IP \(bu
+\fBdiscover c ?\-path p?\fR — \fB{principal <href> calendarHome <href> addressbookHome <href>}\fR.
+.IP \(bu
+\fBgetProperties c ?\-path p? ?\-props {...}?\fR — read collection properties; dict of short\-name \-> value. Known: displayname, calendar\-color, calendar\-description, addressbook\-description, supported\-calendar\-component\-set (a list of comp names).
+.IP \(bu
+\fBproppatch c path props\fR — set properties (PROPPATCH). \fBprops\fR is a dict of short\-name \-> value (displayname, calendar\-color \fB#rrggbb[aa]\fR, calendar\-description, addressbook\-description). The component set is create\-time only and read\-only here.
+.IP \(bu
+\fBsyncCollection c path ?\-token t?\fR — RFC 6578 incremental sync. Returns \fB{token <new> changes <resource dicts>}\fR; empty \fB\-token\fR does the initial sync, a returned token feeds the next call. In incremental results a change with \fBcode\fR 404 means the resource was removed.
+.PP
+Verified end to end against Radicale 3.7 (provision, PUT, REPORT, GET, DELETE) on Tcl 8.6 and 9.x.
+.PP
+Errors: HTTP failures → \fB{TCLUTILS TUDAV HTTP}\fR; missing tls for https → \fB{TCLUTILS TUDAV TLS}\fR.

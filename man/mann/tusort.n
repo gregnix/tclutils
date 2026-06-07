@@ -1,60 +1,35 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tusort n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tusort \- Sort helpers similar to Unix sort, implemented in pure Tcl.
-.SH SYNOPSIS
+.TH tusort n 0.1 tclutils
+.SH tclutils::tusort
 .PP
-.nf
+Sort helpers similar to Unix \fBsort\fR, implemented in pure Tcl.
+.SS Package
+.CS
 package require tclutils::tusort 0.1
-.fi
-.SH COMMANDS
-.PP
-.nf
+.CE
+.SS Commands
+.CS
 ::tclutils::tusort::sortList items ?options...?
 ::tclutils::tusort::text text ?options...?
 ::tclutils::tusort::file path ?options...?
-.fi
-.SH OPTIONS
-.IP
+.CE
+.SS Options
+.IP \(bu
 \fB\-numeric 1\fR sort numerically using Tcl's real comparison
-.IP
+.IP \(bu
 \fB\-integer 1\fR sort as integers
-.IP
+.IP \(bu
 \fB\-real 1\fR sort as real numbers
-.IP
+.IP \(bu
 \fB\-dictionary 1\fR dictionary\-style sorting
-.IP
+.IP \(bu
 \fB\-nocase 1\fR case\-insensitive sorting
-.IP
+.IP \(bu
 \fB\-reverse 1\fR reverse/decreasing order
-.IP
+.IP \(bu
 \fB\-unique 1\fR remove duplicate values during sorting
-.SH EXAMPLES
-.PP
-.nf
+.SS Examples
+.CS
 set sorted [::tclutils::tusort::sortList {banana apple cherry}]
-set sorted [::tclutils::tusort::file names.txt \-dictionary 1 \-nocase 1]
-set sorted [::tclutils::tusort::file numbers.txt \-numeric 1 \-reverse 1]
-.fi
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
+set sorted [::tclutils::tusort::file names.txt -dictionary 1 -nocase 1]
+set sorted [::tclutils::tusort::file numbers.txt -numeric 1 -reverse 1]
+.CE

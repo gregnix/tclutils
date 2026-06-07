@@ -1,37 +1,20 @@
-'\"
-'\" Copyright (c) 2026 Gregor Ebbing
-'\" SPDX-License-Identifier: MIT
-'\"
-'\" Original documentation for the tclutils library.
-'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
-'\" GNU diffutils, or other GPL-licensed manual sources.
-'\"
-.TH tuiconv n 0.23.0 tclutils "Tcl Library Procedures"
-.SH NAME
-tuiconv \- tuiconv provides small encoding conversion helpers in pure Tcl.
-.SH COMMANDS
+.TH tuiconv n 0.1 tclutils
+.SH tclutils::tuiconv
 .PP
-.nf
+\fBtuiconv\fR provides small encoding conversion helpers in pure Tcl.
+.CS
+package require tclutils::tuiconv
+
+set text [::tclutils::tuiconv::readFile data-cp1252.txt cp1252]
+::tclutils::tuiconv::writeFile data-utf8.txt $text utf-8
+.CE
+.SS Commands
+.CS
 ::tclutils::tuiconv::encodings
 ::tclutils::tuiconv::convert data fromEncoding toEncoding
 ::tclutils::tuiconv::readFile filename encoding
 ::tclutils::tuiconv::writeFile filename text encoding
 ::tclutils::tuiconv::convertFile infile outfile fromEncoding toEncoding
-.fi
+.CE
 .PP
 All file operations use binary channels internally and perform encoding conversion explicitly.
-
-.SH COPYRIGHT
-.PP
-Copyright \(co 2026 Gregor Ebbing.
-.PP
-Permission is granted to use, copy, modify, and distribute this
-documentation under the same terms as the tclutils software (MIT License).
-See the file \fILICENSE\fR in the tclutils source distribution.
-.PP
-\fBtclutils\fR is an independent Tcl implementation of common
-Unix-style utilities. It does not incorporate source code or manual text
-from GNU coreutils or other GPL-licensed projects.
-
-.SH SEE ALSO
-tclutils(n)
