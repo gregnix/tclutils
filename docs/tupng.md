@@ -33,3 +33,13 @@ Encode only (no decoder). 8-bit depth; no 16-bit and no interlacing. For
 indexed images the palette holds 1..256 entries; a palette entry with alpha
 < 255 emits a `tRNS` chunk. Truecolour alpha (RGBA) is stored inline (type 6).
 Reuses only `tclutils::common` (option parsing) and the core `zlib`.
+
+## Decoding (0.3)
+
+`tupng::decode bytes` and `tupng::readPNG file` reconstruct an 8-bit,
+non-interlaced PNG (colour types 0/2/3/4/6) and return a dict:
+`width height colortype bitdepth rgba`, where `rgba` is width*height*4
+packed bytes (row-major R G B A) -- the inverse of `encodeRGBARaw`, so
+encode/decode round-trips byte-exactly. Errors carry
+`{TCLUTILS TUPNG DECODE <reason>}` (SIGNATURE, IHDR, BITDEPTH, INTERLACE,
+COLORTYPE, IDAT, FILTER). 16-bit and interlaced PNGs are not supported.

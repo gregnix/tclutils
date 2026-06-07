@@ -1,0 +1,27 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tutablepng 1 0.1 tclutils "Tcl Utility Command"
+.SH NAME
+tutablepng \- thin CLI wrapper for tclutils::tutablepng
+.SH SYNOPSIS
+.nf
+tutablepng <out.png> ?-d DELIM? ?-header 0|1? ?-align SPEC? ?file?
+.fi
+.SH DESCRIPTION
+.PP
+The tutablepng command renders delimited rows (from a file or standard input)
+as a styled PNG table, via the Tcl package tclutils::tutablepng and the pure-Tcl
+drawing layer tclutils::tupngdraw. The primary interface is the Tcl library;
+see tutablepng(n) for procedures, options and semantics.
+.PP
+.nf
+tclsh bin/tutablepng.tcl out.png -d , -header 1 -align "l r r" data.csv
+.fi
+.SH "SEE ALSO"
+tupngdraw(n), tupng(n)

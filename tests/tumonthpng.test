@@ -1,0 +1,147 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file normalize [file join $here .. lib tm]]
+package require tclutils::tumonthpng
+package require tclutils::tuimage
+
+test tumonthpng-1.1 {render -> valid PNG} -body {
+    ::tclutils::tuimage::type [::tclutils::tumonthpng::render 2026 6 -today 2026-06-06]
+} -result png
+
+test tumonthpng-1.2 {dimensions, scale 1, with week column} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tumonthpng::render 2026 6 -scale 1]
+} -result {202 154}
+
+test tumonthpng-1.3 {dimensions, scale 2} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tumonthpng::render 2026 6 -scale 2]
+} -result {404 308}
+
+test tumonthpng-1.4 {-showweeks 0 drops the week-number column} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tumonthpng::render 2026 6 -scale 1 -showweeks 0]
+} -result {182 154}
+
+test tumonthpng-1.5 {holidays and notes are accepted} -body {
+    ::tclutils::tuimage::type [::tclutils::tumonthpng::render 2026 6 \
+        -holidays {2026-06-08 Pfingstmontag} -notes {2026-06-15 Zahnarzt}]
+} -result png
+
+test tumonthpng-1.6 {themes render} -body {
+    set ok {}
+    foreach t {default dark light} {
+        lappend ok [::tclutils::tuimage::type [::tclutils::tumonthpng::render 2026 6 -theme $t]]
+    }
+    lsort -unique $ok
+} -result png
+
+test tumonthpng-2.1 {bad month -> MONTH} -body {
+    catch {::tclutils::tumonthpng::render 2026 13} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUMONTHPNG MONTH}
+
+test tumonthpng-2.2 {bad theme -> THEME} -body {
+    catch {::tclutils::tumonthpng::render 2026 6 -theme nope} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUMONTHPNG THEME}
+
+test tumonthpng-3.1 {write creates a PNG file} -setup {
+    set f [file join [temporaryDirectory] tumonthpng-test.png]
+} -body {
+    ::tclutils::tumonthpng::write $f 2026 6 -today 2026-06-06
+    list [file exists $f] [::tclutils::tuimage::type [::tclutils::common::readBinaryFile $f]]
+} -cleanup { file delete $f } -result {1 png}
+
+# --- 0.2: -textcmd delegates every centred label -----------------------------
+test tumonthpng-4.1 {-textcmd is called for each label (title+header+KW+weeks+days)} -body {
+    set ::__tc 0
+    proc ::__count {img x y w h text color} { incr ::__tc }
+    ::tclutils::tumonthpng::render 2026 6 -scale 2 -today 2026-06-06 -textcmd ::__count
+    rename ::__count {}
+    set ::__tc
+} -result 57
+
+test tumonthpng-4.2 {-textcmd off (default) is unaffected} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tumonthpng::render 2026 6 -scale 2]
+} -result {404 308}
+
+# --- 0.3: quarter / year layouts (ported from monthcanvas drawQuarter/drawYear)
+test tumonthpng-5.1 {renderQuarter dimensions (3 months across)} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tumonthpng::renderQuarter 2026 1 -scale 2]
+} -result {1252 308}
+
+test tumonthpng-5.2 {renderYear default (3 columns) dimensions} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tumonthpng::renderYear 2026 -scale 2]
+} -result {1252 1292}
+
+test tumonthpng-5.3 {renderYear -cols 4 dimensions} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tumonthpng::renderYear 2026 -scale 2 -cols 4]
+} -result {1676 964}
+
+test tumonthpng-5.4 {quarter -textcmd count = 3 x single-month (57)} -body {
+    set ::__qc 0
+    proc ::__qcnt {img x y w h text color} { incr ::__qc }
+    ::tclutils::tumonthpng::renderQuarter 2026 1 -scale 2 -textcmd ::__qcnt
+    rename ::__qcnt {}
+    set ::__qc
+} -result 171
+
+test tumonthpng-5.5 {quarter handles year rollover (Nov..Jan)} -body {
+    ::tclutils::tuimage::type [::tclutils::tumonthpng::renderQuarter 2026 11 -scale 1]
+} -result png
+
+test tumonthpng-5.6 {writeYear writes a file} -setup {
+    set f [file join [::tcltest::temporaryDirectory] yr.png]
+} -body {
+    ::tclutils::tumonthpng::writeYear $f 2026 -scale 1
+    file exists $f
+} -cleanup { file delete $f } -result 1
+
+
+# --- 6.x: -select (multi-day, ranges, outline/fill/both) --------------------
+test tumonthpng-6.1 {_selectSet: single, multiple, range expansion} -body {
+    llength [dict keys [::tclutils::tumonthpng::_selectSet \
+        {2026-06-08 2026-06-12..2026-06-15 2026-06-20}]]
+} -result 6
+
+test tumonthpng-6.2 {_selectSet: invalid entry -> SELECT} -body {
+    catch {::tclutils::tumonthpng::_selectSet {2026-6-8}} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUMONTHPNG SELECT}
+
+test tumonthpng-6.3 {-select keeps dimensions} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tumonthpng::render 2026 6 \
+        -scale 1 -select {2026-06-08 2026-06-20}]
+} -result {202 154}
+
+test tumonthpng-6.4 {selection changes the rendered image} -body {
+    set a [::tclutils::tumonthpng::render 2026 6 -scale 1]
+    set b [::tclutils::tumonthpng::render 2026 6 -scale 1 -select {2026-06-08} -selectstyle both]
+    expr {$a ne $b}
+} -result 1
+
+test tumonthpng-6.5 {-selectstyle fill and both render} -body {
+    set ok {}
+    foreach st {outline fill both} {
+        lappend ok [::tclutils::tuimage::type [::tclutils::tumonthpng::render 2026 6 \
+            -select {2026-06-10..2026-06-14} -selectstyle $st]]
+    }
+    lsort -unique $ok
+} -result png
+
+test tumonthpng-6.6 {bad -selectstyle -> SELECTSTYLE} -body {
+    catch {::tclutils::tumonthpng::render 2026 6 -select {2026-06-08} -selectstyle nope} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUMONTHPNG SELECTSTYLE}
+
+test tumonthpng-6.7 {_blend midpoint} -body {
+    ::tclutils::tumonthpng::_blend #000000 #ffffff 0.5
+} -result #808080
+
+test tumonthpng-6.8 {-select works for renderYear too} -body {
+    ::tclutils::tuimage::type [::tclutils::tumonthpng::renderYear 2026 \
+        -scale 1 -select {2026-03-21 2026-12-24..2026-12-26} -selectstyle both]
+} -result png
+
+
+cleanupTests

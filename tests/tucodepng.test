@@ -1,0 +1,68 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file normalize [file join $here .. lib tm]]
+package require tclutils::tucodepng
+package require tclutils::tuimage
+
+test tucodepng-1.1 {render -> valid PNG} -body {
+    ::tclutils::tuimage::type [::tclutils::tucodepng::render 0 127]
+} -result png
+
+test tucodepng-1.2 {ascii dimensions (scale 2, 16 cols)} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tucodepng::ascii -scale 2]
+} -result {896 272}
+
+test tucodepng-1.3 {latin1 dimensions} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tucodepng::latin1 -scale 2]
+} -result {896 272}
+
+test tucodepng-1.4 {all (0..255) dimensions} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tucodepng::all -scale 2]
+} -result {896 544}
+
+test tucodepng-1.5 {title adds a heading row} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tucodepng::ascii -scale 2 -title {ASCII 0-127}]
+} -result {896 296}
+
+test tucodepng-1.6 {-shownames adds a name row per cell} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tucodepng::ascii -scale 2 -shownames 1]
+} -result {896 352}
+
+test tucodepng-1.7 {-columns changes layout} -body {
+    ::tclutils::tuimage::dimensions [::tclutils::tucodepng::ascii -scale 2 -columns 8]
+} -result {448 544}
+
+test tucodepng-2.1 {range error: from > to} -body {
+    catch {::tclutils::tucodepng::render 100 10} e o
+    list [dict get $o -errorcode]
+} -result {{TCLUTILS TUCODEPNG RANGE}}
+
+test tucodepng-2.2 {range error: out of 0..255} -body {
+    catch {::tclutils::tucodepng::render 0 300} e o
+    list [dict get $o -errorcode]
+} -result {{TCLUTILS TUCODEPNG RANGE}}
+
+test tucodepng-2.3 {unknown theme errors} -body {
+    catch {::tclutils::tucodepng::render 0 15 -theme neon} e o
+    list [dict get $o -errorcode]
+} -result {{TCLUTILS TUCODEPNG THEME}}
+
+test tucodepng-3.1 {-textcmd is invoked for printable cells} -body {
+    set ::__cc 0
+    proc ::__cnt {img x y w h text color} { incr ::__cc }
+    # codes 65..90 are all printable -> one char-draw each
+    ::tclutils::tucodepng::render 65 90 -scale 2 -textcmd ::__cnt
+    rename ::__cnt {}
+    set ::__cc
+} -result 26
+
+test tucodepng-3.2 {writeAscii-style write produces a file} -setup {
+    set f [file join [::tcltest::temporaryDirectory] cp.png]
+} -body {
+    ::tclutils::tucodepng::write $f 0 127 -scale 1
+    file exists $f
+} -cleanup { file delete $f } -result 1
+
+cleanupTests

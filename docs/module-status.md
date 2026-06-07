@@ -61,6 +61,11 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tubase32` | basis complete | RFC 4648 base32 and base32hex encode/decode (pure Tcl; core has only base64). |
 | `tuimage` | basis complete | Detect format/MIME/dimensions from image bytes + data: URIs; pure-Tcl. |
 | `tupng` | basis complete | Pure-Tcl PNG encoder (indexed/RGB/RGBA/gray) via core zlib; encode-side companion to `tuimage`. |
+| `tupngdraw` | toolkit | Immediate-mode 2D drawing onto an RGBA buffer (lines/arrows/shapes, AA fills/strokes, bitmap font, `fillcontours`, `paste`); emits PNG via `tupng`. |
+| `tutablepng` | renderer | Renders data rows to a styled PNG table; built on `tupngdraw`. |
+| `tumonthpng` | renderer | Month/quarter/year calendar to PNG (monthcanvas look); themes, day states, `-textcmd`. |
+| `tucodepng` | renderer | Character-code/codepage table to PNG grid; data from `tucode`. |
+| `tupngpad` | tool | Normalises (transparent) PNGs to a uniform size with margin on a background (trim/pad/flatten). Pure Tcl, for sprite/icon sizes. |
 
 ## Data / serialization
 

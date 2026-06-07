@@ -1,0 +1,69 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file normalize [file join $here .. lib tm]]
+catch {tcl::tm::path add [file normalize [file join $here .. .. tclutils lib tm]]}
+package require tclutils::tupngpad
+package require tclutils::tupng
+
+# packed RGBA: WxH transparent with one opaque block
+proc blk {W H bx by bw bh {r 200} {g 0} {b 0}} {
+    set out {}
+    for {set y 0} {$y < $H} {incr y} {
+        for {set x 0} {$x < $W} {incr x} {
+            if {$x >= $bx && $x < $bx+$bw && $y >= $by && $y < $by+$bh} {
+                lappend out $r $g $b 255
+            } else { lappend out 0 0 0 0 }
+        }
+    }
+    return [binary format cu* $out]
+}
+proc px {png x y} {
+    set d [::tclutils::tupng::decode $png]
+    set W [dict get $d width]
+    binary scan [dict get $d rgba] "x[expr {($y*$W+$x)*4}] cu cu cu cu" r g b a
+    return [format "#%02x%02x%02x/a%d" $r $g $b $a]
+}
+
+test tupngpad-1.1 {bbox of content} -body {
+    ::tclutils::tupngpad::bbox [blk 14 12 4 3 6 4] 14 12
+} -result {4 3 9 6}
+
+test tupngpad-1.2 {bbox of fully transparent image is empty} -body {
+    ::tclutils::tupngpad::bbox [blk 8 8 0 0 0 0] 8 8
+} -result {}
+
+test tupngpad-1.3 {trim crops to content size} -body {
+    lassign [::tclutils::tupngpad::trim [blk 14 12 4 3 6 4] 14 12] _ w h
+    list $w $h
+} -result {6 4}
+
+test tupngpad-2.1 {padTo: size, opaque bg corner, centred content} -body {
+    lassign [::tclutils::tupngpad::trim [blk 14 12 4 3 6 4 10 20 30] 14 12] rgba w h
+    set png [::tclutils::tupngpad::padTo $rgba $w $h 18 16 -background white]
+    set d [::tclutils::tupng::decode $png]
+    list [dict get $d width] [dict get $d height] \
+        [px $png 0 0] [px $png 9 8]
+} -result {18 16 #ffffff/a255 #0a141e/a255}
+
+test tupngpad-3.1 {batch: uniform size, all opaque, margin honoured} -setup {
+    set dir [makeDirectory pin]
+    set odir [makeDirectory pout]
+    foreach {n W H bw bh} {a 14 12 6 4  b 18 16 10 8} {
+        set png [::tclutils::tupng::encodeRGBARaw [blk $W $H 2 2 $bw $bh] $W $H]
+        set fid [open [file join $dir $n.png] w]
+        fconfigure $fid -translation binary; puts -nonewline $fid $png; close $fid
+    }
+} -body {
+    set res [::tclutils::tupngpad::batch \
+        [glob [file join $dir *.png]] $odir -margin 4 -background white]
+    set sizes {}
+    foreach {in out} [dict get $res files] {
+        set d [::tclutils::tupng::readPNG $out]
+        lappend sizes [list [dict get $d width] [dict get $d height]]
+    }
+    list [dict get $res size] [lsort -unique $sizes]
+} -cleanup { removeDirectory pin; removeDirectory pout } -result {{18 16} {{18 16}}}
+
+cleanupTests

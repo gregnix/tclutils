@@ -79,6 +79,11 @@ package require tclutils::tubookmark 0.1
 package require tclutils::tulog 0.1
 package require tclutils::tuimage 0.1
 package require tclutils::tupng 0.1
+package require tclutils::tupngdraw 0.11
+package require tclutils::tutablepng 0.1
+package require tclutils::tumonthpng 0.4
+package require tclutils::tucodepng 0.1
+package require tclutils::tupngpad 0.1
 package require tclutils::tustr 0.1
 package require tclutils::tuvalidate 0.1
 package require tclutils::tulist 0.1
@@ -86,7 +91,7 @@ package require tclutils::tudict 0.1
 package require tclutils::tumath 0.1
 package require tclutils::tutable 0.1
 # HTTP / SPARQL / SQLite helpers (optional, not dependency-free)
-package require tclutils::tufetch 0.2
+package require tclutils::tufetch 0.3
 package require tclutils::tusqlite 0.1
 package require tclutils::tusparql 0.1
 package provide tclutils 0.53.0

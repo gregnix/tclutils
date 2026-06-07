@@ -16,7 +16,7 @@ set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 catch {tcl::tm::path add [file join $root lib tm]}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
-package require tclutils::tufetch 0.2
+package require tclutils::tufetch 0.3
 
 proc opts {args} {
     ::tclutils::common::parseOptions $::tclutils::tufetch::defaults {*}$args
@@ -109,11 +109,53 @@ test tufetch-2.2 {get returns decoded text with the expected content} -constrain
     list [string match {*Mexico*} $txt] [string match {*fifa_code*} $txt]
 } -result {1 1}
 
+# --- error taxonomy (pure, no network) -------------------------------------
+test tufetch-3.1 {_httpClass maps a status code to its class} -body {
+    lmap c {100 200 301 404 503 999 abc} {::tclutils::tufetch::_httpClass $c}
+} -result {1XX 2XX 3XX 4XX 5XX {} {}}
+
+test tufetch-3.2 {an HTTP error carries class and code in the errorcode} -body {
+    catch {::tclutils::tufetch::_httpError 404 http://x/y} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUFETCH HTTP 4XX 404}
+
+test tufetch-3.3 {try/trap distinguishes 404, any-4XX and any-5XX} -body {
+    set hits {}
+    try {
+        ::tclutils::tufetch::_httpError 404 http://x
+    } trap {TCLUTILS TUFETCH HTTP 4XX 404} {} {
+        lappend hits exact-404
+    } trap {TCLUTILS TUFETCH HTTP 5XX} {} {
+        lappend hits any-5XX
+    }
+    try {
+        ::tclutils::tufetch::_httpError 503 http://x
+    } trap {TCLUTILS TUFETCH HTTP 4XX} {} {
+        lappend hits any-4XX
+    } trap {TCLUTILS TUFETCH HTTP} {err} {
+        lappend hits status-503
+    }
+    set hits
+} -result {exact-404 status-503}
+
+test tufetch-3.4 {a non-http(s) URL is rejected with a URL errorcode} -body {
+    catch {::tclutils::tufetch::download ftp://host/file /tmp/none} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUFETCH URL}
+
+test tufetch-3.5 {status and curl-exit classification map to TIMEOUT/CONNECT} -body {
+    list [::tclutils::tufetch::_statusReason timeout] \
+         [::tclutils::tufetch::_statusReason reset] \
+         [::tclutils::tufetch::_statusReason eof] \
+         [::tclutils::tufetch::_curlExitReason 28] \
+         [::tclutils::tufetch::_curlExitReason 7]
+} -result {TIMEOUT CONNECT CONNECT TIMEOUT CONNECT}
+
 test tufetch-2.3 {the curl path reports an HTTP status as a clean errorcode} -constraints net -body {
     catch {::tclutils::tufetch::download \
         https://raw.githubusercontent.com/openfootball/worldcup.json/master/NO_SUCH_FILE_xyz \
         [file join [temporaryDirectory] tufetch-404.tmp] -timeout 15000} e o
-    lrange [dict get $o -errorcode] 0 3
-} -result {TCLUTILS TUFETCH HTTP 404}
+    lrange [dict get $o -errorcode] 0 4
+} -result {TCLUTILS TUFETCH HTTP 4XX 404}
 
 cleanupTests

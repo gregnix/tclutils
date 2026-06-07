@@ -103,4 +103,66 @@ test tupng-3.4 {indexed with transparent palette entry} -constraints haveTk -set
     image delete $img; set r
 } -cleanup {removeDirectory ti} -result {0 1 {255 0 0}}
 
+# --- encodeRGBARaw (packed-bytes fast path) -------------------------------
+test tupng-3.1 {encodeRGBARaw dims + valid PNG} -body {
+    set bytes [binary format c* {255 0 0 255  0 255 0 255  0 0 255 255  255 255 255 255}]
+    ::tclutils::tuimage::inspect [::tclutils::tupng::encodeRGBARaw $bytes 2 2]
+} -result {type png mime image/png width 2 height 2}
+
+test tupng-3.2 {encodeRGBARaw matches encodeRGBA for the same pixels} -body {
+    set img {{FF0000FF 00FF00FF} {0000FFFF FFFFFFFF}}
+    set raw [binary format c* {255 0 0 255  0 255 0 255  0 0 255 255  255 255 255 255}]
+    expr {[::tclutils::tupng::encodeRGBA $img] eq [::tclutils::tupng::encodeRGBARaw $raw 2 2]}
+} -result 1
+
+test tupng-3.3 {wrong byte length -> DIM} -body {
+    catch {::tclutils::tupng::encodeRGBARaw [binary format c* {0 0 0}] 2 2} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPNG DIM}
+
+test tupng-3.4 {non-positive dimension -> DIM} -body {
+    catch {::tclutils::tupng::encodeRGBARaw "" 0 2} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPNG DIM}
+
+# --- 0.3: decoder (round-trip + foreign-encoder inverse) -------------------
+test tupng-4.1 {RGBA round-trip is byte-exact, all filters} -body {
+    set W 5; set H 3; set buf {}
+    for {set y 0} {$y < $H} {incr y} {
+        for {set x 0} {$x < $W} {incr x} {
+            lappend buf [expr {$x*50}] [expr {$y*80}] [expr {($x+$y)*30}] 255
+        }
+    }
+    set packed [binary format cu* $buf]
+    set d [::tclutils::tupng::decode \
+        [::tclutils::tupng::encodeRGBARaw $packed $W $H -filter best -compression 9]]
+    list [dict get $d width] [dict get $d height] [dict get $d colortype] \
+        [expr {[dict get $d rgba] eq $packed}]
+} -result {5 3 6 1}
+
+test tupng-4.2 {RGB decodes to opaque RGBA} -body {
+    set d [::tclutils::tupng::decode \
+        [::tclutils::tupng::encodeRGB {{FF0000 00FF00 0000FF}} -filter paeth]]
+    binary scan [dict get $d rgba] cu* px
+    list [dict get $d colortype] $px
+} -result {2 {255 0 0 255 0 255 0 255 0 0 255 255}}
+
+test tupng-4.3 {grayscale decodes to RGB triplets} -body {
+    set d [::tclutils::tupng::decode [::tclutils::tupng::encodeGray {{0 128 255}}]]
+    binary scan [dict get $d rgba] cu* px
+    list [dict get $d colortype] $px
+} -result {0 {0 0 0 255 128 128 128 255 255 255 255 255}}
+
+test tupng-4.4 {indexed decodes via palette incl. tRNS alpha} -body {
+    set d [::tclutils::tupng::decode \
+        [::tclutils::tupng::encodeIndexed {FF0000 00FF0080} {{0 1} {1 0}}]]
+    binary scan [dict get $d rgba] cu* px
+    list [dict get $d colortype] [lrange $px 0 7]
+} -result {3 {255 0 0 255 0 255 0 128}}
+
+test tupng-4.5 {bad signature -> DECODE SIGNATURE} -body {
+    catch {::tclutils::tupng::decode "not a png"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPNG DECODE SIGNATURE}
+
 cleanupTests

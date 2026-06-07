@@ -14,7 +14,13 @@
 #
 # This is the encode-side companion to tclutils::tuimage (which inspects PNGs).
 # It is indexed/RGB/RGBA/gray at 8-bit depth; it is not an interlaced or
-# 16-bit encoder, and it does not decode.
+# 16-bit encoder. A matching decoder (decode/readPNG) reconstructs 8-bit,
+# non-interlaced PNGs of colour types 0/2/3/4/6 back to packed RGBA bytes.
+#
+# encodeRGBARaw/writeRGBARaw take an already-packed RGBA byte string
+# (length width*height*4, row-major, 8-bit R G B A) and skip the per-pixel
+# colour parsing. This is the fast path for callers that already hold a
+# pixel buffer (e.g. tclutils::tupngdraw or Tk photo data).
 
 package require Tcl 8.6-
 package require tclutils::common 0.1
@@ -22,8 +28,9 @@ package require tclutils::common 0.1
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tupng {
     namespace export encodeRGB encodeRGBA encodeGray encodeIndexed \
-        writeRGB writeRGBA writeGray writeIndexed
-    variable version 0.1
+        writeRGB writeRGBA writeGray writeIndexed encodeRGBARaw writeRGBARaw \
+        decode readPNG
+    variable version 0.2
 }
 
 # --- option / value validation ----------------------------------------
@@ -88,57 +95,32 @@ proc ::tclutils::tupng::_dims {image} {
 # --- scanline filtering (byte-wise, bpp-aware) -------------------------
 proc ::tclutils::tupng::_applyNone {line prevline bpp} { return $line }
 proc ::tclutils::tupng::_applySub {line prevline bpp} {
-    set out {}
-    set n [llength $line]
-    for {set i 0} {$i < $n} {incr i} {
-        set a [expr {$i >= $bpp ? [lindex $line [expr {$i - $bpp}]] : 0}]
-        lappend out [expr {([lindex $line $i] - $a) & 0xff}]
-    }
-    return $out
+    set ashift [concat [lrepeat $bpp 0] [lrange $line 0 end-$bpp]]
+    return [lmap x $line a $ashift {expr {($x - $a) & 0xff}}]
 }
 proc ::tclutils::tupng::_applyUp {line prevline bpp} {
-    set out {}
-    set n [llength $line]
-    set hasPrev [llength $prevline]
-    for {set i 0} {$i < $n} {incr i} {
-        set b [expr {$hasPrev ? [lindex $prevline $i] : 0}]
-        lappend out [expr {([lindex $line $i] - $b) & 0xff}]
+    if {[llength $prevline]} {
+        return [lmap x $line p $prevline {expr {($x - $p) & 0xff}}]
     }
-    return $out
+    return $line
 }
 proc ::tclutils::tupng::_applyAverage {line prevline bpp} {
-    set out {}
     set n [llength $line]
-    set hasPrev [llength $prevline]
-    for {set i 0} {$i < $n} {incr i} {
-        set a [expr {$i >= $bpp ? [lindex $line [expr {$i - $bpp}]] : 0}]
-        set b [expr {$hasPrev ? [lindex $prevline $i] : 0}]
-        lappend out [expr {([lindex $line $i] - (($a + $b) >> 1)) & 0xff}]
-    }
-    return $out
+    if {[llength $prevline]} {set prev $prevline} else {set prev [lrepeat $n 0]}
+    set ashift [concat [lrepeat $bpp 0] [lrange $line 0 end-$bpp]]
+    return [lmap x $line a $ashift b $prev {expr {($x - (($a + $b) >> 1)) & 0xff}}]
 }
 proc ::tclutils::tupng::_applyPaeth {line prevline bpp} {
-    set out {}
     set n [llength $line]
-    set hasPrev [llength $prevline]
-    for {set i 0} {$i < $n} {incr i} {
-        set a [expr {$i >= $bpp ? [lindex $line [expr {$i - $bpp}]] : 0}]
-        set b [expr {$hasPrev ? [lindex $prevline $i] : 0}]
-        set c [expr {($i >= $bpp && $hasPrev) ? [lindex $prevline [expr {$i - $bpp}]] : 0}]
-        set p [expr {$a + $b - $c}]
-        set pa [expr {abs($p - $a)}]
-        set pb [expr {abs($p - $b)}]
-        set pc [expr {abs($p - $c)}]
-        if {$pa <= $pb && $pa <= $pc} {
-            set pr $a
-        } elseif {$pb <= $pc} {
-            set pr $b
-        } else {
-            set pr $c
-        }
-        lappend out [expr {([lindex $line $i] - $pr) & 0xff}]
-    }
-    return $out
+    if {[llength $prevline]} {set prev $prevline} else {set prev [lrepeat $n 0]}
+    set ashift [concat [lrepeat $bpp 0] [lrange $line 0 end-$bpp]]
+    set cshift [concat [lrepeat $bpp 0] [lrange $prev 0 end-$bpp]]
+    return [lmap x $line a $ashift b $prev c $cshift {
+        set pa [expr {abs($b - $c)}]
+        set pb [expr {abs($a - $c)}]
+        set pc [expr {abs($a + $b - 2*$c)}]
+        expr {($x - ($pa <= $pb && $pa <= $pc ? $a : ($pb <= $pc ? $b : $c))) & 0xff}
+    }]
 }
 # Minimum sum of absolute differences (signed) -- standard fast filter heuristic.
 proc ::tclutils::tupng::_msad {bytes} {
@@ -310,4 +292,187 @@ proc ::tclutils::tupng::writeIndexed {file palette image args} {
     return [_writeFile $file [encodeIndexed $palette $image {*}$args]]
 }
 
-package provide tclutils::tupng 0.1
+# --- raw (pre-packed) RGBA fast path ----------------------------------
+# bytes: width*height*4 bytes, row-major, 8-bit R G B A (alpha 0..255).
+proc ::tclutils::tupng::encodeRGBARaw {bytes width height args} {
+    set o [::tclutils::common::parseOptions {-compression 6 -filter best} {*}$args]
+    set level [_checkLevel [dict get $o -compression]]
+    set filter [_checkFilter [dict get $o -filter]]
+    if {![string is integer -strict $width] || $width <= 0 \
+            || ![string is integer -strict $height] || $height <= 0} {
+        return -code error -errorcode {TCLUTILS TUPNG DIM} \
+            "width and height must be positive integers"
+    }
+    set need [expr {$width * $height * 4}]
+    set got [string length $bytes]
+    if {$got != $need} {
+        return -code error -errorcode {TCLUTILS TUPNG DIM} \
+            "byte length $got != width*height*4 ($need)"
+    }
+    binary scan $bytes cu* all
+    set rows {}
+    set stride [expr {$width * 4}]
+    for {set y 0} {$y < $height} {incr y} {
+        set off [expr {$y * $stride}]
+        lappend rows [lrange $all $off [expr {$off + $stride - 1}]]
+    }
+    return [_png 6 $width $height [_filterAndCompress $rows 4 $filter $level]]
+}
+proc ::tclutils::tupng::writeRGBARaw {file bytes width height args} {
+    return [_writeFile $file [encodeRGBARaw $bytes $width $height {*}$args]]
+}
+
+
+# --- decoder ------------------------------------------------------------
+# Reconstruct an 8-bit, non-interlaced PNG (colour type 0/2/3/4/6) to packed
+# RGBA. Returns a dict: width height colortype bitdepth rgba (width*height*4
+# bytes, row-major R G B A). Errors carry {TCLUTILS TUPNG DECODE <reason>}.
+proc ::tclutils::tupng::_paeth {a b c} {
+    set p  [expr {$a + $b - $c}]
+    set pa [expr {abs($p - $a)}]
+    set pb [expr {abs($p - $b)}]
+    set pc [expr {abs($p - $c)}]
+    if {$pa <= $pb && $pa <= $pc} {return $a}
+    if {$pb <= $pc} {return $b}
+    return $c
+}
+proc ::tclutils::tupng::decode {bytes} {
+    if {[string range $bytes 0 7] ne "\x89PNG\r\n\x1a\n"} {
+        return -code error -errorcode {TCLUTILS TUPNG DECODE SIGNATURE} \
+            "not a PNG (bad signature)"
+    }
+    set n [string length $bytes]
+    set pos 8
+    set ihdr ""; set plte ""; set trns ""; set idat ""
+    while {$pos + 8 <= $n} {
+        binary scan [string range $bytes $pos [expr {$pos+3}]] Iu len
+        set type [string range $bytes [expr {$pos+4}] [expr {$pos+7}]]
+        set dstart [expr {$pos+8}]
+        set data [string range $bytes $dstart [expr {$dstart+$len-1}]]
+        set pos [expr {$dstart + $len + 4}]   ;# + CRC
+        switch -- $type {
+            IHDR {set ihdr $data}
+            PLTE {set plte $data}
+            tRNS {set trns $data}
+            IDAT {append idat $data}
+            IEND break
+        }
+    }
+    if {$ihdr eq ""} {
+        return -code error -errorcode {TCLUTILS TUPNG DECODE IHDR} "missing IHDR"
+    }
+    binary scan $ihdr IuIucucucucucu width height bitdepth colortype comp filt interlace
+    if {$bitdepth != 8} {
+        return -code error -errorcode {TCLUTILS TUPNG DECODE BITDEPTH} \
+            "only 8-bit depth is supported (got $bitdepth)"
+    }
+    if {$interlace != 0} {
+        return -code error -errorcode {TCLUTILS TUPNG DECODE INTERLACE} \
+            "interlaced PNGs are not supported"
+    }
+    switch -- $colortype {
+        0 {set ch 1} 2 {set ch 3} 3 {set ch 1} 4 {set ch 2} 6 {set ch 4}
+        default {
+            return -code error -errorcode {TCLUTILS TUPNG DECODE COLORTYPE} \
+                "unsupported colour type $colortype"
+        }
+    }
+    if {$idat eq ""} {
+        return -code error -errorcode {TCLUTILS TUPNG DECODE IDAT} "no image data"
+    }
+    set raw [zlib decompress $idat]
+    binary scan $raw cu* B
+    set stride [expr {$width * $ch}]
+    set bpp $ch
+    # palette / transparency lookup tables (indexed / colour-key)
+    if {$colortype == 3} { binary scan $plte cu* PAL }
+    if {$trns ne ""}     { binary scan $trns cu* TRNS }
+    # un-filter scanlines -> reconstructed sample list R
+    set R {}
+    set ip 0
+    set prev [lrepeat $stride 0]
+    for {set y 0} {$y < $height} {incr y} {
+        set ft [lindex $B $ip]; incr ip
+        set F [lrange $B $ip [expr {$ip + $stride - 1}]]; incr ip $stride
+        # Dispatch once per scanline (not per byte). none/up vectorise via lmap;
+        # sub/average/paeth carry a left neighbour and stay sequential.
+        switch -- $ft {
+            0 { set cur $F }
+            2 { set cur [lmap f $F p $prev {expr {($f + $p) & 0xff}}] }
+            1 {
+                set cur {}; set x 0
+                foreach f $F {
+                    set a [expr {$x >= $bpp ? [lindex $cur [expr {$x-$bpp}]] : 0}]
+                    lappend cur [expr {($f + $a) & 0xff}]; incr x
+                }
+            }
+            3 {
+                set cur {}; set x 0
+                foreach f $F p $prev {
+                    set a [expr {$x >= $bpp ? [lindex $cur [expr {$x-$bpp}]] : 0}]
+                    lappend cur [expr {($f + (($a + $p) >> 1)) & 0xff}]; incr x
+                }
+            }
+            4 {
+                set cur {}; set x 0
+                foreach f $F b $prev {
+                    set a [expr {$x >= $bpp ? [lindex $cur  [expr {$x-$bpp}]] : 0}]
+                    set c [expr {$x >= $bpp ? [lindex $prev [expr {$x-$bpp}]] : 0}]
+                    set pp [expr {$a + $b - $c}]
+                    set pa [expr {abs($pp-$a)}]; set pb [expr {abs($pp-$b)}]; set pc [expr {abs($pp-$c)}]
+                    lappend cur [expr {($f + ($pa<=$pb && $pa<=$pc ? $a : ($pb<=$pc ? $b : $c))) & 0xff}]
+                    incr x
+                }
+            }
+            default {
+                return -code error -errorcode {TCLUTILS TUPNG DECODE FILTER} \
+                    "bad filter type $ft"
+            }
+        }
+        lappend R {*}$cur
+        set prev $cur
+    }
+    # expand to RGBA
+    set npix [expr {$width * $height}]
+    set out {}
+    switch -- $colortype {
+        6 { set out $R }
+        2 {
+            for {set i 0} {$i < $npix} {incr i} {
+                set s [expr {$i*3}]
+                lappend out [lindex $R $s] [lindex $R [expr {$s+1}]] [lindex $R [expr {$s+2}]] 255
+            }
+        }
+        0 {
+            set key [expr {[info exists TRNS] ? [lindex $TRNS 1] : -1}]
+            foreach g $R {
+                lappend out $g $g $g [expr {$g == $key ? 0 : 255}]
+            }
+        }
+        4 {
+            for {set i 0} {$i < $npix} {incr i} {
+                set s [expr {$i*2}]
+                set g [lindex $R $s]
+                lappend out $g $g $g [lindex $R [expr {$s+1}]]
+            }
+        }
+        3 {
+            foreach idx $R {
+                set s [expr {$idx*3}]
+                set al [expr {[info exists TRNS] && $idx < [llength $TRNS] ? [lindex $TRNS $idx] : 255}]
+                lappend out [lindex $PAL $s] [lindex $PAL [expr {$s+1}]] [lindex $PAL [expr {$s+2}]] $al
+            }
+        }
+    }
+    return [dict create width $width height $height colortype $colortype \
+        bitdepth 8 rgba [binary format cu* $out]]
+}
+proc ::tclutils::tupng::readPNG {file} {
+    set fid [open $file r]
+    fconfigure $fid -translation binary
+    set bytes [read $fid]
+    close $fid
+    return [decode $bytes]
+}
+
+package provide tclutils::tupng 0.4

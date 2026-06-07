@@ -1,0 +1,31 @@
+'\"
+'\" Copyright (c) 2026 Gregor Ebbing
+'\" SPDX-License-Identifier: MIT
+'\"
+'\" Original documentation for the tclutils library.
+'\" Not copied or derived from GNU coreutils, GNU grep, GNU sed,
+'\" GNU diffutils, or other GPL-licensed manual sources.
+'\"
+.TH tupngdraw 1 0.7 tclutils "Tcl Utility Command"
+.SH NAME
+tupngdraw \- thin CLI wrapper for tclutils::tupngdraw
+.SH SYNOPSIS
+.nf
+tupngdraw demo <out.png> ?-width N? ?-height N?
+.fi
+.SH DESCRIPTION
+.PP
+The tupngdraw command is a thin wrapper around the Tcl package
+tclutils::tupngdraw, a pure-Tcl 2D drawing layer that renders to a PNG via
+tclutils::tupng (no Tk, no external packages).
+.PP
+The wrapper renders a self-contained demo image (overlapping translucent
+discs, a filled triangle, strokes) to the given file and prints its path.
+The primary interface is the Tcl library; see tupngdraw(n) for the drawing
+object, its methods, options, and semantics.
+.PP
+.nf
+tclsh bin/tupngdraw.tcl demo out.png -width 320 -height 200
+.fi
+.SH "SEE ALSO"
+tupng(n), tuimage(n)

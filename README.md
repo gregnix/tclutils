@@ -5,7 +5,7 @@ text filters, data-format parsers/encoders, binary and checksum helpers, and a
 few document/PIM helpers. It has **no external dependencies** (Tcl core only,
 optionally `zlib` for ZIP) and runs on **Tcl 8.6 and Tcl 9.x**.
 
-It is intentionally split from [`tkutils`](../tkutils-0.28.0/) (the Tk GUI
+It is intentionally split from [`tkutils`](../tkutils-0.40.0/) (the Tk GUI
 widgets) so that console, server and CI use never requires Tk.
 
 ## Install
@@ -30,7 +30,7 @@ the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping
 |----------|---------|
 | Text / coreutils filters | `tucat` `tutac` `turev` `tunl` `tuseq` `tuhead` `tutail` `tuwc` `tusort` `tutsort` `tuuniq` `tucut` `tupaste` `tujoin` `tucomm` `tucsplit` `tusplit` `tufold` `tuexpand` `tushuf` `tucolumn` `tupr` `tutr` `tused` `tugrep` `tuawk` `tuxargs` `tufmt` |
 | Compare / patch | `tucmp` `tudiff` `tupatch` |
-| Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` |
+| Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` `tupngdraw` `tutablepng` `tumonthpng` `tucodepng` `tupngpad` |
 | Data / serialization | `tucsv` `tujson` `tuxml` `tunumfmt` `tusqlite` |
 | Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` |
 | Fuzzy search | `tufuzzy` `tuagrep` |
