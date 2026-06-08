@@ -1,120 +1,87 @@
-# tkutils 0.40.0
+# tclutils 0.53.0
 
-`tkutils` is a collection of Tcl/Tk GUI widgets that sit on top of the pure-Tcl
-engines in [`tclutils`](../tclutils-0.53.0/). It is intentionally separate from
-`tclutils` so that console/server/CI use never requires `Tk`.
+`tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
+text filters, data-format parsers/encoders, binary and checksum helpers, and a
+few document/PIM helpers. It has **no external dependencies** (Tcl core only,
+optionally `zlib` for ZIP) and runs on **Tcl 8.6 and Tcl 9.x**.
 
-- **Rule:** the engine lives in `tclutils`, the GUI in `tkutils`. Each widget is
-  a package `tkutils::tk<name>` (file `lib/tm/tkutils/tk<name>-0.1.tm`).
-- **Tcl/Tk:** 8.6+ and 9.x. The umbrella package loads the **31 core widgets**;
-  optional widgets that need external packages are not in the umbrella.
+It is intentionally split from [`tkutils`](../tkutils-0.40.0/) (the Tk GUI
+widgets) so that console, server and CI use never requires Tk.
 
-## Install / path setup
+## Install
 
-`tkutils` needs `tclutils` on the Tcl module path. Pick one:
-
-```bash
-# explicit (recommended for tests/CI)
-export TCLUTILS_TM=/path/to/tclutils-0.53.0/lib/tm
-export TKUTILS_TM=/path/to/tkutils-0.40.0/lib/tm
-
-# or source the bootstrap (adds both libs, finds the highest version)
-tclsh -e 'source /path/to/tkutils-0.40.0/tools/setup.tcl'
-```
-
-Then:
+Put the library's module directory on the Tcl module path, then require the
+umbrella package (loads all core modules) or a single module:
 
 ```tcl
-package require tkutils            ;# loads all core widgets
-package require tkutils::tkunotes   ;# or a single widget
+::tcl::tm::path add /path/to/tclutils-0.53.0/lib/tm
+package require tclutils          ;# umbrella: all core modules
+package require tclutils::tucsv    ;# or just one module
 ```
 
-> Note: auto-discovery sorts sibling `tclutils-*` folders with
-> `lsort -decreasing -dictionary` (version-aware), so the newest is chosen.
+`tools/setup.tcl` / `tools/setup.md` show a drop-in path setup.
 
-## Core widgets (in the umbrella)
+## Module overview
 
-| Widget | Engine (tclutils) | What it does |
-|--------|-------------------|--------------|
-| `tkuhexedit` | tubin, tuhexdump | Hex editor: offset/hex/ASCII, open/save, goto, find, patch |
-| `tkucsv`     | tucsv     | CSV viewer (treeview) |
-| `tkudiff`    | tudiff    | Side-by-side text diff |
-| `tkumd`      | tumd      | Markdown structure / TOC |
-| `tkujson`    | tujson    | JSON tree (from `parseTyped`) |
-| `tkucal`     | tucal     | Calendar text view |
-| `tkueditor`  | common    | Text editor (context menu, undo/redo, search/replace, goto, read-only) |
-| `tkuzip`     | tuzip     | ZIP member tree |
-| `tkufuzzy`   | tufuzzy   | Fuzzy search / best matches |
-| `tkudialog`  | Tk        | message / confirm / warning / **form** dialogs |
-| `tkubase64`  | tubase64  | Encode/decode panes |
-| `tkustrings` | tustrings | Printable strings from binaries |
-| `tkutoolbar` | Tk        | Toolbar (buttons, separators) |
-| `tkustatus`  | Tk        | Status bar (fields, flash) |
-| `tkunotes`   | tunotes   | Hierarchical notes (tree + editor, tags, expand/collapse, subtree export) |
-| `tkuform`    | Tk        | Declarative form (entry/combo/check/spin/text → dict) |
-| `tkuical`    | tuical    | iCalendar event viewer/**editor** |
-| `tkuldif`    | tuldif    | LDIF entry viewer/**editor** |
-| `tkuini`     | tuini     | INI viewer/**editor** (sections + key/value) |
-| `tkuvcard`   | tuvcard   | vCard contact viewer/**editor** |
-| `tkudateentry`| Tk (clock)| Date entry with a drop-down calendar picker |
-| `tkutimeentry`| Tk        | Time entry (HH:MM[:SS]) with spinboxes |
-| `tkunumentry` | Tk        | Validated numeric entry (decimals, min/max) |
-| `tkutags`    | Tk        | Tag editor: removable chips + input (suggestions) |
-| `tkusearchbar`| Tk        | Debounced search bar + optional filter |
-| `tkufilterbar`| Tk        | Per-column filter bar (one entry per column, ANDed substrings) |
-| `tkutree`    | Tk        | ttk::treeview wrapper (load nested data, selection) |
-| `tkuimage`   | Tk (imgtools opt.) | image fit/scale/thumbnail + zoom/scroll viewer |
-| `tkutodo`    | tuical    | iCalendar VTODO task list (toggle done, due/priority/%) |
-| `tkudavbrowser` | tudav  | read-only CalDAV/CardDAV collection browser (grouped, selection callback) |
-| `tkudavaccount`| tudav   | DAV account form + connection test (PROPFIND) |
+Detailed scope per module is in [`docs/module-status.md`](docs/module-status.md);
+the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping.md).
 
-`tkuical`, `tkuldif`, `tkuini`, `tkuvcard` accept `-editable 0` for a read-only view.
+| Category | Modules |
+|----------|---------|
+| Text / coreutils filters | `tucat` `tutac` `turev` `tunl` `tuseq` `tuhead` `tutail` `tuwc` `tusort` `tutsort` `tuuniq` `tucut` `tupaste` `tujoin` `tucomm` `tucsplit` `tusplit` `tufold` `tuexpand` `tushuf` `tucolumn` `tupr` `tutr` `tused` `tugrep` `tuawk` `tuxargs` `tufmt` |
+| Compare / patch | `tucmp` `tudiff` `tupatch` |
+| Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` `tupngdraw` `tutablepng` `tumonthpng` `tucodepng` `tupngpad` |
+| Data / serialization | `tucsv` `tujson` `tuxml` `tunumfmt` `tusqlite` |
+| Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` |
+| Fuzzy search | `tufuzzy` `tuagrep` |
+| Records / PIM | `tunotes` `tuical` `tuini` `tuvcard` `tuldif` `tubookmark` |
+| Document helpers | `tumd` `tupdf` `tuodf` `tucal` |
+| Date / web / IDs | `tudate` `tuurl` `tuuuid` `tudav` `tufetch` `tusparql` |
+| Calendar / recurrence | `tuical` `turrule` `tuholiday` `tucal` |
+| Events / registry | `tuevent` `turegistry` `tulog` |
+| Strings / validation | `tustr` `tuvalidate` |
+| Lists / dicts | `tulist` `tudict` |
+| Math / tables | `tumath` `tutable` |
+| Archive | `tuzip` `tuzipfs` |
+| Core | `common` |
 
-## Optional widgets (not in the umbrella)
+Highlights: `tucsv` (RFC-4180 quoting, multiline, BOM strip, lenient `-strict 0`),
+`tujson` (parse/`parseTyped`/`fromJson` **and** the `toJson` encoder with
+`str`/`num`/`bool`/`null`/`obj`/`arr` builders), `tuhash` (pure-Tcl
+SHA-256/SHA-1/MD5 verified against the standard vectors).
 
-| Widget | Needs | Notes |
-|--------|-------|-------|
-| `tkutils::tkutablelist` | **Tablelist** (tklib) | Full editable/sortable table; CSV import/export; tests skip without Tablelist |
-| `tkutils::tkuxml`       | **tDOM**     | XML tree |
-| `tkutils::tkusqlite`    | **sqlite3**  | Lightweight DB browser |
-| `tkutils::tkcanvaspng` | `tclutils::tupngdraw` (Glyphs for `-fontmap`) | Export a live Tk canvas to PNG: lines (arrows/dashes), shapes, elliptical arcs, text, images |
-| `tkutils::tkutical` | **tical** (`tical::view::month` + `tical::render::canvas`) | Month calendar on a canvas: prev/next/today, week numbers, day selection (none/single/multiple, Shift-click ranges), `-command` |
-| `tkutils::tkmonthcanvas` | **tical** | Canvas calendar (month/quarter/year): themes, week numbers, weekday header, today/weekend/holiday/note states, day selection (none/single/multiple) |
+The optional net/data helpers `tudav`, `tufetch`, `tusparql` and `tusqlite` are
+the exception to "no external dependencies": they need the `tls` package (or a
+`curl`/`wget` binary) for HTTPS, respectively an `sqlite3` build — only at the
+point of use, so the umbrella still loads without them.
 
-These are pure-Tcl-engine-free GUIs that depend on an external package; on a
-stack without that package they are simply not loaded (and their tests skip).
+## Command-line wrappers
 
-## Quick start
+Thin CLI front-ends live in `bin/` — see [`docs/cli.md`](docs/cli.md).
+
+## Output formats
+
+`tclutils` writes text, CSV (`tucsv`) and JSON (`tujson`) directly. Routes to
+PDF and OpenDocument (.odt/.ods/.odg) via the companion libraries `pdf4tcl`,
+`pdf4tcllib`, `odf` and `docir` are sketched in
+[`docs/todo-output.md`](docs/todo-output.md).
+
+## Testing
+
+Each module has a `tests/*.test` file; run the whole suite with:
 
 ```bash
-# a widget launcher
-tclsh bin/tkunotes.tcl
-# a demo
-tclsh examples/demo-tkuical.tcl
+tclsh tests/all.tcl </dev/null
 ```
 
-There are **23 demos** under `examples/` and **23 launchers** under `bin/`.
+The suite passes on both Tcl 8.6 and Tcl 9.x.
 
-## Tests
+## Conventions & status
 
-Each `tests/*.test` runs in its own interpreter; `tests/all.tcl` runs the suite.
-`tests/stack.test` loads **tclutils + tkutils in one interpreter** and exercises
-several widgets against their engines.
-
-```bash
-export TCLUTILS_TM=/path/to/tclutils-0.53.0/lib/tm
-xvfb-run -a tclsh tests/all.tcl       # GUI tests need a display (Xvfb)
-```
-
-GUI tests use the `haveTk` constraint; widgets requiring Tablelist/tDOM/sqlite3
-skip cleanly when those packages are absent.
-
-## Dependency summary
-
-`tkutils 0.28.0` works with `tclutils 0.35.0+` (editing helpers for
-`tkuini`/`tkuvcard`/`tkuical`/`tkuldif`); `tkunotes` subtree/tags need `tclutils
-0.33.0+`. The recommended pairing is **tclutils 0.41.0 + tkutils 0.28.0**.
+- House rules and module scope: [`docs/module-status.md`](docs/module-status.md)
+- Roadmap and backlog: [`docs/roadmap.md`](docs/roadmap.md)
+- Architecture notes: [`docs/architecture.md`](docs/architecture.md)
 
 ## License
 
-MIT — see `LICENSE` (or the tclutils LICENSE for the shared stack).
+MIT — see `LICENSE`.
