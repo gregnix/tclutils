@@ -5,7 +5,7 @@ text filters, data-format parsers/encoders, binary and checksum helpers, and a
 few document/PIM helpers. It has **no external dependencies** (Tcl core only,
 optionally `zlib` for ZIP) and runs on **Tcl 8.6 and Tcl 9.x**.
 
-It is intentionally split from [`tkutils`](../tkutils-0.40.0/) (the Tk GUI
+It is intentionally split from [`tkutils`](https://github.com/gregnix/tkutils) (the Tk GUI
 widgets) so that console, server and CI use never requires Tk.
 
 ## Install
