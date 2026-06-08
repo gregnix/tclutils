@@ -1,0 +1,10 @@
+# generated demo output (PDF/PNG/ICS produced by demos/*.tcl)
+demos/out/*
+!demos/out/.gitkeep
+
+*.ics
+*.pdf
+*.png
+
+# internal development notes (not published)
+nogit/
