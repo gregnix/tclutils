@@ -30,7 +30,7 @@ the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping
 |----------|---------|
 | Text / coreutils filters | `tucat` `tutac` `turev` `tunl` `tuseq` `tuhead` `tutail` `tuwc` `tusort` `tutsort` `tuuniq` `tucut` `tupaste` `tujoin` `tucomm` `tucsplit` `tusplit` `tufold` `tuexpand` `tushuf` `tucolumn` `tupr` `tutr` `tused` `tugrep` `tuawk` `tuxargs` `tufmt` |
 | Compare / patch | `tucmp` `tudiff` `tupatch` |
-| Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` `tupngdraw` `tutablepng` `tumonthpng` `tucodepng` `tupngpad` |
+| Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` `tupngdraw` `tutablepng` `tumonthpng` `tucodepng` `tupngpad` `tusvg` |
 | Data / serialization | `tucsv` `tujson` `tuxml` `tunumfmt` `tusqlite` |
 | Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` |
 | Fuzzy search | `tufuzzy` `tuagrep` |

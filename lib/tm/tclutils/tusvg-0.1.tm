@@ -6,7 +6,7 @@
 # `saveIcon`). No dependencies (Tcl core only). Tcl 8.6+ / 9.x.
 #
 # Notes carried over from the original:
-# - tksvg/svgnano (Tk 8.6) does NOT render <text>; use real viewers or Tk 8.7+,
+# - tksvg/svgnano (Tk 8.6) does NOT render <text>; use real viewers or Tk 9.0+,
 #   or convert text to paths. The predefined icons are path/shape only and work.
 # - The SVG <text> element builder is named `textElement` here, because `text`
 #   is a Tk command and is barred as a proc name by convention.
@@ -247,7 +247,7 @@ proc ::tclutils::tusvg::path {svgVar d args} {
 
 proc ::tclutils::tusvg::textElement {svgVar x y content args} {
     # ACHTUNG: tksvg/svgnano (Tk 8.6) unterstuetzt KEINE <text> Elemente!
-    # Text wird nur in Tk 8.7+ oder echten SVG-Viewern angezeigt.
+    # Text wird nur in Tk 9.0+ oder echten SVG-Viewern angezeigt.
     # Workaround: Text in InkScape zu Pfaden konvertieren (Shift+Ctrl+C)
     #
     upvar 1 $svgVar svg

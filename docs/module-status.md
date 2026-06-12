@@ -66,6 +66,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tumonthpng` | renderer | Month/quarter/year calendar to PNG (monthcanvas look); themes, day states, `-textcmd`. |
 | `tucodepng` | renderer | Character-code/codepage table to PNG grid; data from `tucode`. |
 | `tupngpad` | tool | Normalises (transparent) PNGs to a uniform size with margin on a background (trim/pad/flatten). Pure Tcl, for sprite/icon sizes. |
+| `tusvg` | generator | Pure-Tcl SVG generator: shapes/paths/text/gradients/groups to string or file, plus a library of ~110 named toolbar icons (`icon`/`icons`/`saveIcon`). No dependencies; vector counterpart to `tupng`. |
 
 ## Data / serialization
 

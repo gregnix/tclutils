@@ -28,7 +28,7 @@ common  (Core: shared layer)
 |   |-- tubin   |-- tuhexdump |-- tuod   |-- tuhexedit |-- tubase64
 |   |-- tucrc   |-- tuhash    |-- tustrings |-- tuiconv |-- tucode
 |   |-- tubase32|-- tuimage   |-- tupng   |-- tupngdraw  |-- tutablepng
-|   |-- tumonthpng |-- tucodepng `-- tupngpad
+|   |-- tumonthpng |-- tucodepng |-- tupngpad `-- tusvg
 |
 |-- data / serialization
 |   |-- tucsv   |-- tujson  |-- tuxml   |-- tunumfmt `-- tusqlite
@@ -103,6 +103,9 @@ text, glyph fills) and the export adapters built on it — `tutablepng` (tabular
 data → table image), `tumonthpng` (month/quarter/year calendar → PNG, mirroring
 the monthcanvas look), `tucodepng` (ASCII/Latin-1 code-page chart → PNG), plus
 `tupngpad` (normalise transparent PNG cut-outs to a uniform, padded size).
+Alongside the raster path, `tusvg` is the **vector** generator: a pure-Tcl SVG
+builder (shapes/paths/text/gradients/groups) with a library of ~110 named
+toolbar icons, used by `tkutils::tkuicon`.
 
 ## Data and serialization
 
