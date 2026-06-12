@@ -1,0 +1,108 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tusvg 0.1
+
+# --- document / rendering --------------------------------------------------
+
+test tusvg-1.1 {create + toString yields an <svg> root} -body {
+    set s [::tclutils::tusvg::create 24 24]
+    string match {*<svg*width="24"*height="24"*} [::tclutils::tusvg::toString $s]
+} -result 1
+
+test tusvg-1.2 {viewBox is emitted when set} -body {
+    set s [::tclutils::tusvg::create 24 24 -viewBox {0 0 24 24}]
+    string match {*viewBox="0 0 24 24"*} [::tclutils::tusvg::toString $s]
+} -result 1
+
+test tusvg-1.3 {rect renders} -body {
+    set s [::tclutils::tusvg::create 24 24]
+    ::tclutils::tusvg::rect s 2 2 20 20 -fill "#eee"
+    string match {*<rect*width="20"*fill="#eee"*} [::tclutils::tusvg::toString $s]
+} -result 1
+
+test tusvg-1.4 {circle and line render} -body {
+    set s [::tclutils::tusvg::create 24 24]
+    ::tclutils::tusvg::circle s 12 12 6 -fill red
+    ::tclutils::tusvg::line s 0 0 24 24 -stroke blue
+    set out [::tclutils::tusvg::toString $s]
+    list [string match {*<circle*r="6"*} $out] [string match {*<line*x2="24"*} $out]
+} -result {1 1}
+
+test tusvg-1.5 {path renders the d attribute} -body {
+    set s [::tclutils::tusvg::create 24 24]
+    ::tclutils::tusvg::path s "M2 2 L22 22" -stroke black
+    string match {*<path*d="M2 2 L22 22"*} [::tclutils::tusvg::toString $s]
+} -result 1
+
+# --- text element + escaping ----------------------------------------------
+
+test tusvg-2.1 {textElement renders <text> with content} -body {
+    set s [::tclutils::tusvg::create 24 24]
+    ::tclutils::tusvg::textElement s 4 20 "Hi" -fontSize 10
+    string match {*<text*font-size="10"*>Hi</text>*} [::tclutils::tusvg::toString $s]
+} -result 1
+
+test tusvg-2.2 {special characters are XML-escaped} -body {
+    set s [::tclutils::tusvg::create 24 24]
+    ::tclutils::tusvg::textElement s 0 10 "a<&>b"
+    string match {*a&lt;&amp;&gt;b*} [::tclutils::tusvg::toString $s]
+} -result 1
+
+# --- gradients + groups ----------------------------------------------------
+
+test tusvg-3.1 {linearGradient returns url() and lands in <defs>} -body {
+    set s [::tclutils::tusvg::create 10 10]
+    set ref [::tclutils::tusvg::linearGradient s g1 0 0 100 0 {{0 "#fff"} {100 "#000"}}]
+    list $ref [string match {*<defs>*linearGradient*id="g1"*</defs>*} \
+        [::tclutils::tusvg::toString $s]]
+} -result {url(#g1) 1}
+
+test tusvg-3.2 {group nests children inside <g>} -body {
+    set s [::tclutils::tusvg::create 24 24]
+    set g [::tclutils::tusvg::group s -id grp]
+    ::tclutils::tusvg::addToGroup g [dict create type circle cx 5 cy 5 r 2 \
+        fill black stroke none strokeWidth 1 opacity 1 id ""]
+    ::tclutils::tusvg::addGroup s $g
+    string match {*<g id="grp">*<circle*</g>*} [::tclutils::tusvg::toString $s]
+} -result 1
+
+# --- file output -----------------------------------------------------------
+
+test tusvg-4.1 {write produces a UTF-8 file} -body {
+    set s [::tclutils::tusvg::create 8 8]
+    ::tclutils::tusvg::rect s 0 0 8 8
+    set fn [file join [makeDirectory tusvg] out.svg]
+    ::tclutils::tusvg::write $s $fn
+    set fh [open $fn r]; fconfigure $fh -encoding utf-8
+    set data [read $fh]; close $fh
+    list [file exists $fn] [string match {*<svg*</svg>*} $data]
+} -result {1 1}
+
+# --- icon library ----------------------------------------------------------
+
+test tusvg-5.1 {named icon builds path geometry} -body {
+    set ic [::tclutils::tusvg::icon save 16 -color "#000"]
+    string match {*<path*} [::tclutils::tusvg::toString $ic]
+} -result 1
+
+test tusvg-5.2 {icons returns a non-empty catalogue} -body {
+    expr {[llength [::tclutils::tusvg::icons]] > 100}
+} -result 1
+
+test tusvg-5.3 {unknown icon falls back without error} -body {
+    set ic [::tclutils::tusvg::icon definitely-not-an-icon 16]
+    string match {*<rect*} [::tclutils::tusvg::toString $ic]
+} -result 1
+
+test tusvg-5.4 {saveIcon writes a file} -body {
+    set fn [file join [makeDirectory tusvgicon] save.svg]
+    ::tclutils::tusvg::saveIcon save 24 $fn -color "#123456"
+    file exists $fn
+} -result 1
+
+cleanupTests

@@ -1,10 +1,4 @@
-# generated demo output (PDF/PNG/ICS produced by demos/*.tcl)
-demos/out/*
-!demos/out/.gitkeep
-
-*.ics
-*.pdf
-*.png
+examples/out/*
 
 # internal development notes (not published)
 nogit/
