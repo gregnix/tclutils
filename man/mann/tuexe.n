@@ -1,0 +1,30 @@
+.TH tuexe n 0.1 tclutils
+.SH tclutils::tuexe
+.PP
+Locate external executables across bundled directories and the system PATH, trying a list of candidate names and platform\-specific extensions. Generalises the common "find \fBgs\fR / \fBgswin64c\fR / ... via \fBauto_execok\fR" idiom and adds support for bundled (vendor) binary directories. Pure Tcl.
+.SS API
+.CS
+::tclutils::tuexe::find   names ?-dirs {d ...}? ?-pathfirst 0|1? ?-all 0|1?
+::tclutils::tuexe::all    names ?-dirs {d ...}? ?-pathfirst 0|1?
+::tclutils::tuexe::exists names ?-dirs {d ...}? ?-pathfirst 0|1?
+.CE
+.PP
+\fBnames\fR is a single name or a list of candidates (tried in order). \fBfind\fR returns the first resolved, normalized path (or \fB""\fR); \fBall\fR returns every match, de\-duplicated, in search order; \fBexists\fR returns 0/1.
+.IP \(bu
+\fB\-dirs\fR lists extra directories to search (e.g. bundled vendor \fBbin\fR dirs).
+.IP \(bu
+\fB\-pathfirst 0\fR (default) searches \fB\-dirs\fR before PATH, so a shipped binary wins deterministically; \fB\-pathfirst 1\fR prefers the system PATH.
+.IP \(bu
+On Windows, names are tried with \fBPATHEXT\fR extensions (or \fB.exe .com .bat .cmd\fR); on Unix a file must be executable to match.
+.CS
+set gs   [tuexe::find {gs gswin64c gswin32c gsc}]        ;# system Ghostscript
+set qpdf [tuexe::find qpdf -dirs [list $appVendorBin]]   ;# bundled, else PATH
+if {[tuexe::exists ffmpeg]} { ... }
+.CE
+.SS Errors
+.PP
+Unknown options carry \fB{TCLUTILS TUEXE OPTION}\fR.
+.SS Demo
+.CS
+tclsh examples/demo-tuexe.tcl
+.CE

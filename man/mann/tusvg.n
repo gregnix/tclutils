@@ -1,0 +1,48 @@
+.TH tusvg n 0.1 tclutils
+.SH tclutils::tusvg
+.PP
+A pure\-Tcl \fBSVG generator\fR \-\- no Tk, no external packages. Build a document as a dict, add shapes/paths/text/gradients/groups, and render to a string or file. Ships a library of ~110 named toolbar icons. It complements the \fBtupng\fR encoders: \fBtusvg\fR is the vector counterpart.
+.SS Document
+.CS
+set svg [tusvg::create width height ?-viewBox "x y w h"? ?-id name?]
+set out [tusvg::toString $svg]              ;# SVG text
+tusvg::write $svg file.svg                  ;# UTF-8 file
+.CE
+.SS "Elements (append to the document variable)"
+.CS
+tusvg::rect     svg x y w h     ?-fill c? ?-stroke c? ?-strokeWidth n? ?-rx n? ?-ry n? ?-opacity o? ?-id i?
+tusvg::circle   svg cx cy r     ?-fill c? ?-stroke c? ?-strokeWidth n? ?...?
+tusvg::ellipse  svg cx cy rx ry ?...?
+tusvg::line     svg x1 y1 x2 y2 ?-stroke c? ?-strokeWidth n? ?-strokeLinecap cap? ?...?
+tusvg::polyline svg "x,y x,y..." ?...?
+tusvg::polygon  svg "x,y x,y..." ?...?
+tusvg::path     svg "M.. L.."    ?-fill c? ?-stroke c? ?-strokeLinejoin j? ?...?
+tusvg::textElement svg x y "text" ?-fontSize n? ?-fontFamily f? ?-fontWeight w? ?-textAnchor a? ?...?
+.CE
+.PP
+\fBtextElement\fR (not \fBtext\fR, which is a Tk command) emits an SVG \fB<text>\fR element.
+.SS "Gradients and groups"
+.CS
+set ref [tusvg::linearGradient svg id x1 y1 x2 y2 {{0 "#fff"} {100 "#000"}}]  ;# -> url(#id)
+set ref [tusvg::radialGradient svg id cx cy r     {{0 "#fff"} {100 "#000"}}]
+set g   [tusvg::group svg ?-transform t? ?-opacity o? ?-id i?]
+tusvg::addToGroup g $element
+tusvg::addGroup   svg $g
+.CE
+.SS "Icon library"
+.CS
+tusvg::icons                                ;# list of ~110 names
+set ic [tusvg::icon name size ?-color c? ?-strokeWidth w?]   ;# an SVG document
+tusvg::saveIcon name size file.svg ?-color c?
+.CE
+.PP
+Unknown icon names render a question\-mark fallback glyph (no error). Icons are path/shape only (so they also render under tksvg/svgnano, which has no \fB<text>\fR).
+.SS Notes
+.IP \(bu
+No dependencies beyond the Tcl core; works on 8.6 and 9.x.
+.IP \(bu
+Errors carry \fB{TCLUTILS TUSVG <REASON>}\fR.
+.SS Demo
+.CS
+tclsh examples/demo-tusvg.tcl     # writes a scene, an icon sheet and one icon
+.CE

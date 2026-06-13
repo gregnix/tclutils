@@ -85,6 +85,8 @@ package require tclutils::tumonthpng 0.4
 package require tclutils::tucodepng 0.1
 package require tclutils::tupngpad 0.1
 package require tclutils::tusvg 0.1
+package require tclutils::tupagespec 0.1
+package require tclutils::tuexe 0.1
 package require tclutils::tustr 0.1
 package require tclutils::tuvalidate 0.1
 package require tclutils::tulist 0.1

@@ -125,6 +125,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tuurl` | basis complete | RFC 3986 percent-encoding/decoding and query strings (UTF-8). |
 | `tuuuid` | basis complete | UUID v4 and v7 generate/validate/version; `/dev/urandom` with `rand()` fallback. |
 | `tudav` | basis complete | Minimal WebDAV/CardDAV/CalDAV client (PROPFIND/REPORT/GET/PUT/DELETE, calendarQuery/addressbookMultiget); core `http`, https via `tls`. Collection provisioning (mkCalendar/mkAddressbook) added; verified vs Radicale 3.7. |
+| `tuexe` | helper | Locate external executables: candidate-name list, bundled `-dirs` plus PATH (`auto_execok`), platform extensions; `find`/`all`/`exists`. |
 | `tufetch` | helper | Tiny HTTP(S) `get`/`download` (to memory or file), GET/POST with headers and body; native `http`+`tls` else curl/wget via `auto_execok`. Optional, not dependency-free. |
 | `tusparql` | helper | Thin SPARQL client (`query` → row dicts, `ask` → 0/1) composing `tufetch`/`tuurl`/`tujson`; GET or POST, English labels via `wikibase:label`. Optional, not dependency-free. |
 
@@ -151,6 +152,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 |---|---|---|
 | `tustr` | helper | String helpers: case conversion (camel/snake), slugify, pad/center/truncate, prefix/suffix, splitTrim, count. |
 | `tuvalidate` | helper | Format/type validation predicates: email/url/ipv4/port/alpha/alnum/length/pattern/inList. |
+| `tupagespec` | helper | Parse page-range specs (`1-3,5,7-`, `all`, open ends, `end`/`last`) to a page list; `compact` is the inverse; `-base 0|1`. |
 
 ## Lists / dicts
 

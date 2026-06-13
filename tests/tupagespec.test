@@ -1,0 +1,88 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set tmDir [file normalize [file join $here .. lib tm]]
+catch {tcl::tm::path add $tmDir}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tupagespec
+set ns ::tclutils::tupagespec
+
+# --- parse ------------------------------------------------------------------
+
+test tupagespec-1.1 {comma list and single range} -body {
+    $::ns\::parse {1-3,5} 10
+} -result {1 2 3 5}
+
+test tupagespec-1.2 {open end} -body { $::ns\::parse {5-} 8 } -result {5 6 7 8}
+test tupagespec-1.3 {open start} -body { $::ns\::parse {-3} 8 } -result {1 2 3}
+test tupagespec-1.4 {all keyword} -body { $::ns\::parse all 4 } -result {1 2 3 4}
+test tupagespec-1.5 {empty spec = all} -body { $::ns\::parse {} 3 } -result {1 2 3}
+test tupagespec-1.6 {star = all} -body { $::ns\::parse * 2 } -result {1 2}
+test tupagespec-1.7 {end keyword} -body { $::ns\::parse end 6 } -result 6
+test tupagespec-1.8 {last keyword in a range} -body { $::ns\::parse {4-last} 6 } -result {4 5 6}
+
+test tupagespec-1.9 {reversed range, dedup and sort} -body {
+    $::ns\::parse {7-5,2,2} 9
+} -result {2 5 6 7}
+
+test tupagespec-1.10 {zero-based output} -body {
+    $::ns\::parse {2-4} 10 -base 0
+} -result {1 2 3}
+
+test tupagespec-1.11 {count convenience} -body {
+    $::ns\::count {1-3,5} 10
+} -result 4
+
+# --- compact (inverse) ------------------------------------------------------
+
+test tupagespec-2.1 {compact groups consecutive runs} -body {
+    $::ns\::compact {1 2 3 5 7 8}
+} -result {1-3,5,7-8}
+
+test tupagespec-2.2 {compact sorts and dedups} -body {
+    $::ns\::compact {5 1 2 3 3}
+} -result {1-3,5}
+
+test tupagespec-2.3 {compact of empty list} -body {
+    $::ns\::compact {}
+} -result {}
+
+test tupagespec-2.4 {parse then compact round-trips} -body {
+    set p [$::ns\::parse {1-3,5,9-11} 20]
+    $::ns\::compact $p
+} -result {1-3,5,9-11}
+
+# --- errors -----------------------------------------------------------------
+
+test tupagespec-3.1 {invalid part syntax} -body {
+    catch {$::ns\::parse {1-x} 10} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPAGESPEC SYNTAX}
+
+test tupagespec-3.2 {page beyond total} -body {
+    catch {$::ns\::parse {12} 10} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPAGESPEC RANGE}
+
+test tupagespec-3.3 {open-ended start beyond total} -body {
+    catch {$::ns\::parse {5-} 3} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPAGESPEC RANGE}
+
+test tupagespec-3.4 {unknown option} -body {
+    catch {$::ns\::parse {1} 10 -bad 1} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPAGESPEC OPTION}
+
+test tupagespec-3.5 {bad -base value} -body {
+    catch {$::ns\::parse {1} 10 -base 2} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPAGESPEC VALUE}
+
+test tupagespec-3.6 {negative total} -body {
+    catch {$::ns\::parse {1} -5} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPAGESPEC VALUE}
+
+cleanupTests

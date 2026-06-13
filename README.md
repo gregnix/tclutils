@@ -32,14 +32,14 @@ the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping
 | Compare / patch | `tucmp` `tudiff` `tupatch` |
 | Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` `tupngdraw` `tutablepng` `tumonthpng` `tucodepng` `tupngpad` `tusvg` |
 | Data / serialization | `tucsv` `tujson` `tuxml` `tunumfmt` `tusqlite` |
-| Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` |
+| Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` `tuexe` |
 | Fuzzy search | `tufuzzy` `tuagrep` |
 | Records / PIM | `tunotes` `tuical` `tuini` `tuvcard` `tuldif` `tubookmark` |
 | Document helpers | `tumd` `tupdf` `tuodf` `tucal` |
 | Date / web / IDs | `tudate` `tuurl` `tuuuid` `tudav` `tufetch` `tusparql` |
 | Calendar / recurrence | `tuical` `turrule` `tuholiday` `tucal` |
 | Events / registry | `tuevent` `turegistry` `tulog` |
-| Strings / validation | `tustr` `tuvalidate` |
+| Strings / validation | `tustr` `tuvalidate` `tupagespec` |
 | Lists / dicts | `tulist` `tudict` |
 | Math / tables | `tumath` `tutable` |
 | Archive | `tuzip` `tuzipfs` |

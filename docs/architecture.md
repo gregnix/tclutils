@@ -48,7 +48,7 @@ common  (Core: shared layer)
 |   |-- tumd    |-- tupdf   |-- tuodf   `-- tucal
 |
 |-- date / web / IDs
-|   |-- tudate  |-- tuurl   |-- tuuuid  |-- tudav   |-- tufetch
+|   |-- tudate  |-- tuurl   |-- tuuuid  |-- tudav   |-- tufetch |-- tuexe
 |   `-- tusparql
 |
 |-- calendar / recurrence
@@ -58,7 +58,7 @@ common  (Core: shared layer)
 |   |-- tuevent |-- turegistry `-- tulog
 |
 |-- strings / validation
-|   |-- tustr   `-- tuvalidate
+|   |-- tustr   |-- tuvalidate `-- tupagespec
 |
 |-- lists / dicts
 |   |-- tulist  `-- tudict
@@ -136,6 +136,7 @@ inspectors/generators, not full engines.
 `tudate` (clock-based date math), `tuurl` (RFC 3986), `tuuuid` (v4/v7), and the
 web clients. The web clients are the only **not dependency-free** modules:
 
+- `tuexe`: locate external executables across bundled dirs and PATH (candidate names, platform extensions); `find`/`all`/`exists`.
 - `tufetch`: tiny HTTP(S) client (`get`/`download`, GET/POST); native
   `http`+`tls`, otherwise curl/wget via `auto_execok`.
 - `tudav`: minimal WebDAV/CardDAV/CalDAV client on `http`(+`tls`).
@@ -151,7 +152,7 @@ web clients. The web clients are the only **not dependency-free** modules:
 ## Events, strings, lists, math, archive
 
 The remaining small layers: app glue (`tuevent` pub/sub, `turegistry` service
-locator, `tulog` leveled logger); string helpers (`tustr`, `tuvalidate`);
+locator, `tulog` leveled logger); string helpers (`tustr`, `tuvalidate`, `tupagespec`);
 structure helpers (`tulist`, `tudict`); numeric/table helpers (`tumath`,
 `tutable`); and ZIP handling (`tuzip` byte-controlled create/read for ODF/OOXML
 containers, `tuzipfs` the Tcl 9 ZipFS wrapper that reports unavailable on 8.6).

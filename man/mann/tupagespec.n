@@ -1,0 +1,29 @@
+.TH tupagespec n 0.1 tclutils
+.SH tclutils::tupagespec
+.PP
+Parse and format page\-range specifications. Turn a human range string like \fB"1\-3,5,7\-"\fR into a concrete list of page numbers, and the inverse: compact a list of numbers back into \fB"1\-3,5,7\-9"\fR. Pure Tcl, no dependencies.
+.SS API
+.CS
+::tclutils::tupagespec::parse   spec total ?-base 1?   ;# -> sorted unique page list
+::tclutils::tupagespec::count   spec total             ;# -> how many pages selected
+::tclutils::tupagespec::compact pages                  ;# -> "1-3,5,7-9"
+.CE
+.PP
+\fBparse\fR accepts, comma\-separated: a single number \fBN\fR, a range \fBA\-B\fR (\fBA>B\fR is tolerated), an open end \fBA\-\fR (A..total), an open start \fB\-B\fR (1..B); the keywords \fBend\fR/\fBlast\fR stand for \fBtotal\fR; an empty spec or \fBall\fR/\fB*\fR selects every page. \fB\-base 1\fR (default) returns 1\-based page numbers, \fB\-base 0\fR returns 0\-based.
+.CS
+tupagespec::parse "1-3,5"  10          ;# -> 1 2 3 5
+tupagespec::parse "5-"     8           ;# -> 5 6 7 8
+tupagespec::parse "-3"     8           ;# -> 1 2 3
+tupagespec::parse "4-last" 6           ;# -> 4 5 6
+tupagespec::parse "2-4"    10 -base 0  ;# -> 1 2 3
+tupagespec::compact {1 2 3 5 7 8}      ;# -> "1-3,5,7-8"
+.CE
+.PP
+\fBparse\fR and \fBcompact\fR round\-trip: \fBcompact [parse $spec $total]\fR re\-emits an equivalent, normalised spec.
+.SS Errors
+.PP
+Carry \fB{TCLUTILS TUPAGESPEC <REASON>}\fR: \fBSYNTAX\fR (unparseable part), \fBRANGE\fR (page outside \fB1..total\fR), \fBOPTION\fR (unknown option), \fBVALUE\fR (bad \fB\-base\fR or \fBtotal\fR).
+.SS Demo
+.CS
+tclsh examples/demo-tupagespec.tcl
+.CE

@@ -1,0 +1,92 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+testConstraint unix [expr {$::tcl_platform(platform) eq "unix"}]
+set here [file dirname [file normalize [info script]]]
+set tmDir [file normalize [file join $here .. lib tm]]
+catch {tcl::tm::path add $tmDir}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tuexe
+set ns ::tclutils::tuexe
+
+# A bundled directory with one executable and one non-executable file.
+proc mkbin {} {
+    set d [::tcltest::makeDirectory tuexe_bin]
+    set exe [file join $d mytool]
+    set ch [open $exe w]; puts $ch "#!/bin/sh"; puts $ch "echo hi"; close $ch
+    catch {file attributes $exe -permissions 0755}
+    set plain [file join $d notexe]
+    set ch [open $plain w]; puts $ch "data"; close $ch
+    catch {file attributes $plain -permissions 0644}
+    return $d
+}
+
+# --- PATH resolution (unix names) ------------------------------------------
+
+test tuexe-1.1 {resolve a name on PATH} -constraints unix -body {
+    string match */sh [$::ns\::find sh]
+} -result 1
+
+test tuexe-1.2 {first matching candidate from a list wins} -constraints unix -body {
+    string match */ls [$::ns\::find {definitely_no_such_x ls}]
+} -result 1
+
+test tuexe-1.3 {no match yields empty string} -body {
+    $::ns\::find {definitely_no_such_x also_no_such_y}
+} -result {}
+
+test tuexe-1.4 {exists is boolean} -constraints unix -body {
+    list [$::ns\::exists sh] [$::ns\::exists definitely_no_such_x]
+} -result {1 0}
+
+# --- bundled directories ----------------------------------------------------
+
+test tuexe-2.1 {find an executable in a bundled dir} -constraints unix -setup {
+    set d [mkbin]
+} -body {
+    string equal [$::ns\::find mytool -dirs [list $d]] [file normalize [file join $d mytool]]
+} -cleanup { ::tcltest::removeDirectory tuexe_bin } -result 1
+
+test tuexe-2.2 {a non-executable file is not matched} -constraints unix -setup {
+    set d [mkbin]
+} -body {
+    $::ns\::find notexe -dirs [list $d]
+} -cleanup { ::tcltest::removeDirectory tuexe_bin } -result {}
+
+test tuexe-2.3 {bundled dir wins over PATH by default} -constraints unix -setup {
+    set d [mkbin]
+    set sh [file join $d sh]
+    set ch [open $sh w]; puts $ch "#!/bin/sh"; close $ch
+    catch {file attributes $sh -permissions 0755}
+} -body {
+    string equal [$::ns\::find sh -dirs [list $d]] [file normalize $sh]
+} -cleanup { ::tcltest::removeDirectory tuexe_bin } -result 1
+
+test tuexe-2.4 {-pathfirst prefers PATH over bundled dir} -constraints unix -setup {
+    set d [mkbin]
+    set sh [file join $d sh]
+    set ch [open $sh w]; puts $ch "#!/bin/sh"; close $ch
+    catch {file attributes $sh -permissions 0755}
+} -body {
+    string match */sh [$::ns\::find sh -dirs [list $d] -pathfirst 1] ;# but not the bundled one
+    expr {[$::ns\::find sh -dirs [list $d] -pathfirst 1] ne [file normalize $sh]}
+} -cleanup { ::tcltest::removeDirectory tuexe_bin } -result 1
+
+test tuexe-2.5 {all collects matches from dirs and PATH, de-duplicated} -constraints unix -setup {
+    set d [mkbin]
+    set sh [file join $d sh]
+    set ch [open $sh w]; puts $ch "#!/bin/sh"; close $ch
+    catch {file attributes $sh -permissions 0755}
+} -body {
+    set r [$::ns\::all sh -dirs [list $d]]
+    expr {[llength $r] >= 2 && [lindex $r 0] eq [file normalize $sh]}
+} -cleanup { ::tcltest::removeDirectory tuexe_bin } -result 1
+
+# --- errors -----------------------------------------------------------------
+
+test tuexe-3.1 {unknown option errors} -body {
+    catch {$::ns\::find sh -bogus 1} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUEXE OPTION}
+
+cleanupTests
