@@ -1,0 +1,53 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set tmDir [file normalize [file join $here .. lib tm]]
+catch {tcl::tm::path add $tmDir}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tupkgfinder
+set ns ::tclutils::tupkgfinder
+
+test versions-1 {known package has versions} -body {
+    expr {[llength [${ns}::versions tcltest]] >= 1}
+} -result 1
+
+test paths-1 {paths returns auto_path entries} -body {
+    dict exists [${ns}::paths] auto_path
+} -result 1
+
+test pkgInfo-1 {pkgInfo carries the package name and versions} -body {
+    set d [${ns}::pkgInfo tcltest]
+    list [dict get $d package] [expr {[llength [dict get $d versions]] >= 1}]
+} -result {tcltest 1}
+
+test which-1 {which reports an active version for a loaded package} -body {
+    set d [${ns}::which tcltest]
+    expr {[dict get $d activeVersion] ne ""}
+} -result 1
+
+test report-1 {report mentions the package} -body {
+    string match {*Package: tcltest*} [${ns}::report tcltest]
+} -result 1
+
+set ROOT [makeDirectory pkgfinder-test]
+file mkdir [file join $ROOT sub]
+set f [file join $ROOT sub findme-1.0.tm]
+set fh [open $f w]; puts $fh "x"; close $fh
+
+test findFileSystem-1 {finds a file under given roots} -body {
+    set hits [${ns}::findFileSystem findme-*.tm -roots [list $ROOT] -maxdepth 3]
+    expr {[file normalize $f] in $hits}
+} -result 1
+
+test findFileSystem-2 {unknown option -> OPTION} -body {
+    catch {${ns}::findFileSystem * -bogus x} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPKGFINDER OPTION}
+
+test findFileSystem-3 {odd option/value count -> OPTION} -body {
+    catch {${ns}::findFileSystem * -roots} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPKGFINDER OPTION}
+
+cleanupTests

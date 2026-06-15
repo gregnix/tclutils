@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.54.0
+
+Adds one module; the library remains pure Tcl and runs on Tcl 8.6 and Tcl 9.x.
+
+- Deployment / packaging: `tudeploy` -- runtime discovery and loading of Tcl
+  module packages from application-relative deployment roots (`vendor`,
+  `libs/common`, `libs`, `lib/tm`), plus locating bundled resource
+  directories for external binaries. Generalises the recurring "add candidate
+  roots to `tcl::tm::path`, then `package require`" idiom; pairs with
+  `tuexe` for decoder/tool lookup. Includes `test`, `doc`, `man`, and demo.
+- Introspection / diagnostics: `tupkgfinder` -- inspect package resolution
+  (known versions, `ifneeded` scripts and source paths, active vs. shadowed
+  version, search paths, optional filesystem search); and `tuappinfo` --
+  collect a plain-text application/system report (Tcl/Tk, environment, search
+  paths, loaded packages, tracked modules) with optional anonymisation. Both
+  pure Tcl and GUI-free; rendering is left to the caller. Each ships with
+  `test`, `doc`, `man`, and demo.
+- Recommended pairing: tclutils 0.54.0 + tkutils 0.40.0.
+
 ## 0.53.0
 
 Changes since 0.41.0. Many modules were added; the library remains pure Tcl

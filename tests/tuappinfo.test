@@ -1,0 +1,35 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set tmDir [file normalize [file join $here .. lib tm]]
+catch {tcl::tm::path add $tmDir}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tuappinfo
+set ns ::tclutils::tuappinfo
+
+test build-1 {report has the core sections} -body {
+    set r [${ns}::buildReport -title "T"]
+    list [string match {*==== T ====*} $r] \
+         [string match {*--- Loaded Packages ---*} $r] \
+         [string match {*--- tm::path ---*} $r]
+} -result {1 1 1}
+
+test track-1 {tracked module appears in the report} -body {
+    ${ns}::trackTm /some/where/foo-1.0.tm
+    string match {*/some/where/foo-1.0.tm*} [${ns}::buildReport]
+} -result 1
+
+test anon-1 {anonymized tracked module is hashed, not raw} -body {
+    set r [${ns}::buildReport -anonymize 1]
+    list [string match {*<tm-*>.tm*} $r] [string match {*/some/where/foo-1.0.tm*} $r]
+} -result {1 0}
+
+test writeLog-1 {writeLog writes the report to a file} -body {
+    set out [file join [makeDirectory appinfo-test] r.txt]
+    ${ns}::writeLog $out -title "T"
+    set fh [open $out]; set c [read $fh]; close $fh
+    string match {*==== T ====*} $c
+} -result 1
+
+cleanupTests

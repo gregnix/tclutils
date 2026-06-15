@@ -1,0 +1,97 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set tmDir [file normalize [file join $here .. lib tm]]
+catch {tcl::tm::path add $tmDir}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tudeploy
+interp alias {} tudeploy {} ::tclutils::tudeploy
+# --- scratch tree ----------------------------------------------------------
+set ::ROOT [makeDirectory tudeploy-test]
+proc mk {args} { set d [file join $::ROOT {*}$args]; file mkdir $d; return $d }
+mk app vendor
+mk app vendor foo
+mk app libs common
+mk app libs
+mk app vendor webp
+mk app vendor webp [::tclutils::tudeploy::platformTag]
+mk app bin
+# a dummy module package: <root>/foo/bar-1.0.tm  under app/vendor
+set tm [file join $::ROOT app vendor foo bar-1.0.tm]
+set fh [open $tm w]; puts $fh "package provide foo::bar 1.0"; close $fh
+set ::APP [file join $::ROOT app]
+
+test platformTag-1 {tag is os+bits} -body {
+    regexp {^(linux|windows|macos)(32|64)$} [tudeploy platformTag]
+} -result 1
+
+test roots-1 {existing roots in order, base override} -body {
+    tudeploy roots -base [list $::APP] -parents 0
+} -result [list [file join $::APP vendor] [file join $::APP libs common] [file join $::APP libs]]
+
+test roots-2 {non-existing roots are filtered (lib/tm absent)} -body {
+    expr {[file join $::APP lib tm] in [tudeploy roots -base [list $::APP] -parents 0]}
+} -result 0
+
+test roots-3 {env dir is prepended} -body {
+    set ::env(TD_TEST_ROOT) [file join $::APP libs]
+    set r [tudeploy roots -base [list $::APP] -parents 0 -env TD_TEST_ROOT]
+    unset ::env(TD_TEST_ROOT)
+    lindex $r 0
+} -result [file join $::APP libs]
+
+test require-1 {require finds the dummy package} -body {
+    tudeploy require {foo::bar} -base [list $::APP] -parents 0
+} -result 1
+
+test require-2 {missing package -> 0} -body {
+    tudeploy require {no::such::pkg} -base [list $::APP] -parents 0
+} -result 0
+
+test require-3 {missing package with -fail throws REQUIRE} -body {
+    catch {tudeploy require {no::such::pkg} -base [list $::APP] -parents 0 -fail 1} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDEPLOY REQUIRE}
+
+test resourceDirs-1 {webp dir + tagged variant present, ordered} -body {
+    set d [tudeploy resourceDirs webp -base [list $::APP] -parents 0]
+    list [expr {[file join $::APP vendor webp [tudeploy platformTag]] in $d}] \
+         [expr {[file join $::APP vendor webp] in $d}] \
+         [expr {[file join $::APP bin] in $d}] \
+         [expr {$::APP in $d}]
+} -result {1 1 1 1}
+
+test resourceDirs-2 {name required} -body {
+    catch {tudeploy resourceDirs ""} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDEPLOY USAGE}
+
+test opt-1 {unknown option -> OPTION} -body {
+    catch {tudeploy roots -bogus x} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDEPLOY OPTION}
+
+test opt-2 {missing option value -> OPTION} -body {
+    catch {tudeploy roots -env} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDEPLOY OPTION}
+
+mk app vendor qpdf lib
+set zz [file join $::ROOT app vendor qpdf lib zz-1.0.tm]
+set fh [open $zz w]; puts $fh "package provide zz 1.0"; close $fh
+
+test sourceModule-1 {source a nested .tm directly (sidesteps tm roots)} -body {
+    tudeploy sourceModule zz -dirs [list [file join $::ROOT app vendor qpdf lib]]
+} -result 1
+
+test sourceModule-2 {already-present package returns 1 without searching} -body {
+    tudeploy sourceModule zz -dirs {}
+} -result 1
+
+test sourceModule-3 {missing module with -fail throws REQUIRE} -body {
+    catch {tudeploy sourceModule nopepkg -dirs [list $::ROOT] -fail 1} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDEPLOY REQUIRE}
+
+cleanupTests

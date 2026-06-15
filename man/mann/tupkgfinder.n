@@ -1,0 +1,40 @@
+.TH tupkgfinder n 0.1 tclutils
+.SH tclutils::tupkgfinder
+.PP
+Inspect how Tcl resolves packages: known versions, their \fBifneeded\fR scripts and source locations, which version is active versus shadowed, the relevant search paths (\fBauto_path\fR, \fBtcl::tm::path\fR), and an optional filesystem search by glob pattern. Useful for "about / diagnostics" views. Pure Tcl, no GUI.
+.SS API
+.CS
+::tclutils::tupkgfinder::paths
+::tclutils::tupkgfinder::versions       packageName
+::tclutils::tupkgfinder::pkgInfo        packageName
+::tclutils::tupkgfinder::which          packageName
+::tclutils::tupkgfinder::report         packageName
+::tclutils::tupkgfinder::findFileSystem pattern ?roots?
+::tclutils::tupkgfinder::findFileSystem pattern ?-roots {d ...}? ?-maxdepth N? \
+        ?-followlinks 0|1? ?-maxfiles N? ?-excludeDirs {name ...}?
+.CE
+.IP \(bu
+\fBpaths\fR — dict \fB{auto_path {pos path ...} tm_path {pos path ...}}\fR.
+.IP \(bu
+\fBversions\fR — versions known to the package database (those with an \fBifneeded\fR entry; note the running interpreter's own \fBTcl\fR has none).
+.IP \(bu
+\fBpkgInfo\fR — dict with \fBpackage\fR, \fBversions\fR, \fBifneeded\fR per version, and the source \fBlocations\fR extracted from each \fBifneeded\fR script.
+.IP \(bu
+\fBwhich\fR — resolution view: \fBfound\fR (version/path/script), \fBactiveVersion\fR, \fBactivePath\fR, and \fBshadowed\fR paths. Determining the active version calls \fBpackage require\fR, which loads the package as a side effect.
+.IP \(bu
+\fBreport\fR — a human\-readable multi\-line diagnostic for one package.
+.IP \(bu
+\fBfindFileSystem\fR — glob the filesystem for matching files. Without \fB\-roots\fR a platform default set is scanned (can be slow); bound it with \fB\-maxdepth\fR / \fB\-maxfiles\fR.
+.CS
+puts [::tclutils::tupkgfinder::report tablelist]
+set w [::tclutils::tupkgfinder::which Img]
+puts "active: [dict get $w activePath]  shadowed: [dict get $w shadowed]"
+::tclutils::tupkgfinder::findFileSystem *pdf4tcl* -roots [list $root] -maxdepth 4
+.CE
+.SS Errors
+.PP
+Carries \fB{TCLUTILS TUPKGFINDER OPTION}\fR for an unknown option or a bad option/value count in \fBfindFileSystem\fR.
+.SS Demo
+.CS
+tclsh examples/demo-tupkgfinder.tcl
+.CE

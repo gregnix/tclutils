@@ -87,6 +87,11 @@ package require tclutils::tupngpad 0.1
 package require tclutils::tusvg 0.1
 package require tclutils::tupagespec 0.1
 package require tclutils::tuexe 0.1
+# Deployment / packaging
+package require tclutils::tudeploy 0.1
+# Introspection / diagnostics
+package require tclutils::tupkgfinder 0.1
+package require tclutils::tuappinfo 0.1
 package require tclutils::tustr 0.1
 package require tclutils::tuvalidate 0.1
 package require tclutils::tulist 0.1
@@ -97,4 +102,4 @@ package require tclutils::tutable 0.1
 package require tclutils::tufetch 0.3
 package require tclutils::tusqlite 0.1
 package require tclutils::tusparql 0.1
-package provide tclutils 0.53.0
+package provide tclutils 0.54.0

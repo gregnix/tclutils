@@ -1,0 +1,24 @@
+.TH tuappinfo n 0.1 tclutils
+.SH tclutils::tuappinfo
+.PP
+Collect application / system information into a plain\-text report: Tcl/Tk versions, executable, platform, selected environment variables, search paths, loaded packages, and an optional list of explicitly tracked module files. Supports anonymisation of user / host / path data. Pure Tcl, no GUI \-\- the caller renders the returned text (e.g. in a Tk window or a log file).
+.SS API
+.CS
+::tclutils::tuappinfo::trackTm    file
+::tclutils::tuappinfo::buildReport ?-title str? ?-anonymize 0|1?
+::tclutils::tuappinfo::writeLog    file ?-title str? ?-anonymize 0|1?
+.CE
+.IP \(bu
+\fBtrackTm\fR — record a module file path so it appears under "Loaded TM Modules" (otherwise that section reads "(none tracked)").
+.IP \(bu
+\fBbuildReport\fR — return the full report as a single string. \fB\-anonymize 1\fR masks user/host names (stable hash), \fBHOME\fR/\fBTEMP\fR paths, and \fBPATH\fR.
+.IP \(bu
+\fBwriteLog\fR — write \fBbuildReport\fR to \fBfile\fR; returns the file path.
+.CS
+puts [::tclutils::tuappinfo::buildReport -title "MyApp 1.0"]
+::tclutils::tuappinfo::writeLog /tmp/myapp-info.txt -title "MyApp 1.0" -anonymize 1
+.CE
+.SS Demo
+.CS
+tclsh examples/demo-tuappinfo.tcl
+.CE

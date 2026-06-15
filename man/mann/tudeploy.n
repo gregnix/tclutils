@@ -1,0 +1,72 @@
+.TH tudeploy n 0.1 tclutils
+.SH tclutils::tudeploy
+.PP
+Runtime discovery and loading of Tcl module packages from application\-relative deployment roots (\fBvendor/\fR, \fBlibs/common/\fR, \fBlibs/\fR, \fBlib/tm/\fR), plus locating bundled resource directories for external binaries (decoders, tools). Generalises the recurring "add candidate roots to \fBtcl::tm::path\fR, then \fBpackage require\fR" idiom every bundled app reimplements. Pure Tcl, library\-neutral.
+.PP
+The ensemble command is the fully\-qualified namespace, so call it as \fB::tclutils::tudeploy <sub>\fR or make a short alias:
+.CS
+interp alias {} tudeploy {} ::tclutils::tudeploy
+.CE
+.SS API
+.CS
+::tclutils::tudeploy baseDirs
+::tclutils::tudeploy platformTag
+::tclutils::tudeploy roots          ?-base {d ...}? ?-env {V ...}? ?-roots {rel ...}? ?-parents 0|1?
+::tclutils::tudeploy addModulePaths ?-base {d ...}? ?-env {V ...}? ?-roots {rel ...}? ?-parents 0|1?
+::tclutils::tudeploy require pkgs   ?-base {d ...}? ?-env {V ...}? ?-roots {rel ...}? ?-parents 0|1? ?-tmadd 0|1? ?-fail 0|1?
+::tclutils::tudeploy resourceDirs name ?-base {d ...}? ?-env {V ...}? ?-parents 0|1? ?-tag <str>?
+::tclutils::tudeploy sourceModule pkg ?-dirs {d ...}? ?-base {d ...}? ?-env {V ...}? ?-roots {rel ...}? ?-parents 0|1? ?-fail 0|1?
+.CE
+.IP \(bu
+\fBbaseDirs\fR — the application base directories: the directory of the main script (\fBargv0\fR) and of the running executable; normalized, de\-duplicated, existing only. Override anywhere with \fB\-base\fR.
+.IP \(bu
+\fBplatformTag\fR — \fB"<os><bits>"\fR, e.g. \fBlinux64\fR, \fBwindows64\fR, \fBmacos64\fR.
+.IP \(bu
+\fBroots\fR — ordered list of EXISTING module roots, relative to each base dir (and its parent, unless \fB\-parents 0\fR), following \fB\-roots\fR (default \fBvendor\fR, \fBlibs/common\fR, \fBlibs\fR, \fBlib/tm\fR). \fB\-env\fR directory values are prepended. A root holds package subdirs, i.e. \fB<root>/<pkg>/<mod>\-<ver>.tm\fR.
+.IP \(bu
+\fBaddModulePaths\fR — add the \fBroots\fR to \fBtcl::tm::path\fR; returns the added list.
+.IP \(bu
+\fBrequire\fR — \fBaddModulePaths\fR (unless \fB\-tmadd 0\fR), then \fBpackage require\fR each package in \fBpkgs\fR. Returns 1 iff all succeed, else 0; with \fB\-fail 1\fR it throws \fB{TCLUTILS TUDEPLOY REQUIRE}\fR instead.
+.IP \(bu
+\fBresourceDirs\fR — ordered list of EXISTING candidate directories for a bundled resource \fBname\fR: per base dir (+ parent) \fBvendor/<name>/<tag>\fR, \fBvendor/<name>\fR, \fBvendor/<tag>\fR, \fBvendor\fR, \fBbin\fR, and the base dir itself. Feed the result to \fBtuexe::find \-dirs\fR, or glob it yourself for non\-executable resources. \fB\-tag\fR overrides the platform tag.
+.IP \(bu
+\fBsourceModule\fR — load \fBpkg\fR by sourcing its module file directly, bypassing \fBtcl::tm\fR discovery. Searches the resolved dirs (\fB\-dirs\fR, else \fBroots\fR of the given \fB\-roots\fR/\fB\-base\fR/\fB\-env\fR) for \fB<tail>\-<ver>.tm\fR (tail = last \fB::\fR component), sources the highest version, and verifies the package became present. Returns 1/0, or throws \fB{TCLUTILS TUDEPLOY REQUIRE}\fR with \fB\-fail 1\fR. Use this for packages whose vendored \fB.tm\fR sits at a path that does not match its package name — e.g. a bare package \fBqpdf\fR shipped as \fBvendor/qpdf/lib/qpdf\-0.2.tm\fR with sibling shared libraries: a dedicated tm root \fBvendor/qpdf/lib\fR would be a descendant of the shared \fBvendor\fR root, and \fBtcl::tm::path add\fR refuses ancestor/descendant paths. Sourcing the file in place avoids the conflict and keeps the module's relative paths intact.
+.CS
+interp alias {} tudeploy {} ::tclutils::tudeploy
+
+# load an app's bundled module packages (bundled wins over a system copy)
+if {![tudeploy require {somelib::widgeta somelib::widgetb otherlib::helper}]} {
+    error "required modules not found"
+}
+
+# find a bundled decoder, falling back to PATH (tuexe does the matching)
+set dirs [tudeploy resourceDirs webp -env MYAPP_WEBP]
+set exe  [::tclutils::tuexe::find dwebp -dirs $dirs]
+.CE
+.CS
+# load a package whose vendored layout doesn't match its package name
+tudeploy sourceModule qpdf -env QPDF_TM -roots {{vendor qpdf lib} {qpdf lib}}
+.CE
+.PP
+Because \fBtudeploy\fR itself lives in this library, an application must first make the library loadable. A minimal inline stub (run once at the app's top level) adds the candidate roots to \fBtcl::tm::path\fR, after which \fBpackage require tclutils::tudeploy\fR succeeds and the rest is delegated:
+.CS
+apply {{} {
+    set bases [list [file dirname [file normalize [info script]]]]
+    catch { lappend bases [file dirname [file normalize [info nameofexecutable]]] }
+    foreach b $bases {
+        foreach rel {vendor {libs common} libs {lib tm}
+                     {.. vendor} {.. libs common} {.. libs}} {
+            set d [file join $b {*}$rel]
+            if {[file isdirectory $d]} { catch {tcl::tm::path add $d} }
+        }
+    }
+}}
+package require tclutils::tudeploy
+.CE
+.SS Errors
+.PP
+Carries \fB{TCLUTILS TUDEPLOY <REASON>}\fR: \fBOPTION\fR (unknown option / missing value), \fBUSAGE\fR (missing required argument), \fBREQUIRE\fR (with \fB\-fail 1\fR, a package could not be loaded).
+.SS Demo
+.CS
+tclsh examples/demo-tudeploy.tcl
+.CE

@@ -175,6 +175,19 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tuzip` | subset | Small ZIP/ODF-friendly create/read/extract; no Zip64, password, or streaming. |
 | `tuzipfs` | platform-limited | Tcl 9 ZipFS wrapper; Tcl 8.6 reports unavailable for ZipFS operations. |
 
+## Deployment / packaging
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tudeploy` | helper | Runtime discovery and loading of Tcl module packages from app-relative deployment roots (`vendor`, `libs/common`, `libs`, `lib/tm`), plus locating bundled resource directories for external binaries; `require` / `resourceDirs` / `sourceModule`. Pairs with `tuexe`. |
+
+## Introspection / diagnostics
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tupkgfinder` | helper | Inspect package resolution: known versions, `ifneeded` scripts and source paths, active vs. shadowed version, search paths; optional filesystem search by pattern. |
+| `tuappinfo` | helper | Collect a plain-text application/system report (Tcl/Tk, environment, search paths, loaded packages, tracked modules); optional anonymisation. GUI-free; the caller renders. |
+
 ## Core
 
 | Module | Scope status | Notes |
