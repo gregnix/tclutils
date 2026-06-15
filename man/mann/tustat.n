@@ -1,7 +1,7 @@
 .TH tustat n 0.1 tclutils
 .SH tclutils::tustat
 .PP
-\fB tustat \fR provides stat\-like file metadata helpers around Tcl's \fBfile stat\fR.
+\fBtustat\fR provides stat\-like file metadata helpers around Tcl's \fBfile stat\fR.
 .SS API
 .CS
 package require tclutils::tustat

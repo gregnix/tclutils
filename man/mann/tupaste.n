@@ -1,7 +1,7 @@
 .TH tupaste n 0.1 tclutils
 .SH tclutils::tupaste
 .PP
-\fB tclutils::tupaste \fR combines line streams side by side, similar to Unix \fBpaste\fR.
+\fBtclutils::tupaste\fR combines line streams side by side, similar to Unix \fBpaste\fR.
 .SS Load
 .CS
 package require tclutils::tupaste

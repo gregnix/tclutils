@@ -56,6 +56,8 @@ package require tclutils::tucolumn 0.1
 package require tclutils::tupr 0.1
 package require tclutils::tutsort 0.1
 package require tclutils::tunumfmt 0.1
+package require tclutils::tunum 0.1
+package require tclutils::tunumany 0.1
 package require tclutils::tunotes 0.1
 package require tclutils::tuldif 0.1
 package require tclutils::tuical 0.1
@@ -102,4 +104,4 @@ package require tclutils::tutable 0.1
 package require tclutils::tufetch 0.3
 package require tclutils::tusqlite 0.1
 package require tclutils::tusparql 0.1
-package provide tclutils 0.54.0
+package provide tclutils 0.55.0

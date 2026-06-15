@@ -1,0 +1,28 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file normalize [file join $here .. lib tm]]
+package require tclutils::tucolor
+
+test tucolor-1.1 {name to rgb}        -body {::tclutils::tucolor::rgb red} -result {255 0 0}
+test tucolor-1.2 {cornflowerblue}     -body {::tclutils::tucolor::rgb cornflowerblue} -result {100 149 237}
+test tucolor-1.3 {case-insensitive}   -body {::tclutils::tucolor::rgb ReD} -result {255 0 0}
+test tucolor-1.4 {long hex}           -body {::tclutils::tucolor::rgb #ff8800} -result {255 136 0}
+test tucolor-1.5 {short hex expands}  -body {::tclutils::tucolor::rgb #f80} -result {255 136 0}
+test tucolor-1.6 {triple passthrough} -body {::tclutils::tucolor::rgb {10 20 30}} -result {10 20 30}
+test tucolor-2.1 {hex from name}      -body {::tclutils::tucolor::hex red} -result {#ff0000}
+test tucolor-2.2 {hex from triple}    -body {::tclutils::tucolor::hex {255 136 0}} -result {#ff8800}
+test tucolor-3.1 {exists yes}         -body {::tclutils::tucolor::exists tomato} -result 1
+test tucolor-3.2 {exists no}          -body {::tclutils::tucolor::exists notacolor} -result 0
+test tucolor-3.3 {names count}        -body {llength [::tclutils::tucolor::names]} -result 148
+test tucolor-4.1 {nearest exact}      -body {::tclutils::tucolor::nearest #fe0000} -result red
+test tucolor-4.2 {nearest approx}     -body {::tclutils::tucolor::nearest {100 149 238}} -result cornflowerblue
+test tucolor-5.1 {toHsv red}          -body {::tclutils::tucolor::toHsv red} -result {0 100 100}
+test tucolor-5.2 {toHsv white}        -body {::tclutils::tucolor::toHsv white} -result {0 0 100}
+test tucolor-5.3 {fromHsv green}      -body {::tclutils::tucolor::fromHsv {120 100 100}} -result {0 255 0}
+test tucolor-5.4 {fromHsv blue}       -body {::tclutils::tucolor::fromHsv {240 100 100}} -result {0 0 255}
+test tucolor-6.1 {unknown errors}     -body {
+    catch {::tclutils::tucolor::rgb bogus} e; set e
+} -match glob -result {*unknown color*}
+cleanupTests

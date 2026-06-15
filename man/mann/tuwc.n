@@ -1,7 +1,7 @@
 .TH tuwc n 0.1 tclutils
 .SH tclutils::tuwc
 .PP
-\fB tclutils::tuwc \fR counts lines, words, characters and bytes.
+\fBtclutils::tuwc\fR counts lines, words, characters and bytes.
 .SS Load
 .CS
 package require tclutils::tuwc

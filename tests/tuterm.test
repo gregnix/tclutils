@@ -1,0 +1,76 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file normalize [file join $here .. lib tm]]
+package require tclutils::tuterm
+set E \x1b
+
+# make sure color is on for the deterministic tests
+::tclutils::tuterm::enable 1
+
+test tuterm-1.1 {bold + fg name} -body {
+    ::tclutils::tuterm::style bold fg:red
+} -result "${E}\[1m${E}\[31m"
+test tuterm-1.2 {explicit off} -body {
+    ::tclutils::tuterm::style underline:off
+} -result "${E}\[24m"
+test tuterm-1.3 {256-color fg} -body {
+    ::tclutils::tuterm::style fg:208
+} -result "${E}\[38;5;208m"
+test tuterm-1.4 {truecolor fg} -body {
+    ::tclutils::tuterm::style fg:#ff8800
+} -result "${E}\[38;2;255;136;0m"
+test tuterm-1.5 {bg name} -body {
+    ::tclutils::tuterm::style bg:blue
+} -result "${E}\[44m"
+test tuterm-1.6 {reset} -body {
+    ::tclutils::tuterm::style reset
+} -result "${E}\[0m"
+
+test tuterm-2.1 {wrap adds reset} -body {
+    ::tclutils::tuterm::wrap X bold
+} -result "${E}\[1mX${E}\[0m"
+test tuterm-2.2 {strip round-trips to plain} -body {
+    ::tclutils::tuterm::strip [::tclutils::tuterm::wrap Hi bold fg:red]
+} -result Hi
+
+test tuterm-3.1 {names all} -body {
+    expr {"fgcolor" in [::tclutils::tuterm::names all]}
+} -result 1
+test tuterm-3.2 {off code} -body {
+    ::tclutils::tuterm::off bold
+} -result "${E}\[22m"
+
+test tuterm-4.1 {disabled style is empty} -body {
+    ::tclutils::tuterm::enable 0
+    set r [::tclutils::tuterm::style bold fg:red]
+    ::tclutils::tuterm::enable 1
+    set r
+} -result {}
+test tuterm-4.2 {disabled wrap is plain} -body {
+    ::tclutils::tuterm::enable 0
+    set r [::tclutils::tuterm::wrap hi bold]
+    ::tclutils::tuterm::enable 1
+    set r
+} -result hi
+test tuterm-4.3 {auto honours NO_COLOR} -body {
+    set ::env(NO_COLOR) 1
+    set off [::tclutils::tuterm::auto]
+    unset ::env(NO_COLOR)
+    set on [::tclutils::tuterm::auto]
+    list $off $on
+} -result {0 1}
+
+test tuterm-5.1 {unknown style errors} -body {
+    catch {::tclutils::tuterm::style bogus} e
+    set e
+} -match glob -result {*unknown style*}
+test tuterm-5.2 {unknown color errors} -body {
+    catch {::tclutils::tuterm::style fg:notacolor} e
+    set e
+} -match glob -result {*unknown color*}
+test tuterm-5.3 {enableVT no-op on non-windows} -constraints {unix} -body {
+    ::tclutils::tuterm::enableVT
+} -result 1
+cleanupTests

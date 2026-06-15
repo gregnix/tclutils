@@ -1,7 +1,7 @@
 .TH tucut n 0.1 tclutils
 .SH tclutils::tucut
 .PP
-\fB tclutils::tucut \fR provides small cut\-like helpers for simple delimited text. It is not a full CSV parser. For quoted CSV data use a CSV package.
+\fBtclutils::tucut\fR provides small cut\-like helpers for simple delimited text. It is not a full CSV parser. For quoted CSV data use a CSV package.
 .SS Load
 .CS
 package require tclutils::tucut

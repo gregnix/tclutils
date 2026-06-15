@@ -72,3 +72,7 @@ Option errors are raised with `-errorcode {TCLUTILS TUNUM OPTION}`.
   display formatting, e.g. `format "%.2f" [::tclutils::tunum::sum $vals]`.
 - The currency symbol `€` is handled via the `\u20AC` escape, so the module is
   safe to source from a `.tm` regardless of the channel encoding.
+- **Relation to `tclutils::tunumfmt`:** the two do *not* overlap. `tunum` parses
+  locale-grouped / currency numbers (`1.234,56 €`); `tunumfmt::fromHuman` parses
+  SI/IEC unit notation (`1.5K` → 1500, `2Mi` → 2097152). Use `tunum` for
+  user-entered amounts, `tunumfmt` for engineering / byte-size notation.

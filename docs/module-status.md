@@ -75,7 +75,6 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tucsv` | basis complete | CSV parse/join with quoting and multiline handling. |
 | `tujson` | helper + parser + encoder | Escape, quote, pretty, minify, validate, `parse`/`fromJson`/`parseTyped`, and `toJson` (typed value -> JSON, with `str`/`num`/`bool`/`null`/`obj`/`arr` builders). |
 | `tuxml` | helper | Escape and tag builder; no DOM/XPath. |
-| `tunumfmt` | filter | `numfmt`-like human-readable number formatting (SI/IEC) and parsing back; line-wise text mode. |
 | `tusqlite` | helper | NULL-safe helpers over a caller-supplied `sqlite3` handle: `insert` (omitted key or `null` → SQL NULL), `rows` → list of dicts, `value`, `quoteId`. Does not `require sqlite3` itself. |
 
 ## Stream / filesystem
@@ -167,6 +166,14 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 |---|---|---|
 | `tumath` | helper | Numeric helpers beyond core expr: clamp/inRange/percent/sign/gcd/lcm/factorial/roundTo. |
 | `tutable` | helper | Render markdown / ASCII-box text tables from headers+rows, with alignment. |
+
+## Number parsing / formatting
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tunum` | basis complete | Locale-aware number parsing: EU `1.234,56` / US `1,234.56`, currency-symbol stripping; `parse`, `sum` (skips non-numeric), `isNumber`. Pure Tcl, value-based. |
+| `tunumany` | helper | Single `parse` dispatcher: routes locale/currency strings to `tunum` and SI/IEC notation (`1.5K`, `2Mi`) to `tunumfmt`, with `-prefer` and fallback. The deliberate bridge between the two parsers (not a merge). |
+| `tunumfmt` | filter | `numfmt`-like human-readable number formatting (SI/IEC) and parsing back; line-wise text mode. |
 
 ## Archive
 

@@ -1,7 +1,7 @@
 .TH tuhexdump n 0.1 tclutils
 .SH tclutils::tuhexdump
 .PP
-\fB tclutils::tuhexdump \fR creates a classic hex/ascii dump from data or files.
+\fBtclutils::tuhexdump\fR creates a classic hex/ascii dump from data or files.
 .SS Load
 .CS
 package require tclutils::tuhexdump

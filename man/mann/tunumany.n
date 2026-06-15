@@ -1,0 +1,42 @@
+.TH tunumany n 0.1 tclutils
+.SH tclutils::tunumany
+.PP
+A single entry point for "string → number" that \fBroutes\fR to the right backend instead of merging them. The two specialised parsers do not overlap:
+.IP \(bu
+locale\-grouped / currency amounts (\fB1.234,56 €\fR, \fB1,234.56\fR) → \fBtclutils::tunum\fR
+.IP \(bu
+SI/IEC unit notation (\fB1.5K\fR, \fB2Mi\fR, \fB3G\fR) → \fBtclutils::tunumfmt\fR
+.PP
+\fBtunumany\fR recognises both notations and dispatches, so callers that may receive either kind of input have one function to call.
+.SS Package
+.CS
+package require tclutils::tunumany 0.1
+.CE
+.PP
+Soft\-depends on \fBtclutils::tunum\fR and \fBtclutils::tunumfmt\fR (each loaded on demand; a missing backend simply means that notation is not parsed).
+.SS Command
+.CS
+::tclutils::tunumany::parse str ?-default VAL? ?-prefer auto|si|locale?
+.CE
+.PP
+Returns the parsed number, or \fBVAL\fR (default \fB""\fR) when nothing parses.
+.SS Routing
+.PP
+With \fB\-prefer auto\fR (the default): a plain number followed by an SI/IEC unit letter (\fBK M G T P E Z Y\fR, optional trailing \fBi\fR) routes to the SI/IEC backend; everything else routes to the locale/currency backend. If the chosen route fails the other is tried as a fallback. Use \fB\-prefer si\fR or \fB\-prefer locale\fR to force a route.
+.SS Examples
+.CS
+::tclutils::tunumany::parse "1.234,56"   ;# -> 1234.56   (locale EU)
+::tclutils::tunumany::parse "1,234.56"   ;# -> 1234.56   (locale US)
+::tclutils::tunumany::parse "12 €"       ;# -> 12.0      (currency)
+::tclutils::tunumany::parse "1.5K"       ;# -> 1500      (SI)
+::tclutils::tunumany::parse "2Mi"        ;# -> 2097152   (IEC)
+::tclutils::tunumany::parse "x" -default 0   ;# -> 0
+.CE
+.SS Notes
+.IP \(bu
+This is the deliberate alternative to merging \fBtunum\fR and \fBtunumfmt\fR: it keeps each parser focused while giving one dispatch point.
+.IP \(bu
+Output is always a Tcl number (or the default); format for display separately.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUNUMANY <REASON>}\fR (\fBOPTION\fR, \fBPREFER\fR).

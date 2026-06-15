@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.57.0
+
+Adds one color module; the library remains pure Tcl and runs on Tcl 8.6 and
+Tcl 9.x.
+
+- Color: `tucolor` -- named-color database and conversions. Resolves color
+  names / `#rgb` / `#rrggbb` / `{r g b}` to RGB, converts to hex and HSV
+  (`rgb`, `hex`, `toHsv`, `fromHsv`), lists/checks names (`names`, `exists`) and
+  finds the nearest named color (`nearest`). The 148-entry CSS3/X11 name table
+  is embedded (generated from Tk's `winfo rgb`, so values match X11/Tk), keeping
+  the module GUI-free -- no Tk/X11 at runtime. Complements `tuterm`, `tupng`
+  and `tusvg`. Ships with `test`, `doc`, `man` and demo; added to the umbrella.
+- Recommended pairing: tclutils 0.57.0 + tkutils 0.41.0.
+
+## 0.56.0
+
+Adds one console module; the library remains pure Tcl and runs on Tcl 8.6 and
+Tcl 9.x.
+
+- Terminal / console: `tuterm` -- ANSI terminal styling (SGR): text attributes
+  and 16- / 256- / 24-bit colors via `style` / `wrap`, an SGR `strip`, a global
+  `enable` switch that honours the `NO_COLOR` convention (`auto`), and optional
+  Windows VT-mode init (`enableVT`, via `twapi`; no-op on other platforms).
+  Generalised from a console helper; GUI-free. Ships with `test`, `doc`, `man`
+  and demo. Added to the umbrella (now 0.56.0).
+- Recommended pairing: tclutils 0.56.0 + tkutils 0.41.0.
+
+## 0.55.0
+
+Adds two number modules; the library remains pure Tcl and runs on Tcl 8.6 and
+Tcl 9.x.
+
+- Numbers: `tunum` -- locale-aware parsing of grouped / currency amounts
+  (EU `1.234,56`, US `1,234.56`, currency-symbol stripping) with `parse`,
+  `sum` (skips non-numeric values) and `isNumber`. Pure Tcl, value-based;
+  output is always a Tcl number.
+- Numbers: `tunumany` -- a single `parse` entry point that routes to the right
+  backend instead of merging them: locale / currency strings go to `tunum`,
+  SI/IEC unit notation (`1.5K`, `2Mi`) to `tunumfmt`, with `-prefer` to force a
+  route and a fallback to the other. Keeps the two specialised parsers separate
+  while giving callers one function for either notation.
+- `tunum` and `tunumany` are added to the umbrella; each ships with `test`,
+  `doc`, `man` and demo. `tcltest` suite green on Tcl 8.6 and Tcl 9.x.
+- Recommended pairing: tclutils 0.55.0 + tkutils 0.41.0.
+
 ## 0.54.0
 
 Adds one module; the library remains pure Tcl and runs on Tcl 8.6 and Tcl 9.x.

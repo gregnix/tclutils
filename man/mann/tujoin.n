@@ -1,7 +1,7 @@
 .TH tujoin n 0.1 tclutils
 .SH tclutils::tujoin
 .PP
-\fB tclutils::tujoin \fR joins two simple delimited text sources on a selected field. It is inspired by Unix \fBjoin\fR, but intentionally small.
+\fBtclutils::tujoin\fR joins two simple delimited text sources on a selected field. It is inspired by Unix \fBjoin\fR, but intentionally small.
 .SS Load
 .CS
 package require tclutils::tujoin

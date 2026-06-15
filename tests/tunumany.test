@@ -1,0 +1,20 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file normalize [file join $here .. lib tm]]
+package require tclutils::tunumany
+
+test tunumany-1.1 {locale EU}    -body {::tclutils::tunumany::parse "1.234,56"} -result 1234.56
+test tunumany-1.2 {locale US}    -body {::tclutils::tunumany::parse "1,234.56"} -result 1234.56
+test tunumany-1.3 {currency}     -body {::tclutils::tunumany::parse "12 \u20AC"} -result 12.0
+test tunumany-1.4 {SI K}         -body {::tclutils::tunumany::parse "1.5K"} -result 1500
+test tunumany-1.5 {IEC Mi}       -body {::tclutils::tunumany::parse "2Mi"} -result 2097152
+test tunumany-1.6 {plain number} -body {::tclutils::tunumany::parse "42"} -result 42.0
+test tunumany-2.1 {default}      -body {::tclutils::tunumany::parse "x" -default 0} -result 0
+test tunumany-2.2 {empty}        -body {::tclutils::tunumany::parse "" -default {}} -result {}
+test tunumany-3.1 {prefer locale falls back to si} -body {::tclutils::tunumany::parse "1.5K" -prefer locale} -result 1500
+test tunumany-3.2 {bad prefer errors} -body {
+    catch {::tclutils::tunumany::parse "1" -prefer bogus} e; set e
+} -match glob -result {*prefer must be*}
+cleanupTests

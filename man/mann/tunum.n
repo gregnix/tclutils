@@ -1,0 +1,56 @@
+.TH tunum n 0.1 tclutils
+.SH tclutils::tunum
+.PP
+Robust parsing and summation of human\-formatted numbers in pure Tcl.
+.PP
+\fBtunum\fR reads numbers as people write them — with thousands grouping, a comma or dot as the decimal mark, currency symbols and stray whitespace — and turns them into plain Tcl doubles. It is GUI\-free and library\-neutral, usable on its own or as the numeric backend for table footers (\fBtkutils::tkutlfooter\fR).
+.SS Package
+.CS
+package require tclutils::tunum 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tunum::parse    s ?-default {}?
+::tclutils::tunum::sum      values ?-default 0?
+::tclutils::tunum::isNumber s
+.CE
+.SS parse
+.PP
+Parses a single value and returns a Tcl double, or \fB\-default\fR (empty by default) when the string is not a recognisable number.
+.CS
+::tclutils::tunum::parse "1.234,56"      ;# -> 1234.56   (EU grouping)
+::tclutils::tunum::parse "1,234.56"      ;# -> 1234.56   (US grouping)
+::tclutils::tunum::parse "1234.56"       ;# -> 1234.56
+::tclutils::tunum::parse "12 €"          ;# -> 12.0      (currency stripped)
+::tclutils::tunum::parse "-5,5"          ;# -> -5.5
+::tclutils::tunum::parse "abc"           ;# -> {}        (unparsable)
+::tclutils::tunum::parse "abc" -default 0 ;# -> 0
+.CE
+.PP
+Format detection: a comma followed by digits at the end (\fB…,56\fR) is treated as the decimal mark (EU style) and dots are grouping; otherwise commas are grouping (US style) and the dot is the decimal mark. Stripped before parsing: the \fB€\fR, \fB$\fR, \fB£\fR, \fB¥\fR symbols and spaces/tabs.
+.SS sum
+.PP
+Sums a list of human\-formatted values. Unparsable entries are skipped. Returns a double, or \fB\-default\fR (0 by default) when nothing was parsable.
+.CS
+::tclutils::tunum::sum {1,50 2,00 4,20}          ;# -> 7.7
+::tclutils::tunum::sum {1.000,00 250,50}         ;# -> 1250.5
+::tclutils::tunum::sum {10 abc 5}                ;# -> 15.0  (abc skipped)
+::tclutils::tunum::sum {} -default {}            ;# -> {}
+.CE
+.SS isNumber
+.PP
+Returns 1 if the value parses as a number, else 0.
+.CS
+::tclutils::tunum::isNumber "3,14"   ;# -> 1
+::tclutils::tunum::isNumber "x"      ;# -> 0
+.CE
+.SS "Error codes"
+.PP
+Option errors are raised with \fB\-errorcode {TCLUTILS TUNUM OPTION}\fR.
+.SS Notes
+.IP \(bu
+Output is always a Tcl double (e.g. \fB7.7\fR, not \fB"7,70"\fR). Use \fBformat\fR for display formatting, e.g. \fBformat "%.2f" [::tclutils::tunum::sum $vals]\fR.
+.IP \(bu
+The currency symbol \fB€\fR is handled via the \fB\eu20AC\fR escape, so the module is safe to source from a \fB.tm\fR regardless of the channel encoding.
+.IP \(bu
+\fBRelation to \fR\fBtclutils::tunumfmt\fR\fB:\fR the two do \fInot\fR overlap. \fBtunum\fR parses locale\-grouped / currency numbers (\fB1.234,56 €\fR); \fBtunumfmt::fromHuman\fR parses SI/IEC unit notation (\fB1.5K\fR → 1500, \fB2Mi\fR → 2097152). Use \fBtunum\fR for user\-entered amounts, \fBtunumfmt\fR for engineering / byte\-size notation.

@@ -1,4 +1,4 @@
-# tclutils 0.53.0
+# tclutils 0.55.0
 
 `tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
 text filters, data-format parsers/encoders, binary and checksum helpers, and a
@@ -14,7 +14,7 @@ Put the library's module directory on the Tcl module path, then require the
 umbrella package (loads all core modules) or a single module:
 
 ```tcl
-::tcl::tm::path add /path/to/tclutils-0.53.0/lib/tm
+::tcl::tm::path add /path/to/tclutils-0.55.0/lib/tm
 package require tclutils          ;# umbrella: all core modules
 package require tclutils::tucsv    ;# or just one module
 ```
@@ -31,7 +31,7 @@ the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping
 | Text / coreutils filters | `tucat` `tutac` `turev` `tunl` `tuseq` `tuhead` `tutail` `tuwc` `tusort` `tutsort` `tuuniq` `tucut` `tupaste` `tujoin` `tucomm` `tucsplit` `tusplit` `tufold` `tuexpand` `tushuf` `tucolumn` `tupr` `tutr` `tused` `tugrep` `tuawk` `tuxargs` `tufmt` |
 | Compare / patch | `tucmp` `tudiff` `tupatch` |
 | Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` `tupngdraw` `tutablepng` `tumonthpng` `tucodepng` `tupngpad` `tusvg` |
-| Data / serialization | `tucsv` `tujson` `tuxml` `tunumfmt` `tusqlite` |
+| Data / serialization | `tucsv` `tujson` `tuxml` `tusqlite` |
 | Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` `tuexe` |
 | Fuzzy search | `tufuzzy` `tuagrep` |
 | Records / PIM | `tunotes` `tuical` `tuini` `tuvcard` `tuldif` `tubookmark` |
@@ -42,13 +42,18 @@ the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping
 | Strings / validation | `tustr` `tuvalidate` `tupagespec` |
 | Lists / dicts | `tulist` `tudict` |
 | Math / tables | `tumath` `tutable` |
+| Number parsing / formatting | `tunum` `tunumany` `tunumfmt` |
 | Archive | `tuzip` `tuzipfs` |
+| Deployment / packaging | `tudeploy` |
+| Introspection / diagnostics | `tuappinfo` `tupkgfinder` |
 | Core | `common` |
 
 Highlights: `tucsv` (RFC-4180 quoting, multiline, BOM strip, lenient `-strict 0`),
 `tujson` (parse/`parseTyped`/`fromJson` **and** the `toJson` encoder with
 `str`/`num`/`bool`/`null`/`obj`/`arr` builders), `tuhash` (pure-Tcl
-SHA-256/SHA-1/MD5 verified against the standard vectors).
+SHA-256/SHA-1/MD5 verified against the standard vectors), and `tunumany`
+(one `parse` that accepts both locale/currency amounts and SI/IEC notation,
+routing to `tunum` / `tunumfmt`).
 
 The optional net/data helpers `tudav`, `tufetch`, `tusparql` and `tusqlite` are
 the exception to "no external dependencies": they need the `tls` package (or a
