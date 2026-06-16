@@ -80,3 +80,11 @@ set rows [::tclutils::tucsv::file data.csv -delimiter {;}]
 - `-strict 0` recovers from an unterminated quoted field instead of raising
   `{TCLUTILS TUCSV QUOTE}` (useful for loading messy real-world exports). The
   default `-strict 1` keeps the previous strict behaviour.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tucsv::text rows args                          ;# format ROWS (a list of field lists) as CSV text; -delimiter -quote -alwaysQuote -newline
+```

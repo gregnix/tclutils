@@ -64,3 +64,11 @@ on Tcl 8.6 and 9.x.
 
 Errors: HTTP failures → `{TCLUTILS TUDAV HTTP}`; missing tls for https →
 `{TCLUTILS TUDAV TLS}`.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tudav::configure c args                        ;# set options on an existing WebDAV client handle C (same options as the constructor)
+```

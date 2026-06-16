@@ -62,3 +62,11 @@ content.
 
 `findHex`, `findString`, and `patch` currently read the complete file into
 memory. `readBytes` is the partial-read API for large files.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tuhexedit::backup filename ?backupName?        ;# write a backup copy of FILENAME (default FILENAME plus .bak) before an in-place edit
+```

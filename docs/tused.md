@@ -59,3 +59,11 @@ set out [::tclutils::tused::script $text {
 ```
 
 Hinweis: Das Scriptformat ist bewusst klein und noch kein vollstaendiger sed-Ersatz.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tused::substitute line pattern replacement args ;# apply one sed-style substitution to a single LINE (PATTERN to REPLACEMENT); -all -nocase
+```

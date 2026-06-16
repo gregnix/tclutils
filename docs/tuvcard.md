@@ -32,3 +32,13 @@ set card [tuvcard::setPhotoUri $card https://example.com/me.jpg]
 to raw bytes and reports the MIME type (from the `TYPE` parameter, the data URI,
 or sniffed via `tuimage`). `setPhoto`/`setPhotoUri` replace any existing PHOTO.
 Reuses `tclutils::tubase64` and `tclutils::tuimage`.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tuvcard::addProperty card name value ?params?  ;# return a copy of a card with a property appended
+tuvcard::removeProperty card index             ;# return a copy of a card with the property at index removed
+tuvcard::setProperty card index name value ?params? ;# return a copy of a card with the property at index replaced
+```

@@ -21,3 +21,12 @@ tustr::count $s $sub                    ;# non-overlapping occurrences
 `padLeft`/`padRight`/`center`/`truncate` take a non-negative integer width/length
 (`{TCLUTILS TUSTR ARG}` otherwise). `char` should be a single character.
 `slugify`/`toSnake`/`toCamel` operate on the ASCII alphanumerics in the input.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tustr::endsWith s suffix                       ;# true if S ends with SUFFIX
+tustr::removeSuffix s suffix                   ;# return S without a trailing SUFFIX (unchanged if absent)
+```

@@ -40,3 +40,12 @@ The `*Info` helpers return a flat dict; missing properties are `""` and text
 fields (summary/description/location) are unescaped. `newComponent` seeds
 properties from a flat `{NAME value ...}` list and yields a component usable
 with `addProperty`/`setProperty`/`toIcs`.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tuical::removeProperty comp name               ;# return a copy of a component with all properties named NAME removed
+tuical::unescapeText s                         ;# decode an iCalendar TEXT value (reverse the backslash escaping of newline, comma, semicolon)
+```

@@ -16,3 +16,13 @@ tuldif::toDict     entry           ;# -> dict attr -> list of values
 ```
 Continuation lines (a leading space) are unfolded automatically.
 Error code: `{TCLUTILS TULDIF SYNTAX}`.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tuldif::addAttr entry attr value               ;# return a copy of an entry with an {attr value} pair appended
+tuldif::removeAttr entry index                 ;# return a copy of an entry with the pair at index removed
+tuldif::setAttr entry index attr value         ;# return a copy of an entry with the pair at index replaced
+```

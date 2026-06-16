@@ -36,3 +36,12 @@ remaining left fields, then the remaining right fields.
 
 Outer joins are available through `-outer left`, `-outer right`, and `-outer full`. The default remains the existing inner join behavior (`-outer none`).
 
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tujoin::files leftPath rightPath args          ;# relational join of two files on a key field (file variant of lines)
+tujoin::lines leftLines rightLines args        ;# relational join of two line lists on a key field; -leftfield -rightfield -delimiter -header -outer
+```

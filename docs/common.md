@@ -29,3 +29,12 @@ This avoids the removed Tcl 9 channel encoding name `binary` and still preserves
 `splitDelimited` supports both one-character and multi-character delimiters.
 It is used by `tucut` and `tujoin`, replacing duplicated private `_split`
 implementations.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+common::ensureBoolean value optionName         ;# return the canonical boolean for VALUE, or throw an OPTION error naming OPTIONNAME
+common::ensurePositiveInteger value what       ;# return VALUE if it is a positive integer, else throw an error naming WHAT
+```

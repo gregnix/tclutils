@@ -28,3 +28,11 @@ Field numbers are 1-based. Simple ranges like `2-4` are supported.
 
 Character selection is available through `tclutils::tucut::chars` and the `-chars` option. Supported specs include single positions, closed ranges like `2-4`, and open ranges like `4-` or `-3`. Character positions are 1-based.
 
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tucut::line line args                          ;# extract fields or characters from a single LINE; -fields/-chars -delimiter -joiner
+```

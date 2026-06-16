@@ -52,3 +52,11 @@ tclsh tusign.tcl german quotes
 
 Byte-oriented tables (0..255), not a full Unicode chart. For Unicode blocks
 use dedicated tools; `tucode` focuses on ASCII and Latin-1/ANSI compatibility.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tucode::lookupChar char                        ;# return the lookup record (name, code point, category) for a single CHAR
+```

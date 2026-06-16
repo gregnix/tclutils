@@ -20,3 +20,11 @@ package require tclutils::tupaste
 ```
 
 If one input is shorter than the others, empty fields are used.
+
+## Additional exported commands
+
+Documented for completeness (same module, also covered by the test suite):
+
+```tcl
+tupaste::lines lineLists args                  ;# merge several column lists row-by-row into delimited lines (like paste); -delimiter
+```
