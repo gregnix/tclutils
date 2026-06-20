@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tubin 0.1
+package require tclutils::tubin 0.3
 
 test tubin-1.1 {hex roundtrip} -body {
     set bytes [::tclutils::tubin::hexToBytes {50 4B 03 04}]
@@ -40,5 +40,91 @@ test tubin-1.7 {bad hex rejected} -body {
     catch {::tclutils::tubin::hexToBytes {5XZ}} msg
     set msg
 } -match glob -result {*hex*}
+
+# --- 0.3: variable-length little-endian unsigned -----------------------------
+
+test tubin-2.1 {uintbe 3 bytes} -body {
+    ::tclutils::tubin::uintbe [binary format ccc 1 2 3] 0 3
+} -result 66051
+
+test tubin-2.2 {uintle 3 bytes} -body {
+    ::tclutils::tubin::uintle [binary format ccc 1 2 3] 0 3
+} -result 197121
+
+test tubin-2.3 {uintbe/uintle zero length} -body {
+    list [::tclutils::tubin::uintbe x 0 0] [::tclutils::tubin::uintle x 0 0]
+} -result {0 0}
+
+# --- 0.3: signed integer readers ---------------------------------------------
+
+test tubin-2.4 {i8 boundaries} -body {
+    list [::tclutils::tubin::i8 [binary format c 127]] \
+         [::tclutils::tubin::i8 [binary format c -128]] \
+         [::tclutils::tubin::i8 [binary format c -1]]
+} -result {127 -128 -1}
+
+test tubin-2.5 {i16 be/le min} -body {
+    list [::tclutils::tubin::i16be [binary format S 0x8000]] \
+         [::tclutils::tubin::i16le [binary format s 0x8000]]
+} -result {-32768 -32768}
+
+test tubin-2.6 {i32 be/le negative} -body {
+    list [::tclutils::tubin::i32be [binary format I -5]] \
+         [::tclutils::tubin::i32le [binary format i -5]]
+} -result {-5 -5}
+
+test tubin-2.7 {i64be negative} -body {
+    ::tclutils::tubin::i64be [binary format W -1]
+} -result -1
+
+# --- 0.3: little-endian floats -----------------------------------------------
+
+test tubin-2.8 {f32le} -body {
+    ::tclutils::tubin::f32le [binary format r 2.5]
+} -result 2.5
+
+test tubin-2.9 {f64le} -body {
+    ::tclutils::tubin::f64le [binary format q -3.25]
+} -result -3.25
+
+# --- 0.3: reader cursor ------------------------------------------------------
+
+test tubin-3.1 {sequential reads advance position} -body {
+    set rd [::tclutils::tubin::reader new [binary format IS 0x01020304 0x0506]]
+    set a [$rd u32be]; set p [$rd tell]; set b [$rd u16be]; set e [$rd atEnd]
+    $rd destroy
+    list $a $p $b $e
+} -result {16909060 4 1286 1}
+
+test tubin-3.2 {bytes, skip, seek, remaining} -body {
+    set rd [::tclutils::tubin::reader new [binary format ccccc 10 20 30 40 50]]
+    set first [$rd bytes 2]
+    $rd skip 1
+    set v [$rd u8]
+    set rem [$rd remaining]
+    $rd seek 0
+    set back [$rd u8]
+    $rd destroy
+    list [::tclutils::tubin::bytesToUnsignedList $first] $v $rem $back
+} -result {{10 20} 40 1 10}
+
+test tubin-3.3 {uintbe/uintle via cursor} -body {
+    set rd [::tclutils::tubin::reader new [binary format ccc 1 2 3]]
+    set be [$rd uintbe 3]; $rd seek 0; set le [$rd uintle 3]
+    $rd destroy
+    list $be $le
+} -result {66051 197121}
+
+test tubin-3.4 {unknown reader method errors} -body {
+    set rd [::tclutils::tubin::reader new abc]
+    set rc [catch {$rd nosuch} e]
+    $rd destroy
+    list $rc [lrange $::errorCode 0 2]
+} -result {1 {TCLUTILS TUBIN READER}}
+
+test tubin-3.5 {unknown reader subcommand errors} -body {
+    catch {::tclutils::tubin::reader bogus} e
+    lrange $::errorCode 0 2
+} -result {TCLUTILS TUBIN READER}
 
 cleanupTests

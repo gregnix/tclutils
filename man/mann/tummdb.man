@@ -1,0 +1,80 @@
+[comment {-*- tcl -*- doctools manpage}]
+[manpage_begin tclutils::tummdb n 0.1]
+[moddesc   {tclutils}]
+[titledesc {Pure-Tcl reader for the MaxMind DB (.mmdb) binary format}]
+[require Tcl 8.6]
+[require tclutils::tubin 0.2]
+[require tclutils::tummdb 0.1]
+[description]
+
+This package reads MaxMind DB ([term .mmdb]) files, version 2.0 of the binary
+format, in pure Tcl. It resolves IPv4 and IPv6 addresses to their associated
+data records and works with GeoLite2, GeoIP2 and DB-IP style databases.
+
+All binary primitives are taken from [package tclutils::tubin]
+([cmd uintbe], [cmd f32be], [cmd f64be], [cmd u8]).
+
+[para]
+
+The file is loaded fully into memory when opened; lookups are then a binary
+search over the database's prefix tree followed by decoding the data record.
+
+[section COMMANDS]
+
+[list_begin definitions]
+
+[call [cmd ::tclutils::tummdb::open] [arg path]]
+
+Open the database at [arg path] and return an opaque [arg handle] used by the
+other commands. Throws an error (error code [const {TCLUTILS TUMMDB FORMAT}])
+if the file is not a valid MaxMind DB.
+
+[call [cmd ::tclutils::tummdb::metadata] [arg handle]]
+
+Return the database metadata as a dictionary. Always present keys include
+[const node_count], [const record_size], [const ip_version],
+[const database_type] and [const build_epoch].
+
+[call [cmd ::tclutils::tummdb::lookup] [arg handle] [arg ip]]
+
+Look up [arg ip] (an IPv4 or IPv6 address string). Returns the decoded record
+as a nested structure (maps become dictionaries, arrays become lists,
+localized names appear under a [const names] sub-dictionary), or the empty
+string if the address is not contained in the database.
+
+[call [cmd ::tclutils::tummdb::close] [arg handle]]
+
+Release the resources associated with [arg handle].
+
+[list_end]
+
+[section EXAMPLE]
+
+[example {
+package require tclutils::tummdb
+
+set h [::tclutils::tummdb::open /path/to/GeoLite2-City.mmdb]
+set r [::tclutils::tummdb::lookup $h 81.2.69.142]
+puts [dict get $r country iso_code]   ;# GB
+puts [dict get $r city names en]      ;# London
+::tclutils::tummdb::close $h
+}]
+
+[section "ERROR CODES"]
+
+[list_begin definitions]
+[def {TCLUTILS TUMMDB FORMAT}]    File is not a valid MaxMind DB.
+[def {TCLUTILS TUMMDB HANDLE}]    Unknown handle passed to a command.
+[def {TCLUTILS TUMMDB RECORDSIZE}] Unsupported tree record size.
+[def {TCLUTILS TUMMDB TYPE}]      Unsupported data type in the record.
+[list_end]
+
+[section LIMITATIONS]
+
+The whole database is held in memory while open. The data section is limited
+to 4 GB by the format. The interpretation of record fields (which keys exist)
+is defined by the database, not by this reader.
+
+[see_also tclutils::tubin]
+[keywords mmdb MaxMind GeoIP geolocation IP binary]
+[manpage_end]

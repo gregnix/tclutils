@@ -1,0 +1,101 @@
+# tummdb.test -- tests for tclutils::tummdb
+#
+# Run:  tclsh tummdb.test
+# Optional integration tests run when TUMMDB_TEST_DB points to an .mmdb file.
+
+package require tcltest
+namespace import ::tcltest::*
+
+# Locate the modules under test via the package's own lib/tm.
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tubin 0.3-
+package require tclutils::tummdb
+
+# Convenience: decode a hex blob and return only the value.
+proc decodeHex {hex} {
+    set raw [::tclutils::tubin::hexToBytes $hex]
+    set rd  [::tclutils::tubin::reader new $raw 0]
+    set value [::tclutils::tummdb::DecodeValue $rd 0]
+    $rd destroy
+    return $value
+}
+
+# --- data decoder (hand-crafted vectors from the spec) -----------------------
+
+test decode-string {utf-8 string "AB"} -body {
+    decodeHex 424142
+} -result AB
+
+test decode-uint32-1byte {unsigned 32-bit, value 1} -body {
+    decodeHex C101
+} -result 1
+
+test decode-uint16 {unsigned 16-bit, value 300} -body {
+    # control A2 = type5 (101), size2 ; payload 012C = 300
+    decodeHex A2012C
+} -result 300
+
+test decode-bool-true {boolean true} -body {
+    # 01 -> extended, size=1 ; 07 -> type 14 (boolean) ; value = size = 1
+    decodeHex 0107
+} -result 1
+
+test decode-bool-false {boolean false} -body {
+    decodeHex 0007
+} -result 0
+
+test decode-array {array {1 2}} -body {
+    # 02 -> extended, size=2 ; 04 -> type 11 (array) ; then two uints C1 01, C1 02
+    decodeHex 0204C101C102
+} -result {1 2}
+
+test decode-map {map k=>1} -body {
+    # E1 -> type7 (map), 1 pair ; key "k" (41 6B) ; value uint 1 (C1 01)
+    decodeHex E1416BC101
+} -result {k 1}
+
+test decode-nested-map {map outer=>{inner=>7}} -body {
+    # E1 (map,1) key "a"(41 61) value E1(map,1) key "b"(41 62) value C1 07
+    decodeHex E14161E14162C107
+} -result {a {b 7}}
+
+# --- integration (only with a real database) ---------------------------------
+
+set dbFile ""
+if {[info exists ::env(TUMMDB_TEST_DB)] && [file exists $::env(TUMMDB_TEST_DB)]} {
+    set dbFile $::env(TUMMDB_TEST_DB)
+}
+testConstraint hasDB [expr {$dbFile ne ""}]
+
+test open-metadata {metadata has required keys} -constraints hasDB -body {
+    set h [::tclutils::tummdb::open $dbFile]
+    set m [::tclutils::tummdb::metadata $h]
+    ::tclutils::tummdb::close $h
+    expr {[dict exists $m node_count] && [dict exists $m record_size] \
+          && [dict exists $m ip_version]}
+} -result 1
+
+test lookup-known {known IP resolves to a country} -constraints hasDB -body {
+    set h [::tclutils::tummdb::open $dbFile]
+    set r [::tclutils::tummdb::lookup $h 81.2.69.142]
+    ::tclutils::tummdb::close $h
+    dict get $r country iso_code
+} -result GB
+
+test lookup-missing {unrouted IP returns empty} -constraints hasDB -body {
+    set h [::tclutils::tummdb::open $dbFile]
+    set r [::tclutils::tummdb::lookup $h 203.0.113.99]
+    ::tclutils::tummdb::close $h
+    set r
+} -result {}
+
+test bad-file {opening a non-MMDB file errors} -body {
+    set tmp [makeFile "not an mmdb" notmmdb.bin]
+    set rc [catch {::tclutils::tummdb::open $tmp} e]
+    removeFile notmmdb.bin
+    list $rc [lrange $::errorCode 0 1]
+} -result {1 {TCLUTILS TUMMDB}}
+
+cleanupTests
