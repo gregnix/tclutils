@@ -464,4 +464,47 @@ test tupngdraw-12.5 {bad -rule -> RULE} -body {
     dict get $o -errorcode
 } -result {TCLUTILS TUPNGDRAW RULE}
 
+# --- rounded rect (rect -rx/-ry) -------------------------------------------
+
+test tupngdraw-13.1 {rounded rect interior = fill colour} -body {
+    set p [::tclutils::tupngdraw::new -width 40 -height 40 -background white]
+    $p setfill {0 128 255}
+    $p rect 5 5 35 35 -fill 1 -outline 0 -rx 12 -ry 12
+    set r [$p pixel 20 20]
+    $p destroy
+    set r
+} -result {0 128 255 255}
+
+test tupngdraw-13.2 {rounding cuts the corner: rounded=bg, square=fill} -body {
+    set a [::tclutils::tupngdraw::new -width 40 -height 40 -background white]
+    $a setfill {0 128 255}
+    $a rect 5 5 35 35 -fill 1 -outline 0 -rx 12 -ry 12
+    set rounded [$a pixel 6 6]
+    $a destroy
+    set b [::tclutils::tupngdraw::new -width 40 -height 40 -background white]
+    $b setfill {0 128 255}
+    $b rect 5 5 35 35 -fill 1 -outline 0
+    set square [$b pixel 6 6]
+    $b destroy
+    list $rounded $square
+} -result {{255 255 255 255} {0 128 255 255}}
+
+test tupngdraw-13.3 {radius is clamped to half-extent (no error, centre filled)} -body {
+    set p [::tclutils::tupngdraw::new -width 40 -height 40 -background white]
+    $p setfill {0 128 255}
+    $p rect 5 5 35 35 -fill 1 -outline 0 -rx 100 -ry 100
+    set r [$p pixel 20 20]
+    $p destroy
+    set r
+} -result {0 128 255 255}
+
+test tupngdraw-13.4 {-ry defaults to -rx (corner cut in both axes)} -body {
+    set p [::tclutils::tupngdraw::new -width 40 -height 40 -background white]
+    $p setfill {0 128 255}
+    $p rect 5 5 35 35 -fill 1 -outline 0 -rx 12
+    set r [$p pixel 6 6]
+    $p destroy
+    set r
+} -result {255 255 255 255}
+
 cleanupTests

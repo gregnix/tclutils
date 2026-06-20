@@ -1,0 +1,101 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tumermaid
+
+namespace eval M { namespace import ::tclutils::tumermaid::* }
+
+proc nodeOf {m id key} {
+    foreach n [dict get $m nodes] {
+        if {[dict get $n id] eq $id} { return [dict get $n $key] }
+    }
+    return ""
+}
+proc edgeKey {m from to key} {
+    foreach e [dict get $m edges] {
+        if {[dict get $e from] eq $from && [dict get $e to] eq $to} { return [dict get $e $key] }
+    }
+    return ""
+}
+
+test tumermaid-1.1 {header sets direction; TD maps to TB} -body {
+    dict get [M::parse {flowchart TD
+        A --> B}] meta direction
+} -result TB
+
+test tumermaid-1.2 {graph LR keeps LR} -body {
+    dict get [M::parse {graph LR
+        A-->B}] meta direction
+} -result LR
+
+test tumermaid-2.1 {node shapes map correctly} -body {
+    set m [M::parse {flowchart LR
+        A[box] --> B(round) --> C((circ)) --> D{dia}}]
+    list [nodeOf $m A shape] [nodeOf $m B shape] [nodeOf $m C shape] [nodeOf $m D shape]
+} -result {box rounded rounded box}
+
+test tumermaid-2.2 {bracket text becomes the label; bare id is its own label} -body {
+    set m [M::parse {graph LR
+        A[Start Here] --> B}]
+    list [nodeOf $m A label] [nodeOf $m B label]
+} -result {{Start Here} B}
+
+test tumermaid-2.3 {quoted labels are unquoted} -body {
+    nodeOf [M::parse {graph LR
+        A["Quoted"] --> B}] A label
+} -result Quoted
+
+test tumermaid-3.1 {pipe-label edge} -body {
+    edgeKey [M::parse {graph LR
+        A -->|yes| B}] A B label
+} -result yes
+
+test tumermaid-3.2 {dash-text-arrow label form} -body {
+    edgeKey [M::parse {graph LR
+        A -- no --> B}] A B label
+} -result no
+
+test tumermaid-3.3 {--- is an arrowless edge} -body {
+    edgeKey [M::parse {graph LR
+        A --- B}] A B arrow
+} -result none
+
+test tumermaid-3.4 {dotted edge keeps arrow + dotted style} -body {
+    set m [M::parse {graph LR
+        A -.-> B}]
+    list [edgeKey $m A B arrow] [edgeKey $m A B style]
+} -result {end dotted}
+
+test tumermaid-4.1 {a chain yields N-1 edges} -body {
+    llength [dict get [M::parse {graph LR
+        A --> B --> C --> D}] edges]
+} -result 3
+
+test tumermaid-4.2 {comments and blank lines are ignored} -body {
+    set m [M::parse {%% a comment
+
+        flowchart LR
+        %% another
+        A --> B}]
+    llength [dict get $m nodes]
+} -result 2
+
+test tumermaid-5.1 {empty source is an error} -body {
+    M::parse {flowchart LR}
+} -returnCodes error -match glob -result {*no nodes*}
+
+test tumermaid-6.1 {the model renders via tudiagram (non-empty SVG)} -body {
+    set m [M::parse {flowchart LR
+        A[Start] --> B{Go}
+        B -->|y| C(End)
+        B -->|n| D
+        C --> E
+        D --> E}]
+    expr {[string length [::tclutils::tudiagram::toSvg $m]] > 0}
+} -result 1
+
+cleanupTests

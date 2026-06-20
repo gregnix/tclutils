@@ -1,35 +1,279 @@
-# tclutils::tusvg -- pure-Tcl SVG generator (ported from uitoolkit svglib 0.1)
+# tusvg-0.2.tm – SVG canvas, congruent with the tupngdraw object API.
 #
-# Builds SVG documents as Tcl dicts and renders them to a string or file:
-# rectangles, circles, ellipses, lines, poly*, paths, text, gradients and
-# groups, plus a library of ~110 named toolbar icons (`icon`, `icons`,
-# `saveIcon`). No dependencies (Tcl core only). Tcl 8.6+ / 9.x.
+# Goal of 0.2: tusvg and tupngdraw become drop-in swappable behind one drawing
+# loop. Both are TclOO canvases created via `<pkg> new -width W -height H`, with
+# identical method names and signatures for the shared primitives (rect, line,
+# polygon, circle, ellipse, text, textwidth, setfill/setstroke/setlinewidth,
+# data, write). tusvg emits an SVG document; tupngdraw paints RGBA pixels.
 #
-# Notes carried over from the original:
-# - tksvg/svgnano (Tk 8.6) does NOT render <text>; use real viewers or Tk 9.0+,
-#   or convert text to paths. The predefined icons are path/shape only and work.
-# - The SVG <text> element builder is named `textElement` here, because `text`
-#   is a Tk command and is barred as a proc name by convention.
+# CRITICAL — shared text metric: `textwidth` returns EXACTLY the same value as
+# tupngdraw (len * (6 + spacing) * scale), and `text` renders with
+# textLength/lengthAdjust so the on-canvas width matches that metric regardless
+# of the viewer's font. This makes box-sizing backend-independent (the contract
+# tudiagram relies on).
 #
-# Error codes: {TCLUTILS TUSVG <REASON>}.
+# Geometry congruence: rect/line take TWO CORNERS (x1 y1 x2 y2), like tupngdraw.
+# Paint congruence: tupngdraw-style state (setfill/setstroke/setlinewidth) plus
+# the same per-call options (-fill 0|1, -outline 0|1, -color, -fillcolor).
+#
+# Beyond the shared core, tusvg keeps its vector superset (path, polyline,
+# gradients, the icon library) as additional methods / legacy procs — these have
+# no tupngdraw counterpart and are not part of the swap contract.
+#
+# Namespace: ::tclutils::tusvg   Package: tclutils::tusvg 0.2
+# Errors:    {TCLUTILS TUSVG <REASON>}
+# Tcl 8.6+/9.x, TclOO core. No Tk, no external packages.
 
 package require Tcl 8.6-
+package require TclOO
+package require tclutils::common 0.1
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tusvg {
-    namespace export create write toString \
-        rect circle ellipse line polyline polygon \
-        path textElement \
-        group addToGroup addGroup \
-        linearGradient radialGradient \
-        icon saveIcon icons
-    variable version 0.1
+    namespace export new
 }
 
-# ============================================================
-# SVG-Dokument erstellen
-# ============================================================
+# --- colour: accept the same inputs as tupngdraw, emit an SVG/CSS colour ------
+#   CSS name ("red", "steelblue") or #hex -> passed through
+#   {r g b}      -> rgb(r,g,b)
+#   {r g b a}    -> rgba(r,g,b, a/255)
+proc ::tclutils::tusvg::_color {c} {
+    set n [llength $c]
+    if {$n == 3} {
+        lassign $c r g b
+        return "rgb($r,$g,$b)"
+    }
+    if {$n == 4} {
+        lassign $c r g b a
+        return "rgba($r,$g,$b,[format %.3f [expr {$a / 255.0}]])"
+    }
+    if {$n == 1} {
+        return [lindex $c 0]   ;# CSS name or #hex
+    }
+    return -code error -errorcode {TCLUTILS TUSVG COLOR} "invalid colour: $c"
+}
 
+proc ::tclutils::tusvg::_esc {s} {
+    return [string map {& &amp; < &lt; > &gt; \" &quot;} $s]
+}
+
+# ---------------------------------------------------------------------------
+# The canvas object.
+# ---------------------------------------------------------------------------
+oo::class create ::tclutils::tusvg::Canvas {
+    variable width height background fill stroke linewidth body defs
+
+    constructor {args} {
+        set o [::tclutils::common::parseOptions \
+            {-width 100 -height 100 -background white} {*}$args]
+        set width  [::tclutils::common::ensurePositiveInteger [dict get $o -width]  -width]
+        set height [::tclutils::common::ensurePositiveInteger [dict get $o -height] -height]
+        set background [dict get $o -background]
+        set fill   black
+        set stroke black
+        set linewidth 1
+        set body {}
+        set defs {}
+    }
+
+    method width  {} { return $width }
+    method height {} { return $height }
+
+    # --- state (congruent with tupngdraw) ---------------------------------
+    method setfill      {c} { set fill   [::tclutils::tusvg::_color $c]; return }
+    method setstroke    {c} { set stroke [::tclutils::tusvg::_color $c]; return }
+    method setlinewidth {n} {
+        set linewidth [::tclutils::common::ensurePositiveInteger $n -linewidth]
+        return
+    }
+
+    # Translate the tupngdraw-style {-fill -outline -color -fillcolor} options
+    # (plus current state) into an SVG fill/stroke attribute string.
+    method _paint {o} {
+        set f none
+        if {[dict get $o -fill]} {
+            set f [expr {[dict get $o -fillcolor] eq "" ? $fill \
+                : [::tclutils::tusvg::_color [dict get $o -fillcolor]]}]
+        }
+        set s none
+        set sw ""
+        if {[dict get $o -outline]} {
+            set s [expr {[dict get $o -color] eq "" ? $stroke \
+                : [::tclutils::tusvg::_color [dict get $o -color]]}]
+            set sw " stroke-width=\"$linewidth\""
+        }
+        return "fill=\"$f\" stroke=\"$s\"$sw"
+    }
+
+    # --- shared primitives -------------------------------------------------
+    method rect {x1 y1 x2 y2 args} {
+        set o [::tclutils::common::parseOptions \
+            {-fill 0 -outline 1 -color {} -fillcolor {} -rx 0 -ry 0} {*}$args]
+        ::tclutils::common::ensureBoolean [dict get $o -fill]    -fill
+        ::tclutils::common::ensureBoolean [dict get $o -outline] -outline
+        if {$x1 > $x2} { lassign [list $x2 $x1] x1 x2 }
+        if {$y1 > $y2} { lassign [list $y2 $y1] y1 y2 }
+        set w [expr {$x2 - $x1}]
+        set h [expr {$y2 - $y1}]
+        set rxry ""
+        if {[dict get $o -rx] > 0} { append rxry " rx=\"[dict get $o -rx]\"" }
+        if {[dict get $o -ry] > 0} { append rxry " ry=\"[dict get $o -ry]\"" }
+        lappend body "<rect x=\"$x1\" y=\"$y1\" width=\"$w\" height=\"$h\"$rxry [my _paint $o]/>"
+        return
+    }
+
+    method line {x1 y1 x2 y2 args} {
+        set o [::tclutils::common::parseOptions \
+            {-color {} -width {} -caps round} {*}$args]
+        set col [expr {[dict get $o -color] eq "" ? $stroke \
+            : [::tclutils::tusvg::_color [dict get $o -color]]}]
+        set lw [expr {[dict get $o -width] eq "" ? $linewidth \
+            : [::tclutils::common::ensurePositiveInteger [dict get $o -width] -width]}]
+        set cap [dict get $o -caps]
+        if {$cap ni {round butt square}} {
+            return -code error -errorcode {TCLUTILS TUSVG CAPS} \
+                "-caps must be round|butt|square"
+        }
+        lappend body "<line x1=\"$x1\" y1=\"$y1\" x2=\"$x2\" y2=\"$y2\"\
+ stroke=\"$col\" stroke-width=\"$lw\" stroke-linecap=\"$cap\"/>"
+        return
+    }
+
+    method polygon {points args} {
+        set o [::tclutils::common::parseOptions \
+            {-fill 0 -outline 1 -color {} -fillcolor {}} {*}$args]
+        ::tclutils::common::ensureBoolean [dict get $o -fill]    -fill
+        ::tclutils::common::ensureBoolean [dict get $o -outline] -outline
+        if {[expr {[llength $points] / 2}] < 3} {
+            return -code error -errorcode {TCLUTILS TUSVG POLY} \
+                "polygon needs at least 3 points"
+        }
+        lappend body "<polygon points=\"[my _points $points]\" [my _paint $o]/>"
+        return
+    }
+
+    method polyline {points args} {
+        set o [::tclutils::common::parseOptions {-color {} -width {}} {*}$args]
+        set col [expr {[dict get $o -color] eq "" ? $stroke \
+            : [::tclutils::tusvg::_color [dict get $o -color]]}]
+        set lw [expr {[dict get $o -width] eq "" ? $linewidth : [dict get $o -width]}]
+        lappend body "<polyline points=\"[my _points $points]\" fill=\"none\"\
+ stroke=\"$col\" stroke-width=\"$lw\"/>"
+        return
+    }
+
+    method circle {cx cy r args} {
+        set o [::tclutils::common::parseOptions \
+            {-fill 0 -outline 1 -color {} -fillcolor {}} {*}$args]
+        ::tclutils::common::ensureBoolean [dict get $o -fill]    -fill
+        ::tclutils::common::ensureBoolean [dict get $o -outline] -outline
+        lappend body "<circle cx=\"$cx\" cy=\"$cy\" r=\"$r\" [my _paint $o]/>"
+        return
+    }
+
+    method ellipse {cx cy rx ry args} {
+        set o [::tclutils::common::parseOptions \
+            {-fill 0 -outline 1 -color {} -fillcolor {}} {*}$args]
+        ::tclutils::common::ensureBoolean [dict get $o -fill]    -fill
+        ::tclutils::common::ensureBoolean [dict get $o -outline] -outline
+        lappend body "<ellipse cx=\"$cx\" cy=\"$cy\" rx=\"$rx\" ry=\"$ry\" [my _paint $o]/>"
+        return
+    }
+
+    # Text metric IDENTICAL to tupngdraw; textLength forces the rendered width
+    # to that metric so box-sizing is backend-independent.
+    method textwidth {str args} {
+        set o [::tclutils::common::parseOptions {-scale 1 -spacing 0} {*}$args]
+        set sc [::tclutils::common::ensurePositiveInteger [dict get $o -scale] -scale]
+        return [expr {[string length $str] * (6 + [dict get $o -spacing]) * $sc}]
+    }
+
+    method text {x y str args} {
+        set o [::tclutils::common::parseOptions \
+            {-color {} -scale 1 -spacing 0 -anchor start} {*}$args]
+        set col [expr {[dict get $o -color] eq "" ? $stroke \
+            : [::tclutils::tusvg::_color [dict get $o -color]]}]
+        set sc [::tclutils::common::ensurePositiveInteger [dict get $o -scale] -scale]
+        set tw [my textwidth $str -scale $sc -spacing [dict get $o -spacing]]
+        set fs       [expr {8 * $sc}]
+        set baseline [expr {$y + 7 * $sc}]
+        set anchor [dict get $o -anchor]
+        if {$anchor ni {start middle end}} {
+            return -code error -errorcode {TCLUTILS TUSVG ANCHOR} \
+                "-anchor must be start|middle|end"
+        }
+        # Anchor point x: start=left edge, middle=centre, end=right edge of the
+        # metric box, so callers that centre via textwidth match tupngdraw.
+        set ax [expr {$anchor eq "start" ? $x : ($anchor eq "end" ? $x + $tw : $x + $tw / 2.0)}]
+        lappend body "<text x=\"$ax\" y=\"$baseline\" font-family=\"monospace\"\
+ font-size=\"$fs\" textLength=\"$tw\" lengthAdjust=\"spacingAndGlyphs\"\
+ text-anchor=\"$anchor\" fill=\"$col\">[::tclutils::tusvg::_esc $str]</text>"
+        return
+    }
+
+    # --- SVG-only extensions (no tupngdraw counterpart) -------------------
+    method path {d args} {
+        set o [::tclutils::common::parseOptions \
+            {-fill 0 -outline 1 -color {} -fillcolor {}} {*}$args]
+        ::tclutils::common::ensureBoolean [dict get $o -fill]    -fill
+        ::tclutils::common::ensureBoolean [dict get $o -outline] -outline
+        lappend body "<path d=\"$d\" [my _paint $o]/>"
+        return
+    }
+
+    # Embed a named icon from the legacy icon library at (x,y) scaled to `size`.
+    method icon {name x y size args} {
+        set inner [::tclutils::tusvg::icon $name $size {*}$args]
+        # icon() returns a standalone <svg ...>...</svg>; nest it positioned.
+        regsub {^<svg[^>]*>} $inner "<svg x=\"$x\" y=\"$y\" width=\"$size\"\
+ height=\"$size\" viewBox=\"0 0 24 24\">" inner
+        lappend body $inner
+        return
+    }
+
+    method addDef {def} { lappend defs $def; return }
+
+    # --- output ------------------------------------------------------------
+    method data {args} {
+        set bg ""
+        if {$background ne "" && $background ne "none"} {
+            set bg "  <rect x=\"0\" y=\"0\" width=\"$width\" height=\"$height\"\
+ fill=\"[::tclutils::tusvg::_color $background]\"/>\n"
+        }
+        set d ""
+        if {[llength $defs]} {
+            set d "  <defs>\n    [join $defs "\n    "]\n  </defs>\n"
+        }
+        set elems ""
+        foreach e $body { append elems "  $e\n" }
+        return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"$width\"\
+ height=\"$height\" viewBox=\"0 0 $width $height\">\n$d$bg$elems</svg>\n"
+    }
+
+    method write {file args} {
+        set fid [open $file w]
+        fconfigure $fid -encoding utf-8
+        puts -nonewline $fid [my data {*}$args]
+        close $fid
+        return $file
+    }
+
+    method _points {points} {
+        set out {}
+        foreach {x y} $points { lappend out "$x,$y" }
+        return [join $out " "]
+    }
+}
+
+proc ::tclutils::tusvg::new {args} {
+    return [::tclutils::tusvg::Canvas new {*}$args]
+}
+
+# ===========================================================================
+# LEGACY vector-authoring + icon library (tusvg 0.1 proc API).
+# Not part of the tupngdraw swap contract; kept as the vector superset
+# (gradients, paths, the 40+ icon set). The Canvas `icon` method delegates here.
+# ===========================================================================
 proc ::tclutils::tusvg::create {width height args} {
     array set opts {
         -viewBox ""
@@ -1457,4 +1701,5 @@ proc ::tclutils::tusvg::icons {} {
     }
 }
 
-package provide tclutils::tusvg $::tclutils::tusvg::version
+
+package provide tclutils::tusvg 0.2

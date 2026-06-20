@@ -1,0 +1,144 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tudiagram
+
+testConstraint tupngdraw [expr {![catch {package require tclutils::tupngdraw}]}]
+testConstraint tdom      [expr {![catch {package require tdom}]}]
+
+namespace eval D { namespace import ::tclutils::tudiagram::* }
+
+# --- model + validation ----------------------------------------------------
+
+test tudiagram-1.1 {create yields a versioned model} -body {
+    set d [D::create -title T -direction LR]
+    list [dict get $d version] [dict get $d meta direction] [llength [dict get $d nodes]]
+} -result {1 LR 0}
+
+test tudiagram-1.2 {duplicate node id is rejected} -body {
+    set d [D::create]
+    set d [D::addNode $d a]
+    D::addNode $d a
+} -returnCodes error -match glob -result {*duplicate node id*}
+
+test tudiagram-1.3 {bad direction is rejected} -body {
+    D::create -direction sideways
+} -returnCodes error -match glob -result {*LR or TB*}
+
+test tudiagram-1.4 {validate flags an edge to an unknown node} -body {
+    set d [D::create]
+    set d [D::addNode $d a]
+    set d [D::addEdge $d a ghost]
+    lindex [lindex [D::validate $d] 0] 0
+} -result NONODE
+
+test tudiagram-1.5 {label defaults to the id} -body {
+    set d [D::addNode [D::create] x]
+    dict get [lindex [dict get $d nodes] 0] label
+} -result x
+
+# --- layered layout --------------------------------------------------------
+
+test tudiagram-2.1 {layout assigns geometry to every node} -body {
+    set d [D::create]
+    foreach id {a b c} { set d [D::addNode $d $id] }
+    set d [D::addEdge $d a b]
+    set d [D::addEdge $d b c]
+    set d [D::layout $d]
+    set ok 1
+    foreach n [dict get $d nodes] {
+        foreach k {x y width height} { if {![dict exists $n $k]} { set ok 0 } }
+    }
+    set ok
+} -result 1
+
+test tudiagram-2.2 {longest-path ranks place a chain left to right (LR x increases)} -body {
+    set d [D::create -direction LR]
+    foreach id {a b c} { set d [D::addNode $d $id] }
+    set d [D::addEdge $d a b]
+    set d [D::addEdge $d b c]
+    set d [D::layout $d]
+    array set X {}
+    foreach n [dict get $d nodes] { set X([dict get $n id]) [dict get $n x] }
+    expr {$X(a) < $X(b) && $X(b) < $X(c)}
+} -result 1
+
+test tudiagram-2.3 {parallel successors share a rank and stack (same x, different y)} -body {
+    set d [D::create -direction LR]
+    foreach id {a b c} { set d [D::addNode $d $id] }
+    set d [D::addEdge $d a b]
+    set d [D::addEdge $d a c]
+    set d [D::layout $d]
+    array set P {}
+    foreach n [dict get $d nodes] { set P([dict get $n id]) [list [dict get $n x] [dict get $n y]] }
+    expr {[lindex $P(b) 0] == [lindex $P(c) 0] && [lindex $P(b) 1] != [lindex $P(c) 1]}
+} -result 1
+
+test tudiagram-2.4 {wider label yields a wider box} -body {
+    set d [D::create]
+    set d [D::addNode $d a -label "X"]
+    set d [D::addNode $d b -label "a much longer label"]
+    set d [D::layout $d]
+    array set W {}
+    foreach n [dict get $d nodes] { set W([dict get $n id]) [dict get $n width] }
+    expr {$W(b) > $W(a)}
+} -result 1
+
+test tudiagram-2.5 {a cycle is broken best-effort: one edge flagged back, no crash} -body {
+    set d [D::create]
+    foreach id {a b} { set d [D::addNode $d $id] }
+    set d [D::addEdge $d a b]
+    set d [D::addEdge $d b a]
+    set d [D::layout $d]
+    set backs 0
+    foreach e [dict get $d edges] { incr backs [dict get $e back] }
+    set backs
+} -result 1
+
+test tudiagram-2.6 {empty diagram cannot be laid out} -body {
+    D::layout [D::create]
+} -returnCodes error -match glob -result {*empty*}
+
+test tudiagram-2.7 {long edges route through dummy waypoints; adjacent edges stay straight} -body {
+    set d [D::create]
+    foreach id {a b c e} { set d [D::addNode $d $id] }
+    set d [D::addEdge $d a b]
+    set d [D::addEdge $d b c]
+    set d [D::addEdge $d c e]
+    set d [D::addEdge $d a e]   ;# spans 3 ranks -> two dummy waypoints
+    set d [D::layout $d]
+    array set NP {}
+    foreach edge [dict get $d edges] {
+        set NP([dict get $edge from][dict get $edge to]) \
+            [expr {[llength [dict get $edge points]] / 2}]
+    }
+    list $NP(ab) $NP(ae)
+} -result {2 4}
+
+# --- render: backend-agnostic ----------------------------------------------
+
+test tudiagram-3.1 {toSvg produces well-formed SVG with the expected element counts} \
+        -constraints tdom -body {
+    set d [D::create -theme pipeline]
+    foreach id {a b} { set d [D::addNode $d $id] }
+    set d [D::addEdge $d a b]
+    dom parse [D::toSvg $d] doc
+    list [llength [$doc getElementsByTagName rect]] \
+         [llength [$doc getElementsByTagName line]] \
+         [llength [$doc getElementsByTagName text]]
+} -result {3 1 2}   ;# bg + 2 boxes, 1 edge, 2 labels
+
+test tudiagram-3.2 {the same model renders on both backends (svg + png non-empty)} \
+        -constraints tupngdraw -body {
+    set d [D::create]
+    foreach id {a b c} { set d [D::addNode $d $id -shape rounded] }
+    set d [D::addEdge $d a b]
+    set d [D::addEdge $d a c]
+    expr {[string length [D::toSvg $d]] > 0 && [string length [D::toPng $d]] > 0}
+} -result 1
+
+cleanupTests

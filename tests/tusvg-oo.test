@@ -1,0 +1,98 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tusvg 0.2
+
+# tupngdraw is needed for the cross-backend congruence tests; skip if absent.
+testConstraint tupngdraw [expr {![catch {package require tclutils::tupngdraw}]}]
+
+# --- OO canvas basics ------------------------------------------------------
+
+test tusvg-oo-1.1 {new + data yields an <svg> root with given size} -body {
+    set c [::tclutils::tusvg::new -width 24 -height 24]
+    string match {*<svg*width="24"*height="24"*} [$c data]
+} -result 1
+
+test tusvg-oo-1.2 {rect takes two corners and normalises them} -body {
+    set c [::tclutils::tusvg::new -width 50 -height 50]
+    $c rect 45 45 5 5
+    string match {*<rect x="5" y="5" width="40" height="40"*} [$c data]
+} -result 1
+
+test tusvg-oo-1.3 {default rect is outline-only (fill=none), like tupngdraw} -body {
+    set c [::tclutils::tusvg::new -width 50 -height 50]
+    $c rect 5 5 45 45
+    string match {*<rect*fill="none"*} [$c data]
+} -result 1
+
+test tusvg-oo-1.4 {setfill state applies to a filled rect} -body {
+    set c [::tclutils::tusvg::new -width 20 -height 20]
+    $c setfill "#abcdef"
+    $c rect 0 0 10 10 -fill 1
+    string match {*fill="#abcdef"*} [$c data]
+} -result 1
+
+test tusvg-oo-1.5 {text locks its width to textwidth via textLength} -body {
+    set c [::tclutils::tusvg::new -width 100 -height 30]
+    set tw [$c textwidth "ABC" -scale 2]   ;# 3 * 6 * 2 = 36
+    $c text 0 0 "ABC" -scale 2
+    string match "*textLength=\"$tw\"*lengthAdjust=\"spacingAndGlyphs\"*" [$c data]
+} -result 1
+
+test tusvg-oo-1.6 {polygon requires at least three points} -body {
+    set c [::tclutils::tusvg::new]
+    $c polygon {0 0 1 1}
+} -returnCodes error -match glob -result {*at least 3*}
+
+test tusvg-oo-1.7 {colour list forms map to rgb()/rgba()} -body {
+    set c [::tclutils::tusvg::new -width 10 -height 10]
+    $c setfill {255 0 0}
+    $c rect 0 0 5 5 -fill 1
+    $c setfill {0 0 255 128}
+    $c rect 5 5 10 10 -fill 1
+    set d [$c data]
+    expr {[string match {*fill="rgb(255,0,0)"*} $d] \
+       && [string match {*fill="rgba(0,0,255,0.502)"*} $d]}
+} -result 1
+
+# --- cross-backend congruence (the swap contract) --------------------------
+
+test tusvg-swap-2.1 {textwidth is identical across tusvg and tupngdraw} \
+        -constraints tupngdraw -body {
+    set a [::tclutils::tusvg::new     -width 10 -height 10]
+    set b [::tclutils::tupngdraw::new -width 10 -height 10]
+    set ok 1
+    foreach s {A Hello Markdown DocIR} {
+        foreach sc {1 2 3} {
+            if {[$a textwidth $s -scale $sc] != [$b textwidth $s -scale $sc]} {
+                set ok 0
+            }
+        }
+    }
+    set ok
+} -result 1
+
+test tusvg-swap-2.2 {one drawing proc runs unchanged on both backends} \
+        -constraints tupngdraw -body {
+    # Shared API only — the proc never names a backend.
+    proc _draw {c} {
+        $c setfill "#eeeeff"; $c setstroke "#333344"; $c setlinewidth 2
+        $c rect 5 5 95 45 -fill 1 -outline 1
+        set tw [$c textwidth "X" -scale 2]
+        $c text [expr {50 - $tw/2}] 18 "X" -scale 2 -color "#000000"
+        $c line 5 60 95 60 -width 2
+        $c polygon {95 60 85 55 85 65} -fill 1 -outline 0
+    }
+    set a [::tclutils::tusvg::new     -width 100 -height 80]
+    set b [::tclutils::tupngdraw::new -width 100 -height 80]
+    _draw $a
+    _draw $b
+    rename _draw {}
+    expr {[string length [$a data]] > 0 && [string length [$b data]] > 0}
+} -result 1
+
+cleanupTests
