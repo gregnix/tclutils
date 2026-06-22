@@ -1,0 +1,85 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tusankey
+
+namespace eval M { namespace import ::tclutils::tusankey::* }
+
+proc nlinks {m} { llength [dict get $m links] }
+proc link   {m i} { lindex [dict get $m links] $i }
+proc nodes  {m} { dict get $m nodes }
+
+# --- parse -------------------------------------------------------------------
+
+test tusankey-1.1 {a flow row parses to source/target/value} -body {
+    link [M::parse "sankey-beta\nA,B,10"] 0
+} -result {A B 10}
+
+test tusankey-1.2 {nodes are collected in first-seen order} -body {
+    nodes [M::parse "sankey-beta\nA,B,5\nB,C,3\nA,C,2"]
+} -result {A B C}
+
+test tusankey-1.3 {blank lines and %% comments are ignored} -body {
+    set src "sankey-beta\n%% a comment\n\nA,B,5\n\nB,C,3"
+    nlinks [M::parse $src]
+} -result 2
+
+test tusankey-1.4 {a quoted node name may contain a comma} -body {
+    set src "sankey-beta\n\"Heating, homes\",Output,5"
+    lindex [nodes [M::parse $src]] 0
+} -result {Heating, homes}
+
+test tusankey-1.5 {a doubled quote inside a quoted name is one quote} -body {
+    set src "sankey-beta\n\"say \"\"hi\"\"\",Out,5"
+    lindex [nodes [M::parse $src]] 0
+} -result {say "hi"}
+
+test tusankey-1.6 {rows with a non-numeric or non-positive value are skipped} -body {
+    set src "sankey-beta\nA,B,x\nC,D,0\nE,F,4"
+    nlinks [M::parse $src]
+} -result 1
+
+test tusankey-1.7 {the bare sankey header is also accepted} -body {
+    nlinks [M::parse "sankey\nA,B,7"]
+} -result 1
+
+# --- errors ------------------------------------------------------------------
+
+test tusankey-2.1 {a diagram with no flows raises TUSANKEY EMPTY} -body {
+    catch {M::parse "sankey-beta"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUSANKEY EMPTY}
+
+test tusankey-2.2 {-scale must be a positive integer} -body {
+    catch {M::toSvg [M::parse "sankey-beta\nA,B,5"] -scale 0} e o
+    lindex [dict get $o -errorcode] 2
+} -result ARG
+
+# --- render ------------------------------------------------------------------
+
+test tusankey-3.1 {toSvg yields one band polygon per link and a rect per node} -body {
+    set svg [M::toSvg [M::parse "sankey-beta\nA,B,10\nA,C,5"]]
+    list [string match "*<svg*" $svg] [regexp -all {<polygon} $svg]
+} -result {1 2}
+
+test tusankey-3.2 {toPng yields a PNG byte stream} -body {
+    set png [M::toPng [M::parse "sankey-beta\nA,B,4"]]
+    binary scan $png H8 sig
+    set sig
+} -result 89504e47
+
+test tusankey-3.3 {-scale enlarges the PNG canvas} -body {
+    set m [M::parse "sankey-beta\nA,B,4\nB,C,2"]
+    set p1 [M::toPng $m -scale 1]
+    set p3 [M::toPng $m -scale 3]
+    # PNG IHDR width is bytes 16..19 big-endian; scale 3 must be wider
+    binary scan $p1 @16I w1
+    binary scan $p3 @16I w3
+    expr {$w3 == 3*$w1}
+} -result 1
+
+cleanupTests

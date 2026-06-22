@@ -1,0 +1,97 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tublock
+
+namespace eval M { namespace import ::tclutils::tublock::* }
+
+proc nnodes {m} { llength [dict get $m nodes] }
+proc nedges {m} { llength [dict get $m edges] }
+proc nodeById {m id} {
+    foreach n [dict get $m nodes] { if {[dict get $n id] eq $id} { return $n } }
+    return {}
+}
+proc ids {m} { lmap n [dict get $m nodes] { dict get $n id } }
+proc epairs {m} { lmap e [dict get $m edges] { list [dict get $e from] [dict get $e to] } }
+
+# --- blocks ------------------------------------------------------------------
+
+test tublock-1.1 {bare ids on a line become separate blocks} -body {
+    ids [M::parse "block-beta\n  a b c"]
+} -result {a b c}
+
+test tublock-1.2 {labelled block: id and label} -body {
+    set n [nodeById [M::parse "block-beta\n  a\[\"Frontend\"\]"] a]
+    list [dict get $n label] [dict get $n shape]
+} -result {Frontend box}
+
+test tublock-1.3 {shapes map to native tudiagram shapes} -body {
+    set m [M::parse "block-beta\n  a\[A\] b(B) c((C)) d\{D\}"]
+    lmap i {a b c d} { dict get [nodeById $m $i] shape }
+} -result {box rounded circle diamond}
+
+test tublock-1.4 {stadium and cylinder shapes decode (block-beta)} -body {
+    set m [M::parse "block-beta\n  a(\[S\]) b\[(C)\]"]
+    lmap i {a b} { dict get [nodeById $m $i] shape }
+} -result {stadium cylinder}
+
+test tublock-1.4 {label with spaces is one block (tokeniser)} -body {
+    set m [M::parse "block-beta\n  a\[\"Long label\"\] b"]
+    list [nnodes $m] [dict get [nodeById $m a] label]
+} -result {2 {Long label}}
+
+test tublock-1.5 {:N span is stripped from the id} -body {
+    ids [M::parse "block-beta\n  a:2 b"]
+} -result {a b}
+
+# --- edges -------------------------------------------------------------------
+
+test tublock-2.1 {plain arrow edge} -body {
+    epairs [M::parse "block-beta\n  a b\n  a --> b"]
+} -result {{a b}}
+
+test tublock-2.2 {pipe-label edge} -body {
+    set m [M::parse "block-beta\n  a b\n  a -->|reads| b"]
+    dict get [lindex [dict get $m edges] 0] label
+} -result reads
+
+test tublock-2.3 {inline-label edge} -body {
+    set m [M::parse "block-beta\n  a b\n  a -- writes --> b"]
+    dict get [lindex [dict get $m edges] 0] label
+} -result writes
+
+test tublock-2.4 {--- is an edge without an arrowhead} -body {
+    set m [M::parse "block-beta\n  a b\n  a --- b"]
+    dict get [lindex [dict get $m edges] 0] arrow
+} -result none
+
+test tublock-2.5 {edge auto-declares endpoints} -body {
+    nnodes [M::parse "block-beta\n  a --> b"]
+} -result 2
+
+# --- groups / noise ----------------------------------------------------------
+
+test tublock-3.1 {block group is flattened: inner kept, group not a node} -body {
+    set m [M::parse "block-beta\n  block:grp\n    d e\n  end"]
+    list [ids $m] [expr {[nodeById $m grp] eq {} ? "no-grp" : "grp"}]
+} -result {{d e} no-grp}
+
+test tublock-3.2 {columns, space, style are ignored} -body {
+    set m [M::parse "block-beta\n  columns 3\n  a space b\n  style a fill:#f00"]
+    ids $m
+} -result {a b}
+
+test tublock-3.3 {comments and blanks ignored} -body {
+    ids [M::parse "block-beta\n  %% note\n\n  a b"]
+} -result {a b}
+
+test tublock-3.4 {empty source raises TUBLOCK EMPTY} -body {
+    catch {M::parse "block-beta"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUBLOCK EMPTY}
+
+cleanupTests

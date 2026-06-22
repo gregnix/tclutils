@@ -30,4 +30,4 @@ foreach {a b} {build compile build test compile link test link link pkg} {
 ::tclutils::tudiagram::writePng $g [file join $outDir fork.png]
 
 puts "wrote pipeline.{svg,png} and fork.{svg,png} to $outDir"
-puts "same render proc, two backends — rounded boxes are rounded in SVG, square in PNG"
+puts "same render proc, two backends — SVG and PNG now both render rounded boxes (tupngdraw >= 0.12)"

@@ -1,0 +1,111 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tuer
+
+namespace eval M { namespace import ::tclutils::tuer::* }
+
+proc nnodes {m} { llength [dict get $m nodes] }
+proc nedges {m} { llength [dict get $m edges] }
+proc ids {m} { lmap n [dict get $m nodes] { dict get $n id } }
+proc nodeById {m id} {
+    foreach n [dict get $m nodes] { if {[dict get $n id] eq $id} { return $n } }
+    return {}
+}
+proc epairs {m} { lmap e [dict get $m edges] { list [dict get $e from] [dict get $e to] } }
+proc edge0 {m} { lindex [dict get $m edges] 0 }
+
+# --- entities & relationships ------------------------------------------------
+
+test tuer-1.1 {two entities + relationship: 2 nodes, 1 edge} -body {
+    set m [M::parse "erDiagram\n  CUSTOMER ||--|| ORDER : places"]
+    list [nnodes $m] [nedges $m]
+} -result {2 1}
+
+test tuer-1.2 {entities are boxes} -body {
+    dict get [nodeById [M::parse "erDiagram\n  A ||--|| B : r"] A] shape
+} -result box
+
+test tuer-1.3 {relationship endpoints and direction} -body {
+    epairs [M::parse "erDiagram\n  A ||--|| B : r"]
+} -result {{A B}}
+
+test tuer-1.4 {relationship label is the text after the colon} -body {
+    dict get [edge0 [M::parse "erDiagram\n  A ||--o\{ B : places"]] label
+} -result places
+
+test tuer-1.5 {relationships are arrowless (crow's-foot not drawn)} -body {
+    dict get [edge0 [M::parse "erDiagram\n  A ||--|| B : r"]] arrow
+} -result none
+
+# --- identifying vs non-identifying ------------------------------------------
+
+test tuer-2.1 {identifying "--" relationship is solid} -body {
+    dict get [edge0 [M::parse "erDiagram\n  A ||--o\{ B : r"]] style
+} -result solid
+
+test tuer-2.2 {non-identifying ".." relationship is dashed} -body {
+    dict get [edge0 [M::parse "erDiagram\n  A \}o..o\{ B : r"]] style
+} -result dashed
+
+# --- entity attribute blocks -------------------------------------------------
+
+test tuer-3.1 {entity block builds a multi-line label: name + attributes} -body {
+    dict get [nodeById [M::parse "erDiagram\n  USER \{\n    string name\n  \}"] USER] label
+} -result "USER\nstring name"
+
+test tuer-3.2 {three-token attribute appends the key in parentheses} -body {
+    dict get [nodeById [M::parse "erDiagram\n  USER \{\n    int id PK\n  \}"] USER] label
+} -result "USER\nint id (PK)"
+
+test tuer-3.3 {single-token attribute line is kept as-is} -body {
+    dict get [nodeById [M::parse "erDiagram\n  USER \{\n    legacy\n  \}"] USER] label
+} -result "USER\nlegacy"
+
+test tuer-3.4 {bare entity name becomes a node} -body {
+    ids [M::parse "erDiagram\n  ORDER"]
+} -result ORDER
+
+# --- noise & errors ----------------------------------------------------------
+
+test tuer-4.1 {comments and blank lines are ignored} -body {
+    nnodes [M::parse "erDiagram\n  %% comment\n\n  A ||--|| B : r"]
+} -result 2
+
+test tuer-4.2 {empty diagram raises TUER EMPTY} -body {
+    catch {M::parse "erDiagram"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUER EMPTY}
+
+# --- crow's-foot cardinality -> end-marks ------------------------------------
+
+proc edgeMarks {src} {
+    set e [edge0 [M::parse $src]]
+    list [dict get $e startMark] [dict get $e endMark]
+}
+
+test tuer-5.1 {||--o\{ : exactly-one on the left, zero-or-many on the right} -body {
+    edgeMarks "erDiagram\n  A ||--o\{ B : r"
+} -result {exactlyOne zeroOrMany}
+
+test tuer-5.2 {|o..o| : zero-or-one on both ends} -body {
+    edgeMarks "erDiagram\n  A |o..o| B : r"
+} -result {zeroOrOne zeroOrOne}
+
+test tuer-5.3 {\}|--|\{ : one-or-many on both ends} -body {
+    edgeMarks "erDiagram\n  A \}|--|\{ B : r"
+} -result {oneOrMany oneOrMany}
+
+test tuer-5.4 {\}o--o\{ : zero-or-many on both ends (mirrored markers agree)} -body {
+    edgeMarks "erDiagram\n  A \}o--o\{ B : r"
+} -result {zeroOrMany zeroOrMany}
+
+test tuer-5.5 {the dashed/solid style is independent of the marks} -body {
+    dict get [edge0 [M::parse "erDiagram\n  A |o..o| B : r"]] style
+} -result dashed
+
+cleanupTests

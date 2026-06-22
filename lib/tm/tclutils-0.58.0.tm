@@ -83,7 +83,7 @@ package require tclutils::tubookmark 0.1
 package require tclutils::tulog 0.1
 package require tclutils::tuimage 0.1
 package require tclutils::tupng 0.1
-package require tclutils::tupngdraw 0.11
+package require tclutils::tupngdraw 0.12
 package require tclutils::tutablepng 0.1
 package require tclutils::tumonthpng 0.4
 package require tclutils::tucodepng 0.1
@@ -106,4 +106,9 @@ package require tclutils::tutable 0.1
 package require tclutils::tufetch 0.3
 package require tclutils::tusqlite 0.1
 package require tclutils::tusparql 0.1
-package provide tclutils 0.57.0
+# MaxMind DB reader
+package require tclutils::tummdb 0.1
+# Diagram subsystem: the tuflow facade (it pulls in tudiagram; the individual
+# diagram parsers and 2D renderers load lazily on first use, not here)
+package require tclutils::tuflow 0.2
+package provide tclutils 0.58.0

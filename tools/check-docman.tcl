@@ -4,7 +4,7 @@
 #
 # For each module it reads the PUBLIC proc names from the source
 # (lib/tm/<repo>/<mod>-*.tm: namespace export + proc ::<repo>::<mod>::name,
-# excluding _private) and checks whether each is mentioned in
+# excluding _private and uppercase-first helpers) and checks whether each is mentioned in
 #   docs/<mod>.md        and
 #   man/mann/<mod>.n  (or man/man1/<mod>.1)
 #
@@ -32,7 +32,10 @@ proc publicNames {src repo mod} {
         }
     }
     foreach {full nm} [regexp -all -inline -- "proc +::${repo}::${mod}::(\\w+)" $src] {
-        if {![string match _* $nm]} { dict set d $nm 1 }
+        # implicit public = lowercase-first procs; uppercase-first and _-prefixed
+        # names are private by convention (only count them if explicitly exported,
+        # which the namespace-export pass above already handles)
+        if {![string match _* $nm] && [regexp {^[a-z]} $nm]} { dict set d $nm 1 }
     }
     return [lsort [dict keys $d]]
 }

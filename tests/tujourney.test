@@ -1,0 +1,95 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tujourney
+
+namespace eval M { namespace import ::tclutils::tujourney::* }
+
+proc ntasks {m} { llength [dict get $m tasks] }
+proc task {m i} { lindex [dict get $m tasks] $i }
+
+# --- parse: tasks ------------------------------------------------------------
+
+test tujourney-1.1 {task: name, score, actors, section} -body {
+    set m [M::parse "journey\n  section Work\n    Make tea: 5: Me, Cat"]
+    task $m 0
+} -result {{Make tea} 5 {Me Cat} Work}
+
+test tujourney-1.2 {task without actors} -body {
+    set m [M::parse "journey\n  Do it: 3"]
+    task $m 0
+} -result {{Do it} 3 {} {}}
+
+test tujourney-1.3 {task count and order preserved} -body {
+    set m [M::parse "journey\n  A: 1: Me\n  B: 2: Me\n  C: 3: Me"]
+    list [ntasks $m] [lindex [task $m 2] 0]
+} -result {3 C}
+
+# --- parse: sections / actors ------------------------------------------------
+
+test tujourney-2.1 {sections are collected in order, unique} -body {
+    set m [M::parse "journey\n  section One\n    A: 1: Me\n  section Two\n    B: 2: Me"]
+    dict get $m sections
+} -result {One Two}
+
+test tujourney-2.2 {tasks carry their current section} -body {
+    set m [M::parse "journey\n  section One\n    A: 1: Me\n  section Two\n    B: 2: Me"]
+    list [lindex [task $m 0] 3] [lindex [task $m 1] 3]
+} -result {One Two}
+
+test tujourney-2.3 {actors collected across tasks, unique and ordered} -body {
+    set m [M::parse "journey\n  A: 1: Me, Cat\n  B: 2: Me, Dog"]
+    dict get $m actors
+} -result {Me Cat Dog}
+
+test tujourney-2.4 {tasks before any section have empty section} -body {
+    lindex [task [M::parse "journey\n  A: 4: Me"] 0] 3
+} -result {}
+
+test tujourney-2.5 {title is parsed} -body {
+    dict get [M::parse "journey\n  title My Day\n  A: 1: Me"] title
+} -result {My Day}
+
+# --- robustness --------------------------------------------------------------
+
+test tujourney-3.1 {comments and blanks ignored} -body {
+    set m [M::parse "journey\n  %% note\n\n  A: 2: Me"]
+    ntasks $m
+} -result 1
+
+test tujourney-3.2 {empty source raises TUJOURNEY EMPTY} -body {
+    catch {M::parse "journey"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUJOURNEY EMPTY}
+
+test tujourney-3.3 {a section with no tasks does not create a phantom task} -body {
+    ntasks [M::parse "journey\n  section Empty\n  section Real\n    A: 1: Me"]
+} -result 1
+
+# --- render: smoke -----------------------------------------------------------
+
+test tujourney-4.1 {toSvg yields svg with points} -body {
+    set svg [M::toSvg [M::parse "journey\n  section S\n    A: 5: Me\n    B: 2: Cat"]]
+    expr {[string match "*<svg*" $svg] && [string match "*<circle*" $svg]}
+} -result 1
+
+test tujourney-4.2 {toPng yields a PNG byte stream} -body {
+    set png [M::toPng [M::parse "journey\n  A: 3: Me"]]
+    binary scan $png H8 sig
+    set sig
+} -result 89504e47
+
+test tujourney-4.3 {integer -scale multiplies the raster dimensions} -body {
+    set m [M::parse "journey\n  A: 3: Me"]
+    set p1 [M::toPng $m -width 200 -height 200 -scale 1]
+    set p3 [M::toPng $m -width 200 -height 200 -scale 3]
+    binary scan $p1 @16II w1 h1
+    binary scan $p3 @16II w3 h3
+    list $w1 $h1 $w3 $h3
+} -result {200 200 600 600}
+
+cleanupTests

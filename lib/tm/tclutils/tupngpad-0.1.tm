@@ -14,7 +14,7 @@
 package require Tcl 8.6-
 package require tclutils::common 0.1
 package require tclutils::tupng 0.4
-package require tclutils::tupngdraw 0.11
+package require tclutils::tupngdraw 0.12
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tupngpad {

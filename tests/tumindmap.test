@@ -1,0 +1,96 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tumindmap
+
+namespace eval M { namespace import ::tclutils::tumindmap::* }
+
+proc nnodes {m} { llength [dict get $m nodes] }
+proc nedges {m} { llength [dict get $m edges] }
+proc labels {m} { lmap n [dict get $m nodes] { dict get $n label } }
+proc shapes {m} { lmap n [dict get $m nodes] { dict get $n shape } }
+proc epairs {m} { lmap e [dict get $m edges] { list [dict get $e from] [dict get $e to] } }
+
+# --- structure ---------------------------------------------------------------
+
+test tumindmap-1.1 {root with two children: 3 nodes, 2 edges} -body {
+    set m [M::parse "mindmap\n  root\n    a\n    b"]
+    list [nnodes $m] [nedges $m]
+} -result {3 2}
+
+test tumindmap-1.2 {direction defaults to TB} -body {
+    dict get [M::parse "mindmap\n  root"] meta direction
+} -result TB
+
+test tumindmap-1.3 {single root, no edges} -body {
+    set m [M::parse "mindmap\n  root"]
+    list [nnodes $m] [nedges $m]
+} -result {1 0}
+
+# --- hierarchy ---------------------------------------------------------------
+
+test tumindmap-2.1 {indentation builds parent->child edges} -body {
+    epairs [M::parse "mindmap\n  root\n    a\n    b"]
+} -result {{n1 n2} {n1 n3}}
+
+test tumindmap-2.2 {dedent returns to the nearest ancestor} -body {
+    epairs [M::parse "mindmap\n  root\n    a\n      a1\n    b"]
+} -result {{n1 n2} {n2 n3} {n1 n4}}
+
+test tumindmap-2.3 {tabs count as indentation} -body {
+    epairs [M::parse "mindmap\n\troot\n\t\tchild"]
+} -result {{n1 n2}}
+
+test tumindmap-2.4 {edges carry no arrowhead} -body {
+    set m [M::parse "mindmap\n  root\n    a"]
+    dict get [lindex [dict get $m edges] 0] arrow
+} -result none
+
+# --- shapes / labels ---------------------------------------------------------
+
+test tumindmap-3.1 {shape decoders map to native tudiagram shapes} -body {
+    shapes [M::parse "mindmap\n  root((R))\n    a\[A\]\n    b(B)\n    c\{\{C\}\}"]
+} -result {circle box rounded hexagon}
+
+test tumindmap-3.2 {bracket text becomes the label, id token dropped} -body {
+    labels [M::parse "mindmap\n  id1\[Hello World\]"]
+} -result {{Hello World}}
+
+test tumindmap-3.3 {double-paren label} -body {
+    labels [M::parse "mindmap\n  root((My Map))"]
+} -result {{My Map}}
+
+test tumindmap-3.4 {parentheses inside plain text are kept verbatim} -body {
+    labels [M::parse "mindmap\n  root\n    API (REST)"]
+} -result {root {API (REST)}}
+
+test tumindmap-3.5 {plain text node defaults to rounded} -body {
+    shapes [M::parse "mindmap\n  Just text"]
+} -result {rounded}
+
+# --- robustness --------------------------------------------------------------
+
+test tumindmap-4.1 {comments and blank lines are ignored} -body {
+    set m [M::parse "mindmap\n  %% a comment\n\n  root\n    a"]
+    list [nnodes $m] [nedges $m]
+} -result {2 1}
+
+test tumindmap-4.2 {icon/class decorator lines are ignored} -body {
+    set m [M::parse "mindmap\n  root\n    ::icon(fa fa-book)\n    class root big"]
+    nnodes $m
+} -result 1
+
+test tumindmap-4.3 {empty input raises TUMINDMAP EMPTY} -body {
+    catch {M::parse "mindmap"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUMINDMAP EMPTY}
+
+test tumindmap-4.4 {header is case-insensitive and skipped} -body {
+    nnodes [M::parse "MindMap\n  root"]
+} -result 1
+
+cleanupTests

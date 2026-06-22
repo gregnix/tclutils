@@ -1,0 +1,98 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tutimeline
+
+namespace eval M { namespace import ::tclutils::tutimeline::* }
+
+proc nper {m} { llength [dict get $m periods] }
+proc per {m i} { lindex [dict get $m periods] $i }
+
+# --- parse: periods ----------------------------------------------------------
+
+test tutimeline-1.1 {period: time, events, section} -body {
+    per [M::parse "timeline\n  2004 : Facebook : Google"] 0
+} -result {2004 {Facebook Google} {}}
+
+test tutimeline-1.2 {single event} -body {
+    per [M::parse "timeline\n  2002 : LinkedIn"] 0
+} -result {2002 LinkedIn {}}
+
+test tutimeline-1.3 {period with no events} -body {
+    per [M::parse "timeline\n  2000"] 0
+} -result {2000 {} {}}
+
+test tutimeline-1.4 {period count and order} -body {
+    set m [M::parse "timeline\n  A : 1\n  B : 2\n  C : 3"]
+    list [nper $m] [lindex [per $m 2] 0]
+} -result {3 C}
+
+# --- continuation lines ------------------------------------------------------
+
+test tutimeline-2.1 {a leading-colon line extends the previous period} -body {
+    set m [M::parse "timeline\n  2002 : LinkedIn\n       : Friendster\n  2004 : Facebook"]
+    list [nper $m] [lindex [per $m 0] 1]
+} -result {2 {LinkedIn Friendster}}
+
+test tutimeline-2.2 {continuation with no prior period is ignored} -body {
+    nper [M::parse "timeline\n  : orphan\n  2002 : X"]
+} -result 1
+
+# --- sections ----------------------------------------------------------------
+
+test tutimeline-3.1 {sections collected in order, unique} -body {
+    set m [M::parse "timeline\n  section A\n    2000 : x\n  section B\n    2001 : y"]
+    dict get $m sections
+} -result {A B}
+
+test tutimeline-3.2 {periods carry their section} -body {
+    set m [M::parse "timeline\n  section A\n    2000 : x\n  section B\n    2001 : y"]
+    list [lindex [per $m 0] 2] [lindex [per $m 1] 2]
+} -result {A B}
+
+test tutimeline-3.3 {periods before a section have empty section} -body {
+    lindex [per [M::parse "timeline\n  2000 : x"] 0] 2
+} -result {}
+
+test tutimeline-3.4 {title is parsed} -body {
+    dict get [M::parse "timeline\n  title Hist\n  2000 : x"] title
+} -result Hist
+
+# --- robustness --------------------------------------------------------------
+
+test tutimeline-4.1 {comments and blanks ignored} -body {
+    nper [M::parse "timeline\n  %% c\n\n  2000 : x"]
+} -result 1
+
+test tutimeline-4.2 {empty source raises TUTIMELINE EMPTY} -body {
+    catch {M::parse "timeline"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUTIMELINE EMPTY}
+
+# --- render: smoke -----------------------------------------------------------
+
+test tutimeline-5.1 {toSvg yields svg with boxes} -body {
+    set svg [M::toSvg [M::parse "timeline\n  section S\n    2000 : a\n    2001 : b : c"]]
+    expr {[string match "*<svg*" $svg] && [string match "*<rect*" $svg]}
+} -result 1
+
+test tutimeline-5.2 {toPng yields a PNG byte stream} -body {
+    set png [M::toPng [M::parse "timeline\n  2000 : x"]]
+    binary scan $png H8 sig
+    set sig
+} -result 89504e47
+
+test tutimeline-5.3 {integer -scale multiplies the raster dimensions} -body {
+    set m [M::parse "timeline\n  2000 : x"]
+    set p1 [M::toPng $m -width 200 -height 200 -scale 1]
+    set p3 [M::toPng $m -width 200 -height 200 -scale 3]
+    binary scan $p1 @16II w1 h1
+    binary scan $p3 @16II w3 h3
+    list $w1 $h1 $w3 $h3
+} -result {200 200 600 600}
+
+cleanupTests

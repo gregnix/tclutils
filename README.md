@@ -1,4 +1,4 @@
-# tclutils 0.55.0
+# tclutils 0.58.0
 
 `tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
 text filters, data-format parsers/encoders, binary and checksum helpers, and a
@@ -11,11 +11,12 @@ widgets) so that console, server and CI use never requires Tk.
 ## Install
 
 Put the library's module directory on the Tcl module path, then require the
-umbrella package (loads all core modules) or a single module:
+umbrella package (loads the core modules plus the `tuflow` diagram facade)
+or a single module:
 
 ```tcl
 ::tcl::tm::path add /path/to/tclutils-0.55.0/lib/tm
-package require tclutils          ;# umbrella: all core modules
+package require tclutils          ;# umbrella: core modules + tuflow facade
 package require tclutils::tucsv    ;# or just one module
 ```
 
@@ -31,7 +32,7 @@ the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping
 | Text / coreutils filters | `tucat` `tutac` `turev` `tunl` `tuseq` `tuhead` `tutail` `tuwc` `tusort` `tutsort` `tuuniq` `tucut` `tupaste` `tujoin` `tucomm` `tucsplit` `tusplit` `tufold` `tuexpand` `tushuf` `tucolumn` `tupr` `tutr` `tused` `tugrep` `tuawk` `tuxargs` `tufmt` |
 | Compare / patch | `tucmp` `tudiff` `tupatch` |
 | Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` `tupngdraw` `tutablepng` `tumonthpng` `tucodepng` `tupngpad` `tusvg` |
-| Data / serialization | `tucsv` `tujson` `tuxml` `tusqlite` |
+| Data / serialization | `tucsv` `tujson` `tuxml` `tusqlite` `tummdb` |
 | Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` `tuexe` |
 | Fuzzy search | `tufuzzy` `tuagrep` |
 | Records / PIM | `tunotes` `tuical` `tuini` `tuvcard` `tuldif` `tubookmark` |
@@ -45,6 +46,7 @@ the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping
 | Number parsing / formatting | `tunum` `tunumany` `tunumfmt` |
 | Archive | `tuzip` `tuzipfs` |
 | Deployment / packaging | `tudeploy` |
+| Diagrams (Mermaid-compatible) | `tuflow` `tudiagram` `tupie` `tuxychart` `tustate` `tuer` `tuclass` `turequirement` `tumindmap` `tuc4` `tublock` `tugit` `tuquadrant` `tujourney` `tutimeline` `tusankey` `tugantt` `tusequence` |
 | Introspection / diagnostics | `tuappinfo` `tupkgfinder` |
 | Core | `common` |
 

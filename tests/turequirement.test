@@ -1,0 +1,76 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::turequirement
+
+namespace eval M { namespace import ::tclutils::turequirement::* }
+
+proc nnodes {m} { llength [dict get $m nodes] }
+proc nedges {m} { llength [dict get $m edges] }
+proc ids {m} { lmap n [dict get $m nodes] { dict get $n id } }
+proc nodeById {m id} {
+    foreach n [dict get $m nodes] { if {[dict get $n id] eq $id} { return $n } }
+    return {}
+}
+proc epairs {m} { lmap e [dict get $m edges] { list [dict get $e from] [dict get $e to] } }
+proc edge0 {m} { lindex [dict get $m edges] 0 }
+
+# --- blocks & relationships --------------------------------------------------
+
+test turequirement-1.1 {requirement + element + relationship: 2 nodes, 1 edge} -body {
+    set src "requirementDiagram\n  requirement R1 {\n    id: 1\n  }\n  element E1 {\n    type: test\n  }\n  E1 - satisfies -> R1"
+    set m [M::parse $src]
+    list [nnodes $m] [nedges $m]
+} -result {2 1}
+
+test turequirement-1.2 {nodes are boxes} -body {
+    set src "requirementDiagram\n  requirement R1 {\n    id: 1\n  }\n  element E1 {\n  }\n  E1 - satisfies -> R1"
+    dict get [nodeById [M::parse $src] R1] shape
+} -result box
+
+test turequirement-1.3 {relationship endpoints and the relation as label} -body {
+    set m [M::parse "requirementDiagram\n  E1 - satisfies -> R1"]
+    list [epairs $m] [dict get [edge0 $m] label]
+} -result {{{E1 R1}} satisfies}
+
+test turequirement-1.4 {reverse "dst <- relation - src" keeps src -> dst direction} -body {
+    epairs [M::parse "requirementDiagram\n  R1 <- derives - R2"]
+} -result {{R2 R1}}
+
+test turequirement-1.5 {relationships referencing undeclared names auto-create nodes} -body {
+    nnodes [M::parse "requirementDiagram\n  A - traces -> B"]
+} -result 2
+
+# --- block labels ------------------------------------------------------------
+
+test turequirement-2.1 {a requirement block carries a stereotype, name and fields} -body {
+    set src "requirementDiagram\n  requirement R1 {\n    id: 1\n    text: must work\n    risk: high\n  }"
+    dict get [nodeById [M::parse $src] R1] label
+} -result "<<requirement>>\nR1\nid: 1\ntext: must work\nrisk: high"
+
+test turequirement-2.2 {an element block is accepted and stereotyped} -body {
+    set src "requirementDiagram\n  element E1 {\n    type: simulation\n  }"
+    dict get [nodeById [M::parse $src] E1] label
+} -result "<<element>>\nE1\ntype: simulation"
+
+test turequirement-2.3 {requirement sub-types are accepted} -body {
+    set src "requirementDiagram\n  functionalRequirement F1 {\n    id: 7\n  }"
+    dict get [nodeById [M::parse $src] F1] label
+} -result "<<functionalRequirement>>\nF1\nid: 7"
+
+# --- noise & errors ----------------------------------------------------------
+
+test turequirement-3.1 {comments and blank lines are ignored} -body {
+    nnodes [M::parse "requirementDiagram\n  %% comment\n\n  A - traces -> B"]
+} -result 2
+
+test turequirement-3.2 {empty diagram raises TUREQUIREMENT EMPTY} -body {
+    catch {M::parse "requirementDiagram"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUREQUIREMENT EMPTY}
+
+cleanupTests

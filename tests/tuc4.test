@@ -1,0 +1,118 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tuc4
+
+namespace eval M { namespace import ::tclutils::tuc4::* }
+
+proc nnodes {m} { llength [dict get $m nodes] }
+proc nedges {m} { llength [dict get $m edges] }
+proc nodeById {m id} {
+    foreach n [dict get $m nodes] { if {[dict get $n id] eq $id} { return $n } }
+    return {}
+}
+proc epairs {m} { lmap e [dict get $m edges] { list [dict get $e from] [dict get $e to] } }
+proc elabels {m} { lmap e [dict get $m edges] { dict get $e label } }
+
+# --- elements ----------------------------------------------------------------
+
+test tuc4-1.1 {person + system + rel: 2 nodes, 1 edge} -body {
+    set m [M::parse "C4Context\n  Person(c, \"Cust\")\n  System(s, \"Sys\")\n  Rel(c, s, \"Uses\")"]
+    list [nnodes $m] [nedges $m]
+} -result {2 1}
+
+test tuc4-1.2 {element label is the quoted name, not the id} -body {
+    set m [M::parse "C4Context\n  Person(customer, \"Banking Customer\", \"A customer\")"]
+    dict get [nodeById $m customer] label
+} -result {Banking Customer}
+
+test tuc4-1.3 {Person -> rounded, System -> box} -body {
+    set m [M::parse "C4Context\n  Person(p, \"P\")\n  System(s, \"S\")"]
+    list [dict get [nodeById $m p] shape] [dict get [nodeById $m s] shape]
+} -result {rounded box}
+
+test tuc4-1.4 {SystemDb -> cylinder, SystemQueue -> box} -body {
+    set m [M::parse "C4Context\n  SystemDb(d, \"DB\")\n  SystemQueue(q, \"Q\")"]
+    list [dict get [nodeById $m d] shape] [dict get [nodeById $m q] shape]
+} -result {cylinder box}
+
+test tuc4-1.5 {Person_Ext is still an actor -> rounded} -body {
+    dict get [nodeById [M::parse "C4Context\n  Person_Ext(e, \"Ext\")"] e] shape
+} -result rounded
+
+# --- relationships -----------------------------------------------------------
+
+test tuc4-2.1 {rel endpoints and direction} -body {
+    epairs [M::parse "C4Context\n  System(a,\"A\")\n  System(b,\"B\")\n  Rel(a, b, \"calls\")"]
+} -result {{a b}}
+
+test tuc4-2.2 {rel label is the quoted text} -body {
+    elabels [M::parse "C4Context\n  System(a,\"A\")\n  System(b,\"B\")\n  Rel(a, b, \"Sends\", \"SMTP\")"]
+} -result {Sends}
+
+test tuc4-2.3 {rel draws an arrowhead} -body {
+    set m [M::parse "C4Context\n  System(a,\"A\")\n  System(b,\"B\")\n  Rel(a, b, \"x\")"]
+    dict get [lindex [dict get $m edges] 0] arrow
+} -result end
+
+test tuc4-2.4 {rel auto-creates undeclared endpoints} -body {
+    set m [M::parse "C4Context\n  Rel(x, y, \"link\")"]
+    list [nnodes $m] [nedges $m]
+} -result {2 1}
+
+test tuc4-2.5 {directional Rel_U is treated as a relationship} -body {
+    epairs [M::parse "C4Context\n  System(a,\"A\")\n  System(b,\"B\")\n  Rel_U(a, b, \"up\")"]
+} -result {{a b}}
+
+# --- boundaries / title / noise ---------------------------------------------
+
+test tuc4-3.1 {boundary is flattened: inner kept, boundary not a node} -body {
+    set src "C4Context
+  System_Boundary(bnd, \"Bank\") {
+    System(s1, \"Sys1\")
+    System(s2, \"Sys2\")
+  }"
+    set m [M::parse $src]
+    list [nnodes $m] [expr {[nodeById $m bnd] eq {} ? "no-bnd" : "bnd"}]
+} -result {2 no-bnd}
+
+test tuc4-3.2 {title sets the diagram title} -body {
+    dict get [M::parse "C4Context\n  title My System\n  System(s,\"S\")"] meta title
+} -result {My System}
+
+test tuc4-3.3 {Update* styling lines are ignored} -body {
+    set m [M::parse "C4Context\n  System(s,\"S\")\n  UpdateElementStyle(s, \$bgColor=\"red\")"]
+    nnodes $m
+} -result 1
+
+test tuc4-3.4 {comments and blanks are ignored} -body {
+    set m [M::parse "C4Context\n  %% a comment\n\n  System(s,\"S\")"]
+    nnodes $m
+} -result 1
+
+test tuc4-3.5 {C4Container header is accepted} -body {
+    nnodes [M::parse "C4Container\n  Container(c, \"App\", \"Tcl\")"]
+} -result 1
+
+test tuc4-4.1 {empty diagram raises TUC4 EMPTY} -body {
+    catch {M::parse "C4Context"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUC4 EMPTY}
+
+# --- element type colours ---------------------------------------------------
+
+test tuc4-5.1 {elements of different types get different fills} -body {
+    set m [M::parse "C4Context\n  Person(p, \"P\")\n  System(s, \"S\")"]
+    expr {[dict get [dict get [nodeById $m p] style] fill]
+          ne [dict get [dict get [nodeById $m s] style] fill]}
+} -result 1
+
+test tuc4-5.2 {an _Ext element is grey} -body {
+    dict get [dict get [nodeById [M::parse "C4Context\n  System_Ext(e, \"E\")"] e] style] stroke
+} -result #757575
+
+cleanupTests

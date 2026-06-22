@@ -3,7 +3,7 @@
 
 package require Tcl 8.6-
 package require tclutils::common 0.1
-package require tclutils::tubin 0.1
+package require tclutils::tubin 0.2
 package require tclutils::tuhexdump 0.1
 
 namespace eval ::tclutils {}
@@ -58,7 +58,7 @@ proc ::tclutils::tuhexedit::backup {filename {backupName ""}} {
     return $backupName
 }
 
-proc ::tclutils::tuhexedit::findData {filename needle} {
+proc ::tclutils::tuhexedit::FindData {filename needle} {
     if {$needle eq ""} {
         return -code error -errorcode {TCLUTILS TUHEXEDIT NEEDLE} "needle must not be empty"
     }
@@ -76,12 +76,12 @@ proc ::tclutils::tuhexedit::findData {filename needle} {
 
 proc ::tclutils::tuhexedit::findHex {filename hex} {
     set needle [::tclutils::tubin::hexToBytes $hex]
-    return [findData $filename $needle]
+    return [FindData $filename $needle]
 }
 
 proc ::tclutils::tuhexedit::findString {filename text {encoding utf-8}} {
     set needle [encoding convertto $encoding $text]
-    return [findData $filename $needle]
+    return [FindData $filename $needle]
 }
 
 proc ::tclutils::tuhexedit::patch {filename offset hex args} {

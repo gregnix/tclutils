@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.58.0
+
+Adds a Mermaid-compatible diagram subsystem and a MaxMind DB reader; the library
+remains pure Tcl and runs on Tcl 8.6 and Tcl 9.x. All diagram rendering uses
+primitive operations on a shared abstract canvas, so SVG and PNG output stay
+congruent.
+
+- Diagrams -- `tuflow`: the render facade. Detects the diagram language of a
+  fenced code block and dispatches -- graph types through a parser into the
+  `tudiagram` model (laid out and drawn), non-graph types through a
+  self-contained 2D renderer. Requiring it pulls in `tudiagram`; the individual
+  parsers and renderers load lazily on first use.
+- Diagram model -- `tudiagram` 0.3: abstract graph model, layout and drawing.
+  Node shapes box / rounded / circle / stadium / diamond / hexagon / cylinder,
+  per-node colour overrides, thick edges, and crow's-foot end-marks
+  (exactlyOne / zeroOrOne / oneOrMany / zeroOrMany). All shapes use
+  rect / line / polygon / text primitives for portability.
+- Graph parsers (Mermaid subset -> `tudiagram`): `tustate` (stateDiagram),
+  `tuer` 0.2 (erDiagram, crow's-foot), `tuclass` (classDiagram),
+  `turequirement` (requirementDiagram), `tumindmap` (mindmap), `tuc4` (C4),
+  `tublock` (block-beta), `tugit` (gitGraph).
+- 2D renderers (own parser + render): `tupie` (pie), `tuxychart` (xychart),
+  `tuquadrant` (quadrantChart), `tujourney` (journey), `tutimeline` (timeline),
+  `tusankey` (sankey-beta), `tugantt` (gantt), `tusequence` (sequenceDiagram).
+- Canvas backends: `tusvg` 0.2 gains a Canvas-object constructor (`tusvg::new`);
+  `tupngdraw` 0.12. The two share an abstract drawing protocol, so every
+  renderer targets both SVG and PNG.
+- Geo: `tummdb` -- pure-Tcl MaxMind DB (.mmdb) reader; added to the umbrella.
+- Removed `tumermaid` (redundant -- tuflow's flowchart parser produces the same
+  output). Cut over tudiagram 0.1 -> 0.3, tuflow 0.1 -> 0.2, tupngdraw 0.11 -> 0.12.
+- Recommended pairing: tclutils 0.58.0 + tkutils 0.41.0.
+
 ## 0.57.0
 
 Adds one color module; the library remains pure Tcl and runs on Tcl 8.6 and

@@ -3,7 +3,7 @@
 
 package require Tcl 8.6-
 package require tclutils::common 0.1
-package require tclutils::tubin 0.1
+package require tclutils::tubin 0.2
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tuhexdump {

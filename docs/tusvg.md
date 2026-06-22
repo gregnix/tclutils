@@ -13,6 +13,19 @@ set out [tusvg::toString $svg]              ;# SVG text
 tusvg::write $svg file.svg                  ;# UTF-8 file
 ```
 
+## Canvas object (for diagram renderers)
+
+```tcl
+set c [tusvg::new ?-width W? ?-height H? ?-background C?]   ;# -> a canvas object
+```
+
+`new` returns a drawing-canvas **object** (not a document dict). It exposes the
+abstract canvas protocol shared with `tclutils::tupngdraw`
+(`width height line rect polygon text textwidth data destroy` ...), so a single
+generic draw routine can target SVG or PNG by only swapping the constructor.
+This is the entry point the diagram renderers (`tudiagram`, `tupie`,
+`tuxychart`) build on; for hand-written SVG use the document API above.
+
 ## Elements (append to the document variable)
 
 ```tcl

@@ -1,0 +1,107 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tugantt
+
+namespace eval M { namespace import ::tclutils::tugantt::* }
+
+proc rtask {m i} { lindex [::tclutils::tugantt::_resolve $m] $i }
+proc gday  {s} { clock format [expr {int($s)}] -format %Y-%m-%d -gmt 1 }
+proc gdays {t} { expr {([dict get $t end]-[dict get $t start])/86400.0} }
+
+# --- parse -------------------------------------------------------------------
+
+test tugantt-1.1 {a task line parses title, tags and id} -body {
+    set m [M::parse "gantt\nDesign :done, des1, 2014-01-01, 3d"]
+    set t [lindex [dict get $m tasks] 0]
+    list [dict get $t title] [dict get $t tags] [dict get $t id]
+} -result {Design done des1}
+
+test tugantt-1.2 {title and dateFormat are parsed} -body {
+    set m [M::parse "gantt\ntitle My Plan\ndateFormat YYYY-MM-DD\nA :a1, 2014-01-01, 1d"]
+    list [dict get $m title] [dict get $m dateFormat]
+} -result {{My Plan} YYYY-MM-DD}
+
+test tugantt-1.3 {tasks carry their section} -body {
+    set m [M::parse "gantt\nsection Build\nA :a1, 2014-01-01, 1d\nsection Test\nB :b1, after a1, 1d"]
+    list [dict get [lindex [dict get $m tasks] 0] section] \
+         [dict get [lindex [dict get $m tasks] 1] section]
+} -result {Build Test}
+
+test tugantt-1.4 {a milestone task is flagged} -body {
+    set m [M::parse "gantt\ndateFormat YYYY-MM-DD\nLaunch :milestone, m1, 2014-01-10, 0d"]
+    dict get [rtask $m 0] milestone
+} -result 1
+
+# --- date resolution ---------------------------------------------------------
+
+test tugantt-1.5 {explicit start and end dates resolve} -body {
+    set m [M::parse "gantt\ndateFormat YYYY-MM-DD\nA :a1, 2014-01-01, 2014-01-06"]
+    set t [rtask $m 0]
+    list [gday [dict get $t start]] [gday [dict get $t end]]
+} -result {2014-01-01 2014-01-06}
+
+test tugantt-1.6 {after <id> starts at the referenced task's end} -body {
+    set m [M::parse "gantt\ndateFormat YYYY-MM-DD\nA :a1, 2014-01-01, 4d\nB :after a1, 2d"]
+    gday [dict get [rtask $m 1] start]
+} -result 2014-01-05
+
+test tugantt-1.7 {a duration sets the end relative to the start} -body {
+    set m [M::parse "gantt\ndateFormat YYYY-MM-DD\nA :a1, 2014-01-01, 5d"]
+    gdays [rtask $m 0]
+} -result 5.0
+
+test tugantt-1.8 {a task with no start follows the previous task's end} -body {
+    set m [M::parse "gantt\ndateFormat YYYY-MM-DD\nA :a1, 2014-01-01, 3d\nB :2d"]
+    gday [dict get [rtask $m 1] start]
+} -result 2014-01-04
+
+test tugantt-1.9 {after with several ids uses the latest end} -body {
+    set m [M::parse "gantt\ndateFormat YYYY-MM-DD\nA :a, 2014-01-01, 3d\nB :b, 2014-01-01, 6d\nC :after a b, 1d"]
+    gday [dict get [rtask $m 2] start]
+} -result 2014-01-07
+
+# --- errors ------------------------------------------------------------------
+
+test tugantt-2.1 {a gantt with no tasks raises TUGANTT EMPTY} -body {
+    catch {M::parse "gantt\ntitle x"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUGANTT EMPTY}
+
+test tugantt-2.2 {-scale must be a positive integer} -body {
+    catch {M::toSvg [M::parse "gantt\nA :a1, 2014-01-01, 1d"] -scale 0} e o
+    lindex [dict get $o -errorcode] 2
+} -result ARG
+
+# --- render ------------------------------------------------------------------
+
+test tugantt-3.1 {toSvg yields an svg with task bars} -body {
+    set svg [M::toSvg [M::parse "gantt\nsection S\nA :a1, 2014-01-01, 3d\nB :after a1, 2d"]]
+    list [string match "*<svg*" $svg] [expr {[regexp -all {<rect} $svg] >= 2}]
+} -result {1 1}
+
+test tugantt-3.2 {toPng yields a PNG byte stream} -body {
+    set png [M::toPng [M::parse "gantt\nA :a1, 2014-01-01, 1d"]]
+    binary scan $png H8 sig
+    set sig
+} -result 89504e47
+
+test tugantt-3.3 {integer -scale multiplies the raster dimensions} -body {
+    set m [M::parse "gantt\nA :a1, 2014-01-01, 3d"]
+    set p1 [M::toPng $m -width 200 -height 200 -scale 1]
+    set p3 [M::toPng $m -width 200 -height 200 -scale 3]
+    binary scan $p1 @16II w1 h1
+    binary scan $p3 @16II w3 h3
+    list $w1 $h1 $w3 $h3
+} -result {200 200 600 600}
+
+test tugantt-3.4 {a milestone is drawn as a diamond polygon} -body {
+    set svg [M::toSvg [M::parse "gantt\nA :a1, 2014-01-01, 2d\nM :milestone, m1, 2014-01-03, 0d"]]
+    expr {[regexp -all {<polygon} $svg] >= 1}
+} -result 1
+
+cleanupTests

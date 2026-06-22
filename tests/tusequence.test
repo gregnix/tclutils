@@ -1,0 +1,101 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tusequence
+
+namespace eval M { namespace import ::tclutils::tusequence::* }
+proc step {m i} { lindex [dict get $m steps] $i }
+
+# --- parse -------------------------------------------------------------------
+
+test tusequence-1.1 {participant with alias} -body {
+    set m [M::parse "sequenceDiagram\nparticipant S as Server"]
+    list [dict get $m participants] [dict get $m labels]
+} -result {S {S Server}}
+
+test tusequence-1.2 {actor is flagged, participant is not} -body {
+    set m [M::parse "sequenceDiagram\nactor U as User\nparticipant S"]
+    dict get $m isActor
+} -result {U 1 S 0}
+
+test tusequence-1.3 {participants are created implicitly from a message} -body {
+    dict get [M::parse "sequenceDiagram\nA->>B: hi"] participants
+} -result {A B}
+
+test tusequence-1.4 {autonumber flag} -body {
+    dict get [M::parse "sequenceDiagram\nautonumber\nA->>B: x"] autonumber
+} -result 1
+
+test tusequence-1.5 {a message parses from/to/op/act/text} -body {
+    set s [step [M::parse "sequenceDiagram\nA->>+B: do it"] 0]
+    list [dict get $s from] [dict get $s to] [dict get $s op] [dict get $s act] [dict get $s text]
+} -result {A B ->> + {do it}}
+
+test tusequence-1.6 {a note over two actors parses position and actors} -body {
+    set s [step [M::parse "sequenceDiagram\nA->>B: x\nNote over A,B: shared"] 1]
+    list [dict get $s kind] [dict get $s pos] [dict get $s actors] [dict get $s text]
+} -result {note over {A B} shared}
+
+test tusequence-1.7 {activate and deactivate parse} -body {
+    set m [M::parse "sequenceDiagram\nA->>B: x\nactivate B\ndeactivate B"]
+    list [dict get [step $m 1] kind] [dict get [step $m 1] actor] [dict get [step $m 2] kind]
+} -result {activate B deactivate}
+
+test tusequence-1.8 {alt/else/end parse into block markers} -body {
+    set m [M::parse "sequenceDiagram\nA->>B: x\nalt ok\nB-->>A: y\nelse no\nB-->>A: z\nend"]
+    lmap s [dict get $m steps] { dict get $s kind }
+} -result {message blockStart message blockElse message blockEnd}
+
+test tusequence-1.9 {block start carries type and label} -body {
+    set s [step [M::parse "sequenceDiagram\nA->>B: x\nloop every minute\nB-->>A: y\nend"] 1]
+    list [dict get $s type] [dict get $s label]
+} -result {loop {every minute}}
+
+# --- arrow spec --------------------------------------------------------------
+
+test tusequence-2.1 {arrow operators map to line/head specs} -body {
+    list [::tclutils::tusequence::_arrowSpec ->>] [::tclutils::tusequence::_arrowSpec -->] [::tclutils::tusequence::_arrowSpec -x] [::tclutils::tusequence::_arrowSpec --)]
+} -result {{line solid head filled} {line dotted head open} {line solid head cross} {line dotted head open}}
+
+# --- errors ------------------------------------------------------------------
+
+test tusequence-2.2 {no participants raises TUSEQUENCE EMPTY} -body {
+    catch {M::parse "sequenceDiagram\ntitle x"} e o
+    lindex [dict get $o -errorcode] 2
+} -result EMPTY
+
+test tusequence-2.3 {-scale must be a positive integer} -body {
+    catch {M::toSvg [M::parse "sequenceDiagram\nA->>B: x"] -scale 0} e o
+    lindex [dict get $o -errorcode] 2
+} -result ARG
+
+# --- render ------------------------------------------------------------------
+
+test tusequence-3.1 {toSvg yields an svg with actor boxes} -body {
+    set svg [M::toSvg [M::parse "sequenceDiagram\nA->>B: hi\nB-->>A: yo"]]
+    list [string match "*<svg*" $svg] [expr {[regexp -all {<rect} $svg] >= 4}]
+} -result {1 1}
+
+test tusequence-3.2 {toPng yields a PNG byte stream} -body {
+    binary scan [M::toPng [M::parse "sequenceDiagram\nA->>B: hi"]] H8 sig
+    set sig
+} -result 89504e47
+
+test tusequence-3.3 {integer -scale multiplies the auto-sized raster} -body {
+    set m [M::parse "sequenceDiagram\nA->>B: hi\nB-->>A: yo"]
+    binary scan [M::toPng $m -scale 1] @16II w1 h1
+    binary scan [M::toPng $m -scale 3] @16II w3 h3
+    list [expr {$w3==3*$w1}] [expr {$h3==3*$h1}]
+} -result {1 1}
+
+test tusequence-3.4 {a self-message is flagged in the layout} -body {
+    set m [M::parse "sequenceDiagram\nA->>A: think"]
+    set L [::tclutils::tusequence::_layout $m {-width 0 -height 0 -scale 1}]
+    dict get [lindex [dict get $L msgs] 0] self
+} -result 1
+
+cleanupTests

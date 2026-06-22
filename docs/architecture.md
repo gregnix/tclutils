@@ -30,8 +30,15 @@ common  (Core: shared layer)
 |   |-- tubase32|-- tuimage   |-- tupng   |-- tupngdraw  |-- tutablepng
 |   |-- tumonthpng |-- tucodepng |-- tupngpad `-- tusvg
 |
+|-- diagrams (Mermaid-compatible)
+|   |-- tuflow  |-- tudiagram |-- tustate |-- tuer    |-- tuclass
+|   |-- turequirement |-- tumindmap |-- tuc4 |-- tublock |-- tugit
+|   |-- tupie   |-- tuxychart |-- tuquadrant |-- tujourney |-- tutimeline
+|   |-- tusankey |-- tugantt `-- tusequence
+|
 |-- data / serialization
-|   |-- tucsv   |-- tujson  |-- tuxml   |-- tunumfmt `-- tusqlite
+|   |-- tucsv   |-- tujson  |-- tuxml   |-- tunumfmt |-- tusqlite
+|   `-- tummdb
 |
 |-- stream / filesystem
 |   |-- tufile  |-- tufind  |-- tustat  |-- tutee   |-- tupath
@@ -107,10 +114,23 @@ Alongside the raster path, `tusvg` is the **vector** generator: a pure-Tcl SVG
 builder (shapes/paths/text/gradients/groups) with a library of ~110 named
 toolbar icons, used by `tkutils::tkuicon`.
 
+## Diagrams
+
+A Mermaid-compatible diagram subsystem sits on top of the raster/vector layer.
+`tuflow` is the facade: it reads a fenced-code diagram source, detects the kind
+and dispatches. Graph-shaped types become a `tudiagram` model via a dedicated
+parser (`tustate`, `tuer`, `tuclass`, `turequirement`, `tumindmap`, `tuc4`,
+`tublock`, `tugit`, plus tuflow's own flowchart parser); `tudiagram` then lays
+the graph out (layered layout, shapes, crow's-foot end-marks) and draws it.
+Non-graph types own a self-contained 2D renderer (`tupie`, `tuxychart`,
+`tuquadrant`, `tujourney`, `tutimeline`, `tusankey`, `tugantt`, `tusequence`). Both paths render through the shared
+`tusvg` / `tupngdraw` canvas protocol, so SVG and PNG output stay congruent.
+`docir::diagram` wires this subsystem into the docir sinks.
+
 ## Data and serialization
 
 Format readers/writers/encoders: `tucsv`, `tujson` (parser + encoder), `tuxml`,
-`tunumfmt`, plus `tusqlite` — NULL-safe `insert`/`rows`/`value` helpers over a
+`tunumfmt`, `tummdb` (a pure-Tcl MaxMind `.mmdb` geolocation reader), plus `tusqlite` — NULL-safe `insert`/`rows`/`value` helpers over a
 caller-supplied `sqlite3` handle (it does not load `sqlite3` itself).
 
 ## Stream and filesystem

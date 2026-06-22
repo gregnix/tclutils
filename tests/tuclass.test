@@ -1,0 +1,84 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tuclass
+
+namespace eval M { namespace import ::tclutils::tuclass::* }
+
+proc nnodes {m} { llength [dict get $m nodes] }
+proc nedges {m} { llength [dict get $m edges] }
+proc nodeById {m id} {
+    foreach n [dict get $m nodes] { if {[dict get $n id] eq $id} { return $n } }
+    return {}
+}
+proc epairs {m} { lmap e [dict get $m edges] { list [dict get $e from] [dict get $e to] } }
+proc edge0 {m} { lindex [dict get $m edges] 0 }
+
+# --- relationships & reltype labels ------------------------------------------
+
+test tuclass-1.1 {inheritance: 2 nodes, 1 edge} -body {
+    set m [M::parse "classDiagram\n  Animal <|-- Dog"]
+    list [nnodes $m] [nedges $m]
+} -result {2 1}
+
+test tuclass-1.2 {"A <|-- B" is reversed so the child points at the parent} -body {
+    epairs [M::parse "classDiagram\n  Animal <|-- Dog"]
+} -result {{Dog Animal}}
+
+test tuclass-1.3 {inheritance op maps to the "extends" label} -body {
+    dict get [edge0 [M::parse "classDiagram\n  Animal <|-- Dog"]] label
+} -result extends
+
+test tuclass-1.4 {composition / aggregation / dependency reltype labels} -body {
+    set m [M::parse "classDiagram\n  A *-- B\n  A o-- C\n  A ..> D"]
+    lmap e [dict get $m edges] { dict get $e label }
+} -result {composition aggregation dependency}
+
+test tuclass-1.5 {dotted operators are drawn dashed, solid otherwise} -body {
+    set m [M::parse "classDiagram\n  A *-- B\n  A ..> C"]
+    lmap e [dict get $m edges] { dict get $e style }
+} -result {solid dashed}
+
+test tuclass-1.6 {an explicit relationship label wins over the reltype} -body {
+    dict get [edge0 [M::parse "classDiagram\n  Animal <|-- Dog : myLabel"]] label
+} -result myLabel
+
+test tuclass-1.7 {edges carry an arrowhead at the end} -body {
+    dict get [edge0 [M::parse "classDiagram\n  A *-- B"]] arrow
+} -result end
+
+# --- classes, compartments, members ------------------------------------------
+
+test tuclass-2.1 {plain "class X" declaration is a bare box} -body {
+    set m [M::parse "classDiagram\n  class Lonely"]
+    list [nnodes $m] [dict get [nodeById $m Lonely] label]
+} -result {1 Lonely}
+
+test tuclass-2.2 {a class block splits members into attribute/method compartments} -body {
+    dict get [nodeById [M::parse "classDiagram\n  class Car {\n    +int wheels\n    +drive()\n  }"] Car] label
+} -result "Car\n----------\n+int wheels\n----------\n+drive()"
+
+test tuclass-2.3 {shorthand member with "()" is classed as a method} -body {
+    dict get [nodeById [M::parse "classDiagram\n  Bird : +fly()"] Bird] label
+} -result "Bird\n----------\n+fly()"
+
+test tuclass-2.4 {shorthand member without "()" is classed as an attribute} -body {
+    dict get [nodeById [M::parse "classDiagram\n  Bird : +int wings"] Bird] label
+} -result "Bird\n----------\n+int wings"
+
+# --- noise & errors ----------------------------------------------------------
+
+test tuclass-3.1 {comments and blank lines are ignored} -body {
+    nnodes [M::parse "classDiagram\n  %% comment\n\n  Animal <|-- Dog"]
+} -result 2
+
+test tuclass-3.2 {empty diagram raises TUCLASS EMPTY} -body {
+    catch {M::parse "classDiagram"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUCLASS EMPTY}
+
+cleanupTests

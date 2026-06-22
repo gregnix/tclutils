@@ -20,7 +20,7 @@
 
 package require Tcl 8.6-
 package require tclutils::common 0.1
-package require tclutils::tupngdraw 0.11
+package require tclutils::tupngdraw 0.12
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tumonthpng {
@@ -157,20 +157,20 @@ proc ::tclutils::tumonthpng::_drawMonthOn {img x0 y0 year month titleText th s o
     set selA [dict get $o -selectalpha]
     dict with g {}  ;# -> cw ch lw titleH headerH topH blockW blockH gap
 
-    my_centre $img [expr {$x0 + $lw}] $y0 [expr {7 * $cw}] $titleH \
+    MyCentre $img [expr {$x0 + $lw}] $y0 [expr {7 * $cw}] $titleH \
         $titleText [dict get $th titleFg] $s $tcmd
 
     set hy [expr {$y0 + $titleH}]
     if {$lw > 0} {
         $img setfill [dict get $th headerBg]
         $img rect $x0 $hy [expr {$x0 + $lw - 1}] [expr {$hy + $headerH - 1}] -fill 1 -outline 0
-        my_centre $img $x0 $hy $lw $headerH "KW" [dict get $th headerFg] $s $tcmd
+        MyCentre $img $x0 $hy $lw $headerH "KW" [dict get $th headerFg] $s $tcmd
     }
     for {set c 0} {$c < 7} {incr c} {
         set hx [expr {$x0 + $lw + $c * $cw}]
         $img setfill [dict get $th headerBg]
         $img rect $hx $hy [expr {$hx + $cw - 1}] [expr {$hy + $headerH - 1}] -fill 1 -outline 0
-        my_centre $img $hx $hy $cw $headerH [lindex [dict get $o -weekdays] $c] \
+        MyCentre $img $hx $hy $cw $headerH [lindex [dict get $o -weekdays] $c] \
             [dict get $th headerFg] $s $tcmd
     }
 
@@ -191,7 +191,7 @@ proc ::tclutils::tumonthpng::_drawMonthOn {img x0 y0 year month titleText th s o
                 set wy [expr {$y0 + $topH + $row * $ch}]
                 $img setfill [dict get $th weeknrBg]
                 $img rect $wx $wy [expr {$wx + $lw - 1}] [expr {$wy + $ch - 1}] -fill 1 -outline 0
-                my_centre $img $wx $wy $lw $ch \
+                MyCentre $img $wx $wy $lw $ch \
                     [format %02d [dict get $day weeknr]] [dict get $th weeknrFg] $s $tcmd
                 set wkDrawn 1
             }
@@ -226,7 +226,7 @@ proc ::tclutils::tumonthpng::_drawMonthOn {img x0 y0 year month titleText th s o
             $img setstroke $ol
             $img setlinewidth 1
             $img rect $dx $dy [expr {$dx + $cw - 1}] [expr {$dy + $ch - 1}] -fill 1
-            my_centre $img $dx $dy $cw $ch [dict get $day day] $fg $s $tcmd
+            MyCentre $img $dx $dy $cw $ch [dict get $day day] $fg $s $tcmd
 
             if {$hasNote} {
                 $img setfill [dict get $th noteMarker]
@@ -281,7 +281,7 @@ proc ::tclutils::tumonthpng::render {year month args} {
 }
 
 # centre a short string in a cell (top-left x,y; width cw, height ch)
-proc ::tclutils::tumonthpng::my_centre {img x y cw ch text color scale {tcmd {}}} {
+proc ::tclutils::tumonthpng::MyCentre {img x y cw ch text color scale {tcmd {}}} {
     if {$tcmd ne ""} {
         # Delegate drawing of "text" centred in the box (x,y,cw,ch) to the
         # caller-supplied command, e.g. an outline-font renderer. It is free to

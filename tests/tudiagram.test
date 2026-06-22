@@ -27,7 +27,7 @@ test tudiagram-1.2 {duplicate node id is rejected} -body {
 
 test tudiagram-1.3 {bad direction is rejected} -body {
     D::create -direction sideways
-} -returnCodes error -match glob -result {*LR or TB*}
+} -returnCodes error -match glob -result {*LR, TB, RL or BT*}
 
 test tudiagram-1.4 {validate flags an edge to an unknown node} -body {
     set d [D::create]
@@ -140,5 +140,155 @@ test tudiagram-3.2 {the same model renders on both backends (svg + png non-empty
     set d [D::addEdge $d a c]
     expr {[string length [D::toSvg $d]] > 0 && [string length [D::toPng $d]] > 0}
 } -result 1
+
+# --- per-node style (colour overrides) -------------------------------------
+
+test tudiagram-4.1 {a -style fill/stroke override appears in the SVG} -body {
+    set d [D::create]
+    set d [D::addNode $d a -style {fill #112233 stroke #445566}]
+    set svg [D::toSvg $d]
+    expr {[string match {*#112233*} $svg] && [string match {*#445566*} $svg]}
+} -result 1
+
+test tudiagram-4.2 {an unstyled node uses the theme fill} -body {
+    set d [D::create]
+    set d [D::addNode $d a]
+    string match {*#f4f4f5*} [D::toSvg $d]
+} -result 1
+
+test tudiagram-4.3 {a malformed (odd-length) -style is ignored, theme fill used} -body {
+    set d [D::create]
+    set d [D::addNode $d a -style fill]
+    string match {*#f4f4f5*} [D::toSvg $d]
+} -result 1
+
+# --- node shapes -----------------------------------------------------------
+
+test tudiagram-5.1 {the new shapes are accepted} -body {
+    set d [D::create]
+    foreach s {circle stadium diamond hexagon cylinder} {
+        set d [D::addNode $d n_$s -shape $s]
+    }
+    llength [dict get $d nodes]
+} -result 5
+
+test tudiagram-5.2 {an unknown shape is rejected} -body {
+    catch {D::addNode [D::create] x -shape star} e o
+    lindex [dict get $o -errorcode] 2
+} -result ARG
+
+test tudiagram-5.3 {diamond renders as a polygon} -body {
+    string match {*<polygon*} [D::toSvg [D::addNode [D::create] a -shape diamond]]
+} -result 1
+
+test tudiagram-5.4 {cylinder renders polygon lids and a body rect} -body {
+    set svg [D::toSvg [D::addNode [D::create] a -shape cylinder]]
+    expr {[regexp -all {<polygon} $svg] >= 2 && [string match {*<rect*} $svg]}
+} -result 1
+
+# --- directions (RL/BT mirror LR/TB) ---------------------------------------
+
+proc chainXY {dir axis} {
+    set d [D::create -direction $dir]
+    foreach id {a b c} { set d [D::addNode $d $id] }
+    set d [D::addEdge $d a b]; set d [D::addEdge $d b c]
+    set d [D::layout $d]
+    set r {}
+    foreach n [dict get $d nodes] { dict set r [dict get $n id] [dict get $n $axis] }
+    return $r
+}
+
+test tudiagram-6.1 {RL reverses the LR x-order of a chain} -body {
+    set lr [chainXY LR x]; set rl [chainXY RL x]
+    expr {[dict get $lr a] < [dict get $lr c]
+          && [dict get $rl a] > [dict get $rl c]}
+} -result 1
+
+test tudiagram-6.2 {BT reverses the TB y-order of a chain} -body {
+    set tb [chainXY TB y]; set bt [chainXY BT y]
+    expr {[dict get $tb a] < [dict get $tb c]
+          && [dict get $bt a] > [dict get $bt c]}
+} -result 1
+
+test tudiagram-6.3 {RL/BT still render to SVG and PNG} -constraints tupngdraw -body {
+    set d [D::addEdge [D::addNode [D::addNode [D::create -direction RL] a] b] a b]
+    expr {[string length [D::toSvg $d]] > 0 && [string length [D::toPng $d]] > 0}
+} -result 1
+
+# --- edge styles and arrows -------------------------------------------------
+
+proc edgeSvg {style arrow} {
+    set d [D::create -direction LR]
+    set d [D::addNode $d a]; set d [D::addNode $d b]
+    set d [D::addEdge $d a b -style $style -arrow $arrow]
+    return [D::toSvg $d]
+}
+
+test tudiagram-7.1 {a dashed edge is drawn as several line pieces} -body {
+    expr {[regexp -all {<line} [edgeSvg dashed end]]
+          > [regexp -all {<line} [edgeSvg solid end]]}
+} -result 1
+
+test tudiagram-7.2 {arrow both draws two arrowheads} -body {
+    regexp -all {<polygon} [edgeSvg solid both]
+} -result 2
+
+test tudiagram-7.3 {arrow none draws no arrowhead} -body {
+    regexp -all {<polygon} [edgeSvg solid none]
+} -result 0
+
+test tudiagram-7.4 {default edge is one solid segment with one head} -body {
+    set svg [edgeSvg solid end]
+    list [regexp -all {<line} $svg] [regexp -all {<polygon} $svg]
+} -result {1 1}
+
+test tudiagram-7.5 {a thick edge is drawn with a wider stroke} -body {
+    string match {*stroke-width="4"*} [edgeSvg thick end]
+} -result 1
+
+test tudiagram-7.6 {a non-thick edge keeps the default stroke width} -body {
+    set svg [edgeSvg solid end]
+    list [string match {*stroke-width="2"*} $svg] [string match {*stroke-width="4"*} $svg]
+} -result {1 0}
+
+# --- cardinality end-marks (crow's foot) -----------------------------------
+
+proc markSvg {sm em} {
+    set d [D::create -direction LR]
+    set d [D::addNode $d a]; set d [D::addNode $d b]
+    set d [D::addEdge $d a b -arrow none -startMark $sm -endMark $em]
+    return [D::toSvg $d]
+}
+proc markCounts {svg} {
+    list [regexp -all {<line} $svg] [regexp -all {<polygon} $svg]
+}
+
+test tudiagram-8.1 {no marks by default: just the edge segment} -body {
+    markCounts [markSvg none none]
+} -result {1 0}
+
+test tudiagram-8.2 {exactlyOne draws two bars} -body {
+    markCounts [markSvg none exactlyOne]
+} -result {3 0}
+
+test tudiagram-8.3 {zeroOrOne draws one bar and a ring} -body {
+    markCounts [markSvg none zeroOrOne]
+} -result {2 1}
+
+test tudiagram-8.4 {oneOrMany draws a crow's foot and a bar} -body {
+    markCounts [markSvg none oneOrMany]
+} -result {5 0}
+
+test tudiagram-8.5 {zeroOrMany draws a crow's foot and a ring} -body {
+    markCounts [markSvg none zeroOrMany]
+} -result {4 1}
+
+test tudiagram-8.6 {marks on both ends are both drawn} -body {
+    markCounts [markSvg exactlyOne zeroOrMany]
+} -result {6 1}
+
+test tudiagram-8.7 {an unknown mark draws nothing (treated as none)} -body {
+    markCounts [markSvg none bogus]
+} -result {1 0}
 
 cleanupTests

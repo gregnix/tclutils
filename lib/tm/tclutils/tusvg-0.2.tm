@@ -270,7 +270,7 @@ proc ::tclutils::tusvg::new {args} {
 }
 
 # ===========================================================================
-# LEGACY vector-authoring + icon library (tusvg 0.1 proc API).
+# LEGACY vector-authoring + icon library (tusvg 0.2 proc API).
 # Not part of the tupngdraw swap contract; kept as the vector superset
 # (gradients, paths, the 40+ icon set). The Canvas `icon` method delegates here.
 # ===========================================================================

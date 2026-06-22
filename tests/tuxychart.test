@@ -1,0 +1,107 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tuxychart
+
+namespace eval M { namespace import ::tclutils::tuxychart::* }
+
+proc seriesTypes {m} { lmap s [dict get $m series] { dict get $s type } }
+proc seriesVals {m i} { dict get [lindex [dict get $m series] $i] values }
+
+# --- parse: structure --------------------------------------------------------
+
+test tuxychart-1.1 {title, categories, series count} -body {
+    set m [M::parse "xychart-beta\n  title \"Sales\"\n  x-axis \[a, b, c\]\n  bar \[1, 2, 3\]"]
+    list [dict get $m title] [dict get $m categories] [llength [dict get $m series]]
+} -result {Sales {a b c} 1}
+
+test tuxychart-1.2 {bar series values} -body {
+    seriesVals [M::parse "xychart-beta\n  bar \[5, 6, 7\]"] 0
+} -result {5 6 7}
+
+test tuxychart-1.3 {bar and line are separate series, in order} -body {
+    seriesTypes [M::parse "xychart-beta\n  bar \[1,2\]\n  line \[3,4\]"]
+} -result {bar line}
+
+test tuxychart-1.4 {multiple bar series are all kept} -body {
+    llength [dict get [M::parse "xychart-beta\n  bar \[1,2\]\n  bar \[3,4\]\n  line \[5,6\]"] series]
+} -result 3
+
+# --- parse: axes -------------------------------------------------------------
+
+test tuxychart-2.1 {explicit y range disables auto} -body {
+    set m [M::parse "xychart-beta\n  y-axis 0 --> 100\n  bar \[1\]"]
+    list [dict get $m yauto] [dict get $m ymin] [dict get $m ymax]
+} -result {0 0 100}
+
+test tuxychart-2.2 {no y range -> auto} -body {
+    dict get [M::parse "xychart-beta\n  y-axis \"Rev\"\n  bar \[1\]"] yauto
+} -result 1
+
+test tuxychart-2.3 {y-axis title with range} -body {
+    set m [M::parse "xychart-beta\n  y-axis \"Revenue\" 0 --> 10\n  bar \[1\]"]
+    list [dict get $m ytitle] [dict get $m ymax]
+} -result {Revenue 10}
+
+test tuxychart-2.4 {x-axis title before categories} -body {
+    set m [M::parse "xychart-beta\n  x-axis \"Month\" \[jan, feb\]\n  bar \[1,2\]"]
+    list [dict get $m xtitle] [dict get $m categories]
+} -result {Month {jan feb}}
+
+test tuxychart-2.5 {numeric x-axis range} -body {
+    set m [M::parse "xychart-beta\n  x-axis 0 --> 100\n  line \[1,2,3\]"]
+    list [dict get $m xnumeric] [dict get $m xmin] [dict get $m xmax]
+} -result {1 0 100}
+
+# --- parse: robustness -------------------------------------------------------
+
+test tuxychart-3.1 {horizontal orientation is recorded} -body {
+    dict get [M::parse "xychart-beta horizontal\n  bar \[1\]"] orientation
+} -result horizontal
+
+test tuxychart-3.2 {comments and blanks ignored} -body {
+    set m [M::parse "xychart-beta\n  %% note\n\n  bar \[1, 2\]"]
+    seriesVals $m 0
+} -result {1 2}
+
+test tuxychart-3.3 {non-numeric value raises TUXYCHART VALUE} -body {
+    catch {M::parse "xychart-beta\n  bar \[1, x, 3\]"} e o
+    lindex [dict get $o -errorcode] 2
+} -result VALUE
+
+test tuxychart-3.4 {no series raises TUXYCHART EMPTY} -body {
+    catch {M::parse "xychart-beta\n  x-axis \[a, b\]"} e o
+    lindex [dict get $o -errorcode] 2
+} -result EMPTY
+
+test tuxychart-3.5 {decimal values are accepted} -body {
+    seriesVals [M::parse "xychart-beta\n  line \[1.5, 2.25\]"] 0
+} -result {1.5 2.25}
+
+# --- render: smoke -----------------------------------------------------------
+
+test tuxychart-4.1 {toSvg yields an svg document with content} -body {
+    set svg [M::toSvg [M::parse "xychart-beta\n  title T\n  x-axis \[a,b\]\n  bar \[1,2\]"]]
+    expr {[string match "*<svg*" $svg] && [string match "*<rect*" $svg]}
+} -result 1
+
+test tuxychart-4.2 {toPng yields a PNG byte stream} -body {
+    set png [M::toPng [M::parse "xychart-beta\n  bar \[1,2,3\]"]]
+    binary scan $png H8 sig
+    set sig
+} -result 89504e47
+
+test tuxychart-4.3 {integer -scale multiplies the raster dimensions} -body {
+    set m [M::parse "xychart-beta\n  bar \[1,2,3\]"]
+    set p1 [M::toPng $m -width 200 -height 200 -scale 1]
+    set p3 [M::toPng $m -width 200 -height 200 -scale 3]
+    binary scan $p1 @16II w1 h1
+    binary scan $p3 @16II w3 h3
+    list $w1 $h1 $w3 $h3
+} -result {200 200 600 600}
+
+cleanupTests

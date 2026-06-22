@@ -76,6 +76,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tujson` | helper + parser + encoder | Escape, quote, pretty, minify, validate, `parse`/`fromJson`/`parseTyped`, and `toJson` (typed value -> JSON, with `str`/`num`/`bool`/`null`/`obj`/`arr` builders). |
 | `tuxml` | helper | Escape and tag builder; no DOM/XPath. |
 | `tusqlite` | helper | NULL-safe helpers over a caller-supplied `sqlite3` handle: `insert` (omitted key or `null` → SQL NULL), `rows` → list of dicts, `value`, `quoteId`. Does not `require sqlite3` itself. |
+| `tummdb` | reader | Pure-Tcl reader for MaxMind DB (`.mmdb`) binary geolocation databases. |
 
 ## Stream / filesystem
 
@@ -194,6 +195,36 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 |---|---|---|
 | `tupkgfinder` | helper | Inspect package resolution: known versions, `ifneeded` scripts and source paths, active vs. shadowed version, search paths; optional filesystem search by pattern. |
 | `tuappinfo` | helper | Collect a plain-text application/system report (Tcl/Tk, environment, search paths, loaded packages, tracked modules); optional anonymisation. GUI-free; the caller renders. |
+
+## Diagrams
+
+Mermaid-compatible diagram rendering, pure Tcl, no browser. `tuflow` is the
+facade: it detects the diagram kind from the fenced-code source and dispatches
+to a parser (graph types, laid out and drawn by `tudiagram`) or to a
+self-contained 2D renderer. Both paths draw through the shared `tusvg` /
+`tupngdraw` canvas, so SVG and PNG output stay congruent. Consumed by
+`docir::diagram` and the showcase.
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tuflow` | facade | Detects the diagram language and dispatches to a parser or a 2D renderer; `parse`/`toSvg`/`toPng`. Mermaid-compatible fenced-code entry point, plus its own flowchart parser. |
+| `tudiagram` | renderer | Node-edge graph renderer: layered layout, 8 node shapes, edge styles incl. `thick`, crow's-foot end-marks, themes; draws to SVG or PNG via the shared canvas. |
+| `tustate` | parser | Mermaid `stateDiagram(-v2)` -> tudiagram model. |
+| `tuer` | parser | Mermaid `erDiagram` -> tudiagram model, with crow's-foot cardinality end-marks. |
+| `tuclass` | parser | Mermaid `classDiagram` -> tudiagram model (compartments, relationship kinds). |
+| `turequirement` | parser | Mermaid `requirementDiagram` -> tudiagram model. |
+| `tumindmap` | parser | Mermaid `mindmap` -> tudiagram model. |
+| `tuc4` | parser | Mermaid C4 (`C4Context`/`Container`/...) -> tudiagram model; boundaries flattened. |
+| `tublock` | parser | Mermaid `block-beta` -> tudiagram model. |
+| `tugit` | parser | Mermaid `gitGraph` -> tudiagram model. |
+| `tupie` | 2D renderer | Mermaid-style `pie` chart -> SVG/PNG (own renderer, not a graph). |
+| `tuxychart` | 2D renderer | Mermaid `xychart-beta` (bar/line series, axes) -> SVG/PNG. |
+| `tuquadrant` | 2D renderer | Mermaid `quadrantChart` -> SVG/PNG. |
+| `tujourney` | 2D renderer | Mermaid `journey` (user journey) -> SVG/PNG. |
+| `tutimeline` | 2D renderer | Mermaid `timeline` -> SVG/PNG. |
+| `tusankey` | 2D renderer | Mermaid `sankey-beta` flow diagram -> SVG/PNG; longest-path columns, value-proportional bands. |
+| `tugantt` | 2D renderer | Mermaid `gantt` chart -> SVG/PNG; sections, tags, `after` deps, durations, milestones over a time axis. |
+| `tusequence` | 2D renderer | Mermaid `sequenceDiagram` -> SVG/PNG; lifelines, all arrow types, activations, notes, autonumber, nestable loop/alt/opt/par frames. |
 
 ## Core
 

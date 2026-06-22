@@ -36,7 +36,18 @@ test tuflow-2.1 {node shapes map correctly} -body {
     set m [M::parse {flowchart LR
         A[box] --> B(round) --> C((circ)) --> D{dia}}]
     list [nodeOf $m A shape] [nodeOf $m B shape] [nodeOf $m C shape] [nodeOf $m D shape]
-} -result {box rounded rounded box}
+} -result {box rounded circle diamond}
+
+test tuflow-2.1a {stadium, hexagon and database shapes} -body {
+    set m [M::parse {flowchart LR
+        A([sta]) --> B{{hex}} --> C[(db)]}]
+    list [nodeOf $m A shape] [nodeOf $m B shape] [nodeOf $m C shape]
+} -result {stadium hexagon cylinder}
+
+test tuflow-2.1b {RL and BT directions pass through} -body {
+    list [dict get [M::parse "graph RL\n  X --> Y"] meta direction] \
+         [dict get [M::parse "graph BT\n  X --> Y"] meta direction]
+} -result {RL BT}
 
 test tuflow-2.2 {bracket text becomes the label; bare id is its own label} -body {
     set m [M::parse {graph LR
@@ -97,5 +108,40 @@ test tuflow-6.1 {the model renders via tudiagram (non-empty SVG)} -body {
         D --> E}]
     expr {[string length [::tclutils::tudiagram::toSvg $m]] > 0}
 } -result 1
+
+# --- render facade -----------------------------------------------------------
+
+test tuflow-facade-1.1 {toSvg on a graph equals tudiagram::toSvg [parse]} -body {
+    set g {graph LR
+        A[Start] --> B{Check}
+        B -->|ok| C[Done]}
+    expr {[M::toSvg $g] eq [::tclutils::tudiagram::toSvg [M::parse $g]]}
+} -result 1
+
+test tuflow-facade-1.2 {toPng on a graph equals tudiagram::toPng [parse]} -body {
+    set g {graph LR
+        A --> B --> C}
+    expr {[M::toPng $g -scale 2] eq [::tclutils::tudiagram::toPng [M::parse $g] -scale 2]}
+} -result 1
+
+test tuflow-facade-2.1 {pie renders to SVG through the facade} -body {
+    set svg [M::toSvg "pie title T\n  \"A\" : 30\n  \"B\" : 70"]
+    expr {[string match {<svg*} $svg] && [regexp -all {<(polygon|path)\M} $svg] == 2}
+} -result 1
+
+test tuflow-facade-2.2 {pie renders to PNG through the facade} -body {
+    binary scan [M::toPng "pie\n  \"A\" : 1\n  \"B\" : 1" -scale 2] H8 sig
+    set sig
+} -result 89504e47
+
+test tuflow-facade-2.3 {facade -fontfile with a missing path is a hard FONT error} -body {
+    catch {M::toPng "pie\n  \"A\" : 1" -fontfile /no/such/font/here.ttf} e o
+    lindex [dict get $o -errorcode] end
+} -result FONT
+
+test tuflow-facade-3.1 {parse stays graph-only and still rejects pie} -body {
+    catch {M::parse "pie\n  \"A\" : 1"} e o
+    lindex [dict get $o -errorcode] end
+} -result UNSUPPORTED
 
 cleanupTests

@@ -1,0 +1,99 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tuquadrant
+
+namespace eval M { namespace import ::tclutils::tuquadrant::* }
+
+proc npoints {m} { llength [dict get $m points] }
+proc point {m i} { lindex [dict get $m points] $i }
+
+# --- parse: points -----------------------------------------------------------
+
+test tuquadrant-1.1 {points are parsed with name and coords} -body {
+    set m [M::parse "quadrantChart\n  A: \[0.3, 0.6\]\n  B: \[0.45, 0.23\]"]
+    list [npoints $m] [point $m 0]
+} -result {2 {A 0.3 0.6}}
+
+test tuquadrant-1.2 {coordinates are clamped to 0..1} -body {
+    point [M::parse "quadrantChart\n  P: \[1.5, -0.2\]"] 0
+} -result {P 1.0 0.0}
+
+test tuquadrant-1.3 {trailing style hints are ignored} -body {
+    point [M::parse "quadrantChart\n  P: \[0.5, 0.4\] radius: 10, color: #ff0000"] 0
+} -result {P 0.5 0.4}
+
+test tuquadrant-1.4 {quoted point name is unquoted} -body {
+    lindex [point [M::parse "quadrantChart\n  \"My Point\": \[0.2, 0.2\]"] 0] 0
+} -result {My Point}
+
+# --- parse: axes / quadrants -------------------------------------------------
+
+test tuquadrant-2.1 {x-axis splits into left and right} -body {
+    set m [M::parse "quadrantChart\n  x-axis Low Reach --> High Reach\n  A: \[0.1,0.1\]"]
+    list [dict get $m xleft] [dict get $m xright]
+} -result {{Low Reach} {High Reach}}
+
+test tuquadrant-2.2 {y-axis splits into bottom and top} -body {
+    set m [M::parse "quadrantChart\n  y-axis Low --> High\n  A: \[0.1,0.1\]"]
+    list [dict get $m ybottom] [dict get $m ytop]
+} -result {Low High}
+
+test tuquadrant-2.3 {x-axis without --> sets only the left label} -body {
+    set m [M::parse "quadrantChart\n  x-axis Reach\n  A: \[0.1,0.1\]"]
+    list [dict get $m xleft] [dict get $m xright]
+} -result {Reach {}}
+
+test tuquadrant-2.4 {quadrant labels 1..4} -body {
+    set m [M::parse "quadrantChart\n  quadrant-1 TR\n  quadrant-2 TL\n  quadrant-3 BL\n  quadrant-4 BR"]
+    list [dict get $m q1] [dict get $m q2] [dict get $m q3] [dict get $m q4]
+} -result {TR TL BL BR}
+
+test tuquadrant-2.5 {title is parsed} -body {
+    dict get [M::parse "quadrantChart\n  title Campaigns\n  A: \[0.1,0.1\]"] title
+} -result {Campaigns}
+
+# --- robustness --------------------------------------------------------------
+
+test tuquadrant-3.1 {comments and blanks are ignored} -body {
+    set m [M::parse "quadrantChart\n  %% note\n\n  A: \[0.2, 0.3\]"]
+    npoints $m
+} -result 1
+
+test tuquadrant-3.2 {a chart with only axis labels is valid} -body {
+    set m [M::parse "quadrantChart\n  x-axis Lo --> Hi"]
+    list [npoints $m] [dict get $m xleft]
+} -result {0 Lo}
+
+test tuquadrant-3.3 {empty source raises TUQUADRANT EMPTY} -body {
+    catch {M::parse "quadrantChart"} e o
+    list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
+} -result {TUQUADRANT EMPTY}
+
+# --- render: smoke -----------------------------------------------------------
+
+test tuquadrant-4.1 {toSvg yields svg with quadrants and points} -body {
+    set svg [M::toSvg [M::parse "quadrantChart\n  quadrant-1 X\n  A: \[0.5,0.5\]"]]
+    expr {[string match "*<svg*" $svg] && [string match "*<rect*" $svg] && [string match "*<circle*" $svg]}
+} -result 1
+
+test tuquadrant-4.2 {toPng yields a PNG byte stream} -body {
+    set png [M::toPng [M::parse "quadrantChart\n  A: \[0.3,0.7\]"]]
+    binary scan $png H8 sig
+    set sig
+} -result 89504e47
+
+test tuquadrant-4.3 {integer -scale multiplies the raster dimensions} -body {
+    set m [M::parse "quadrantChart\n  A: \[0.3,0.7\]"]
+    set p1 [M::toPng $m -width 200 -height 200 -scale 1]
+    set p3 [M::toPng $m -width 200 -height 200 -scale 3]
+    binary scan $p1 @16II w1 h1
+    binary scan $p3 @16II w3 h3
+    list $w1 $h1 $w3 $h3
+} -result {200 200 600 600}
+
+cleanupTests
