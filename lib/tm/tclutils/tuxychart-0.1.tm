@@ -16,8 +16,9 @@
 #   line [v1, v2, ...]                 -> a line series  (multiple allowed)
 #
 # v1 limitations (honest): only the vertical orientation is drawn (a trailing
-# `horizontal` is ignored); the y-axis title is placed horizontally, not
-# rotated; series are coloured from a fixed palette; bar groups share each
+# `horizontal` is ignored); the y-axis title is drawn horizontally in a band
+# above the axis (not rotated); series are coloured from a fixed palette; bar
+# groups share each
 # category slot side by side.
 #
 # Namespace: ::tclutils::tuxychart   Package: tclutils::tuxychart 0.1
@@ -292,14 +293,17 @@ proc ::tclutils::tuxychart::_draw {c model o gfont} {
     # layout
     set pad     [expr {12 * $fs}]
     set titleH  [expr {$title ne "" ? 18 * $fs : 0}]
-    set yTitleW [expr {[dict get $model ytitle] ne "" ? 12 * $fs : 0}]
+    # y-axis title is drawn horizontally in a band ABOVE the plot (next to the
+    # top of the y-axis) so it never collides with the topmost tick label.
+    set yTitleW 0
+    set yTitleH [expr {[dict get $model ytitle] ne "" ? 14 * $fs : 0}]
     set yLabW   [expr {32 * $fs}]
     set xLabH   [expr {14 * $fs}]
     set xTitleH [expr {[dict get $model xtitle] ne "" ? 14 * $fs : 0}]
 
     set px0 [expr {$pad + $yTitleW + $yLabW}]
     set px1 [expr {$W - $pad}]
-    set py0 [expr {$pad + $titleH}]
+    set py0 [expr {$pad + $titleH + $yTitleH}]
     set py1 [expr {$H - $pad - $xLabH - $xTitleH}]
     if {$px1 - $px0 < 10} { set px1 [expr {$px0 + 10}] }
     if {$py1 - $py0 < 10} { set py1 [expr {$py0 + 10}] }
@@ -391,7 +395,7 @@ proc ::tclutils::tuxychart::_draw {c model o gfont} {
             [expr {$py1 + $xLabH}] [dict get $model xtitle] black
     }
     if {[dict get $model ytitle] ne ""} {
-        _drawText $c $gfont $fs $pad [expr {$py0 - 0}] [dict get $model ytitle] black
+        _drawText $c $gfont $fs $px0 [expr {$pad + $titleH}] [dict get $model ytitle] #555555
     }
 
     # legend (only when more than one series)
