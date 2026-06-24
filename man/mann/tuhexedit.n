@@ -44,3 +44,9 @@ The dump command delegates to \fBtclutils::tuhexdump\fR.
 \fBpatch\fR and \fBwriteBytes\fR are in\-place, length\-preserving operations. They do not insert or delete bytes and therefore do not shift the remaining file content.
 .PP
 \fBfindHex\fR, \fBfindString\fR, and \fBpatch\fR currently read the complete file into memory. \fBreadBytes\fR is the partial\-read API for large files.
+.SS "Additional exported commands"
+.PP
+Documented for completeness (same module, also covered by the test suite):
+.CS
+tuhexedit::backup filename ?backupName?        ;# write a backup copy of FILENAME (default FILENAME plus .bak) before an in-place edit
+.CE

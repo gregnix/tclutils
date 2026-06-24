@@ -83,3 +83,10 @@ tujson::toJson $doc -indent 2
 .CE
 .PP
 \fB\-indent N\fR (N > 0) pretty\-prints; the default (0) is compact. Strings are escaped via \fBquote\fR; numbers are validated; unknown tags raise \fB{TCLUTILS TUJSON TYPE}\fR.
+.SS "Additional exported commands"
+.PP
+Documented for completeness (same module, also covered by the test suite):
+.CS
+tujson::fileMinify infile outfile              ;# read JSON from INFILE and write a minified copy to OUTFILE
+tujson::filePretty infile outfile args         ;# read JSON from INFILE and write a pretty-printed copy to OUTFILE
+.CE

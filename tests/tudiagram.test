@@ -291,4 +291,73 @@ test tudiagram-8.7 {an unknown mark draws nothing (treated as none)} -body {
     markCounts [markSvg none bogus]
 } -result {1 0}
 
+# --- groups (clusters, since 0.4) --------------------------------------------
+
+proc groupDoc {} {
+    set d [D::create -direction TB]
+    set d [D::addNode $d A -label A]
+    set d [D::addNode $d B -label B]
+    set d [D::addNode $d C -label C]
+    set d [D::addEdge $d A B -arrow end]
+    set d [D::addEdge $d B C -arrow end]
+    return $d
+}
+
+test tudiagram-9.1 {addGroup records id, label and members} -body {
+    set d [D::addGroup [groupDoc] g1 -label "Phase 1" -members {A B}]
+    lindex [dict get $d groups] 0
+} -result {id g1 label {Phase 1} members {A B}}
+
+test tudiagram-9.2 {addGroup defaults the label to the id} -body {
+    set d [D::addGroup [groupDoc] g1 -members {A B}]
+    dict get [lindex [dict get $d groups] 0] label
+} -result {g1}
+
+test tudiagram-9.3 {a model with a group still validates and lays out} -body {
+    set d [D::addGroup [groupDoc] g1 -label G -members {A B}]
+    set d [D::layout $d]
+    expr {[dict get $d meta width] > 0 && [dict get $d meta height] > 0}
+} -result 1
+
+test tudiagram-9.4 {a grouped model renders to an <svg> document} -body {
+    set d [D::addGroup [groupDoc] g1 -label "Phase 1" -members {A B}]
+    string match {<svg*} [D::toSvg $d]
+} -result 1
+
+test tudiagram-9.5 {the group label appears in the SVG text} -body {
+    set d [D::addGroup [groupDoc] g1 -label ZZTOP -members {A B}]
+    expr {[string first ZZTOP [D::toSvg $d]] >= 0}
+} -result 1
+
+test tudiagram-9.6 {a grouped model renders valid PNG} -constraints tupngdraw -body {
+    set d [D::addGroup [groupDoc] g1 -label G -members {A B}]
+    binary scan [D::toPng $d] H8 s
+    set s
+} -result {89504e47}
+
+test tudiagram-9.7 {a group with no real members is skipped at render (no crash)} -body {
+    set d [D::addGroup [groupDoc] ghost -label X -members {NOPE}]
+    string match {<svg*} [D::toSvg $d]
+} -result 1
+
+test tudiagram-9.8 {same-rank compaction keeps a foreign node out of the group span} -body {
+    # A fans out to M1, X, M2 (all one rank); group {M1,M2} must end up
+    # contiguous so X's centre is not inside the group's x-interval.
+    set d [D::create -direction TB]
+    foreach id {A M1 X M2} { set d [D::addNode $d $id -label $id] }
+    set d [D::addEdge $d A M1 -arrow end]
+    set d [D::addEdge $d A X  -arrow end]
+    set d [D::addEdge $d A M2 -arrow end]
+    set d [D::addGroup $d G -label G -members {M1 M2}]
+    set d [D::layout $d]
+    array set P {}
+    foreach n [dict get $d nodes] {
+        set P([dict get $n id]) [list [dict get $n x] [expr {[dict get $n x]+[dict get $n width]}]]
+    }
+    lassign $P(M1) m1a m1b; lassign $P(M2) m2a m2b; lassign $P(X) xa xb
+    set lo [expr {min($m1a,$m2a)}]; set hi [expr {max($m1b,$m2b)}]
+    set xc [expr {($xa+$xb)/2.0}]
+    expr {$xc < $lo || $xc > $hi}
+} -result 1
+
 cleanupTests

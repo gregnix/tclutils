@@ -1,0 +1,71 @@
+.TH tukanban n 0.1 tclutils
+.SH tclutils::tukanban
+.PP
+Parses a Mermaid \fBkanban\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtusankey\fR / \fBtupacket\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here. A kanban board is a column layout, not a node\-edge graph, so it does \fBnot\fR go through \fBtudiagram\fR.
+.SS Package
+.CS
+package require tclutils::tukanban 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tukanban::parse text                          ;# -> kanban model dict
+::tclutils::tukanban::toSvg  model ?-width W? ?-height H? ?-fontfile f? ?-scale n?
+::tclutils::tukanban::toPng  model ?...?                  ;# -> PNG bytes
+::tclutils::tukanban::writeSvg model file ?...?
+::tclutils::tukanban::writePng model file ?...?
+.CE
+.SS "Supported syntax (Mermaid subset)"
+.CS
+kanban
+  <Column Title>                 -> least-indented content line
+    <Card text>                  -> a more-indented line
+    <Card text>@{ key: val, ... } -> optional metadata
+.CE
+.IP \(bu
+The header line is \fBkanban\fR; columns and cards follow.
+.IP \(bu
+\fBIndentation decides the role.\fR The first content line after the header sets the column indent; lines at that indent are column titles, deeper lines are cards of the current column.
+.IP \(bu
+Card metadata after \fB@{ ... }\fR is shown as a small grey sub\-line (all parsed \fBkey: value\fR pairs, joined). The Mermaid keys \fBticket\fR, \fBassigned\fR, \fBpriority\fR are typical but not required \-\- any keys present are shown.
+.IP \(bu
+Blank lines and \fB%%\fR comments are ignored.
+.SS "Layout (v1)"
+.PP
+Columns are laid out left\-to\-right and fill the canvas evenly. Each column has a coloured header band (from a fixed qualitative palette), a light lane background, and its cards stacked top\-to\-bottom as rounded white boxes. A card with metadata is drawn taller to fit its sub\-line. The canvas size grows automatically with the column count and the tallest card stack when \fB\-width\fR / \fB\-height\fR are left at their default (\fB0\fR = auto).
+.SS "v1 limitations (honest)"
+.IP \(bu
+Metadata is rendered as a single joined text line, not styled per key.
+.IP \(bu
+No card colours, priority\-based styling, or assignee avatars.
+.IP \(bu
+Long card text is clipped to the column width, not wrapped or shrunk.
+.IP \(bu
+Cards exceeding the lane height are dropped (the lane does not scroll).
+.SS Options
+.PP
+\fB\-width\fR (default \fB0\fR = auto from column count), \fB\-height\fR (default \fB0\fR = auto from the tallest stack), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in 6x8 bitmap font with German umlauts via real codepoints), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+.SS Usage
+.CS
+package require tclutils::tukanban
+set src {kanban
+    Backlog
+        Write the spec
+        Design the API@{ ticket: DOC-1, priority: High }
+    In Progress
+        Implement parser@{ assigned: Dev }
+    Done
+        Review complete@{ ticket: DOC-99 }}
+::tclutils::tukanban::writePng [::tclutils::tukanban::parse $src] board.png -scale 3
+.CE
+.PP
+In Markdown, \fBkanban\fR rides on the \fB```mermaid\fR fence, so docir's raster sinks (pdf / odt / rendererTk) render it through \fBtuflow::toPng\fR; no docir change is needed.
+.SS Notes
+.IP \(bu
+Companion: \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (canvas), \fBtclutils::tuflow\fR (dispatch).
+.IP \(bu
+Headers, lanes, cards and text use only rect/text primitives, so SVG and PNG stay congruent.
+.IP \(bu
+\fBtuflow::parse\fR rejects \fBkanban\fR with \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR (it is not a node\-edge graph); the facade \fBtoSvg\fR/\fBtoPng\fR is the render path, exactly as for \fBpie\fR / \fBsankey\-beta\fR / \fBpacket\-beta\fR.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUKANBAN <REASON>}\fR \-\- \fBEMPTY\fR (no header / no columns), \fBARG\fR (bad \fB\-scale\fR), \fBFONT\fR (font file not found).

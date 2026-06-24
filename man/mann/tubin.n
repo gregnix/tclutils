@@ -1,12 +1,12 @@
-.TH tubin n 0.1 tclutils
+.TH tubin n 0.3 tclutils
 .SH tclutils::tubin
 .PP
 Binary helper primitives in pure Tcl.
 .PP
-\fBtubin\fR is the shared binary layer for modules such as \fBtuhexdump\fR, \fBtuhexedit\fR, and later byte\-oriented parsers.
+\fBtubin\fR is the shared binary layer for modules such as \fBtuhexdump\fR, \fBtuhexedit\fR, \fBtummdb\fR, and later byte\-oriented parsers.
 .SS Package
 .CS
-package require tclutils::tubin 0.1
+package require tclutils::tubin 0.3
 .CE
 .SS "Hex conversion"
 .CS
@@ -25,6 +25,58 @@ set hex   [::tclutils::tubin::bytesToHex $bytes]
 .CE
 .PP
 Offsets may be decimal or hex\-like strings such as \fB0x100\fR.
+.SS "Variable\-length big\-endian integer"
+.CS
+::tclutils::tubin::uintbe $bytes ?offset? ?length?
+.CE
+.PP
+Reads a big\-endian unsigned integer of arbitrary byte length (0..N). A length of \fB0\fR returns \fB0\fR. Useful for formats with non\-power\-of\-two widths, e.g. the 24\-bit tree records and 128\-bit integers of the MaxMind DB format. Tcl's big\-integer support keeps values exact beyond 64 bits.
+.CS
+::tclutils::tubin::uintbe [binary format ccc 1 2 3] 0 3   ;# -> 66051
+.CE
+.SS "IEEE\-754 float readers (big\-endian)"
+.CS
+::tclutils::tubin::f32be  $bytes ?offset?   ;# single precision (4 bytes)
+::tclutils::tubin::f64be  $bytes ?offset?   ;# double precision (8 bytes)
+.CE
+.SS "Little\-endian variants"
+.CS
+::tclutils::tubin::uintle $bytes ?offset? ?length?   ;# variable-length LE unsigned
+::tclutils::tubin::f32le  $bytes ?offset?
+::tclutils::tubin::f64le  $bytes ?offset?
+.CE
+.SS "Signed integer readers (two's complement)"
+.CS
+::tclutils::tubin::i8     $bytes ?offset?
+::tclutils::tubin::i16le  $bytes ?offset?
+::tclutils::tubin::i16be  $bytes ?offset?
+::tclutils::tubin::i32le  $bytes ?offset?
+::tclutils::tubin::i32be  $bytes ?offset?
+::tclutils::tubin::i64le  $bytes ?offset?
+::tclutils::tubin::i64be  $bytes ?offset?
+.CE
+.PP
+Each is the signed counterpart of the matching \fBuNN\fR reader.
+.SS "Reader cursor"
+.PP
+A position\-tracking view over a byte string, so parsers need not thread an offset by hand.
+.CS
+set rd [::tclutils::tubin::reader new $bytes ?offset?]
+
+$rd u32be              ;# read and advance
+$rd uintbe 3           ;# variable-length read and advance
+$rd i16le
+$rd f64be
+$rd bytes 8            ;# read 8 raw bytes
+$rd skip 4             ;# advance without reading
+$rd seek 0             ;# absolute position
+$rd tell               ;# current position
+$rd remaining          ;# bytes left
+$rd atEnd              ;# 1 at end of data
+$rd destroy            ;# release the cursor
+.CE
+.PP
+Read methods mirror the standalone readers: \fBu8\fR/\fBi8\fR, \fBu16le\fR/\fBu16be\fR/\fBi16le\fR/ \fBi16be\fR, the 32\- and 64\-bit variants, \fBf32le\fR/\fBf32be\fR/\fBf64le\fR/\fBf64be\fR, and \fBuintbe\fR/\fBuintle\fR (which take a length).
 .SS "Unsigned integer packers"
 .CS
 ::tclutils::tubin::packU8     255

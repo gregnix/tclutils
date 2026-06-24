@@ -1,0 +1,45 @@
+.TH tustate n 0.1 tclutils
+.SH tclutils::tustate
+.PP
+Parses a Mermaid \fBstateDiagram\fR / \fBstateDiagram\-v2\fR block into a \fBtclutils::tudiagram\fR model, so a state diagram can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
+.SS Package
+.CS
+package require tclutils::tustate 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tustate::parse text      ;# -> tudiagram model dict
+.CE
+.PP
+The result is a \fBtudiagram\fR model and is rendered with \fBtclutils::tudiagram::toSvg\fR / \fBtoPng\fR (or via the \fBtuflow\fR facade).
+.SS "Supported syntax (Mermaid subset)"
+.CS
+states           -> rounded boxes
+transitions      -> edges:  A --> B   (optional ": label")
+[*]              -> start (__start) / end (__end) marker, by side
+"S : text"       -> sets state S's display label
+state X <<fork>> -> a labelled box named X (also <<join>>)
+direction LR|RL|TB|TD|BT  -> layout direction (RL->LR, BT/TD->TB)
+.CE
+.SS Usage
+.CS
+package require tclutils::tustate
+package require tclutils::tudiagram
+
+set src {stateDiagram-v2
+    [*] --> Idle
+    Idle --> Running : start
+    Running --> Idle : stop
+    Running --> [*]
+}
+set m [::tclutils::tustate::parse $src]
+::tclutils::tudiagram::writePng $m state.png -scale 3
+.CE
+.SS Notes
+.IP \(bu
+v1 limitations (honest): composite states \fBstate X { ... }\fR are flattened (inner transitions kept, the boundary box is not drawn); notes are ignored; fork/join render as boxes, not bars; self\-loops are not drawn.
+.IP \(bu
+Companion: \fBtclutils::tudiagram\fR (renderer), \fBtclutils::tuflow\fR (dispatch).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUSTATE <REASON>}\fR — \fBEMPTY\fR (no states/transitions found).

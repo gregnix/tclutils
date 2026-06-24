@@ -17,3 +17,10 @@ tustr::count $s $sub                    ;# non-overlapping occurrences
 .CE
 .PP
 \fBpadLeft\fR/\fBpadRight\fR/\fBcenter\fR/\fBtruncate\fR take a non\-negative integer width/length (\fB{TCLUTILS TUSTR ARG}\fR otherwise). \fBchar\fR should be a single character. \fBslugify\fR/\fBtoSnake\fR/\fBtoCamel\fR operate on the ASCII alphanumerics in the input.
+.SS "Additional exported commands"
+.PP
+Documented for completeness (same module, also covered by the test suite):
+.CS
+tustr::endsWith s suffix                       ;# true if S ends with SUFFIX
+tustr::removeSuffix s suffix                   ;# return S without a trailing SUFFIX (unchanged if absent)
+.CE

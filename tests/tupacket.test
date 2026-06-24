@@ -1,0 +1,146 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tupacket
+
+namespace eval M { namespace import ::tclutils::tupacket::* }
+
+proc fields {m} { dict get $m fields }
+proc field  {m i} { lindex [dict get $m fields] $i }
+proc pngsig {bytes} { binary scan [string range $bytes 0 3] H* s; return $s }
+
+# --- parse: fields -----------------------------------------------------------
+
+test tupacket-1.1 {a range field parses to start/end/label} -body {
+    field [M::parse "packet-beta\n0-7: \"Magic\""] 0
+} -result {0 7 Magic}
+
+test tupacket-1.2 {a single-bit field has start == end} -body {
+    field [M::parse "packet-beta\n3: \"Flag\""] 0
+} -result {3 3 Flag}
+
+test tupacket-1.3 {label quotes are optional} -body {
+    field [M::parse "packet-beta\n0-1: Bare"] 0
+} -result {0 1 Bare}
+
+test tupacket-1.4 {single-quoted labels are unwrapped too} -body {
+    lindex [field [M::parse "packet-beta\n0-1: 'Quoted'"] 0] 2
+} -result {Quoted}
+
+test tupacket-1.5 {a title on its own line is captured} -body {
+    dict get [M::parse "packet-beta\ntitle Header\n0-3: x"] title
+} -result {Header}
+
+test tupacket-1.6 {a title on the header line is captured} -body {
+    dict get [M::parse "packet-beta title Inline\n0-3: x"] title
+} -result {Inline}
+
+test tupacket-1.7 {bare 'packet' header is accepted} -body {
+    llength [fields [M::parse "packet\n0-3: x"]]
+} -result 1
+
+test tupacket-1.8 {blank lines and %% comments are ignored} -body {
+    llength [fields [M::parse "packet-beta\n%% c\n\n0-3: a\n\n4-7: b"]]
+} -result 2
+
+test tupacket-1.9 {fields are returned sorted by start bit} -body {
+    set m [M::parse "packet-beta\n8-15: b\n0-7: a"]
+    list [lindex [field $m 0] 0] [lindex [field $m 1] 0]
+} -result {0 8}
+
+test tupacket-1.10 {bitsPerRow is 32} -body {
+    dict get [M::parse "packet-beta\n0-3: x"] bitsPerRow
+} -result 32
+
+# --- row / layout math -------------------------------------------------------
+
+test tupacket-2.1 {a sub-32 field needs one row} -body {
+    ::tclutils::tupacket::_rows [M::parse "packet-beta\n0-7: a"]
+} -result 1
+
+test tupacket-2.2 {bit 32 spills into a second row} -body {
+    ::tclutils::tupacket::_rows [M::parse "packet-beta\n0-31: a\n32-63: b"]
+} -result 2
+
+test tupacket-2.3 {bit 96-127 reaches the fourth row} -body {
+    ::tclutils::tupacket::_rows [M::parse "packet-beta\n96-127: a"]
+} -result 4
+
+test tupacket-2.4 {a field is split into per-row segments} -body {
+    ::tclutils::tupacket::_segments 28 40 32
+} -result {{0 28 31} {1 32 40}}
+
+test tupacket-2.5 {auto height grows with row count} -body {
+    set h1 [::tclutils::tupacket::_autoHeight [M::parse "packet-beta\n0-7: a"]]
+    set h4 [::tclutils::tupacket::_autoHeight [M::parse "packet-beta\n96-127: a"]]
+    expr {$h4 > $h1}
+} -result 1
+
+# --- errors ------------------------------------------------------------------
+
+test tupacket-3.1 {no header is an EMPTY error} -body {
+    catch {M::parse "0-7: a"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPACKET EMPTY}
+
+test tupacket-3.2 {a header with no fields is EMPTY} -body {
+    catch {M::parse "packet-beta"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPACKET EMPTY}
+
+test tupacket-3.3 {overlapping fields are a RANGE error} -body {
+    catch {M::parse "packet-beta\n0-7: a\n4-9: b"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPACKET RANGE}
+
+test tupacket-3.4 {end before start is a RANGE error} -body {
+    catch {M::parse "packet-beta\n9-3: a"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPACKET RANGE}
+
+test tupacket-3.5 {an unparseable field line is a VALUE error} -body {
+    catch {M::parse "packet-beta\nnonsense"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPACKET VALUE}
+
+test tupacket-3.6 {a non-integer scale is an ARG error} -body {
+    catch {M::toSvg [M::parse "packet-beta\n0-3: a"] -scale x} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPACKET ARG}
+
+# --- render ------------------------------------------------------------------
+
+test tupacket-4.1 {toSvg returns an <svg> document} -body {
+    string match {<svg*} [M::toSvg [M::parse "packet-beta\n0-7: a\n8-15: b"]]
+} -result 1
+
+test tupacket-4.2 {toPng returns valid PNG bytes} -body {
+    pngsig [M::toPng [M::parse "packet-beta\n0-31: a\n32-63: b"]]
+} -result {89504e47}
+
+test tupacket-4.3 {a gap between fields still renders} -body {
+    pngsig [M::toPng [M::parse "packet-beta\n0-3: a\n8-15: b"]]
+} -result {89504e47}
+
+test tupacket-4.4 {-scale 3 yields a 3x wider PNG} -body {
+    set m [M::parse "packet-beta\n0-7: a"]
+    binary scan [M::toPng $m -scale 1] @16I w1
+    binary scan [M::toPng $m -scale 3] @16I w3
+    expr {$w3 == 3*$w1}
+} -result 1
+
+test tupacket-4.5 {a field spanning a row boundary renders} -body {
+    pngsig [M::toPng [M::parse "packet-beta\n28-40: spanning"]]
+} -result {89504e47}
+
+test tupacket-4.6 {a title is honoured in render (taller canvas)} -body {
+    set h0 [::tclutils::tupacket::_autoHeight [M::parse "packet-beta\n0-7: a"]]
+    set ht [::tclutils::tupacket::_autoHeight [M::parse "packet-beta\ntitle T\n0-7: a"]]
+    expr {$ht > $h0}
+} -result 1
+
+cleanupTests

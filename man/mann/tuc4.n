@@ -1,0 +1,52 @@
+.TH tuc4 n 0.1 tclutils
+.SH tclutils::tuc4
+.PP
+Parses a Mermaid C4 diagram (\fBC4Context\fR, \fBC4Container\fR, \fBC4Component\fR, \fBC4Dynamic\fR, \fBC4Deployment\fR) into a \fBtclutils::tudiagram\fR model, so a C4 diagram can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
+.SS Package
+.CS
+package require tclutils::tuc4 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tuc4::parse text      ;# -> tudiagram model dict
+.CE
+.PP
+The result is a \fBtudiagram\fR model and is rendered with \fBtclutils::tudiagram::toSvg\fR / \fBtoPng\fR (or via the \fBtuflow\fR facade).
+.SS "Supported syntax (Mermaid subset)"
+.CS
+Person(id,"name",...)  Person_Ext(...)        -> rounded box (actor)
+System(...) SystemDb(...) SystemQueue(...)     -> box
+Container(...) Component(...) and *Db/*Queue   -> box
+*_Ext variants                                 -> box
+Rel(from,to,"label",...)                       -> edge from -> to, labelled
+BiRel / Rel_U|Rel_D|Rel_L|Rel_R(from,to,"...") -> edge (direction hint ignored)
+title <text>                                   -> diagram title
+*_Boundary(id,"label") { ... }                 -> flattened (inner kept)
+UpdateElementStyle / UpdateRelStyle / Update…  -> ignored
+.CE
+.PP
+An element's display label is its \fB"name"\fR (the first quoted argument); the leading id token becomes the node id.
+.SS Usage
+.CS
+package require tclutils::tuc4
+package require tclutils::tudiagram
+
+set src {C4Context
+    title Internet Banking
+    Person(customer, "Customer", "A bank customer")
+    System(banking, "Banking System", "Web app")
+    System_Ext(email, "E-mail System")
+    Rel(customer, banking, "Uses")
+    Rel(banking, email, "Sends", "SMTP")
+}
+set m [::tclutils::tuc4::parse $src]
+::tclutils::tudiagram::writePng $m c4.png -scale 3
+.CE
+.SS Notes
+.IP \(bu
+v1 limitations (honest): boundaries (\fBEnterprise_Boundary\fR, \fBSystem_Boundary\fR, \fBContainer_Boundary\fR, \fBBoundary\fR, \fBDeployment_Node\fR, \fBNode\fR) are flattened — their inner elements are kept, the boundary box itself is not drawn; the technology/description arguments are not shown (only the name); \fBBiRel\fR renders as a single\-headed edge; the directional \fBRel_U/D/L/R\fR hints are ignored (\fBtudiagram\fR lays the graph out top\-down).
+.IP \(bu
+Companion: \fBtclutils::tudiagram\fR (renderer), \fBtclutils::tuflow\fR (dispatch).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUC4 <REASON>}\fR — \fBEMPTY\fR (no elements found).

@@ -1,0 +1,81 @@
+.TH tutimeline n 0.1 tclutils
+.SH tclutils::tutimeline
+.PP
+A Mermaid\-style \fBtimeline\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBtimeline\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
+.PP
+A timeline is not a node\-edge graph, so \fBtutimeline\fR does \fBnot\fR go through \fBtclutils::tudiagram\fR; it owns its own parse and draw step, exposing the same \fBtoSvg\fR / \fBtoPng\fR shape the other renderers use. That lets the \fBtclutils::tuflow\fR facade treat every diagram family uniformly: \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR detect a \fBtimeline\fR block and dispatch here (like \fBpie\fR, \fBxychart\-beta\fR, \fBquadrantChart\fR and \fBjourney\fR).
+.PP
+The chart is drawn horizontally: a time axis with the period labels below it, each period's events stacked as boxes above it, and sections as coloured bands across the top.
+.SS Package
+.CS
+package require tclutils::tutimeline 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tutimeline::parse    text                       ;# -> model dict
+::tclutils::tutimeline::toSvg    model ?-opt val ...?        ;# -> SVG string
+::tclutils::tutimeline::toPng    model ?-opt val ...?        ;# -> PNG bytes
+::tclutils::tutimeline::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
+::tclutils::tutimeline::writePng model file ?-opt val ...?   ;# -> file (PNG)
+.CE
+.PP
+\fBparse\fR turns Mermaid \fBtimeline\fR source into a model dict with keys \fBtitle\fR, \fBperiods\fR (a list of \fB{time events section}\fR, \fBevents\fR a list) and \fBsections\fR (ordered unique section names). The render commands take that model.
+.PP
+Render options (all optional):
+.CS
+-width  N      chart width in logical px           (default 640)
+-height N      chart height in logical px          (default 380)
+-scale  N      raster scale, positive integer      (default 1; toPng only)
+-fontfile F    real TTF/OTF for labels (raster)    (default: 6x8 bitmap font)
+.CE
+.PP
+The SVG backend ignores \fB\-scale\fR and \fB\-fontfile\fR (it uses a fixed \fBmonospace\fR viewer font locked to the 6x8 metric). On the raster backend \fB\-scale N\fR multiplies the pixel dimensions and the font scale by \fBN\fR.
+.SS "Input grammar (Mermaid \fBtimeline\fR subset)"
+.CS
+timeline                           %% header
+title <text>                       %% chart title
+section <name>                     %% starts a section
+<time> : <event> : <event> ...     %% a time period with one or more events
+        : <event>                  %% continuation: more events for the
+                                   %% previous period
+%% ...                             %% comment, ignored
+.CE
+.PP
+At least one time period is required. Periods listed before any \fBsection\fR keep an empty section.
+.SS Usage
+.CS
+package require tclutils::tutimeline
+namespace import ::tclutils::tutimeline::*
+
+set src {timeline
+    title History of Social Media
+    2002 : LinkedIn
+    2004 : Facebook : Google
+    2005 : YouTube
+    section 2010s
+      2010 : Instagram
+      2011 : Snapchat : WhatsApp
+}
+
+set m [parse $src]
+writePng $m timeline.png -scale 3
+writeSvg $m timeline.svg
+.CE
+.PP
+Through the \fBtuflow\fR facade the same source renders without an explicit model:
+.CS
+package require tclutils::tuflow
+::tclutils::tuflow::toPng $src -scale 3      ;# facade detects the timeline block
+.CE
+.SS Notes
+.IP \(bu
+Each period (and its event boxes) is coloured from a light tint palette, grouped per section so a section reads as one colour; an empty leading section cycles by period.
+.IP \(bu
+v1 limitations (honest): horizontal layout only; long event text or many periods may crowd or clip (no wrapping or rotation); a section is a contiguous run of periods (as Mermaid emits them); events that overflow the available height are dropped from the top.
+.IP \(bu
+Labels use the \fBtupngdraw\fR 6x8 bitmap font by default. With \fB\-fontfile\fR on the raster backend a real outline font is used via \fBfillcontours\fR (lazy \fBGlyphs\fR, unbundled); a set\-but\-missing path is a hard error, a missing \fBGlyphs\fR package degrades silently to the bitmap font.
+.IP \(bu
+Companion modules: \fBtclutils::tupngdraw\fR and \fBtclutils::tusvg\fR (backends), \fBtclutils::tuflow\fR (facade / dispatch), \fBtclutils::tudiagram\fR (the node\-edge graph renderer for the other Mermaid types).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUTIMELINE <REASON>}\fR — \fBEMPTY\fR (no periods), \fBARG\fR (bad render option, e.g. non\-integer \fB\-scale\fR), \fBFONT\fR (a \fB\-fontfile\fR path that does not exist).

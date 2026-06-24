@@ -63,3 +63,9 @@ Commands:
 Verified end to end against Radicale 3.7 (provision, PUT, REPORT, GET, DELETE) on Tcl 8.6 and 9.x.
 .PP
 Errors: HTTP failures → \fB{TCLUTILS TUDAV HTTP}\fR; missing tls for https → \fB{TCLUTILS TUDAV TLS}\fR.
+.SS "Additional exported commands"
+.PP
+Documented for completeness (same module, also covered by the test suite):
+.CS
+tudav::configure c args                        ;# set options on an existing WebDAV client handle C (same options as the constructor)
+.CE

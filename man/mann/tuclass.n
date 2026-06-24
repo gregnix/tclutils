@@ -1,0 +1,46 @@
+.TH tuclass n 0.1 tclutils
+.SH tclutils::tuclass
+.PP
+Parses a Mermaid \fBclassDiagram\fR block into a \fBtclutils::tudiagram\fR model so it renders natively (SVG or PNG) through the pure\-Tcl engine. One of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR.
+.SS Package
+.CS
+package require tclutils::tuclass 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tuclass::parse text      ;# -> tudiagram model dict
+.CE
+.SS "Supported syntax (Mermaid subset)"
+.CS
+class X { +int a; +m() }    -> box with three compartments
+X : +int a                     (name / attributes / methods, separated by a
+X : +m()                       dashed line; members with "()" are methods)
+A <|-- B                    -> edge B->A labelled "extends" (B inherits A)
+A *-- B / A o-- B / A ..> B -> labelled edge (composition / aggregation / dependency)
+A <|-- B : label            -> an explicit label wins
+.CE
+.SS Usage
+.CS
+package require tclutils::tuclass
+package require tclutils::tudiagram
+
+set src {classDiagram
+    Animal <|-- Dog
+    class Animal {
+        +String name
+        +makeSound()
+    }
+    class Dog {
+        +fetch()
+    }
+}
+::tclutils::tudiagram::writePng [::tclutils::tuclass::parse $src] class.png -scale 3
+.CE
+.SS Notes
+.IP \(bu
+v1 limitations (honest): compartments use a dashed separator line, not drawn box dividers; UML arrowheads (hollow triangle, diamond) are not drawn — the relationship kind is shown as an edge label instead; cardinality strings (\fB1\fR, \fB*\fR) are ignored.
+.IP \(bu
+Companion: \fBtclutils::tudiagram\fR (renderer), \fBtclutils::tuflow\fR (dispatch).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUCLASS <REASON>}\fR — \fBEMPTY\fR (no classes found).

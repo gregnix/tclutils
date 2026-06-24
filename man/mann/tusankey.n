@@ -1,0 +1,53 @@
+.TH tusankey n 0.1 tclutils
+.SH tclutils::tusankey
+.PP
+Parses a Mermaid \fBsankey\-beta\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtuxychart\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here.
+.SS Package
+.CS
+package require tclutils::tusankey 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tusankey::parse text                          ;# -> sankey model dict
+::tclutils::tusankey::toSvg  model ?-width W? ?-height H? ?-fontfile f? ?-scale n?
+::tclutils::tusankey::toPng  model ?...?                  ;# -> PNG bytes
+::tclutils::tusankey::writeSvg model file ?...?
+::tclutils::tusankey::writePng model file ?...?
+.CE
+.SS "Supported syntax (Mermaid subset)"
+.CS
+sankey-beta
+source,target,value      -> one flow per line (CSV, exactly 3 columns)
+.CE
+.IP \(bu
+The header line is \fBsankey\-beta\fR (or \fBsankey\fR); the data rows follow.
+.IP \(bu
+A node name containing a comma is wrapped in double quotes; a literal double quote inside is written as a pair (\fB""\fR).
+.IP \(bu
+Blank lines and \fB%%\fR comments are ignored. Values must be positive numbers.
+.IP \(bu
+Nodes appear in first\-seen order.
+.SS "Layout (v1)"
+.PP
+Nodes are placed in columns by longest\-path rank from the sources; each node's height is proportional to \fBmax(inflow, outflow)\fR. Links are drawn as smooth bands whose width is proportional to the value, stacked at each node in link order and coloured after the source node (Mermaid \fBlinkColor: source\fR). Cycles are handled best\-effort (the rank iteration is bounded). v1 does not minimise band crossings or honour Mermaid's \fBlinkColor\fR / \fBnodeAlignment\fR configuration.
+.SS Options
+.PP
+\fB\-width\fR / \fB\-height\fR (default 700 x 400), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in bitmap font), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+.SS Usage
+.CS
+package require tclutils::tusankey
+set src {sankey-beta
+Coal,Electricity,40
+Gas,Electricity,25
+Electricity,Residential,30
+Electricity,Industry,35}
+::tclutils::tusankey::writePng [::tclutils::tusankey::parse $src] energy.png -scale 2
+.CE
+.SS Notes
+.IP \(bu
+Companion: \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (canvas), \fBtclutils::tuflow\fR (dispatch).
+.IP \(bu
+Bands and nodes use only rect/polygon primitives, so SVG and PNG stay congruent.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUSANKEY <REASON>}\fR \-\- \fBEMPTY\fR (no flows), \fBARG\fR (bad \fB\-scale\fR), \fBFONT\fR (font file not found).

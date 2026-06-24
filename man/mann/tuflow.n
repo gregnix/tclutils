@@ -1,0 +1,73 @@
+.TH tuflow n 0.2 tclutils
+.SH tclutils::tuflow
+.PP
+The front end of the \fBtuflow\fR diagram family: it parses a Mermaid / flowchart source block and renders it to SVG or PNG. It is the single entry point a consumer (e.g. a documentation renderer) calls; it detects the diagram kind and dispatches to the right family module, so the caller never has to know whether a block is a graph, a class diagram or a pie chart.
+.PP
+Everything is pure Tcl: graphs go through \fBtclutils::tudiagram\fR (a node\-edge layout over the \fBtclutils::tupngdraw\fR / \fBtclutils::tusvg\fR backends), pie charts through \fBtclutils::tupie\fR. No Tk, no browser, no external rasteriser.
+.SS Package
+.CS
+package require tclutils::tuflow 0.2
+.CE
+.SS Commands
+.CS
+::tclutils::tuflow::parse    text                       ;# -> tudiagram model (graphs only)
+::tclutils::tuflow::toSvg     text ?-opt val ...?        ;# -> SVG string
+::tclutils::tuflow::toPng     text ?-opt val ...?        ;# -> PNG bytes
+::tclutils::tuflow::writeSvg  text file ?-opt val ...?   ;# -> file (SVG)
+::tclutils::tuflow::writePng  text file ?-opt val ...?   ;# -> file (PNG)
+.CE
+.PP
+\fBparse\fR is \fBgraph\-only\fR: it returns a \fBtudiagram\fR model for the graph\-like Mermaid types and raises \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR for everything else. \fBtoSvg\fR / \fBtoPng\fR are the \fBrender facade\fR: they render \fIany\fR supported family, detecting non\-graph blocks (currently \fBpie\fR) before \fBparse\fR is reached and dispatching them to their own renderer.
+.PP
+Render options are forwarded to the family that handles the block; an option a family does not understand is ignored. Common ones:
+.CS
+-fontfile F    real TTF/OTF for labels on the raster backend (graph + pie)
+-scale  N      raster scale, positive integer (toPng)
+-width  N      pie width   (pie only)
+-height N      pie height  (pie only)
+-legend 0|1    pie legend  (pie only)
+.CE
+.PP
+For the graph path \fB\-fontfile\fR is applied to the \fBtudiagram\fR model via \fBsetMeta \-fontfile\fR before rasterising; the SVG backend uses its fixed \fBmonospace\fR viewer font.
+.SS "Supported diagram types"
+.PP
+Graph\-like (rendered as node\-edge diagrams via \fBtudiagram\fR):
+.CS
+graph / flowchart    stateDiagram    requirementDiagram    erDiagram    classDiagram
+.CE
+.PP
+Non\-graph (own renderer):
+.CS
+pie                  -> tclutils::tupie
+.CE
+.PP
+Other Mermaid types (\fBsequenceDiagram\fR, \fBgantt\fR, \fBjourney\fR, \fBgitGraph\fR, ...) are not supported and raise \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR; a consumer typically falls back to showing the source as a code block.
+.SS Usage
+.CS
+package require tclutils::tuflow
+namespace import ::tclutils::tuflow::*
+
+set graph {graph LR
+    A[Start] --> B{Check}
+    B -->|ok| C[Done]
+    B -->|no| A
+}
+writePng $graph flow.png -scale 3
+set svg [toSvg $graph]
+
+set pie {pie title Result
+    "pass" : 87
+    "fail" : 3
+}
+writePng $pie pie.png -scale 3       ;# same facade, dispatched to tupie
+.CE
+.SS Notes
+.IP \(bu
+\fBtoSvg\fR/\fBtoPng\fR on a graph are equivalent to \fBtudiagram::toSvg\fR/\fBtoPng\fR of \fBparse\fR's result; the facade just hides the dispatch. Keeping \fBparse\fR graph\-only means existing callers that want the raw model are unaffected.
+.IP \(bu
+New non\-graph families are added in one place (a dispatch branch here plus a \fBtu<type>\fR module exposing \fBparse\fR/\fBtoSvg\fR/\fBtoPng\fR); consumers calling the facade need no change.
+.IP \(bu
+Family modules: \fBtclutils::tudiagram\fR (graphs), \fBtclutils::tustate\fR, \fBtclutils::turequirement\fR, \fBtclutils::tuer\fR, \fBtclutils::tuclass\fR (graph\-type parsers), \fBtclutils::tupie\fR (pie). Backends: \fBtclutils::tupngdraw\fR, \fBtclutils::tusvg\fR.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUFLOW <REASON>}\fR — \fBUNSUPPORTED\fR (a diagram type with no renderer). Errors from the dispatched family propagate with their own code (\fB{TCLUTILS TUDIAGRAM ...}\fR, \fB{TCLUTILS TUPIE ...}\fR).

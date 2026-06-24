@@ -208,7 +208,7 @@ self-contained 2D renderer. Both paths draw through the shared `tusvg` /
 | Module | Scope status | Notes |
 |---|---|---|
 | `tuflow` | facade | Detects the diagram language and dispatches to a parser or a 2D renderer; `parse`/`toSvg`/`toPng`. Mermaid-compatible fenced-code entry point, plus its own flowchart parser. |
-| `tudiagram` | renderer | Node-edge graph renderer: layered layout, 8 node shapes, edge styles incl. `thick`, crow's-foot end-marks, themes; draws to SVG or PNG via the shared canvas. |
+| `tudiagram` | renderer | Node-edge graph renderer: layered layout, 8 node shapes, edge styles incl. `thick`, crow's-foot end-marks, themes, group/cluster frames (subgraph, since 0.4); draws to SVG or PNG via the shared canvas. |
 | `tustate` | parser | Mermaid `stateDiagram(-v2)` -> tudiagram model. |
 | `tuer` | parser | Mermaid `erDiagram` -> tudiagram model, with crow's-foot cardinality end-marks. |
 | `tuclass` | parser | Mermaid `classDiagram` -> tudiagram model (compartments, relationship kinds). |
@@ -217,6 +217,7 @@ self-contained 2D renderer. Both paths draw through the shared `tusvg` /
 | `tuc4` | parser | Mermaid C4 (`C4Context`/`Container`/...) -> tudiagram model; boundaries flattened. |
 | `tublock` | parser | Mermaid `block-beta` -> tudiagram model. |
 | `tugit` | parser | Mermaid `gitGraph` -> tudiagram model. |
+| `tuarchitecture` | parser | Mermaid `architecture-beta` -> tudiagram model; service/group/junction, icon->shape, group cluster frames (`in <group>`, nested). |
 | `tupie` | 2D renderer | Mermaid-style `pie` chart -> SVG/PNG (own renderer, not a graph). |
 | `tuxychart` | 2D renderer | Mermaid `xychart-beta` (bar/line series, axes) -> SVG/PNG. |
 | `tuquadrant` | 2D renderer | Mermaid `quadrantChart` -> SVG/PNG. |
@@ -225,6 +226,10 @@ self-contained 2D renderer. Both paths draw through the shared `tusvg` /
 | `tusankey` | 2D renderer | Mermaid `sankey-beta` flow diagram -> SVG/PNG; longest-path columns, value-proportional bands. |
 | `tugantt` | 2D renderer | Mermaid `gantt` chart -> SVG/PNG; sections, tags, `after` deps, durations, milestones over a time axis. |
 | `tusequence` | 2D renderer | Mermaid `sequenceDiagram` -> SVG/PNG; lifelines, all arrow types, activations, notes, autonumber, nestable loop/alt/opt/par frames. |
+| `tukanban` | 2D renderer | Mermaid `kanban` board -> SVG/PNG; indent-based columns/cards, `@{...}` card metadata. |
+| `tupacket` | 2D renderer | Mermaid `packet-beta` -> SVG/PNG; 32-bit rows, range/single-bit fields, gap cells. |
+| `tutreemap` | 2D renderer | Mermaid `treemap-beta` -> SVG/PNG; squarified area-proportional nested rectangles, value-sum branches. |
+| `turadar` | 2D renderer | Mermaid `radar-beta` -> SVG/PNG; polar spider chart, multi-axis/multi-curve, circle/polygon graticule. |
 
 ## Core
 

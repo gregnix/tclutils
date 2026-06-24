@@ -1,0 +1,70 @@
+.TH tupacket n 0.1 tclutils
+.SH tclutils::tupacket
+.PP
+Parses a Mermaid \fBpacket\-beta\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtukanban\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here. A packet layout is a bit\-field table, not a node\-edge graph, so it does \fBnot\fR go through \fBtudiagram\fR.
+.SS Package
+.CS
+package require tclutils::tupacket 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tupacket::parse text                          ;# -> packet model dict
+::tclutils::tupacket::toSvg  model ?-width W? ?-height H? ?-fontfile f? ?-scale n?
+::tclutils::tupacket::toPng  model ?...?                  ;# -> PNG bytes
+::tclutils::tupacket::writeSvg model file ?...?
+::tclutils::tupacket::writePng model file ?...?
+.CE
+.SS "Supported syntax (Mermaid subset)"
+.CS
+packet-beta
+title <text>             -> optional, own line (or "packet-beta title <text>")
+<start>-<end>: "Label"   -> a bit range, inclusive
+<bit>: "Label"           -> a single bit (start == end)
+.CE
+.IP \(bu
+The header line is \fBpacket\-beta\fR (or bare \fBpacket\fR); fields follow.
+.IP \(bu
+The label may be quoted (\fB"..."\fR / \fB'...'\fR) or bare.
+.IP \(bu
+Blank lines and \fB%%\fR comments are ignored. Bit indices are integers.
+.IP \(bu
+Fields are sorted by start bit; \fBoverlapping\fR ranges and an \fBend before start\fR are parse errors. Bits no field covers (within the used range) are drawn as light\-grey gap cells.
+.SS "Layout (v1)"
+.PP
+Bits are laid out \fB32 per row\fR (the Mermaid default). Each row draws the start/end bit index of every field segment along the top and the fields as filled cells below, coloured from a fixed qualitative palette. A field that crosses a row boundary is split into per\-row segments that share one colour; its label is drawn once, centred in its widest segment, and clipped (not wrapped) if longer than the cell. The canvas height grows automatically with the number of rows when \fB\-height\fR is left at its default (\fB0\fR = auto).
+.SS "v1 limitations (honest)"
+.IP \(bu
+Bits\-per\-row is fixed at 32; Mermaid's \fBpacket\fR config block is not parsed.
+.IP \(bu
+No theming or per\-field colour configuration.
+.IP \(bu
+Long labels are clipped to their cell, not wrapped or shrunk.
+.IP \(bu
+A field crossing a row boundary is split visually; the label sits in the widest part only.
+.SS Options
+.PP
+\fB\-width\fR (default 640), \fB\-height\fR (default \fB0\fR = auto from the row count), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in 6x8 bitmap font with German umlauts via real codepoints), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+.SS Usage
+.CS
+package require tclutils::tupacket
+set src {packet-beta
+    title IPv4 (simplified)
+    0-3: "Version"
+    4-7: "IHL"
+    8-15: "Total Length"
+    16-31: "Identification"
+    32-63: "Flags + Fragment + TTL + Protocol"}
+::tclutils::tupacket::writePng [::tclutils::tupacket::parse $src] ipv4.png -scale 3
+.CE
+.PP
+In Markdown, \fBpacket\-beta\fR rides on the \fB```mermaid\fR fence, so docir's raster sinks (pdf / odt / rendererTk) render it through \fBtuflow::toPng\fR; no docir change is needed.
+.SS Notes
+.IP \(bu
+Companion: \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (canvas), \fBtclutils::tuflow\fR (dispatch).
+.IP \(bu
+Cells, gaps and ticks use only rect/text primitives, so SVG and PNG stay congruent.
+.IP \(bu
+\fBtuflow::parse\fR rejects \fBpacket\-beta\fR with \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR (it is not a node\-edge graph); the facade \fBtoSvg\fR/\fBtoPng\fR is the render path, exactly as for \fBpie\fR / \fBkanban\fR.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUPACKET <REASON>}\fR \-\- \fBEMPTY\fR (no header / no fields), \fBRANGE\fR (overlap or end\-before\-start), \fBVALUE\fR (unparseable field line), \fBARG\fR (bad \fB\-scale\fR), \fBFONT\fR (font file not found).

@@ -1,0 +1,81 @@
+.TH tujourney n 0.1 tclutils
+.SH tclutils::tujourney
+.PP
+A Mermaid\-style \fBuser journey\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBjourney\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
+.PP
+A journey is not a node\-edge graph, so \fBtujourney\fR does \fBnot\fR go through \fBtclutils::tudiagram\fR; it owns its own parse and draw step, exposing the same \fBtoSvg\fR / \fBtoPng\fR shape the other renderers use. That lets the \fBtclutils::tuflow\fR facade treat every diagram family uniformly: \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR detect a \fBjourney\fR block and dispatch here (like \fBpie\fR, \fBxychart\-beta\fR and \fBquadrantChart\fR).
+.PP
+The chart shows the tasks left\-to\-right in source order, a line through their satisfaction scores, section bands across the top, the actors under each task as coloured dots, and an actor legend.
+.SS Package
+.CS
+package require tclutils::tujourney 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tujourney::parse    text                       ;# -> model dict
+::tclutils::tujourney::toSvg    model ?-opt val ...?        ;# -> SVG string
+::tclutils::tujourney::toPng    model ?-opt val ...?        ;# -> PNG bytes
+::tclutils::tujourney::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
+::tclutils::tujourney::writePng model file ?-opt val ...?   ;# -> file (PNG)
+.CE
+.PP
+\fBparse\fR turns Mermaid \fBjourney\fR source into a model dict with keys \fBtitle\fR, \fBtasks\fR (a list of \fB{name score actors section}\fR), \fBsections\fR (ordered unique section names) and \fBactors\fR (ordered unique actor names). The render commands take that model.
+.PP
+Render options (all optional):
+.CS
+-width  N      chart width in logical px           (default 600)
+-height N      chart height in logical px          (default 360)
+-scale  N      raster scale, positive integer      (default 1; toPng only)
+-fontfile F    real TTF/OTF for labels (raster)    (default: 6x8 bitmap font)
+.CE
+.PP
+The SVG backend ignores \fB\-scale\fR and \fB\-fontfile\fR (it uses a fixed \fBmonospace\fR viewer font locked to the 6x8 metric). On the raster backend \fB\-scale N\fR multiplies the pixel dimensions and the font scale by \fBN\fR.
+.SS "Input grammar (Mermaid \fBjourney\fR subset)"
+.CS
+journey                            %% header
+title <text>                       %% chart title
+section <name>                     %% starts a section
+<task>: <score>: <actor>, <actor>  %% a task with a 1..5 score and actors
+<task>: <score>                    %% actors are optional
+%% ...                             %% comment, ignored
+.CE
+.PP
+At least one task is required. Tasks listed before any \fBsection\fR keep an empty section.
+.SS Usage
+.CS
+package require tclutils::tujourney
+namespace import ::tclutils::tujourney::*
+
+set src {journey
+    title My working day
+    section Go to work
+      Make tea: 5: Me
+      Go upstairs: 3: Me
+      Do work: 1: Me, Cat
+    section Go home
+      Go downstairs: 5: Me
+      Sit down: 3: Me
+}
+
+set m [parse $src]
+writePng $m journey.png -scale 3
+writeSvg $m journey.svg
+.CE
+.PP
+Through the \fBtuflow\fR facade the same source renders without an explicit model:
+.CS
+package require tclutils::tuflow
+::tclutils::tuflow::toPng $src -scale 3      ;# facade detects the journey block
+.CE
+.SS Notes
+.IP \(bu
+Actor colours come from a fixed qualitative palette (10 entries) that cycles; a task's score point is coloured by its first actor, and every actor of a task is shown as a small dot under the task name. Section bands cycle through a light tint palette.
+.IP \(bu
+v1 limitations (honest): task names are drawn horizontally (not rotated) and may crowd when long or numerous; scores are plotted on a \fB0..max(5,data)\fR axis; a section is a contiguous run of tasks (as Mermaid emits them).
+.IP \(bu
+Labels use the \fBtupngdraw\fR 6x8 bitmap font by default. With \fB\-fontfile\fR on the raster backend a real outline font is used via \fBfillcontours\fR (lazy \fBGlyphs\fR, unbundled); a set\-but\-missing path is a hard error, a missing \fBGlyphs\fR package degrades silently to the bitmap font.
+.IP \(bu
+Companion modules: \fBtclutils::tupngdraw\fR and \fBtclutils::tusvg\fR (backends), \fBtclutils::tuflow\fR (facade / dispatch), \fBtclutils::tudiagram\fR (the node\-edge graph renderer for the other Mermaid types).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUJOURNEY <REASON>}\fR — \fBEMPTY\fR (no tasks), \fBARG\fR (bad render option, e.g. non\-integer \fB\-scale\fR), \fBFONT\fR (a \fB\-fontfile\fR path that does not exist).

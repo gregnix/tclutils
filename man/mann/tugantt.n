@@ -1,0 +1,66 @@
+.TH tugantt n 0.1 tclutils
+.SH tclutils::tugantt
+.PP
+Parses a Mermaid \fBgantt\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtusankey\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here.
+.SS Package
+.CS
+package require tclutils::tugantt 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tugantt::parse text                           ;# -> gantt model dict
+::tclutils::tugantt::toSvg  model ?-width W? ?-height H? ?-fontfile f? ?-scale n?
+::tclutils::tugantt::toPng  model ?...?                   ;# -> PNG bytes
+::tclutils::tugantt::writeSvg model file ?...?
+::tclutils::tugantt::writePng model file ?...?
+.CE
+.SS "Supported syntax (Mermaid subset)"
+.CS
+gantt
+  title <text>                 optional chart title
+  dateFormat <fmt>             input date format (default YYYY-MM-DD)
+  axisFormat <fmt>             optional axis label format
+  section <name>               start a labelled group of tasks
+  <title> : [tags,] [id,] <start>, <end-or-duration>
+.CE
+.IP \(bu
+\fBTags\fR (optional, must come first): \fBactive\fR, \fBdone\fR, \fBcrit\fR, \fBmilestone\fR. They set the bar colour; a \fBmilestone\fR is drawn as a diamond.
+.IP \(bu
+\fBStart\fR: an explicit date, \fBafter <id> [<id> ...]\fR (the latest end of the referenced tasks), or omitted — the task then starts at the end of the preceding task.
+.IP \(bu
+\fBEnd\fR: an explicit date, or a duration \fB5d\fR / \fB2w\fR / \fB8h\fR / \fB30m\fR.
+.IP \(bu
+\fBdateFormat\fR / \fBaxisFormat\fR accept the usual tokens \fBYYYY MM DD HH mm ss\fR (mapped to \fBclock\fR format); \fBX\fR means a Unix timestamp.
+.IP \(bu
+Comments start with \fB%%\fR.
+.SS "v1 scope"
+.PP
+Covered: title, dateFormat/axisFormat, sections, tags, ids, explicit dates, \fBafter\fR dependencies, durations, and milestones. \fBNot\fR in v1: \fBexcludes\fR / weekend exclusion, \fBuntil\fR, \fBvert\fR markers, compact display mode, and custom \fBtickInterval\fR. The chart height is fixed (\fB\-height\fR); tasks fill from the top.
+.SS Options
+.PP
+\fB\-width\fR / \fB\-height\fR (default 800 x 400), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in bitmap font), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+.SS Usage
+.CS
+package require tclutils::tugantt
+set src {gantt
+  title Project Plan
+  dateFormat YYYY-MM-DD
+  section Planning
+  Requirements :done, req, 2014-01-01, 4d
+  Design       :done, des, after req, 5d
+  section Development
+  Frontend     :active, fe, after des, 8d
+  Backend      :crit, be, after des, 10d
+  section Release
+  Testing      :test, after be, 4d
+  Launch       :milestone, m1, after test, 0d}
+::tclutils::tugantt::writePng [::tclutils::tugantt::parse $src] plan.png -scale 2
+.CE
+.SS Notes
+.IP \(bu
+Companion: \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (canvas), \fBtclutils::tuflow\fR (dispatch).
+.IP \(bu
+Bars use rect primitives and milestones a polygon, so SVG and PNG stay congruent. Bar colours: normal blue, \fBactive\fR light blue, \fBdone\fR grey, \fBcrit\fR red, \fBmilestone\fR amber.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUGANTT <REASON>}\fR \-\- \fBEMPTY\fR (no tasks), \fBARG\fR (bad \fB\-scale\fR), \fBDATE\fR (a date that does not match \fBdateFormat\fR), \fBFONT\fR (font file not found).

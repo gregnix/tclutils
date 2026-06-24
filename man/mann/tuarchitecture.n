@@ -1,0 +1,78 @@
+.TH tuarchitecture n 0.1 tclutils
+.SH tclutils::tuarchitecture
+.PP
+Parses a Mermaid \fBarchitecture\-beta\fR block into a \fBtclutils::tudiagram\fR model so an architecture diagram renders natively (SVG or PNG) through the pure\-Tcl engine everywhere \-\- no browser. Like \fBtuc4\fR, this is a \fBgraph parser\fR: it only builds a model; layout and rendering are done by \fBtudiagram\fR. Normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which detect the \fBarchitecture\-beta\fR header, parse here, and lay the graph out.
+.SS Package
+.CS
+package require tclutils::tuarchitecture 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tuarchitecture::parse text   ;# -> tudiagram model dict
+.CE
+.PP
+Render the returned model with the tudiagram backends:
+.CS
+::tclutils::tudiagram::toSvg  model
+::tclutils::tudiagram::toPng   model ?-scale n?
+::tclutils::tudiagram::writeSvg model file
+::tclutils::tudiagram::writePng model file
+.CE
+.SS "Supported syntax (Mermaid subset)"
+.CS
+architecture-beta
+  group <id>(<icon>)[<Label>]            -> a group (flattened, see below)
+  service <id>(<icon>)[<Label>] in <g>   -> a service node (`in <group>` optional)
+  junction <id>                          -> a routing point (drawn as a dot)
+  <id>:<S> -- <S>:<id>                    -> edge, no arrowhead
+  <id>:<S> --> <S>:<id>                   -> edge, arrowhead at the target
+.CE
+.IP \(bu
+The header is \fBarchitecture\-beta\fR (bare \fBarchitecture\fR is also accepted).
+.IP \(bu
+The display label is the \fB[Label]\fR, or the id if absent.
+.IP \(bu
+\fB<S>\fR is a side hint \fBL|R|T|B\fR; \fB\-\-\fR / \fB\-\->\fR / \fB<\-\-\fR / \fB<\-\->\fR choose the arrowheads (none / end / start / both).
+.IP \(bu
+Edge endpoints that were never declared are created as plain boxes, so an edge to an as\-yet\-undeclared id still renders.
+.IP \(bu
+Blank lines and \fB%%\fR comments are ignored.
+.SS "Icons \-> shapes"
+.PP
+There is no external icon set; the \fB(icon)\fR maps to a tudiagram node shape so families stay readable:
+.TS
+l l.
+icon	shape
+\fBdatabase\fR, \fBdb\fR, \fBdisk\fR, \fBstorage\fR	cylinder
+\fBcloud\fR, \fBinternet\fR	rounded
+\fBserver\fR and anything else	box
+.TE
+.SS "v1 limitations (honest)"
+.IP \(bu
+\fBGroups are flattened.\fR A declared \fBgroup\fR is \fBnot\fR drawn as a container box, and \fBin <group>\fR is ignored for layout (tudiagram lays the graph out left\-to\-right). A group box is Phase 2. A group id that an edge references is drawn as a plain node.
+.IP \(bu
+\fBSide hints are not routed.\fR \fB:L :R :T :B\fR are parsed but do not steer the edge ports \-\- the engine decides port positions (the same limitation as \fBtuc4\fR's \fBRel_U/D/L/R\fR hints). The declared topology survives; the exact approach side may differ from Mermaid.
+.IP \(bu
+\fBIcons are shapes, not glyphs\fR (no Iconify dependency).
+.SS Usage
+.CS
+package require tclutils::tuarchitecture
+set src {architecture-beta
+    group tier(cloud)[Application Tier]
+    service web(server)[Web UI] in tier
+    service api(server)[API] in tier
+    service db(database)[Database] in tier
+    web:R -- L:api
+    api:B -- T:db}
+::tclutils::tudiagram::writePng [::tclutils::tuarchitecture::parse $src] arch.png -scale 3
+.CE
+.PP
+In Markdown, \fBarchitecture\-beta\fR rides on the \fB```mermaid\fR fence, so docir's raster sinks (pdf / odt / rendererTk) render it through \fBtuflow::toPng\fR; no docir change is needed.
+.SS Notes
+.IP \(bu
+Companion: \fBtclutils::tudiagram\fR (layout + render), \fBtclutils::tuflow\fR (dispatch). \fBtuflow::parse\fR delegates \fBarchitecture\-beta\fR here and returns the tudiagram model, exactly like \fBmindmap\fR / \fBC4*\fR / \fBgitGraph\fR.
+.IP \(bu
+Because it is a graph type, the same model also flows through every other tudiagram consumer unchanged.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUARCHITECTURE <REASON>}\fR \-\- \fBEMPTY\fR (no services; a diagram consisting only of flattened groups also yields no nodes).

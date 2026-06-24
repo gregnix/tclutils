@@ -1,0 +1,83 @@
+.TH tupie n 0.1 tclutils
+.SH tclutils::tupie
+.PP
+A Mermaid\-style \fBpie chart\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBpie\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
+.PP
+A pie chart is not a node\-edge graph, so \fBtupie\fR does \fBnot\fR go through \fBtclutils::tudiagram\fR; it owns its own parse and draw step, exposing the same \fBtoSvg\fR / \fBtoPng\fR shape \fBtudiagram\fR uses. That lets the \fBtclutils::tuflow\fR facade treat every diagram family uniformly: \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR detect a \fBpie\fR block and dispatch here.
+.PP
+A slice is drawn as a filled polygon (centre plus arc\-sampled rim points), so the \fBsame\fR routine renders identically on the raster and the SVG backend.
+.SS Package
+.CS
+package require tclutils::tupie 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tupie::parse    text                          ;# -> model dict
+::tclutils::tupie::toSvg     model ?-opt val ...?          ;# -> SVG string
+::tclutils::tupie::toPng     model ?-opt val ...?          ;# -> PNG bytes
+::tclutils::tupie::writeSvg  model file ?-opt val ...?     ;# -> file (SVG)
+::tclutils::tupie::writePng  model file ?-opt val ...?     ;# -> file (PNG)
+.CE
+.PP
+\fBparse\fR turns Mermaid \fBpie\fR source into a model dict with keys \fBtitle\fR (string, may be empty), \fBshowData\fR (\fB0\fR|\fB1\fR) and \fBslices\fR (a list of \fB{label value}\fR pairs). The render commands take that model.
+.PP
+Render options (all optional):
+.CS
+-width  N      diagram width in logical px        (default 480)
+-height N      diagram height in logical px        (default 320)
+-legend 0|1    show the legend column             (default 1)
+-scale  N      raster scale, positive integer     (default 1; toPng only effect)
+-fontfile F    real TTF/OTF for labels (raster)   (default: 6x8 bitmap font)
+.CE
+.PP
+The SVG backend ignores \fB\-scale\fR and \fB\-fontfile\fR (it uses a fixed \fBmonospace\fR viewer font locked to the 6x8 metric). On the raster backend \fB\-scale N\fR multiplies the pixel dimensions and the font scale by \fBN\fR.
+.SS "Input grammar (Mermaid \fBpie\fR subset)"
+.CS
+pie                          %% header; the following are optional and in order
+pie showData
+pie title <text>
+pie showData title <text>
+title <text>                 %% alternatively on its own line
+"<label>" : <value>          %% a slice; quotes optional, value int or float
+%% ...                       %% comment, ignored
+.CE
+.PP
+At least one slice is required and the values must sum to a positive number.
+.SS Usage
+.CS
+package require tclutils::tupie
+namespace import ::tclutils::tupie::*
+
+set src {pie showData title Browser share
+    "Chrome"  : 64
+    "Safari"  : 19
+    "Edge"    : 5
+    "Firefox" : 3
+    "Other"   : 9
+}
+
+set m [parse $src]
+writePng $m chart.png -scale 3       ;# crisp raster, with legend
+writeSvg $m chart.svg                ;# vector
+
+set bytes [toPng $m -legend 0]       ;# pie only, no legend
+set svg   [toSvg $m]
+.CE
+.PP
+Through the \fBtuflow\fR facade the same source renders without an explicit model:
+.CS
+package require tclutils::tuflow
+::tclutils::tuflow::toPng $src -scale 3      ;# facade detects the pie block
+.CE
+.SS Notes
+.IP \(bu
+Slice colours come from a fixed qualitative palette (10 entries) that cycles when there are more slices than colours.
+.IP \(bu
+A percentage label is drawn inside a slice only when the wedge is wide enough; the legend always carries label and percentage, plus the raw value when the source used \fBshowData\fR.
+.IP \(bu
+Labels use the \fBtupngdraw\fR 6x8 bitmap font by default, which covers ASCII and the German umlauts (real codepoints \fB\eu00xx\fR). With \fB\-fontfile\fR on the raster backend a real outline font is used via \fBfillcontours\fR (lazy \fBGlyphs\fR, unbundled); a set\-but\-missing path is a hard error, a missing \fBGlyphs\fR package degrades silently to the bitmap font.
+.IP \(bu
+Companion modules: \fBtclutils::tupngdraw\fR and \fBtclutils::tusvg\fR (backends), \fBtclutils::tuflow\fR (facade / dispatch), \fBtclutils::tudiagram\fR (the node\-edge graph renderer for the other Mermaid types).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUPIE <REASON>}\fR — \fBEMPTY\fR (no slices), \fBVALUE\fR (values do not sum to a positive number), \fBARG\fR (bad render option, e.g. non\-integer \fB\-scale\fR), \fBFONT\fR (a \fB\-fontfile\fR path that does not exist).

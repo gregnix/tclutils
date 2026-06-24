@@ -1,0 +1,52 @@
+.TH tumindmap n 0.1 tclutils
+.SH tclutils::tumindmap
+.PP
+Parses a Mermaid \fBmindmap\fR block into a \fBtclutils::tudiagram\fR model, so a mindmap can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
+.SS Package
+.CS
+package require tclutils::tumindmap 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tumindmap::parse text      ;# -> tudiagram model dict
+.CE
+.PP
+The result is a \fBtudiagram\fR model and is rendered with \fBtclutils::tudiagram::toSvg\fR / \fBtoPng\fR (or via the \fBtuflow\fR facade).
+.SS "Supported syntax (Mermaid subset)"
+.CS
+indentation      -> hierarchy (relative: a deeper line is a child of the
+                    nearest line with smaller indent; tabs count as 4 spaces)
+parent -> child  -> edges, drawn without an arrowhead (mindmap connectors)
+node shapes:
+    ((text))                      -> circle
+    {{text}}                      -> hexagon
+    [text] (square)               -> box
+    (text) / plain text           -> rounded
+    )text(    ))text((            -> rounded (cloud/bang, no native shape)
+id[text] etc.    -> a leading id token is dropped; the bracket text is the label
+.CE
+.SS Usage
+.CS
+package require tclutils::tumindmap
+package require tclutils::tudiagram
+
+set src {mindmap
+  root((Project))
+    Planning
+      Scope
+      Budget
+    Build
+      Backend
+      Frontend
+}
+set m [::tclutils::tumindmap::parse $src]
+::tclutils::tudiagram::writePng $m mindmap.png -scale 3
+.CE
+.SS Notes
+.IP \(bu
+v1 limitations (honest): the result is laid out as a top\-down layered tree (\fBtudiagram\fR), not the radial Mermaid layout; node ids are generated, so an explicit mindmap id is used only as a label source and never as the id; \fB::icon(...)\fR and \fBclass\fR decorator lines are ignored; markdown inside a label is kept verbatim.
+.IP \(bu
+Companion: \fBtclutils::tudiagram\fR (renderer), \fBtclutils::tuflow\fR (dispatch).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUMINDMAP <REASON>}\fR — \fBEMPTY\fR (no nodes found).

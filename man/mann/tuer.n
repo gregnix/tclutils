@@ -1,0 +1,61 @@
+.TH tuer n 0.2 tclutils
+.SH tclutils::tuer
+.PP
+Parses a Mermaid \fBerDiagram\fR (entity\-relationship) block into a \fBtclutils::tudiagram\fR model so it renders natively (SVG or PNG) through the pure\-Tcl engine. One of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR.
+.SS Package
+.CS
+package require tclutils::tuer 0.2
+.CE
+.PP
+Depends on \fBtclutils::tudiagram 0.3\fR (the crow's\-foot end\-marks).
+.SS Commands
+.CS
+::tclutils::tuer::parse text      ;# -> tudiagram model dict
+.CE
+.SS "Supported syntax (Mermaid subset)"
+.CS
+ENTITY { type name [key] ... }   -> a box: entity name plus attribute lines
+A <cardinality> B : label        -> a connector A--B labelled <label>, with
+                                    crow's-foot cardinality marks at both ends
+.CE
+.PP
+Keys (PK / FK) are appended in parentheses on the attribute line. A \fB..\fR (non\-identifying) relationship is drawn dashed, \fB\-\-\fR (identifying) solid.
+.SS "Cardinality marks"
+.PP
+The cardinality on each side of the connector becomes a \fBtudiagram\fR end\-mark (\fB\-startMark\fR on the \fBA\fR end, \fB\-endMark\fR on the \fBB\fR end). The mapping is side\-independent — \fB{\fR/\fB}\fR mean "many", \fBo\fR means "zero (optional)":
+.TS
+l l l.
+Mermaid (left / right)	meaning	end\-mark
+`\e	\e	\fB/\fR\e
+`\e	o\fB/\fRo\e	`
+`}\e	\fB/\fR\e	{`
+\fB}o\fR / \fBo{\fR	zero or many	\fBzeroOrMany\fR
+.TE
+.PP
+So \fBCUSTOMER ||\-\-o{ ORDER\fR draws "exactly one" at the customer end and "zero or many" at the order end.
+.SS Usage
+.CS
+package require tclutils::tuer
+package require tclutils::tudiagram
+
+set src {erDiagram
+    CUSTOMER {
+        int id PK
+        string name
+    }
+    ORDER {
+        int id PK
+        int customer_id FK
+    }
+    CUSTOMER ||--o{ ORDER : places
+}
+::tclutils::tudiagram::writeSvg [::tclutils::tuer::parse $src] er.svg
+.CE
+.SS Notes
+.IP \(bu
+Crow's\-foot cardinality is drawn via \fBtudiagram\fR's \fB\-startMark\fR / \fB\-endMark\fR. v1 limitations (honest): long attribute lists make tall boxes (no scrolling); attribute keys are shown in parentheses rather than a separate column.
+.IP \(bu
+Companion: \fBtclutils::tudiagram\fR (renderer), \fBtclutils::tuflow\fR (dispatch).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUER <REASON>}\fR — \fBEMPTY\fR (no entities found).

@@ -144,4 +144,61 @@ test tuflow-facade-3.1 {parse stays graph-only and still rejects pie} -body {
     lindex [dict get $o -errorcode] end
 } -result UNSUPPORTED
 
+# --- subgraph / cluster ------------------------------------------------------
+
+proc grpMembers {m id} {
+    foreach g [dict get $m groups] {
+        if {[dict get $g id] eq $id} { return [lsort [dict get $g members]] }
+    }
+    return "MISSING"
+}
+proc grpLabel {m id} {
+    foreach g [dict get $m groups] {
+        if {[dict get $g id] eq $id} { return [dict get $g label] }
+    }
+    return "MISSING"
+}
+proc ids {m} { lsort [lmap n [dict get $m nodes] { dict get $n id }] }
+proc epairs {m} { lsort [lmap e [dict get $m edges] { list [dict get $e from] [dict get $e to] }] }
+
+test tuflow-sg-1.1 {a subgraph becomes a group over its member nodes} -body {
+    set m [M::parse "flowchart TB\n  subgraph phase1 \[Phase 1\]\n    A --> B\n  end\n  B --> C"]
+    list [grpMembers $m phase1] [grpLabel $m phase1]
+} -result {{A B} {Phase 1}}
+
+test tuflow-sg-1.2 {a node outside the subgraph is not a member} -body {
+    set m [M::parse "flowchart TB\n  subgraph phase1 \[Phase 1\]\n    A --> B\n  end\n  B --> C"]
+    list [ids $m] [grpMembers $m phase1]
+} -result {{A B C} {A B}}
+
+test tuflow-sg-1.3 {subgraph id with no label uses the id as label} -body {
+    set m [M::parse "flowchart TB\n  subgraph two\n    C --> D\n  end"]
+    grpLabel $m two
+} -result {two}
+
+test tuflow-sg-1.4 {two sibling subgraphs each get their own group} -body {
+    set m [M::parse "flowchart LR\n  subgraph ingest \[Ingest\]\n    I1 --> I2\n  end\n  subgraph render \[Render\]\n    R1 --> R2\n  end\n  I2 --> R1"]
+    list [grpMembers $m ingest] [grpMembers $m render] [llength [dict get $m groups]]
+} -result {{I1 I2} {R1 R2} 2}
+
+test tuflow-sg-1.5 {nested subgraphs: inner members are also outer members} -body {
+    set m [M::parse "flowchart TB\n  subgraph outer \[Outer\]\n    subgraph inner \[Inner\]\n      X --> Y\n    end\n    Y --> Z\n  end\n  Z --> W"]
+    list [grpMembers $m outer] [grpMembers $m inner]
+} -result {{X Y Z} {X Y}}
+
+test tuflow-sg-1.6 {an edge to a subgraph id is dropped; the id is not a node} -body {
+    set m [M::parse "flowchart LR\n  subgraph block \[Block\]\n    P --> Q\n  end\n  A --> block"]
+    list [ids $m] [epairs $m]
+} -result {{A P Q} {{P Q}}}
+
+test tuflow-sg-1.7 {a `direction` line inside a subgraph is ignored} -body {
+    set m [M::parse "flowchart LR\n  subgraph block \[Block\]\n    direction TB\n    P --> Q\n  end"]
+    list [ids $m] [epairs $m] [grpMembers $m block]
+} -result {{P Q} {{P Q}} {P Q}}
+
+test tuflow-sg-1.8 {subgraphs render through the facade as a valid PNG} -body {
+    binary scan [M::toPng "flowchart TB\n  subgraph g \[G\]\n    A --> B\n  end\n  B --> C"] H8 sig
+    set sig
+} -result 89504e47
+
 cleanupTests

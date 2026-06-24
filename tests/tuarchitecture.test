@@ -1,0 +1,182 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tuarchitecture
+package require tclutils::tudiagram
+
+namespace eval M { namespace import ::tclutils::tuarchitecture::* }
+
+proc nnodes {m} { llength [dict get $m nodes] }
+proc nedges {m} { llength [dict get $m edges] }
+proc nodeById {m id} {
+    foreach n [dict get $m nodes] { if {[dict get $n id] eq $id} { return $n } }
+    return {}
+}
+proc ids {m} { lsort [lmap n [dict get $m nodes] { dict get $n id }] }
+proc epairs {m} { lmap e [dict get $m edges] { list [dict get $e from] [dict get $e to] } }
+proc arrow0 {m} { dict get [lindex [dict get $m edges] 0] arrow }
+proc pngsig {bytes} { binary scan [string range $bytes 0 3] H* s; return $s }
+
+# --- elements ----------------------------------------------------------------
+
+test tuarchitecture-1.1 {two services + one edge: 2 nodes, 1 edge} -body {
+    set m [M::parse "architecture-beta\n  service a(server)\[A\]\n  service b(server)\[B\]\n  a:R -- L:b"]
+    list [nnodes $m] [nedges $m]
+} -result {2 1}
+
+test tuarchitecture-1.2 {label is the [Label], not the id} -body {
+    set m [M::parse "architecture-beta\n  service web(server)\[Web UI\]"]
+    dict get [nodeById $m web] label
+} -result {Web UI}
+
+test tuarchitecture-1.3 {label falls back to the id when no [Label] given} -body {
+    set m [M::parse "architecture-beta\n  service lone(server)"]
+    dict get [nodeById $m lone] label
+} -result {lone}
+
+test tuarchitecture-1.4 {database -> cylinder, cloud -> rounded, server -> box} -body {
+    set m [M::parse "architecture-beta\n  service d(database)\[D\]\n  service c(cloud)\[C\]\n  service s(server)\[S\]"]
+    list [dict get [nodeById $m d] shape] \
+         [dict get [nodeById $m c] shape] \
+         [dict get [nodeById $m s] shape]
+} -result {cylinder rounded box}
+
+test tuarchitecture-1.5 {junction is drawn as a dot} -body {
+    set m [M::parse "architecture-beta\n  junction j\n  service s(server)\[S\]\n  j -- s"]
+    dict get [nodeById $m j] shape
+} -result {dot}
+
+test tuarchitecture-1.6 {a group is flattened: not a node, members survive} -body {
+    set m [M::parse "architecture-beta\n  group tier(cloud)\[Tier\]\n  service web(server)\[Web\] in tier\n  service db(database)\[DB\] in tier"]
+    list [nnodes $m] [ids $m]
+} -result {2 {db web}}
+
+test tuarchitecture-1.7 {`in <group>` is accepted and the service is still a node} -body {
+    set m [M::parse "architecture-beta\n  service web(server)\[Web\] in tier"]
+    list [nnodes $m] [dict get [nodeById $m web] label]
+} -result {1 Web}
+
+test tuarchitecture-1.8 {an edge to an undeclared id creates a plain box node} -body {
+    set m [M::parse "architecture-beta\n  service a(server)\[A\]\n  a -- ghost"]
+    list [nnodes $m] [dict get [nodeById $m ghost] shape]
+} -result {2 box}
+
+test tuarchitecture-1.9 {bare `architecture` header, comments and blanks ignored} -body {
+    set m [M::parse "architecture\n%% note\n\n  service a(server)\[A\]\n  service b(server)\[B\]"]
+    nnodes $m
+} -result 2
+
+# --- arrows (side hints ignored, connector decides) --------------------------
+
+test tuarchitecture-2.1 {`--` is an edge with no arrowhead} -body {
+    arrow0 [M::parse "architecture-beta\n  service a(server)\[A\]\n  service b(server)\[B\]\n  a:R -- L:b"]
+} -result {none}
+
+test tuarchitecture-2.2 {`-->` puts an arrowhead at the target} -body {
+    arrow0 [M::parse "architecture-beta\n  service a(server)\[A\]\n  service b(server)\[B\]\n  a:R --> L:b"]
+} -result {end}
+
+test tuarchitecture-2.3 {`<--` puts an arrowhead at the source} -body {
+    arrow0 [M::parse "architecture-beta\n  service a(server)\[A\]\n  service b(server)\[B\]\n  a:R <-- L:b"]
+} -result {start}
+
+test tuarchitecture-2.4 {`<-->` is a double-headed edge} -body {
+    arrow0 [M::parse "architecture-beta\n  service a(server)\[A\]\n  service b(server)\[B\]\n  a:R <--> L:b"]
+} -result {both}
+
+test tuarchitecture-2.5 {side hints do not change the parsed from/to} -body {
+    epairs [M::parse "architecture-beta\n  service a(server)\[A\]\n  service b(server)\[B\]\n  a:T -- B:b"]
+} -result {{a b}}
+
+test tuarchitecture-2.6 {an edge without side hints still parses} -body {
+    epairs [M::parse "architecture-beta\n  service a(server)\[A\]\n  service b(server)\[B\]\n  a --> b"]
+} -result {{a b}}
+
+# --- errors ------------------------------------------------------------------
+
+test tuarchitecture-3.1 {a diagram with no services is EMPTY} -body {
+    catch {M::parse "architecture-beta\n%% nothing here"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUARCHITECTURE EMPTY}
+
+test tuarchitecture-3.2 {a lone flattened group yields no nodes -> EMPTY} -body {
+    catch {M::parse "architecture-beta\n  group only(cloud)\[Only\]"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUARCHITECTURE EMPTY}
+
+# --- render (through tudiagram, like every graph type) -----------------------
+
+test tuarchitecture-4.1 {the model renders to an <svg> document} -body {
+    set m [M::parse "architecture-beta\n  service a(server)\[A\]\n  service b(database)\[B\]\n  a:R --> L:b"]
+    string match {<svg*} [::tclutils::tudiagram::toSvg $m]
+} -result 1
+
+test tuarchitecture-4.2 {the model renders to valid PNG bytes} -body {
+    set m [M::parse "architecture-beta\n  service a(server)\[A\]\n  service b(database)\[B\]\n  a:R --> L:b"]
+    pngsig [::tclutils::tudiagram::toPng $m]
+} -result {89504e47}
+
+# --- groups as cluster frames (since the group-box enhancement) --------------
+
+proc grp {m id} {
+    foreach g [dict get $m groups] {
+        if {[dict get $g id] eq $id} { return $g }
+    }
+    return ""
+}
+
+test tuarchitecture-5.1 {`in <group>` collects members into a group} -body {
+    set m [M::parse "architecture-beta\n  group tier(cloud)\[Tier\]\n  service web(server)\[Web\] in tier\n  service db(database)\[DB\] in tier"]
+    lsort [dict get [grp $m tier] members]
+} -result {db web}
+
+test tuarchitecture-5.2 {a group keeps its bracket label} -body {
+    set m [M::parse "architecture-beta\n  group tier(cloud)\[Application Tier\]\n  service web(server)\[Web\] in tier"]
+    dict get [grp $m tier] label
+} -result {Application Tier}
+
+test tuarchitecture-5.3 {a group with no label defaults to its id} -body {
+    set m [M::parse "architecture-beta\n  group t\n  service web(server)\[Web\] in t"]
+    dict get [grp $m t] label
+} -result {t}
+
+test tuarchitecture-5.4 {nested groups roll child members up into the parent} -body {
+    set src "architecture-beta\n  group outer(cloud)\[Outer\]\n  group inner(cloud)\[Inner\] in outer\n  service a(server)\[A\] in inner\n  service b(server)\[B\] in outer"
+    set m [M::parse $src]
+    list [lsort [dict get [grp $m outer] members]] [lsort [dict get [grp $m inner] members]]
+} -result {{a b} a}
+
+test tuarchitecture-5.5 {a service in an undeclared group still forms a group} -body {
+    set m [M::parse "architecture-beta\n  service web(server)\[Web\] in tier\n  service db(database)\[DB\] in tier"]
+    list [llength [dict get $m groups]] [lsort [dict get [grp $m tier] members]]
+} -result {1 {db web}}
+
+test tuarchitecture-5.6 {a grouped architecture renders to valid PNG} -body {
+    set src "architecture-beta\n  group tier(cloud)\[Tier\]\n  service web(server)\[Web\] in tier\n  service api(server)\[API\] in tier\n  web:R -- L:api"
+    pngsig [::tclutils::tudiagram::toPng [M::parse $src]]
+} -result {89504e47}
+
+test tuarchitecture-5.7 {the group label appears in the rendered SVG} -body {
+    set src "architecture-beta\n  group tier(cloud)\[MyTier\]\n  service web(server)\[Web\] in tier\n  service db(database)\[DB\] in tier"
+    expr {[string first MyTier [::tclutils::tudiagram::toSvg [M::parse $src]]] >= 0}
+} -result 1
+
+# --- mermaid.js subset fidelity ----------------------------------------------
+
+test tuarchitecture-6.1 {the cross-group {group} edge modifier is tolerated} -body {
+    set src "architecture-beta\n  group g1(cloud)\[One\]\n  group g2(cloud)\[Two\]\n  service a(server)\[A\] in g1\n  service b(server)\[B\] in g2\n  a{group}:B --> T:b{group}"
+    set m [M::parse $src]
+    list [nedges $m] [arrow0 $m]
+} -result {1 end}
+
+test tuarchitecture-6.2 {the official nested-group example parses with nesting} -body {
+    set src "architecture-beta\n  group cloud(cloud)\[Cloud\]\n  group fe(internet)\[FE\] in cloud\n  service ui(server)\[UI\] in fe\n  service db(database)\[DB\] in cloud\n  ui:B --> T:db"
+    set m [M::parse $src]
+    list [lsort [dict get [grp $m cloud] members]] [dict get [grp $m fe] members]
+} -result {{db ui} ui}
+
+cleanupTests

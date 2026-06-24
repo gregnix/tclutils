@@ -1,0 +1,168 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tutreemap
+
+namespace eval M { namespace import ::tclutils::tutreemap::* }
+
+# walk to a node by a path of names from the root's children
+proc node {m args} {
+    set cur [dict create children [dict get $m children]]
+    foreach name $args {
+        set found ""
+        foreach c [dict get $cur children] {
+            if {[dict get $c name] eq $name} { set found $c; break }
+        }
+        if {$found eq ""} { return "MISSING:$name" }
+        set cur $found
+    }
+    return $cur
+}
+proc val {m args}  { dict get [node $m {*}$args] value }
+proc kids {m args} { llength [dict get [node $m {*}$args] children] }
+proc pngsig {b} { binary scan [string range $b 0 3] H* s; return $s }
+
+set budget [M::parse {treemap-beta
+"Annual Budget"
+    "Operations"
+        "Salaries": 700
+        "Equipment": 200
+    "Marketing"
+        "Advertising": 400}]
+
+# --- parse: hierarchy & values ----------------------------------------------
+
+test tutreemap-1.1 {a leaf keeps its own value} -body {
+    val [M::parse "treemap-beta\n\"A\": 10"] A
+} -result 10.0
+
+test tutreemap-1.2 {a branch value is the sum of its children} -body {
+    val $budget "Annual Budget" "Operations"
+} -result 900.0
+
+test tutreemap-1.3 {nested sums roll all the way up} -body {
+    val $budget "Annual Budget"
+} -result 1300.0
+
+test tutreemap-1.4 {indentation defines parent/child nesting} -body {
+    list [kids $budget "Annual Budget"] \
+         [kids $budget "Annual Budget" "Operations"]
+} -result {2 2}
+
+test tutreemap-1.5 {siblings at the same indent stay siblings} -body {
+    set m [M::parse "treemap-beta\n\"X\": 1\n\"Y\": 2\n\"Z\": 3"]
+    kids $m
+} -result 3
+
+test tutreemap-1.6 {a branch with no value is distinguished from a leaf} -body {
+    set m [M::parse "treemap-beta\n\"P\"\n    \"Q\": 5"]
+    list [kids $m P] [val $m P Q]
+} -result {1 5.0}
+
+test tutreemap-1.7 {bare 'treemap' header is accepted} -body {
+    val [M::parse "treemap\n\"A\": 3"] A
+} -result 3.0
+
+test tutreemap-1.8 {%% comments and blank lines are ignored} -body {
+    val [M::parse "treemap-beta\n%% note\n\n\"A\": 4\n"] A
+} -result 4.0
+
+test tutreemap-1.9 {a :::class styling tag is parsed off and ignored} -body {
+    val [M::parse "treemap-beta\n\"A\":::important : 5"] A
+} -result 5.0
+
+test tutreemap-1.10 {deeper indentation creates deeper nesting} -body {
+    set m [M::parse "treemap-beta\n\"A\"\n    \"B\"\n        \"C\": 7"]
+    val $m A B C
+} -result 7.0
+
+test tutreemap-1.11 {fractional values are preserved} -body {
+    val [M::parse "treemap-beta\n\"A\": 2.5"] A
+} -result 2.5
+
+# --- squarify helpers --------------------------------------------------------
+
+test tutreemap-2.1 {squarify covers the whole rect area} -body {
+    set rs [::tclutils::tutreemap::_squarify {{a 1} {b 1} {c 1} {d 1}} 0 0 100 100]
+    set area 0.0
+    foreach r $rs { set area [expr {$area + [lindex $r 3]*[lindex $r 4]}] }
+    expr {abs($area - 10000) < 1.0}
+} -result 1
+
+test tutreemap-2.2 {squarify gives every item a cell} -body {
+    llength [::tclutils::tutreemap::_squarify {{a 3} {b 2} {c 1}} 0 0 60 40]
+} -result 3
+
+test tutreemap-2.3 {a bigger value gets a bigger cell} -body {
+    set rs [::tclutils::tutreemap::_squarify {{big 80} {small 20}} 0 0 100 100]
+    array set A {}
+    foreach r $rs { set A([lindex $r 0]) [expr {[lindex $r 3]*[lindex $r 4]}] }
+    expr {$A(big) > $A(small)}
+} -result 1
+
+test tutreemap-2.4 {empty / zero input squarifies to nothing} -body {
+    list [llength [::tclutils::tutreemap::_squarify {} 0 0 100 100]] \
+         [llength [::tclutils::tutreemap::_squarify {{a 0} {b 0}} 0 0 100 100]]
+} -result {0 0}
+
+test tutreemap-2.5 {worst aspect ratio is >= 1} -body {
+    expr {[::tclutils::tutreemap::_worst {{a 4} {b 1}} 6] >= 1.0}
+} -result 1
+
+# --- errors ------------------------------------------------------------------
+
+test tutreemap-3.1 {no header is an EMPTY error} -body {
+    catch {M::parse "\"A\": 1"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTREEMAP EMPTY}
+
+test tutreemap-3.2 {a header with no nodes is EMPTY} -body {
+    catch {M::parse "treemap-beta"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTREEMAP EMPTY}
+
+test tutreemap-3.3 {a non-numeric value is a VALUE error} -body {
+    catch {M::parse "treemap-beta\n\"A\": abc"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTREEMAP VALUE}
+
+test tutreemap-3.4 {a non-integer scale is an ARG error} -body {
+    catch {M::toSvg [M::parse "treemap-beta\n\"A\": 1"] -scale x} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTREEMAP ARG}
+
+# --- render ------------------------------------------------------------------
+
+test tutreemap-4.1 {toSvg returns an <svg> document} -body {
+    string match {<svg*} [M::toSvg $budget]
+} -result 1
+
+test tutreemap-4.2 {toPng returns valid PNG bytes} -body {
+    pngsig [M::toPng $budget]
+} -result {89504e47}
+
+test tutreemap-4.3 {-scale 3 yields a 3x wider PNG} -body {
+    binary scan [M::toPng $budget -scale 1] @16I w1
+    binary scan [M::toPng $budget -scale 3] @16I w3
+    expr {$w3 == 3*$w1}
+} -result 1
+
+test tutreemap-4.4 {a leaf name appears in the SVG text} -body {
+    expr {[string first Salaries [M::toSvg $budget]] >= 0}
+} -result 1
+
+test tutreemap-4.5 {a multi-section nested treemap renders to PNG} -body {
+    set src "treemap-beta\n\"S1\"\n    \"a\": 5\n    \"S1.1\"\n        \"b\": 3\n\"S2\"\n    \"c\": 8"
+    pngsig [M::toPng [M::parse $src]]
+} -result {89504e47}
+
+test tutreemap-4.6 {negative leaf values are dropped, not crashing} -body {
+    set m [M::parse "treemap-beta\n\"A\": 10\n\"B\": -4"]
+    pngsig [M::toPng $m]
+} -result {89504e47}
+
+cleanupTests

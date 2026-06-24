@@ -68,3 +68,9 @@ set rows [::tclutils::tucsv::file data.csv -delimiter {;}]
 A leading UTF\-8 BOM is stripped automatically on \fBparse\fR.
 .IP \(bu
 \fB\-strict 0\fR recovers from an unterminated quoted field instead of raising \fB{TCLUTILS TUCSV QUOTE}\fR (useful for loading messy real\-world exports). The default \fB\-strict 1\fR keeps the previous strict behaviour.
+.SS "Additional exported commands"
+.PP
+Documented for completeness (same module, also covered by the test suite):
+.CS
+tucsv::text rows args                          ;# format ROWS (a list of field lists) as CSV text; -delimiter -quote -alwaysQuote -newline
+.CE

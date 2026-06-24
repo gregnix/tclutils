@@ -1,0 +1,51 @@
+.TH tugit n 0.1 tclutils
+.SH tclutils::tugit
+.PP
+Parses a Mermaid \fBgitGraph\fR into a \fBtclutils::tudiagram\fR model (best\-effort), so it can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
+.SS Package
+.CS
+package require tclutils::tugit 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tugit::parse text      ;# -> tudiagram model dict
+.CE
+.PP
+The result is a \fBtudiagram\fR model and is rendered with \fBtclutils::tudiagram::toSvg\fR / \fBtoPng\fR (or via the \fBtuflow\fR facade).
+.SS "Supported syntax (Mermaid subset)"
+.CS
+commit                    -> a commit node on the current branch
+commit id: "X" tag: "T"   -> node labelled X (the tag is appended)
+branch <name>             -> create a branch from the current HEAD, switch to it
+checkout <name>           -> switch the current branch
+merge <name>              -> a merge commit with two parents (current HEAD and
+                             <name>'s HEAD)
+cherry-pick id: "X"       -> a commit node on the current branch
+.CE
+.PP
+Commits become nodes; an edge runs from each parent commit to its child. The default branch is \fBmain\fR; the direction is \fBLR\fR unless the header says \fBgitGraph TB:\fR.
+.SS Usage
+.CS
+package require tclutils::tugit
+package require tclutils::tudiagram
+
+set src {gitGraph
+   commit
+   commit id: "Normal" tag: "v1.0"
+   branch develop
+   checkout develop
+   commit
+   checkout main
+   merge develop
+}
+set m [::tclutils::tugit::parse $src]
+::tclutils::tudiagram::writePng $m git.png -scale 3
+.CE
+.SS Notes
+.IP \(bu
+v1 limitations (honest): the characteristic branch lanes / swimlanes of a git graph are NOT drawn — \fBtudiagram\fR lays the commits out as a generic left\-to\-right DAG, so the parent/merge topology is preserved but the per\-branch rows are not. Commit \fBtype:\fR styling and branch colours are ignored; commit nodes are \fBrounded\fR, merge nodes are \fBbox\fR.
+.IP \(bu
+Companion: \fBtclutils::tudiagram\fR (renderer), \fBtclutils::tuflow\fR (dispatch).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUGIT <REASON>}\fR — \fBEMPTY\fR (no commits found).

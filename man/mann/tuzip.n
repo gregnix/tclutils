@@ -19,3 +19,9 @@ package require tclutils::tuzip
 \fBtuzip\fR currently supports stored entries and deflated entries. This is enough for common ZIP files and for inspecting ODF files such as \fB.odt\fR, \fB.ods\fR, \fB.odg\fR and \fB.odp\fR, because those files are ZIP containers.
 .PP
 Binary files are always opened in binary mode.
+.SS "Additional exported commands"
+.PP
+Documented for completeness (same module, also covered by the test suite):
+.CS
+tuzip::createMembers zipfile members args      ;# create a ZIP from in-memory members with per-entry compression and explicit order. `members` is a list of dicts, each with keys: name (archive path, required), content (raw bytes, required), method (stored|deflate, default deflate). The member order is preserved -- e.g. an ODF container can put `mimetype` first as stored and compress the XML parts in a single call. Option -mtime EPOCH sets a fixed timestamp for all entries (default: now)
+.CE

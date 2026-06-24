@@ -29,3 +29,10 @@ Field numbers are 1\-based. The joined result contains the key once, then the re
 .SS 0.24.0
 .PP
 Outer joins are available through \fB\-outer left\fR, \fB\-outer right\fR, and \fB\-outer full\fR. The default remains the existing inner join behavior (\fB\-outer none\fR).
+.SS "Additional exported commands"
+.PP
+Documented for completeness (same module, also covered by the test suite):
+.CS
+tujoin::files leftPath rightPath args          ;# relational join of two files on a key field (file variant of lines)
+tujoin::lines leftLines rightLines args        ;# relational join of two line lists on a key field; -leftfield -rightfield -delimiter -header -outer
+.CE

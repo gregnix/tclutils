@@ -1,0 +1,124 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tukanban
+
+namespace eval M { namespace import ::tclutils::tukanban::* }
+
+proc cols  {m} { dict get $m columns }
+proc col   {m i} { lindex [dict get $m columns] $i }
+proc ctitle {m i} { lindex [col $m $i] 0 }
+proc ccards {m i} { lindex [col $m $i] 1 }
+proc pngsig {bytes} { binary scan [string range $bytes 0 3] H* s; return $s }
+
+# --- parse: structure --------------------------------------------------------
+
+test tukanban-1.1 {a column with cards parses to {title cards}} -body {
+    set m [M::parse "kanban\n  Todo\n    a\n    b"]
+    list [llength [cols $m]] [ctitle $m 0] [llength [ccards $m 0]]
+} -result {1 Todo 2}
+
+test tukanban-1.2 {a card without metadata has an empty meta field} -body {
+    set m [M::parse "kanban\n  Todo\n    just text"]
+    lindex [ccards $m 0] 0
+} -result {{just text} {}}
+
+test tukanban-1.3 {@{...} metadata is split into joined key: value pairs} -body {
+    set m [M::parse "kanban\n  Todo\n    work@{ ticket: ABC-1, priority: High }"]
+    lindex [ccards $m 0] 0
+} -result {work {ticket: ABC-1  priority: High}}
+
+test tukanban-1.4 {the least-indented content line is a column title} -body {
+    set m [M::parse "kanban\n  A\n    card\n  B\n    card2"]
+    list [ctitle $m 0] [ctitle $m 1]
+} -result {A B}
+
+test tukanban-1.5 {cards attach to their current column} -body {
+    set m [M::parse "kanban\n  A\n    a1\n    a2\n  B\n    b1"]
+    list [llength [ccards $m 0]] [llength [ccards $m 1]]
+} -result {2 1}
+
+test tukanban-1.6 {blank lines and %% comments are ignored} -body {
+    set m [M::parse "kanban\n%% note\n\n  A\n\n    card\n"]
+    list [llength [cols $m]] [llength [ccards $m 0]]
+} -result {1 1}
+
+test tukanban-1.7 {tab indentation counts as four columns} -body {
+    set m [M::parse "kanban\n\tA\n\t\tcard"]
+    list [ctitle $m 0] [llength [ccards $m 0]]
+} -result {A 1}
+
+test tukanban-1.8 {a column with no cards is still a column} -body {
+    set m [M::parse "kanban\n  Empty\n  Full\n    one"]
+    list [llength [cols $m]] [llength [ccards $m 0]] [llength [ccards $m 1]]
+} -result {2 0 1}
+
+# --- layout math -------------------------------------------------------------
+
+test tukanban-2.1 {auto width grows with column count} -body {
+    set w1 [::tclutils::tukanban::_autoWidth [M::parse "kanban\n  A\n    x"]]
+    set w3 [::tclutils::tukanban::_autoWidth [M::parse "kanban\n  A\n    x\n  B\n    y\n  C\n    z"]]
+    expr {$w3 > $w1}
+} -result 1
+
+test tukanban-2.2 {auto height grows with the tallest card stack} -body {
+    set h1 [::tclutils::tukanban::_autoHeight [M::parse "kanban\n  A\n    x"]]
+    set h4 [::tclutils::tukanban::_autoHeight [M::parse "kanban\n  A\n    x\n    y\n    z\n    w"]]
+    expr {$h4 > $h1}
+} -result 1
+
+test tukanban-2.3 {a card with metadata is taller than one without} -body {
+    set bare [::tclutils::tukanban::_cardH {text {}}]
+    set meta [::tclutils::tukanban::_cardH {text {k: v}}]
+    expr {$meta > $bare}
+} -result 1
+
+# --- errors ------------------------------------------------------------------
+
+test tukanban-3.1 {missing header is an EMPTY error} -body {
+    catch {M::parse "  A\n    card"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUKANBAN EMPTY}
+
+test tukanban-3.2 {a header with no columns is EMPTY} -body {
+    catch {M::parse "kanban"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUKANBAN EMPTY}
+
+test tukanban-3.3 {a non-integer scale is an ARG error} -body {
+    catch {M::toSvg [M::parse "kanban\n  A\n    x"] -scale x} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUKANBAN ARG}
+
+# --- render ------------------------------------------------------------------
+
+test tukanban-4.1 {toSvg returns an <svg> document} -body {
+    string match {<svg*} [M::toSvg [M::parse "kanban\n  A\n    x\n  B\n    y"]]
+} -result 1
+
+test tukanban-4.2 {toPng returns valid PNG bytes} -body {
+    pngsig [M::toPng [M::parse "kanban\n  A\n    x\n  B\n    y"]]
+} -result {89504e47}
+
+test tukanban-4.3 {a card with metadata still renders} -body {
+    pngsig [M::toPng [M::parse "kanban\n  A\n    x@{ priority: High }"]]
+} -result {89504e47}
+
+test tukanban-4.4 {-scale 3 yields a 3x wider PNG} -body {
+    set m [M::parse "kanban\n  A\n    x"]
+    binary scan [M::toPng $m -scale 1] @16I w1
+    binary scan [M::toPng $m -scale 3] @16I w3
+    expr {$w3 == 3*$w1}
+} -result 1
+
+test tukanban-4.5 {explicit -width/-height are honoured} -body {
+    set m [M::parse "kanban\n  A\n    x"]
+    binary scan [M::toPng $m -width 500 -height 200 -scale 1] @16II w h
+    list $w $h
+} -result {500 200}
+
+cleanupTests

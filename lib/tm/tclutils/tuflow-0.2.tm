@@ -157,12 +157,28 @@ proc ::tclutils::tuflow::parse {text args} {
             package require tclutils::tugit
             return [::tclutils::tugit::parse $text]
         }
-        if {[regexp -nocase {^(sequenceDiagram|gantt|journey|pie|timeline|quadrantChart|sankey-beta|xychart-beta)\M} $_probe -> _kw]} {
+        if {[regexp -nocase {^architecture(-beta)?\M} $_probe]} {
+            package require tclutils::tuarchitecture
+            return [::tclutils::tuarchitecture::parse $text]
+        }
+        if {[regexp -nocase {^(sequenceDiagram|gantt|journey|pie|timeline|quadrantChart|sankey-beta|xychart-beta|kanban|packet(-beta)?|treemap(-beta)?|radar(-beta)?)\M} $_probe -> _kw]} {
             return -code error -errorcode {TCLUTILS TUFLOW UNSUPPORTED} \
                 "Mermaid diagram type \"$_kw\" is not supported (tuflow renders flowcharts only)"
         }
         break
     }
+    # Pre-scan: collect declared subgraph ids so an edge that targets a cluster
+    # id (e.g. `A --> block`) can be dropped -- v1 does not draw edges to/from a
+    # cluster, only the frame around its member nodes.
+    set groupIds {}
+    foreach _rl [split $text \n] {
+        if {[regexp -nocase {^\s*subgraph\s+(\S+)} $_rl -> _gid]} { lappend groupIds $_gid }
+    }
+    set groupOrder {}       ;# declared subgraph ids, in order
+    array set groupLabel {}
+    array set groupMembers {}
+    set groupStack {}       ;# open subgraphs, innermost last
+
     foreach rawline [split $text \n] {
         set line [string trim $rawline]
         if {$line eq "" || [string match {%%*} $line]} continue
@@ -175,7 +191,24 @@ proc ::tclutils::tuflow::parse {text args} {
             if {!$headerSeen && [regexp {^(graph|flowchart)\M} $stmt]} {
                 set headerSeen 1; continue
             }
-            if {[regexp {^(style|classDef|class|subgraph|end|click|linkStyle)\M} $stmt]} continue
+            # subgraph open: push onto the group stack (nested subgraphs allowed)
+            if {[regexp -nocase {^subgraph\s+(\S+)(?:\s*\[([^\]]*)\])?\s*$} $stmt -> gid glabel]} {
+                if {$glabel eq ""} { set glabel $gid }
+                if {$gid ni $groupOrder} {
+                    lappend groupOrder $gid
+                    set groupLabel($gid) $glabel
+                    set groupMembers($gid) {}
+                }
+                lappend groupStack $gid
+                continue
+            }
+            if {[regexp -nocase {^end\M} $stmt]} {
+                if {[llength $groupStack]} { set groupStack [lrange $groupStack 0 end-1] }
+                continue
+            }
+            # `direction` inside a subgraph is v1-ignored (global direction wins)
+            if {[regexp -nocase {^direction\M} $stmt]} continue
+            if {[regexp {^(style|classDef|class|click|linkStyle)\M} $stmt]} continue
             # normalise "A -- text --> B" forms to "A -->|text| B"
             regsub -all -- {--\s+([^|>]+?)\s+-->}  $stmt {-->|\1|}  stmt
             regsub -all -- {==\s+([^|>]+?)\s+==>}  $stmt {==>|\1|}  stmt
@@ -183,17 +216,27 @@ proc ::tclutils::tuflow::parse {text args} {
             set s $stmt
             set from [_takeNode s nodes]
             if {$from eq ""} continue
+            if {$from in $groupIds} continue   ;# stmt targets a cluster id
+            if {[llength $groupStack]} {
+                foreach _g $groupStack { lappend groupMembers($_g) $from }
+            }
             while {1} {
                 set e [_takeEdge s]
                 if {$e eq ""} break
                 lassign $e arrow style elabel
                 set to [_takeNode s nodes]
                 if {$to eq ""} break
+                if {$to in $groupIds} break    ;# edge to a cluster id (v1: drop)
+                if {[llength $groupStack]} {
+                    foreach _g $groupStack { lappend groupMembers($_g) $to }
+                }
                 lappend edges [list $from $to $arrow $style $elabel]
                 set from $to
             }
         }
     }
+    # drop phantom nodes created from cluster ids referenced in edges
+    foreach gid $groupIds { catch {dict unset nodes $gid} }
     if {![dict size $nodes]} {
         return -code error -errorcode {TCLUTILS TUFLOW EMPTY} \
             "no nodes found in flowchart source"
@@ -207,6 +250,18 @@ proc ::tclutils::tuflow::parse {text args} {
         lassign $e from to arrow style elabel
         set m [::tclutils::tudiagram::addEdge $m $from $to \
             -arrow $arrow -style $style -label $elabel]
+    }
+    # clusters: a frame is drawn around each subgraph's member nodes (tudiagram
+    # >= 0.4; with 0.3 addGroup is absent, so this is a no-op via catch).
+    foreach gid $groupOrder {
+        set real {}
+        foreach mid [lsort -unique $groupMembers($gid)] {
+            if {[dict exists $nodes $mid]} { lappend real $mid }
+        }
+        if {[llength $real] && [llength [info commands ::tclutils::tudiagram::addGroup]]} {
+            set m [::tclutils::tudiagram::addGroup $m $gid \
+                -label $groupLabel($gid) -members $real]
+        }
     }
     return $m
 }
@@ -288,6 +343,30 @@ proc ::tclutils::tuflow::toSvg {text args} {
         return [::tclutils::tusequence::toSvg $m \
             {*}[_forward $args {-width -height -fontfile -scale}]]
     }
+    if {[regexp -nocase {^radar(-beta)?$} [_firstKeyword $text]]} {
+        package require tclutils::turadar
+        set m [::tclutils::turadar::parse $text]
+        return [::tclutils::turadar::toSvg $m \
+            {*}[_forward $args {-width -height -fontfile -scale}]]
+    }
+    if {[regexp -nocase {^treemap(-beta)?$} [_firstKeyword $text]]} {
+        package require tclutils::tutreemap
+        set m [::tclutils::tutreemap::parse $text]
+        return [::tclutils::tutreemap::toSvg $m \
+            {*}[_forward $args {-width -height -fontfile -scale}]]
+    }
+    if {[regexp -nocase {^packet(-beta)?$} [_firstKeyword $text]]} {
+        package require tclutils::tupacket
+        set m [::tclutils::tupacket::parse $text]
+        return [::tclutils::tupacket::toSvg $m \
+            {*}[_forward $args {-width -height -fontfile -scale}]]
+    }
+    if {[string match -nocase kanban [_firstKeyword $text]]} {
+        package require tclutils::tukanban
+        set m [::tclutils::tukanban::parse $text]
+        return [::tclutils::tukanban::toSvg $m \
+            {*}[_forward $args {-width -height -fontfile -scale}]]
+    }
     return [::tclutils::tudiagram::toSvg [parse $text]]
 }
 
@@ -338,6 +417,30 @@ proc ::tclutils::tuflow::toPng {text args} {
         package require tclutils::tusequence
         set m [::tclutils::tusequence::parse $text]
         return [::tclutils::tusequence::toPng $m \
+            {*}[_forward $args {-width -height -fontfile -scale}]]
+    }
+    if {[regexp -nocase {^radar(-beta)?$} [_firstKeyword $text]]} {
+        package require tclutils::turadar
+        set m [::tclutils::turadar::parse $text]
+        return [::tclutils::turadar::toPng $m \
+            {*}[_forward $args {-width -height -fontfile -scale}]]
+    }
+    if {[regexp -nocase {^treemap(-beta)?$} [_firstKeyword $text]]} {
+        package require tclutils::tutreemap
+        set m [::tclutils::tutreemap::parse $text]
+        return [::tclutils::tutreemap::toPng $m \
+            {*}[_forward $args {-width -height -fontfile -scale}]]
+    }
+    if {[regexp -nocase {^packet(-beta)?$} [_firstKeyword $text]]} {
+        package require tclutils::tupacket
+        set m [::tclutils::tupacket::parse $text]
+        return [::tclutils::tupacket::toPng $m \
+            {*}[_forward $args {-width -height -fontfile -scale}]]
+    }
+    if {[string match -nocase kanban [_firstKeyword $text]]} {
+        package require tclutils::tukanban
+        set m [::tclutils::tukanban::parse $text]
+        return [::tclutils::tukanban::toPng $m \
             {*}[_forward $args {-width -height -fontfile -scale}]]
     }
     set m [parse $text]

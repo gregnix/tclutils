@@ -1,0 +1,85 @@
+.TH tuquadrant n 0.1 tclutils
+.SH tclutils::tuquadrant
+.PP
+A Mermaid\-style \fBquadrant chart\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBquadrantChart\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
+.PP
+A quadrant chart is not a node\-edge graph, so \fBtuquadrant\fR does \fBnot\fR go through \fBtclutils::tudiagram\fR; it owns its own parse and draw step, exposing the same \fBtoSvg\fR / \fBtoPng\fR shape the other renderers use. That lets the \fBtclutils::tuflow\fR facade treat every diagram family uniformly: \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR detect a \fBquadrantChart\fR block and dispatch here (like \fBpie\fR and \fBxychart\-beta\fR).
+.PP
+The plot is a unit square split into four tinted quadrants; data points are placed at their normalised \fB0..1\fR coordinates with the same routine on both backends, so the SVG and the raster output stay congruent.
+.SS Package
+.CS
+package require tclutils::tuquadrant 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tuquadrant::parse    text                       ;# -> model dict
+::tclutils::tuquadrant::toSvg    model ?-opt val ...?        ;# -> SVG string
+::tclutils::tuquadrant::toPng    model ?-opt val ...?        ;# -> PNG bytes
+::tclutils::tuquadrant::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
+::tclutils::tuquadrant::writePng model file ?-opt val ...?   ;# -> file (PNG)
+.CE
+.PP
+\fBparse\fR turns Mermaid \fBquadrantChart\fR source into a model dict with keys \fBtitle\fR, \fBxleft\fR/\fBxright\fR, \fBybottom\fR/\fBytop\fR, \fBq1\fR..\fBq4\fR (quadrant labels) and \fBpoints\fR (a list of \fB{name x y}\fR with \fBx\fR,\fBy\fR in \fB0..1\fR). The render commands take that model.
+.PP
+Render options (all optional):
+.CS
+-width  N      chart width in logical px           (default 420)
+-height N      chart height in logical px          (default 420)
+-scale  N      raster scale, positive integer      (default 1; toPng only)
+-fontfile F    real TTF/OTF for labels (raster)    (default: 6x8 bitmap font)
+.CE
+.PP
+The SVG backend ignores \fB\-scale\fR and \fB\-fontfile\fR (it uses a fixed \fBmonospace\fR viewer font locked to the 6x8 metric). On the raster backend \fB\-scale N\fR multiplies the pixel dimensions and the font scale by \fBN\fR.
+.SS "Input grammar (Mermaid \fBquadrantChart\fR subset)"
+.CS
+quadrantChart                      %% header
+title <text>                       %% chart title
+x-axis <left> --> <right>          %% x-axis end labels (axis is 0..1)
+y-axis <bottom> --> <top>          %% y-axis end labels (axis is 0..1)
+quadrant-1 <text> ... quadrant-4   %% 1=top-right, 2=top-left,
+                                   %% 3=bottom-left, 4=bottom-right
+<Point Name>: [x, y]               %% point at normalised 0..1 coords
+%% ...                             %% comment, ignored
+.CE
+.PP
+Any of title, axes, quadrant labels or points counts as content; a completely empty source is an error. A trailing style hint after a point (\fBradius:\fR, \fBcolor:\fR, ...) is accepted and ignored.
+.SS Usage
+.CS
+package require tclutils::tuquadrant
+namespace import ::tclutils::tuquadrant::*
+
+set src {quadrantChart
+    title Reach and engagement of campaigns
+    x-axis Low Reach --> High Reach
+    y-axis Low Engagement --> High Engagement
+    quadrant-1 We should expand
+    quadrant-2 Need to promote
+    quadrant-3 Re-evaluate
+    quadrant-4 May be improved
+    Campaign A: [0.3, 0.6]
+    Campaign B: [0.45, 0.23]
+    Campaign C: [0.57, 0.69]
+}
+
+set m [parse $src]
+writePng $m quad.png -scale 3
+writeSvg $m quad.svg
+.CE
+.PP
+Through the \fBtuflow\fR facade the same source renders without an explicit model:
+.CS
+package require tclutils::tuflow
+::tclutils::tuflow::toPng $src -scale 3      ;# facade detects the quadrantChart block
+.CE
+.SS Notes
+.IP \(bu
+Point colours come from a fixed qualitative palette (10 entries) that cycles when there are more points than colours.
+.IP \(bu
+v1 limitations (honest): per\-point style hints (\fBradius:\fR, \fBcolor:\fR, ...) are ignored; the y\-axis end labels are placed horizontally in the left margin, not rotated; coordinates outside \fB0..1\fR are clamped.
+.IP \(bu
+Labels use the \fBtupngdraw\fR 6x8 bitmap font by default. With \fB\-fontfile\fR on the raster backend a real outline font is used via \fBfillcontours\fR (lazy \fBGlyphs\fR, unbundled); a set\-but\-missing path is a hard error, a missing \fBGlyphs\fR package degrades silently to the bitmap font.
+.IP \(bu
+Companion modules: \fBtclutils::tupngdraw\fR and \fBtclutils::tusvg\fR (backends), \fBtclutils::tuflow\fR (facade / dispatch), \fBtclutils::tudiagram\fR (the node\-edge graph renderer for the other Mermaid types).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUQUADRANT <REASON>}\fR — \fBEMPTY\fR (no content at all), \fBARG\fR (bad render option, e.g. non\-integer \fB\-scale\fR), \fBFONT\fR (a \fB\-fontfile\fR path that does not exist).

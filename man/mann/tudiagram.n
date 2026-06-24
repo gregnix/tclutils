@@ -1,0 +1,135 @@
+.TH tudiagram n 0.4 tclutils
+.SH tclutils::tudiagram
+.PP
+A pure\-Tcl \fBnode\-edge graph renderer\fR for the \fBtuflow\fR diagram family. It builds a small diagram model (a dict), runs a layered layout, and draws the result to SVG or PNG with the pure\-Tcl backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
+.PP
+\fBtudiagram\fR is the renderer behind every \fIgraph\-shaped\fR Mermaid type that \fBtclutils::tuflow\fR supports (flowchart/graph, stateDiagram, erDiagram, classDiagram, requirementDiagram, mindmap, C4, …). Each of those parsers emits a \fBtudiagram\fR model; the \fBtuflow\fR facade then calls \fBtudiagram::toSvg\fR / \fBtudiagram::toPng\fR. Non\-graph types (pie, xychart) own their own renderer and do \fBnot\fR go through \fBtudiagram\fR.
+.PP
+The render layer talks only to the congruent canvas protocol shared by \fBtusvg\fR and \fBtupngdraw\fR: the same \fBrender\fR proc emits SVG or PNG, the constructor is the only difference. Box sizing uses the shared monospace text metric, so the layout geometry is backend\-independent and the SVG and PNG output stay congruent.
+.SS Package
+.CS
+package require tclutils::tudiagram 0.3
+.CE
+.PP
+Depends only on \fBtclutils::common\fR. Building and laying out a model needs no canvas; rendering needs a \fBtusvg\fR or \fBtupngdraw\fR object. The optional \fB\-fontfile\fR path additionally needs the third\-party \fBGlyphs\fR package at render time (lazy, unbundled).
+.SS Model
+.PP
+The builders are \fBfunctional\fR: each returns the updated diagram dict, so the idiom is \fBset d [tudiagram::addNode $d id \-label X]\fR.
+.CS
+{
+    version 1
+    meta  {title T direction LR theme default fontfile {} nodeGap 30 rankGap 70 padding 20}
+    nodes {{id A label A shape box style {}} ...}
+    edges {{from A to B label {} style solid arrow end} ...}
+}
+.CE
+.PP
+After \fBlayout\fR each node additionally carries \fBx y width height\fR (top\-left origin, pixels), each edge carries a polyline \fBpoints\fR plus \fBback\fR (1 if the edge was reversed to break a cycle), and \fBmeta\fR carries \fBlaid 1\fR and the overall \fBwidth\fR / \fBheight\fR.
+.SS Commands
+.SS "Model builders"
+.CS
+::tclutils::tudiagram::create  ?-title T? ?-direction LR|TB|RL|BT? \
+                               ?-theme name|dict? ?-fontfile F?      ;# -> diagram dict
+::tclutils::tudiagram::setMeta d ?-key val ...?                      ;# -> diagram dict
+::tclutils::tudiagram::addNode d id ?-label L? ?-shape S? ?-style D? ;# -> diagram dict
+::tclutils::tudiagram::addEdge d from to ?-label L? ?-style E? ?-arrow A? \
+                               ?-startMark M? ?-endMark M?              ;# -> diagram dict
+.CE
+.PP
+\fBcreate\fR starts an empty diagram. \fB\-direction\fR is the rank flow (default \fBLR\fR). \fB\-theme\fR is a theme name (see \fIThemes\fR) or an inline theme dict. \fBsetMeta\fR overrides any \fBmeta\fR key after creation (e.g. \fB\-direction TB\fR, \fB\-nodeGap 40\fR); it re\-validates \fBdirection\fR.
+.PP
+\fBaddNode\fR adds a node; \fBid\fR must be unique. \fB\-label\fR defaults to the id. \fB\-shape\fR is one of \fBbox\fR (default), \fBrounded\fR, \fBdot\fR, \fBcircle\fR, \fBstadium\fR, \fBdiamond\fR, \fBhexagon\fR, \fBcylinder\fR. \fB\-style\fR is an optional per\-node colour override — a dict with any of the keys \fBfill\fR, \fBstroke\fR, \fBtext\fR (6\-digit hex), e.g. \fB\-style {fill #e3f2fd stroke #1565c0}\fR; absent keys fall back to the theme, and a malformed or empty value is ignored (theme is used), so it is backward compatible.
+.PP
+\fBaddEdge\fR adds a directed edge between two node ids. \fB\-style\fR is \fBsolid\fR (default), \fBdashed\fR, \fBdotted\fR or \fBthick\fR (a wider stroke, e.g. for a Mermaid \fB==>\fR link). \fB\-arrow\fR is \fBend\fR (default, head at the target), \fBnone\fR, \fBboth\fR or \fBstart\fR.
+.PP
+\fB\-startMark\fR / \fB\-endMark\fR add a crow's\-foot cardinality mark at the \fBfrom\fR / \fBto\fR end, independent of the arrow head. Value \fBM\fR is \fBnone\fR (default), \fBexactlyOne\fR, \fBzeroOrOne\fR, \fBoneOrMany\fR or \fBzeroOrMany\fR — each drawn as a "max" symbol nearest the node (bar = one, crow's foot = many) plus a "min" symbol toward the line (bar = one, ring = zero). An unknown value draws nothing. \fBtclutils::tuer\fR uses these to render ER cardinality.
+.SS Validation
+.CS
+::tclutils::tudiagram::validate d        ;# -> list of problems ({} == valid)
+.CE
+.PP
+Returns a list of \fB{REASON message}\fR problems: \fBEMPTY\fR if there are no nodes, \fBNONODE\fR for any edge endpoint that is not a declared node id. An empty list means the model is renderable. \fBvalidate\fR does not throw.
+.SS Layout
+.CS
+::tclutils::tudiagram::layout d          ;# -> diagram dict with geometry
+.CE
+.PP
+Computes a layered layout for a DAG and returns a new dict with the geometry fields described under \fIModel\fR. \fBrender\fR / \fBtoSvg\fR / \fBtoPng\fR call \fBlayout\fR automatically when \fBmeta.laid\fR is absent, so calling it directly is only needed to inspect coordinates.
+.SS Themes
+.CS
+::tclutils::tudiagram::theme name        ;# -> theme dict
+.CE
+.PP
+Resolves a theme name to its dict. Known names are \fBdefault\fR, \fBpipeline\fR and \fBmono\fR. An unknown name returns \fBdefault\fR; an inline dict that carries a \fBfill\fR key is merged over \fBdefault\fR and returned as\-is. A theme dict has the keys \fBfill stroke text edge font pad\fR.
+.SS "Rendering and output"
+.CS
+::tclutils::tudiagram::render   d canvas                  ;# draw onto a canvas object
+::tclutils::tudiagram::toSvg    d ?-opt val ...?          ;# -> SVG string
+::tclutils::tudiagram::toPng    d ?-scale N?              ;# -> PNG bytes
+::tclutils::tudiagram::writeSvg d file ?-opt val ...?     ;# -> file (SVG)
+::tclutils::tudiagram::writePng d file ?-scale N?         ;# -> file (PNG)
+.CE
+.PP
+\fBrender\fR draws the (already laid\-out) model onto an existing canvas object — a \fBtclutils::tusvg\fR or \fBtclutils::tupngdraw\fR instance — and is the low\-level entry point. The four \fBto*\fR / \fBwrite*\fR procs are the convenience wrappers: they construct the right backend, call \fBrender\fR, and return the bytes / write the file.
+.SS "Render options"
+.CS
+-scale N      raster supersample factor, positive integer  (default 1; toPng/writePng only)
+-fontfile F   real TTF/OTF for labels (raster backend)      (default: 6x8 bitmap font)
+.CE
+.PP
+\fB\-scale N\fR (raster only) renders at \fBN×\fR into an \fBN×\fR\-sized canvas for a sharp, supersampled PNG with the identical layout; the SVG backend ignores it. \fB\-scale\fR must be a positive integer.
+.PP
+\fB\-fontfile\fR is passed to \fBcreate\fR (or \fBsetMeta\fR). On the raster (PNG) backend the labels are then drawn as real outlines via \fBtupngdraw fillcontours\fR, which needs the unbundled \fBGlyphs\fR package (A. Buratti, permissive licence). The SVG backend ignores \fB\-fontfile\fR (it uses the viewer font), and the layout metric stays 6x8 either way, so SVG and PNG geometry remain congruent.
+.SS Usage
+.CS
+package require tclutils::tudiagram
+namespace import ::tclutils::tudiagram::*
+
+set d [create -direction TB -theme pipeline -title "Build"]
+set d [addNode $d src   -label "Source"]
+set d [addNode $d build -label "Build"   -shape rounded]
+set d [addNode $d ok    -label "OK"      -shape stadium -style {fill #e8f5e9 stroke #2e7d32}]
+set d [addNode $d fail  -label "Fail"    -shape diamond -style {fill #ffebee stroke #c62828}]
+set d [addEdge $d src   build]
+set d [addEdge $d build ok   -label pass]
+set d [addEdge $d build fail -label error -style dashed]
+
+if {[set p [validate $d]] ne ""} { error "invalid diagram: $p" }
+
+writePng $d build.png -scale 3       ;# crisp raster
+writeSvg $d build.svg                ;# vector
+
+set bytes [toPng $d -scale 2]
+set svg   [toSvg $d]
+.CE
+.PP
+Through the \fBtuflow\fR facade the same graph renders straight from Mermaid source, without building the model by hand:
+.CS
+package require tclutils::tuflow
+set model [::tclutils::tuflow::parse $mermaidText]   ;# -> tudiagram model
+::tclutils::tuflow::toPng $mermaidText -scale 3      ;# facade parses + renders
+.CE
+.SS Notes
+.IP \(bu
+\fBLayout scope (v1):\fR layered layout for DAGs. Long edges (span > 1 rank) are routed through dummy lane nodes so they stay visible behind intermediate boxes; within\-rank order is improved by a few barycentre sweeps to reduce crossings. Cycles are broken best\-effort (a back\-edge is drawn reversed and flagged \fBback 1\fR). Cross\-axis placement is simple ordered stacking, so long chains can still wiggle slightly. \fBSelf\-loops are not drawn.\fR
+.IP \(bu
+\fBDirections:\fR \fBLR\fR and \fBTB\fR are the primary flows; \fBRL\fR and \fBBT\fR are produced by mirroring the laid\-out coordinates of \fBLR\fR / \fBTB\fR.
+.IP \(bu
+\fBShapes\fR are drawn with the primitive canvas operations only (rect/line/polygon/text); the supersample proxy exposes no native circle/ellipse, so round shapes are polygon approximations. This keeps every shape identical on the SVG and raster backends.
+.IP \(bu
+\fBFonts:\fR labels use the \fBtupngdraw\fR 6x8 bitmap font by default, which covers ASCII and the German umlauts (real codepoints \fB\eu00xx\fR). With \fB\-fontfile\fR on the raster backend a real outline font is used via \fBfillcontours\fR (lazy \fBGlyphs\fR, unbundled); a set\-but\-missing path is a hard error, a missing \fBGlyphs\fR package degrades silently to the bitmap font.
+.IP \(bu
+\fBCompanion modules:\fR \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (backends), \fBtclutils::tuflow\fR (facade / dispatch), \fBtclutils::tupie\fR and \fBtclutils::tuxychart\fR (the non\-graph renderers in the same family).
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUDIAGRAM <REASON>}\fR:
+.IP \(bu
+\fBDUPID\fR — duplicate node id in \fBaddNode\fR.
+.IP \(bu
+\fBDIR\fR — \fB\-direction\fR not one of \fBLR TB RL BT\fR.
+.IP \(bu
+\fBARG\fR — bad argument (unknown \fB\-shape\fR, non\-integer \fB\-scale\fR, unknown render backend).
+.IP \(bu
+\fBFONT\fR — a \fB\-fontfile\fR path that does not exist (raster backend).
+.IP \(bu
+\fBNONODE\fR / \fBEMPTY\fR — reported by \fBvalidate\fR (as list entries, not thrown): an edge endpoint with no matching node, or a model with no nodes.

@@ -26,3 +26,11 @@ set card [tuvcard::setPhotoUri $card https://example.com/me.jpg]
 .CE
 .PP
 \fBphoto\fR decodes inline photos (vCard 3.0 \fBENCODING=b;TYPE=...\fR and 4.0 \fBdata:\fR URIs) to raw bytes and reports the MIME type (from the \fBTYPE\fR parameter, the data URI, or sniffed via \fBtuimage\fR). \fBsetPhoto\fR/\fBsetPhotoUri\fR replace any existing PHOTO. Reuses \fBtclutils::tubase64\fR and \fBtclutils::tuimage\fR.
+.SS "Additional exported commands"
+.PP
+Documented for completeness (same module, also covered by the test suite):
+.CS
+tuvcard::addProperty card name value ?params?  ;# return a copy of a card with a property appended
+tuvcard::removeProperty card index             ;# return a copy of a card with the property at index removed
+tuvcard::setProperty card index name value ?params? ;# return a copy of a card with the property at index replaced
+.CE

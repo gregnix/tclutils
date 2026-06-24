@@ -1,4 +1,4 @@
-.TH tusvg n 0.1 tclutils
+.TH tusvg n 0.2 tclutils
 .SH tclutils::tusvg
 .PP
 A pure\-Tcl \fBSVG generator\fR \-\- no Tk, no external packages. Build a document as a dict, add shapes/paths/text/gradients/groups, and render to a string or file. Ships a library of ~110 named toolbar icons. It complements the \fBtupng\fR encoders: \fBtusvg\fR is the vector counterpart.
@@ -8,6 +8,12 @@ set svg [tusvg::create width height ?-viewBox "x y w h"? ?-id name?]
 set out [tusvg::toString $svg]              ;# SVG text
 tusvg::write $svg file.svg                  ;# UTF-8 file
 .CE
+.SS "Canvas object (for diagram renderers)"
+.CS
+set c [tusvg::new ?-width W? ?-height H? ?-background C?]   ;# -> a canvas object
+.CE
+.PP
+\fBnew\fR returns a drawing\-canvas \fBobject\fR (not a document dict). It exposes the abstract canvas protocol shared with \fBtclutils::tupngdraw\fR (\fBwidth height line rect polygon text textwidth data destroy\fR ...), so a single generic draw routine can target SVG or PNG by only swapping the constructor. This is the entry point the diagram renderers (\fBtudiagram\fR, \fBtupie\fR, \fBtuxychart\fR) build on; for hand\-written SVG use the document API above.
 .SS "Elements (append to the document variable)"
 .CS
 tusvg::rect     svg x y w h     ?-fill c? ?-stroke c? ?-strokeWidth n? ?-rx n? ?-ry n? ?-opacity o? ?-id i?

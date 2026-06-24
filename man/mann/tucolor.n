@@ -1,0 +1,45 @@
+.TH tucolor n 0.1 tclutils
+.SH tclutils::tucolor
+.PP
+Named\-color database and conversions: resolve color names / hex / RGB triples to RGB, convert to hex and HSV, and find the nearest named color. The name table (CSS3 / X11 standard colors, 148 entries) is \fBembedded\fR, so the module is pure Tcl and \fBGUI\-free\fR — no Tk / X11 needed at runtime. The table was generated from Tk's \fBwinfo rgb\fR, so values match X11/Tk exactly.
+.SS Package
+.CS
+package require tclutils::tucolor 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tucolor::rgb     color       ;# -> {r g b}   (0..255 each)
+::tclutils::tucolor::hex     color       ;# -> #rrggbb
+::tclutils::tucolor::names                ;# -> sorted list of known names
+::tclutils::tucolor::exists  name        ;# -> 0 | 1
+::tclutils::tucolor::nearest color       ;# -> nearest known color name
+::tclutils::tucolor::toHsv   color       ;# -> {h s v}   (h 0..360, s/v 0..100)
+::tclutils::tucolor::fromHsv {h s v}     ;# -> {r g b}
+.CE
+.PP
+\fBcolor\fR accepts a known name, \fB#rgb\fR, \fB#rrggbb\fR, or a \fB{r g b}\fR triple (0..255).
+.SS Usage
+.CS
+package require tclutils::tucolor
+namespace import ::tclutils::tucolor::*
+
+rgb red                 ;# -> 255 0 0
+rgb cornflowerblue      ;# -> 100 149 237
+rgb #f80                ;# -> 255 136 0   (short hex expands)
+hex {255 136 0}         ;# -> #ff8800
+nearest #fe0000         ;# -> red
+toHsv steelblue         ;# -> 207 61 71
+fromHsv {120 100 100}   ;# -> 0 255 0
+.CE
+.SS Notes
+.IP \(bu
+Names are matched case\-insensitively. \fBnames\fR returns the 148 CSS3/X11 keywords.
+.IP \(bu
+\fBnearest\fR uses Euclidean distance in RGB space — good enough for snapping an arbitrary color to a named one, not a perceptual match.
+.IP \(bu
+HSV is the common hexcone model; round\-tripping \fBtoHsv\fR/\fBfromHsv\fR may differ by one unit per channel due to integer rounding.
+.IP \(bu
+Being GUI\-free, it complements \fBtuterm\fR (resolve any color name → RGB for 24\-bit ANSI), \fBtupng\fR/\fBtupngdraw\fR and \fBtusvg\fR.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUCOLOR <REASON>}\fR (\fBNAME\fR).

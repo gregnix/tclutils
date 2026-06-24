@@ -1,0 +1,68 @@
+.TH tuterm n 0.1 tclutils
+.SH tclutils::tuterm
+.PP
+ANSI terminal styling (SGR): text attributes and 16\- / 256\- / 24\-bit colors, with a global enable switch (honouring the \fBNO_COLOR\fR convention), an ANSI stripper, and optional Windows VT\-mode initialisation. Pure Tcl, GUI\-free.
+.SS Package
+.CS
+package require tclutils::tuterm 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tuterm::style ?spec ...?       ;# -> SGR sequence ("" when disabled)
+::tclutils::tuterm::wrap  text ?spec ...?   ;# -> styled text + reset
+::tclutils::tuterm::off   attr              ;# -> the "off" SGR for one attribute
+::tclutils::tuterm::names ?what?            ;# -> available names
+::tclutils::tuterm::strip text              ;# -> text with SGR removed
+::tclutils::tuterm::enable ?bool?           ;# -> get/set global enable flag
+::tclutils::tuterm::auto                    ;# -> set enable from NO_COLOR
+::tclutils::tuterm::enableVT                ;# -> Windows VT mode (no-op elsewhere)
+::tclutils::tuterm::disableVT
+.CE
+.SS "Style specs"
+.PP
+Accepted by \fBstyle\fR and \fBwrap\fR:
+.TS
+l l.
+Spec	Meaning
+\fBreset\fR	reset all attributes
+\fBbold\fR \fBdim\fR \fBitalic\fR \fBunderline\fR \fBblink\fR \fBreverse\fR \fBinvisible\fR \fBstrike\fR	turn the attribute \fBon\fR
+\fBbold:on\fR / \fBbold:off\fR (any attribute)	turn explicitly on/off
+\fBfg:<color>\fR / \fBbg:<color>\fR	foreground / background color
+.TE
+.PP
+\fB<color>\fR is a name (\fBred\fR, \fBbright_cyan\fR, …), a 256\-color index \fB0..255\fR, or a \fB#rrggbb\fR truecolor value. \fBfgcolor:\fR / \fBbgcolor:\fR are accepted as aliases.
+.SS Usage
+.CS
+package require tclutils::tuterm
+namespace import ::tclutils::tuterm::*
+
+puts [wrap "Important!" bold fg:red]
+puts "[style fg:yellow]warning[style reset]"
+puts [wrap "ok" fg:#00aa00]          ;# truecolor
+puts [wrap "note" fg:208]            ;# 256-color
+.CE
+.PP
+Disable color for pipes / \fBNO_COLOR\fR:
+.CS
+::tclutils::tuterm::auto             ;# disables if NO_COLOR is set
+# or force:
+::tclutils::tuterm::enable 0
+.CE
+.PP
+On Windows, enable VT processing once at startup so escapes render:
+.CS
+::tclutils::tuterm::enableVT         ;# needs twapi; no-op on other platforms
+.CE
+.PP
+\fBstrip\fR removes SGR sequences (e.g. before measuring width or logging):
+.CS
+string length [::tclutils::tuterm::strip $styled]
+.CE
+.SS Notes
+.IP \(bu
+When disabled, \fBstyle\fR returns \fB""\fR and \fBwrap\fR returns the plain text, so the same code paths work with or without color.
+.IP \(bu
+\fBenableVT\fR uses \fBtwapi\fR if present; it returns 1 on success or on non\-Windows platforms, 0 only if the Windows call failed.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUTERM <REASON>}\fR (\fBSTYLE\fR, \fBVALUE\fR, \fBCATEGORY\fR).

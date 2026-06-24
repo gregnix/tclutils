@@ -1,0 +1,72 @@
+.TH tutreemap n 0.1 tclutils
+.SH tclutils::tutreemap
+.PP
+Parses a Mermaid \fBtreemap\-beta\fR block and renders it as a \fBsquarified treemap\fR \-\- area\-proportional nested rectangles \-\- natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtukanban\fR / \fBtupacket\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here. A treemap is a hierarchical area chart, not a node\-edge graph, so it does \fBnot\fR go through \fBtudiagram\fR.
+.SS Package
+.CS
+package require tclutils::tutreemap 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::tutreemap::parse text                          ;# -> nested tree dict
+::tclutils::tutreemap::toSvg  model ?-width W? ?-height H? ?-fontfile f? ?-scale n?
+::tclutils::tutreemap::toPng  model ?...?                  ;# -> PNG bytes
+::tclutils::tutreemap::writeSvg model file ?...?
+::tclutils::tutreemap::writePng model file ?...?
+.CE
+.PP
+\fBparse\fR returns the root node \fB{name "" value <total> children {...}}\fR; each child is the same shape. A branch's \fBvalue\fR is the sum of its children; a leaf's is the number it was given.
+.SS "Supported syntax (Mermaid subset)"
+.CS
+treemap-beta
+"Section"                -> a branch (parent); value = sum of children
+    "Leaf": <value>      -> a leaf with a numeric value
+        ...              -> deeper indentation = deeper nesting
+.CE
+.IP \(bu
+The header is \fBtreemap\-beta\fR (or bare \fBtreemap\fR).
+.IP \(bu
+Indentation defines the hierarchy; a node with a value and no deeper\-indented lines is a leaf, otherwise a branch.
+.IP \(bu
+A \fB:::class\fR styling tag and \fBclassDef\fR / \fBstyle\fR lines are parsed off and \fBignored\fR (v1). Blank lines and \fB%%\fR comments are ignored.
+.IP \(bu
+Quotes around names are recommended (Mermaid style); a bare \fBName: value\fR / \fBName\fR is tolerated.
+.SS Layout
+.PP
+Tiling uses the \fBsquarify\fR algorithm (Bruls/Huizing/van Wijk): children are sorted by value and packed into rows so each cell stays close to square, which makes areas easy to compare. Each branch below the root draws a header bar with its name; leaves show name + value when the cell is large enough. Colours come from a fixed palette assigned per top\-level section and lightened with depth, so the hierarchy reads at a glance; nested branches get their own darker header bar.
+.SS "v1 limitations (honest)"
+.IP \(bu
+Styling (\fB:::class\fR, \fBclassDef\fR, theme, \fBvalueFormat\fR) is ignored.
+.IP \(bu
+Labels are clipped to their cell, not wrapped or shrunk; very small cells show no label.
+.IP \(bu
+Negative values are dropped (a treemap needs non\-negative areas).
+.IP \(bu
+A node given a value \fIand\fR children is treated as a branch (the children's sum wins over the explicit value).
+.SS Options
+.PP
+\fB\-width\fR (default 640), \fB\-height\fR (default 400), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in 6x8 bitmap font with German umlauts via real codepoints), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+.SS Usage
+.CS
+package require tclutils::tutreemap
+set src {treemap-beta
+    "Annual Budget"
+        "Operations"
+            "Salaries": 700000
+            "Equipment": 200000
+        "Marketing"
+            "Advertising": 400000}
+::tclutils::tutreemap::writePng [::tclutils::tutreemap::parse $src] budget.png -scale 3
+.CE
+.PP
+In Markdown, \fBtreemap\-beta\fR rides on the \fB```mermaid\fR fence, so docir's raster sinks render it through \fBtuflow::toPng\fR; no docir change is needed.
+.SS Notes
+.IP \(bu
+Companion: \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (canvas), \fBtclutils::tuflow\fR (dispatch).
+.IP \(bu
+Cells, headers and labels use only rect/text primitives, so SVG and PNG stay congruent.
+.IP \(bu
+\fBtuflow::parse\fR rejects \fBtreemap\-beta\fR with \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR (it is not a node\-edge graph); the facade \fBtoSvg\fR/\fBtoPng\fR is the render path, exactly as for \fBpie\fR / \fBkanban\fR / \fBpacket\fR.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TUTREEMAP <REASON>}\fR \-\- \fBEMPTY\fR (no header / no nodes), \fBVALUE\fR (non\-numeric value), \fBARG\fR (bad \fB\-scale\fR), \fBFONT\fR (font file not found).

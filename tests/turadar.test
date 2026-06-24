@@ -1,0 +1,136 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::turadar
+
+namespace eval M { namespace import ::tclutils::turadar::* }
+
+proc curve {m i} { lindex [dict get $m curves] $i }
+proc pngsig {b} { binary scan [string range $b 0 3] H* s; return $s }
+
+set grades {radar-beta
+title Grades
+axis m["Math"], s["Science"], e["English"]
+axis h["History"], g["Geography"], a["Art"]
+curve a["Alice"]{85, 90, 80, 70, 75, 90}
+curve b["Bob"]{70, 75, 85, 80, 90, 85}
+max 100
+min 0}
+set gm [M::parse $grades]
+
+# --- parse: axes & curves ----------------------------------------------------
+
+test turadar-1.1 {axis labels accumulate across lines, in order} -body {
+    dict get [M::parse $grades] axes
+} -result {Math Science English History Geography Art}
+
+test turadar-1.2 {bare axis ids are used as labels} -body {
+    dict get [M::parse "radar-beta\naxis A, B, C\ncurve c{1,2,3}"] axes
+} -result {A B C}
+
+test turadar-1.3 {a curve label and values are parsed} -body {
+    curve [M::parse $grades] 0
+} -result {Alice {85.0 90.0 80.0 70.0 75.0 90.0}}
+
+test turadar-1.4 {two curves are captured} -body {
+    llength [dict get [M::parse $grades] curves]
+} -result 2
+
+test turadar-1.5 {min/max are read; default min is 0} -body {
+    set m [M::parse $grades]
+    list [dict get $m min] [dict get $m max]
+} -result {0.0 100.0}
+
+test turadar-1.6 {max defaults to the largest data value} -body {
+    dict get [M::parse "radar-beta\naxis A,B,C\ncurve c{10,40,25}"] max
+} -result 40.0
+
+test turadar-1.7 {ticks and graticule are read} -body {
+    set m [M::parse "radar-beta\naxis A,B,C\ncurve c{1,2,3}\nticks 4\ngraticule polygon"]
+    list [dict get $m ticks] [dict get $m graticule]
+} -result {4 polygon}
+
+test turadar-1.8 {key-value curve values map by axis id, in axis order} -body {
+    set m [M::parse "radar-beta\naxis a, b, c\ncurve x{ c: 30, a: 10, b: 20 }"]
+    lindex [curve $m 0] 1
+} -result {10.0 20.0 30.0}
+
+test turadar-1.9 {fewer values than axes pad with 0} -body {
+    lindex [curve [M::parse "radar-beta\naxis a,b,c,d\ncurve x{5,6}"] 0] 1
+} -result {5.0 6.0 0.0 0.0}
+
+test turadar-1.10 {showLegend defaults on when curves are labelled} -body {
+    dict get [M::parse $grades] showLegend
+} -result 1
+
+test turadar-1.11 {showLegend false is honoured even with labels} -body {
+    dict get [M::parse {radar-beta
+axis A,B,C
+curve x["L"]{1,2,3}
+showLegend false}] showLegend
+} -result 0
+
+test turadar-1.12 {a title is captured} -body {
+    dict get [M::parse $grades] title
+} -result {Grades}
+
+# --- errors ------------------------------------------------------------------
+
+test turadar-2.1 {no header is an EMPTY error} -body {
+    catch {M::parse "axis A,B,C\ncurve x{1,2,3}"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TURADAR EMPTY}
+
+test turadar-2.2 {fewer than 3 axes is an AXES error} -body {
+    catch {M::parse "radar-beta\naxis A, B\ncurve x{1,2}"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TURADAR AXES}
+
+test turadar-2.3 {a header with axes but no curves is EMPTY} -body {
+    catch {M::parse "radar-beta\naxis A, B, C"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TURADAR EMPTY}
+
+test turadar-2.4 {a non-numeric curve value is a VALUE error} -body {
+    catch {M::parse "radar-beta\naxis A,B,C\ncurve x{1,foo,3}"} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TURADAR VALUE}
+
+test turadar-2.5 {a non-integer scale is an ARG error} -body {
+    catch {M::toSvg [M::parse $grades] -scale x} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TURADAR ARG}
+
+# --- render ------------------------------------------------------------------
+
+test turadar-3.1 {toSvg returns an <svg> document} -body {
+    string match {<svg*} [M::toSvg $gm]
+} -result 1
+
+test turadar-3.2 {toPng returns valid PNG bytes} -body {
+    pngsig [M::toPng $gm]
+} -result {89504e47}
+
+test turadar-3.3 {-scale 3 yields a 3x wider PNG} -body {
+    binary scan [M::toPng $gm -scale 1] @16I w1
+    binary scan [M::toPng $gm -scale 3] @16I w3
+    expr {$w3 == 3*$w1}
+} -result 1
+
+test turadar-3.4 {polygon graticule renders} -body {
+    pngsig [M::toPng [M::parse "radar-beta\naxis A,B,C,D,E\ncurve c{1,2,3,4,5}\ngraticule polygon"]]
+} -result {89504e47}
+
+test turadar-3.5 {an axis label appears in the SVG text} -body {
+    expr {[string first Science [M::toSvg $gm]] >= 0}
+} -result 1
+
+test turadar-3.6 {values above max are clamped to the rim (no crash)} -body {
+    pngsig [M::toPng [M::parse "radar-beta\naxis A,B,C\ncurve c{200,50,10}\nmax 100"]]
+} -result {89504e47}
+
+cleanupTests

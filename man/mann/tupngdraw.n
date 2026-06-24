@@ -1,4 +1,4 @@
-.TH tupngdraw n 0.11 tclutils
+.TH tupngdraw n 0.12 tclutils
 .SH tclutils::tupngdraw
 .PP
 A tiny pure\-Tcl 2D drawing layer that renders to a PNG via \fBtclutils::tupng\fR. No Tk and no external packages (TclOO is part of Tcl core). A surface is a TclOO object whose command is the handle, in the spirit of \fBpdf4tcl\fR \-\- but a PNG is a single surface, so there are no pages.

@@ -1,6 +1,17 @@
-# tudiagram-0.2.tm – box-and-arrow diagrams in pure Tcl.
+# tudiagram-0.4.tm – box-and-arrow diagrams in pure Tcl.
 #
 # Model (dict) -> layered layout -> render on the shared canvas protocol.
+#
+# Groups (since 0.4): addGroup records a named set of node ids (a flowchart
+# `subgraph` / cluster). After the normal layered layout, render draws a labelled
+# frame around the bounding box of each group's members, behind nodes and edges.
+# Nesting is honoured (a group whose members are a strict superset of another's
+# is drawn with a larger inset). When groups are present the layout runs a
+# cluster-compaction pass so each group's members within a rank form a contiguous
+# block (no unrelated node splits a group). Honest residual limit: a group whose
+# members span several ranks can still have its bounding box enclose an unrelated
+# node from an intermediate rank -- it is tight when the members share a rank or
+# form a connected sub-chain.
 # The render layer talks ONLY to the congruent canvas API (tusvg 0.2 OR
 # tupngdraw): the same render proc emits SVG or PNG, the constructor is the only
 # difference. Box sizing uses the shared monospace text metric, so geometry is
@@ -29,7 +40,7 @@
 # Builder procs are functional: they return the updated diagram dict
 #   (use:  set d [tudiagram::addNode $d id -label X]).
 #
-# Namespace: ::tclutils::tudiagram   Package: tclutils::tudiagram 0.2
+# Namespace: ::tclutils::tudiagram   Package: tclutils::tudiagram 0.4
 # Errors:    {TCLUTILS TUDIAGRAM <REASON>}   REASON in DUPID NONODE EMPTY DIR ARG FONT
 # Tcl 8.6+/9.x. Depends only on tclutils::common; render needs a canvas object
 # (tusvg or tupngdraw) but the model/layout do not. The optional -fontfile path
@@ -40,7 +51,7 @@ package require tclutils::common 0.1
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tudiagram {
-    namespace export create addNode addEdge setMeta validate layout \
+    namespace export create addNode addEdge addGroup setMeta validate layout \
         render toSvg toPng writeSvg writePng theme
     variable themes
     # Colours are 6-digit hex on purpose: the swap-safe intersection of the
@@ -74,7 +85,7 @@ proc ::tclutils::tudiagram::create {args} {
             theme     [dict get $o -theme] \
             fontfile  [dict get $o -fontfile] \
             nodeGap 30 rankGap 70 padding 20] \
-        nodes {} edges {}]
+        nodes {} edges {} groups {}]
 }
 
 proc ::tclutils::tudiagram::setMeta {d args} {
@@ -120,6 +131,20 @@ proc ::tclutils::tudiagram::addEdge {d from to args} {
         from $from to $to label [dict get $o -label] \
         style [dict get $o -style] arrow [dict get $o -arrow] \
         startMark [dict get $o -startMark] endMark [dict get $o -endMark]]
+    return $d
+}
+
+# Record a group (cluster / flowchart subgraph): a named set of node ids that
+# render gets a labelled frame drawn around the bounding box of their laid-out
+# positions. Members that are not real nodes are ignored at render time. Groups
+# whose member sets nest (strict subset) are drawn with a larger inset for the
+# outer group so the frames stay visually nested.
+proc ::tclutils::tudiagram::addGroup {d id args} {
+    set o [::tclutils::common::parseOptions {-label {} -members {}} {*}$args]
+    set label [dict get $o -label]
+    if {$label eq ""} { set label $id }
+    dict lappend d groups [dict create \
+        id $id label $label members [dict get $o -members]]
     return $d
 }
 
@@ -208,6 +233,45 @@ proc ::tclutils::tudiagram::_orderByBary {ids nbrName posName} {
     return $out
 }
 
+# Cluster compaction: reorder one rank's ids so that the members of each group
+# form a contiguous block (no foreign node splits a group), with the blocks --
+# and free nodes -- ordered by their barycentre. Recurses by nesting level so an
+# inner group stays contiguous inside its outer block. `chainD` maps id -> list
+# of its group ids ordered outer->inner; `posD` maps id -> its current position.
+proc ::tclutils::tudiagram::_ccOrder {ids level chainD posD} {
+    array set bucket {}
+    set seen {}
+    foreach id $ids {
+        set gl [expr {[dict exists $chainD $id] ? [dict get $chainD $id] : {}}]
+        if {$level < [llength $gl]} {
+            set key "g:[lindex $gl $level]"
+        } else {
+            set key "f:$id"
+        }
+        if {![info exists bucket($key)]} { lappend seen $key }
+        lappend bucket($key) $id
+    }
+    set units {}
+    foreach key $seen {
+        set s 0.0; set n 0
+        foreach id $bucket($key) {
+            set s [expr {$s + ([dict exists $posD $id] ? [dict get $posD $id] : 0)}]
+            incr n
+        }
+        lappend units [list [expr {$s/$n}] $key]
+    }
+    set out {}
+    foreach u [lsort -real -index 0 $units] {
+        set key [lindex $u 1]
+        set b $bucket($key)
+        if {[string match {g:*} $key] && [llength $b] > 1} {
+            set b [_ccOrder $b [expr {$level+1}] $chainD $posD]
+        }
+        lappend out {*}$b
+    }
+    return $out
+}
+
 # --- layout: layered with dummy nodes for long edges -----------------------
 #
 # Each real node gets x y width height (top-left origin). Each edge gets a
@@ -230,6 +294,11 @@ proc ::tclutils::tudiagram::layout {d} {
     set nodeGap [dict get $meta nodeGap]
     set rankGap [dict get $meta rankGap]
     set padding [dict get $meta padding]
+    # Groups draw a frame inset around their members; reserve a little more
+    # canvas margin so the outermost frame + its label stay inside the bounds.
+    if {[dict exists $d groups] && [llength [dict get $d groups]]} {
+        set padding [expr {max($padding, 34)}]
+    }
     set laneH   16
 
     # real nodes: insertion order + box size from label
@@ -359,6 +428,35 @@ proc ::tclutils::tudiagram::layout {d} {
         }
         for {set r [expr {$maxRank-1}]} {$r >= 0} {incr r -1} {
             set members($r) [_orderByBary $members($r) nextN pos]
+            set i 0; foreach id $members($r) { set pos($id) $i; incr i }
+        }
+    }
+
+    # cluster compaction (only when groups are present, so plain graphs are
+    # untouched): pull each group's members into a contiguous block per rank so
+    # the cluster frame drawn by render is tight and never wraps a foreign node.
+    if {[dict exists $d groups] && [llength [dict get $d groups]]} {
+        set chainD {}
+        array set gsize {}
+        foreach g [dict get $d groups] {
+            set gid [dict get $g id]
+            set gsize($gid) [llength [dict get $g members]]
+            foreach mid [dict get $g members] { dict lappend chainD $mid $gid }
+        }
+        # order each node's groups outer->inner (larger member set first)
+        dict for {id gl} $chainD {
+            set pairs {}
+            foreach gid $gl { lappend pairs [list $gsize($gid) $gid] }
+            set ord {}
+            foreach p [lsort -integer -decreasing -index 0 $pairs] { lappend ord [lindex $p 1] }
+            dict set chainD $id $ord
+        }
+        set posD {}
+        for {set r 0} {$r <= $maxRank} {incr r} {
+            foreach id $members($r) { dict set posD $id $pos($id) }
+        }
+        for {set r 0} {$r <= $maxRank} {incr r} {
+            set members($r) [_ccOrder $members($r) 0 $chainD $posD]
             set i 0; foreach id $members($r) { set pos($id) $i; incr i }
         }
     }
@@ -710,6 +808,64 @@ proc ::tclutils::tudiagram::render {d canvas} {
         }
     }
 
+    # group frames (clusters / subgraphs): drawn first so they sit behind the
+    # edges and nodes. Each frame is the bounding box of its members' laid-out
+    # boxes, expanded by a per-nesting-level inset; the label sits in the top
+    # inset band. Members that are not real nodes are ignored.
+    if {[dict exists $d groups] && [llength [dict get $d groups]]} {
+        set groups [dict get $d groups]
+        array set NG {}
+        foreach n [dict get $d nodes] {
+            set NG([dict get $n id]) [list [dict get $n x] [dict get $n y] \
+                [dict get $n width] [dict get $n height]]
+        }
+        set ng [llength $groups]
+        for {set i 0} {$i < $ng} {incr i} {
+            set ms {}
+            foreach mid [dict get [lindex $groups $i] members] {
+                if {[info exists NG($mid)]} { lappend ms $mid }
+            }
+            set MS($i) $ms
+        }
+        # nesting level = how many other groups are a strict subset of this one
+        for {set i 0} {$i < $ng} {incr i} {
+            set lvl 0
+            for {set j 0} {$j < $ng} {incr j} {
+                if {$i == $j || ![llength $MS($j)]} continue
+                if {[llength $MS($j)] >= [llength $MS($i)]} continue
+                set sub 1
+                foreach m $MS($j) { if {$m ni $MS($i)} { set sub 0; break } }
+                if {$sub} { incr lvl }
+            }
+            set LVL($i) $lvl
+        }
+        set pairs {}
+        for {set i 0} {$i < $ng} {incr i} { lappend pairs [list $LVL($i) $i] }
+        set pairs [lsort -integer -decreasing -index 0 $pairs]
+        set basePad 12; set step 9
+        foreach pr $pairs {
+            lassign $pr lvl i
+            if {![llength $MS($i)]} continue
+            set minx 1e9; set miny 1e9; set maxx -1e9; set maxy -1e9
+            foreach mid $MS($i) {
+                lassign $NG($mid) gx gy gw gh
+                set minx [expr {min($minx,$gx)}];     set miny [expr {min($miny,$gy)}]
+                set maxx [expr {max($maxx,$gx+$gw)}]; set maxy [expr {max($maxy,$gy+$gh)}]
+            }
+            set gp [expr {$basePad + $lvl*$step}]
+            set gx1 [expr {int($minx-$gp)}]; set gy1 [expr {int($miny-$gp)}]
+            set gx2 [expr {int($maxx+$gp)}]; set gy2 [expr {int($maxy+$gp)}]
+            set gfill [expr {$lvl%2 ? "#e6ebf3" : "#eef1f6"}]
+            $canvas setfill $gfill
+            $canvas rect $gx1 $gy1 $gx2 $gy2 -fill 1 -fillcolor $gfill \
+                -outline 1 -color #9aa0a6 -rx 8 -ry 8
+            set glbl [dict get [lindex $groups $i] label]
+            if {$glbl ne ""} {
+                _drawText $canvas $gfont 1 [expr {$gx1+6}] [expr {$gy1+3}] $glbl #5f6368
+            }
+        }
+    }
+
     # edges first (under boxes): draw the precomputed polyline, then an arrowhead
     foreach e [dict get $d edges] {
         set pts [dict get $e points]
@@ -969,4 +1125,4 @@ proc ::tclutils::tudiagram::writePng {d file args} {
     return $file
 }
 
-package provide tclutils::tudiagram 0.3
+package provide tclutils::tudiagram 0.4

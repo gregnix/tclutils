@@ -21,3 +21,10 @@ The file helpers use Tcl 8.6 \fBtry ... finally\fR, so opened channels are close
 .SS "Delimited text"
 .PP
 \fBsplitDelimited\fR supports both one\-character and multi\-character delimiters. It is used by \fBtucut\fR and \fBtujoin\fR, replacing duplicated private \fB_split\fR implementations.
+.SS "Additional exported commands"
+.PP
+Documented for completeness (same module, also covered by the test suite):
+.CS
+common::ensureBoolean value optionName         ;# return the canonical boolean for VALUE, or throw an OPTION error naming OPTIONNAME
+common::ensurePositiveInteger value what       ;# return VALUE if it is a positive integer, else throw an error naming WHAT
+.CE
