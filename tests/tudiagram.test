@@ -360,4 +360,43 @@ test tudiagram-9.8 {same-rank compaction keeps a foreign node out of the group s
     expr {$xc < $lo || $xc > $hi}
 } -result 1
 
+test tudiagram-9.9 {cross-rank groups get disjoint column bands} -body {
+    # app={UI,Logic} (rank0), tk={WM,EV,Bind} and tcl={VM,PK} span ranks.
+    # Each group must occupy its own column band -> pairwise-disjoint x-ranges.
+    set d [D::create -direction TB]
+    foreach id {UI Logic WM EV Bind VM PK} { set d [D::addNode $d $id -label $id] }
+    foreach {f t} {UI WM Logic VM WM EV Bind EV EV VM PK VM} {
+        set d [D::addEdge $d $f $t -arrow end]
+    }
+    set d [D::addGroup $d app -label App -members {UI Logic}]
+    set d [D::addGroup $d tk  -label Tk  -members {WM EV Bind}]
+    set d [D::addGroup $d tcl -label Tcl -members {VM PK}]
+    set d [D::layout $d]
+    array set R {}
+    foreach n [dict get $d nodes] {
+        set R([dict get $n id]) [list [dict get $n x] [expr {[dict get $n x]+[dict get $n width]}]]
+    }
+    set bands {}
+    foreach mem {{UI Logic} {WM EV Bind} {VM PK}} {
+        set lo 1e9; set hi -1e9
+        foreach m $mem {
+            lassign $R($m) a b
+            set lo [expr {min($lo,$a)}]; set hi [expr {max($hi,$b)}]
+        }
+        lappend bands [list $lo $hi]
+    }
+    set bands [lsort -real -index 0 $bands]
+    set ok 1
+    for {set i 0} {$i < 2} {incr i} {
+        if {[lindex $bands $i 1] > [lindex $bands [expr {$i+1}] 0] + 1} { set ok 0 }
+    }
+    set ok
+} -result 1
+
+test tudiagram-9.10 {_edgeLabelPoint returns a point at the fraction with a left normal} -body {
+    # vertical line downwards: 40% point is (0,40); left normal of "down" is (-1,0)
+    lassign [::tclutils::tudiagram::_edgeLabelPoint {0 0 0 100} 0.4] x y nx ny
+    list [expr {round($x)}] [expr {round($y)}] [expr {round($nx)}] [expr {round($ny)}]
+} -result {0 40 -1 0}
+
 cleanupTests

@@ -6,12 +6,12 @@
 # `subgraph` / cluster). After the normal layered layout, render draws a labelled
 # frame around the bounding box of each group's members, behind nodes and edges.
 # Nesting is honoured (a group whose members are a strict superset of another's
-# is drawn with a larger inset). When groups are present the layout runs a
-# cluster-compaction pass so each group's members within a rank form a contiguous
-# block (no unrelated node splits a group). Honest residual limit: a group whose
-# members span several ranks can still have its bounding box enclose an unrelated
-# node from an intermediate rank -- it is tight when the members share a rank or
-# form a connected sub-chain.
+# is drawn with a larger inset). When groups are present the layout assigns each
+# group a contiguous COLUMN BAND and rank-colours its members within it, so a
+# group whose members span several ranks forms one tight vertical band rather
+# than a bounding box that sprawls across the diagram; sibling groups get
+# disjoint bands and never overlap. Plain graphs (no groups) are untouched and
+# use the original per-rank packing.
 # The render layer talks ONLY to the congruent canvas API (tusvg 0.2 OR
 # tupngdraw): the same render proc emits SVG or PNG, the constructor is the only
 # difference. Box sizing uses the shared monospace text metric, so geometry is
@@ -185,6 +185,41 @@ proc ::tclutils::tudiagram::_ellipsePts {cx cy rx ry {steps 24}} {
     return $pts
 }
 
+# Point at fraction `frac` (0..1) along a polyline `pts` {x0 y0 x1 y1 ...},
+# returning {x y nx ny} where (nx,ny) is the left-hand unit normal of the local
+# direction. Used to place edge labels off the midpoint so anti-parallel edges
+# (a->b and b->a) put their labels at opposite ends instead of colliding.
+proc ::tclutils::tudiagram::_edgeLabelPoint {pts frac} {
+    set total 0.0; set segs {}
+    for {set i 0} {$i < [llength $pts]-2} {incr i 2} {
+        set x1 [lindex $pts $i];            set y1 [lindex $pts [expr {$i+1}]]
+        set x2 [lindex $pts [expr {$i+2}]]; set y2 [lindex $pts [expr {$i+3}]]
+        set L [expr {hypot($x2-$x1,$y2-$y1)}]
+        lappend segs [list $x1 $y1 $x2 $y2 $L]
+        set total [expr {$total + $L}]
+    }
+    if {$total <= 0} { return [list [lindex $pts 0] [lindex $pts 1] 0 0] }
+    set target [expr {$total * $frac}]
+    set acc 0.0
+    set last [expr {[llength $segs]-1}]; set si 0
+    foreach s $segs {
+        lassign $s x1 y1 x2 y2 L
+        if {$acc + $L >= $target || $si == $last} {
+            set t [expr {$L > 0 ? ($target-$acc)/$L : 0}]
+            if {$t < 0} { set t 0 } elseif {$t > 1} { set t 1 }
+            set x [expr {$x1 + ($x2-$x1)*$t}]
+            set y [expr {$y1 + ($y2-$y1)*$t}]
+            set dx [expr {$x2-$x1}]; set dy [expr {$y2-$y1}]
+            set dl [expr {hypot($dx,$dy)}]
+            if {$dl > 0} { set nx [expr {-$dy/$dl}]; set ny [expr {$dx/$dl}] } \
+            else { set nx 0.0; set ny 0.0 }
+            return [list $x $y $nx $ny]
+        }
+        set acc [expr {$acc + $L}]; incr si
+    }
+    return [list [lindex $pts end-1] [lindex $pts end] 0 0]
+}
+
 proc ::tclutils::tudiagram::_textMetrics {label font} {
     # font = tupngdraw/tusvg -scale. char cell 6x8 px. Returns {w h} of the text.
     set lines [split $label \n]
@@ -270,6 +305,116 @@ proc ::tclutils::tudiagram::_ccOrder {ids level chainD posD} {
         lappend out {*}$b
     }
     return $out
+}
+
+# Cluster-aware column assignment: give every group a contiguous band of columns
+# and rank-colour its members within the band (members in different ranks reuse
+# columns -> they stack; members in the same rank get adjacent columns). Columns
+# are shared across ranks, so a group that spans several ranks occupies one tight
+# vertical band instead of a bounding box that sprawls across the whole diagram.
+# Returns a dict: real-node-id -> column index. State lives in a namespace array
+# so the recursion can share it; it is cleared on entry.
+proc ::tclutils::tudiagram::_clusterColumns {realIds rankD chainD groupsList posD} {
+    variable _cc
+    array unset _cc
+    foreach id $realIds {
+        set ch [expr {[dict exists $chainD $id] ? [dict get $chainD $id] : {}}]
+        set _cc(inner,$id) [expr {[llength $ch] ? [lindex $ch end] : ""}]
+        set _cc(rank,$id)  [dict get $rankD $id]
+        set _cc(pos,$id)   [expr {[dict exists $posD $id] ? [dict get $posD $id] : 0}]
+    }
+    set gids {}
+    foreach g $groupsList {
+        set gid [dict get $g id]
+        lappend gids $gid
+        set _cc(members,$gid) [dict get $g members]
+        set _cc(direct,$gid)   {}
+        set _cc(children,$gid) {}
+    }
+    # immediate parent = smallest strict superset group
+    foreach a $gids {
+        set best ""; set bestsz 0
+        foreach b $gids {
+            if {$a eq $b} continue
+            set ma $_cc(members,$a); set mb $_cc(members,$b)
+            if {[llength $mb] <= [llength $ma]} continue
+            set sup 1
+            foreach m $ma { if {$m ni $mb} { set sup 0; break } }
+            if {$sup && ($best eq "" || [llength $mb] < $bestsz)} {
+                set best $b; set bestsz [llength $mb]
+            }
+        }
+        set _cc(parent,$a) $best
+    }
+    # direct member nodes (innermost group == g); root direct = ungrouped nodes
+    set _cc(direct,) {}
+    set _cc(children,) {}
+    foreach id $realIds {
+        set g $_cc(inner,$id)
+        lappend _cc(direct,$g) $id
+    }
+    foreach g $gids {
+        if {$_cc(parent,$g) eq ""} { lappend _cc(children,) $g } \
+        else { lappend _cc(children,$_cc(parent,$g)) $g }
+    }
+    _ccWidth ""
+    _ccAssignCols "" 0
+    set col {}
+    foreach id $realIds { dict set col $id $_cc(col,$id) }
+    array unset _cc
+    return $col
+}
+
+# mean barycentre hint of a set of node ids (for ordering units left-to-right)
+proc ::tclutils::tudiagram::_ccBary {ids} {
+    variable _cc
+    set s 0.0; set n 0
+    foreach id $ids {
+        if {[info exists _cc(pos,$id)]} { set s [expr {$s + $_cc(pos,$id)}]; incr n }
+    }
+    return [expr {$n ? $s/$n : 0}]
+}
+
+# post-order band width of a group (or "" for the root): subgroup widths plus the
+# max number of direct member nodes in any single rank.
+proc ::tclutils::tudiagram::_ccWidth {g} {
+    variable _cc
+    set sub 0
+    foreach c $_cc(children,$g) { incr sub [_ccWidth $c] }
+    array set cnt {}
+    set mx 0
+    foreach id $_cc(direct,$g) {
+        set r $_cc(rank,$id)
+        set cnt($r) [expr {[info exists cnt($r)] ? $cnt($r)+1 : 1}]
+        if {$cnt($r) > $mx} { set mx $cnt($r) }
+    }
+    set _cc(width,$g) [expr {$sub + $mx}]
+    return $_cc(width,$g)
+}
+
+# pre-order column assignment within [base, base+width): subgroups first (each a
+# contiguous sub-band, ordered by barycentre), then direct nodes rank-coloured.
+proc ::tclutils::tudiagram::_ccAssignCols {g base} {
+    variable _cc
+    set cur $base
+    set kids {}
+    foreach c $_cc(children,$g) { lappend kids [list [_ccBary $_cc(members,$c)] $c] }
+    foreach pair [lsort -real -index 0 $kids] {
+        set c [lindex $pair 1]
+        _ccAssignCols $c $cur
+        incr cur $_cc(width,$c)
+    }
+    set directBase $cur
+    set nodes {}
+    foreach id $_cc(direct,$g) { lappend nodes [list $_cc(pos,$id) $id] }
+    array set used {}
+    foreach pair [lsort -real -index 0 $nodes] {
+        set id [lindex $pair 1]
+        set r $_cc(rank,$id)
+        set used($r) [expr {[info exists used($r)] ? $used($r) : 0}]
+        set _cc(col,$id) [expr {$directBase + $used($r)}]
+        incr used($r)
+    }
 }
 
 # --- layout: layered with dummy nodes for long edges -----------------------
@@ -459,7 +604,21 @@ proc ::tclutils::tudiagram::layout {d} {
             set members($r) [_ccOrder $members($r) 0 $chainD $posD]
             set i 0; foreach id $members($r) { set pos($id) $i; incr i }
         }
+        # cluster-aware columns: each group gets a contiguous column band, its
+        # members rank-coloured within it, so a group that spans several ranks is
+        # one tight vertical band instead of a sprawling bounding box.
+        set realIds {}; set rankD {}; set posD2 {}
+        for {set r 0} {$r <= $maxRank} {incr r} {
+            foreach id $members($r) {
+                if {[info exists real($id)]} {
+                    lappend realIds $id; dict set rankD $id $r; dict set posD2 $id $pos($id)
+                }
+            }
+        }
+        set colByNode [_clusterColumns $realIds $rankD $chainD [dict get $d groups] $posD2]
+        set useCols 1
     }
+    if {![info exists useCols]} { set useCols 0 }
 
     # coordinates: main axis = rank columns; cross axis = stacked order
     for {set r 0} {$r <= $maxRank} {incr r} {
@@ -477,6 +636,62 @@ proc ::tclutils::tudiagram::layout {d} {
         set rankMain($r) $baseMain
         set baseMain [expr {$baseMain + $mainSize($r) + $rankGap}]
     }
+    if {$useCols} {
+        # cluster-aware column grid: real nodes sit at their column centre so a
+        # group spanning several ranks forms one tight vertical band; dummy nodes
+        # (long-edge waypoints) are interpolated between their rank neighbours.
+        set ncol 0
+        dict for {id c} $colByNode { if {$c+1 > $ncol} { set ncol [expr {$c+1}] } }
+        for {set c 0} {$c < $ncol} {incr c} { set colSize($c) $laneH }
+        dict for {id c} $colByNode {
+            set cs [expr {$baseDir eq "LR" ? $H($id) : $W($id)}]
+            if {$cs > $colSize($c)} { set colSize($c) $cs }
+        }
+        set off $padding
+        for {set c 0} {$c < $ncol} {incr c} {
+            set colCenter($c) [expr {$off + $colSize($c)/2.0}]
+            set off [expr {$off + $colSize($c) + $nodeGap}]
+        }
+        for {set r 0} {$r <= $maxRank} {incr r} {
+            foreach id $members($r) {
+                if {![info exists real($id)]} continue
+                set w $W($id); set h $H($id)
+                set cc $colCenter([dict get $colByNode $id])
+                if {$baseDir eq "LR"} {
+                    set X($id) [expr {$rankMain($r) + ($mainSize($r)-$w)/2.0}]
+                    set Y($id) [expr {$cc - $h/2.0}]
+                } else {
+                    set X($id) [expr {$cc - $w/2.0}]
+                    set Y($id) [expr {$rankMain($r) + ($mainSize($r)-$h)/2.0}]
+                }
+                set CX($id) [expr {$X($id)+$w/2.0}]
+                set CY($id) [expr {$Y($id)+$h/2.0}]
+            }
+            set ord $members($r); set n [llength $ord]
+            for {set i 0} {$i < $n} {incr i} {
+                set id [lindex $ord $i]
+                if {[info exists real($id)]} continue
+                set lc ""; set rc ""
+                for {set j [expr {$i-1}]} {$j >= 0} {incr j -1} {
+                    set x [lindex $ord $j]
+                    if {[info exists real($x)]} { set lc [expr {$baseDir eq "LR" ? $CY($x) : $CX($x)}]; break }
+                }
+                for {set j [expr {$i+1}]} {$j < $n} {incr j} {
+                    set x [lindex $ord $j]
+                    if {[info exists real($x)]} { set rc [expr {$baseDir eq "LR" ? $CY($x) : $CX($x)}]; break }
+                }
+                if {$lc eq "" && $rc eq ""} { set cc [expr {$padding + $laneH/2.0}] } \
+                elseif {$lc eq ""} { set cc [expr {$rc - $laneH}] } \
+                elseif {$rc eq ""} { set cc [expr {$lc + $laneH}] } \
+                else { set cc [expr {($lc + $rc)/2.0}] }
+                if {$baseDir eq "LR"} {
+                    set CX($id) [expr {$rankMain($r)+$mainSize($r)/2.0}]; set CY($id) $cc
+                } else {
+                    set CX($id) $cc; set CY($id) [expr {$rankMain($r)+$mainSize($r)/2.0}]
+                }
+            }
+        }
+    } else {
     for {set r 0} {$r <= $maxRank} {incr r} {
         set cross $padding
         foreach id $members($r) {
@@ -504,6 +719,7 @@ proc ::tclutils::tudiagram::layout {d} {
                 set cross [expr {$cross + $laneH + $nodeGap}]
             }
         }
+    }
     }
 
     # edge waypoints: clip first/last segment to the box borders
@@ -867,6 +1083,14 @@ proc ::tclutils::tudiagram::render {d canvas} {
     }
 
     # edges first (under boxes): draw the precomputed polyline, then an arrowhead
+    # seed the label-collision set with node boxes so labels avoid nodes too
+    set placedLabels {}
+    foreach n [dict get $d nodes] {
+        set nx [dict get $n x]; set ny [dict get $n y]
+        lappend placedLabels [list $nx $ny \
+            [expr {$nx+[dict get $n width]}] [expr {$ny+[dict get $n height]}]]
+    }
+    set nodeRectCount [llength $placedLabels]
     foreach e [dict get $d edges] {
         set pts [dict get $e points]
         if {[llength $pts] < 4} continue
@@ -886,15 +1110,39 @@ proc ::tclutils::tudiagram::render {d canvas} {
         set lbl [dict get $e label]
         if {$lbl ne ""} {
             set ef 1
-            set ns  [expr {[llength $pts]/2 - 1}]
-            set mid [expr {($ns/2)*2}]
-            set mx [expr {([lindex $pts $mid]+[lindex $pts [expr {$mid+2}]])/2.0}]
-            set my [expr {([lindex $pts [expr {$mid+1}]]+[lindex $pts [expr {$mid+3}]])/2.0}]
             set tw  [$canvas textwidth $lbl -scale $ef]
             set tht [expr {8*$ef}]
-            set lx [expr {int($mx-$tw/2.0)}]; set ly [expr {int($my-$tht/2.0)}]
+            # anti-parallel edges (a->b and the reversed back-edge b->a) share a
+            # corridor; offset their labels to different fractions AND opposite
+            # sides so they don't collide. back-edges were reversed in layout.
+            set isback [expr {[dict exists $e back] && [dict get $e back]}]
+            set frac [expr {$isback ? 0.62 : 0.38}]
+            set side [expr {$isback ? 1 : -1}]
+            lassign [_edgeLabelPoint $pts $frac] bx by nx ny
+            set base [expr {$tht/2.0 + 3}]
+            if {$nx == 0 && $ny == 0} { set nx 0; set ny -1 }
+            # try increasing offsets along the normal (preferred side first, then
+            # the other) until the label box clears previously placed labels.
+            set placed 0
+            foreach k {0 1 -1 2 -2 3 -3 4 -4} {
+                set offs [expr {($base + abs($k)*($tht+3)) * ($k >= 0 ? $side : -$side)}]
+                if {$k == 0} { set offs [expr {$base*$side}] }
+                set mx [expr {$bx + $nx*$offs}]
+                set my [expr {$by + $ny*$offs}]
+                set lx [expr {int($mx-$tw/2.0)}]; set ly [expr {int($my-$tht/2.0)}]
+                set r [list [expr {$lx-2}] [expr {$ly-1}] [expr {$lx+$tw+2}] [expr {$ly+$tht+1}]]
+                set clash 0
+                foreach pr $placedLabels {
+                    if {[lindex $r 0] < [lindex $pr 2] && [lindex $r 2] > [lindex $pr 0] \
+                     && [lindex $r 1] < [lindex $pr 3] && [lindex $r 3] > [lindex $pr 1]} {
+                        set clash 1; break
+                    }
+                }
+                if {!$clash} { set placed 1; break }
+            }
+            lappend placedLabels $r
             $canvas setfill white
-            $canvas rect [expr {$lx-2}] [expr {$ly-1}] [expr {$lx+$tw+2}] [expr {$ly+$tht+1}] \
+            $canvas rect [lindex $r 0] [lindex $r 1] [lindex $r 2] [lindex $r 3] \
                 -fill 1 -outline 0
             _drawText $canvas $gfont $ef $lx $ly $lbl $edgeC
         }
