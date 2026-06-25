@@ -3,7 +3,7 @@ package require tcltest
 namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 tcl::tm::path add [file normalize [file join $here .. lib tm]]
-package require tclutils::tunum
+package require tclutils::tunum 0.3
 
 test tunum-1.1 {parse EU grouping}   -body {::tclutils::tunum::parse "1.234,56"} -result 1234.56
 test tunum-1.2 {parse US grouping}   -body {::tclutils::tunum::parse "1,234.56"} -result 1234.56
@@ -14,4 +14,30 @@ test tunum-2.1 {sum skips non-numeric} -body {::tclutils::tunum::sum {1,50 2,00 
 test tunum-2.2 {sum empty default}   -body {::tclutils::tunum::sum {} -default {}} -result {}
 test tunum-3.1 {isNumber true}       -body {::tclutils::tunum::isNumber "3,14"} -result 1
 test tunum-3.2 {isNumber false}      -body {::tclutils::tunum::isNumber "x"} -result 0
+# -- de-strict locale (German strict, == Lieferschein numDe) -----------------
+test tunum-4.1 {de EU grouped}     -body {::tclutils::tunum::parse "1.234,50" -locale de-strict -default 0.0} -result 1234.5
+test tunum-4.2 {de empty->default} -body {::tclutils::tunum::parse "" -locale de-strict -default 0.0} -result 0.0
+test tunum-4.3 {de plain comma}    -body {::tclutils::tunum::parse "12,5" -locale de-strict -default 0.0} -result 12.5
+test tunum-4.4 {de garbage->def}   -body {::tclutils::tunum::parse "abc" -locale de-strict -default 0.0} -result 0.0
+test tunum-4.5 {de dot=thousands}  -body {::tclutils::tunum::parse "1.000" -locale de-strict -default 0.0} -result 1000.0
+test tunum-4.6 {de dot-only group} -body {::tclutils::tunum::parse "956.06" -locale de-strict -default 0.0} -result 95606.0
+test tunum-4.7 {de negative}       -body {::tclutils::tunum::parse "-1.234,50" -locale de-strict -default 0.0} -result -1234.5
+test tunum-4.8 {de leading dot}    -body {::tclutils::tunum::parse ".5" -locale de-strict -default 0.0} -result 5.0
+test tunum-4.9 {de no currency}    -body {::tclutils::tunum::parse "5 \u20AC" -locale de-strict -default 0.0} -result 0.0
+test tunum-4.10 {de multi-group}   -body {::tclutils::tunum::parse "1.234.567,89" -locale de-strict -default 0.0} -result 1234567.89
+test tunum-4.11 {auto unchanged}   -body {::tclutils::tunum::parse "1.000"} -result 1.0
+test tunum-5.1 {bad locale errors} -body {catch {::tclutils::tunum::parse "1" -locale xx} e; set e} -match glob -result {*de-strict*}
+# -- format (locale de) ------------------------------------------------------
+test tunum-6.1 {format basic}        -body {::tclutils::tunum::format 1234.5} -result 1.234,50
+test tunum-6.2 {format negative}     -body {::tclutils::tunum::format -1234.5} -result -1.234,50
+test tunum-6.3 {format zero}         -body {::tclutils::tunum::format 0} -result 0,00
+test tunum-6.4 {format millions}     -body {::tclutils::tunum::format 1000000} -result 1.000.000,00
+test tunum-6.5 {format 0 decimals}   -body {::tclutils::tunum::format 1234.5 -decimals 0} -result 1.234
+test tunum-6.6 {format 3 decimals}   -body {::tclutils::tunum::format 1234.5 -decimals 3} -result 1.234,500
+test tunum-6.7 {format rounds up}    -body {::tclutils::tunum::format 1.236} -result 1,24
+test tunum-6.8 {format neg rounds 0} -body {::tclutils::tunum::format -0.004} -result -0,00
+test tunum-6.9 {format/parse roundtrip} -body {::tclutils::tunum::parse [::tclutils::tunum::format 1234.56] -locale de-strict -default 0.0} -result 1234.56
+test tunum-6.10 {format bad locale}  -body {catch {::tclutils::tunum::format 1 -locale en} e; set e} -match glob -result {*locale*}
+test tunum-6.11 {format bad decimals} -body {catch {::tclutils::tunum::format 1 -decimals -1} e; set e} -match glob -result {*decimals*}
+
 cleanupTests

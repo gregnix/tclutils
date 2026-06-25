@@ -56,7 +56,7 @@ package require tclutils::tucolumn 0.1
 package require tclutils::tupr 0.1
 package require tclutils::tutsort 0.1
 package require tclutils::tunumfmt 0.1
-package require tclutils::tunum 0.1
+package require tclutils::tunum 0.3
 package require tclutils::tunumany 0.1
 package require tclutils::tuterm 0.1
 package require tclutils::tucolor 0.1

@@ -17,14 +17,32 @@ puts $f "apple"
 puts $f "cherry"
 close $f
 
+# Interpreter fuer die CLI-Tools. Die Tools sind tclsh-Werkzeuge (Shebang
+# tclsh). Wird die Suite mit "wish tests/all.tcl" gestartet, ist
+# [info nameofexecutable] = wish; wish macht Praefix-Matching auf eigene
+# Optionen und schluckt z. B. "-n" (Praefix von -name) aus argv. Deshalb hier
+# stets ein tclsh waehlen, wenn wir unter wish laufen.
+proc cliInterp {} {
+    set exe [info nameofexecutable]
+    if {![string match -nocase *wish* [file tail $exe]]} { return $exe }
+    set cand [file join [file dirname $exe] \
+                  [string map {wish tclsh Wish tclsh WISH tclsh} [file tail $exe]]]
+    if {[file executable $cand]} { return $cand }
+    foreach t {tclsh tclsh9.0 tclsh9.1 tclsh8.7 tclsh8.6} {
+        set p [auto_execok $t]
+        if {$p ne ""} { return [lindex $p 0] }
+    }
+    return $exe
+}
+
 proc runcli {script args} {
     global bin
-    return [exec [info nameofexecutable] [file join $bin $script] {*}$args]
+    return [exec [cliInterp] [file join $bin $script] {*}$args]
 }
 
 proc runcliStatus {script args} {
     global bin
-    set code [catch {exec [info nameofexecutable] [file join $bin $script] {*}$args} out opts]
+    set code [catch {exec [cliInterp] [file join $bin $script] {*}$args} out opts]
     return [list $code $out [dict get $opts -errorcode]]
 }
 
