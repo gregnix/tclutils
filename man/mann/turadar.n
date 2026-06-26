@@ -1,0 +1,79 @@
+.TH turadar n 0.1 tclutils
+.SH tclutils::turadar
+.PP
+Parses a Mermaid \fBradar\-beta\fR block and renders it as a \fBradar / spider chart\fR natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtukanban\fR / \fBtupacket\fR / \fBtutreemap\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here. A radar chart is a polar plot, not a node\-edge graph, so it does \fBnot\fR go through \fBtudiagram\fR.
+.SS Package
+.CS
+package require tclutils::turadar 0.1
+.CE
+.SS Commands
+.CS
+::tclutils::turadar::parse text                          ;# -> radar model dict
+::tclutils::turadar::toSvg  model ?-width W? ?-height H? ?-fontfile f? ?-scale n?
+::tclutils::turadar::toPng  model ?...?                  ;# -> PNG bytes
+::tclutils::turadar::writeSvg model file ?...?
+::tclutils::turadar::writePng model file ?...?
+.CE
+.SS "Supported syntax (Mermaid subset)"
+.CS
+radar-beta
+title <text>                     -> optional title
+axis A, B, C                     -> axes (bare ids; or id["Label"])
+axis m["Math"], s["Science"]     -> may repeat; ids accumulate in order
+curve id["Label"]{v1, v2, ...}   -> a data series, values in axis order
+curve id{ ax2: 30, ax1: 20 }     -> key-value form (by axis id)
+max <n> / min <n>                -> value scale (default min 0, max = data max)
+ticks <n>                        -> number of graticule rings (default 5)
+graticule circle|polygon         -> ring shape (default circle)
+showLegend true|false            -> legend toggle (default: on if labelled)
+.CE
+.IP \(bu
+The header is \fBradar\-beta\fR (or bare \fBradar\fR).
+.IP \(bu
+\fBaxis\fR lines accumulate; each axis is a bare id or \fBid["Label"]\fR.
+.IP \(bu
+A \fBcurve\fR's values are positional (axis order) or key\-value (\fBaxisId: value\fR); missing axes default to 0, extra values are ignored.
+.IP \(bu
+\fBmin\fR/\fBmax\fR set the scale; \fBmax\fR defaults to the largest data value, \fBmin\fR to 0.
+.IP \(bu
+Blank lines and \fB%%\fR comments are ignored. Unknown config lines are ignored.
+.SS Layout
+.PP
+Each axis radiates from the centre at 360/N spacing, with the first axis at the top and the rest clockwise. \fBticks\fR graticule rings (concentric \fBcircle\fRs or \fBpolygon\fRs) mark the scale, with value labels along the top axis. Each curve plots one point per axis at radius proportional to \fB(value\-min)/(max\-min)\fR (clamped to the rim) and connects them into a closed polygon with a translucent area fill, a solid outline and vertex dots, coloured from a fixed palette. An optional legend lists the curves.
+.SS "v1 limitations (honest)"
+.IP \(bu
+Curves are straight\-edged polygons \-\- no Catmull\-Rom spline smoothing. Each gets a translucent area fill (overlaps blend) plus a solid outline and dots.
+.IP \(bu
+One curve per \fBcurve\fR line (Mermaid's comma\-joined multi\-curve lines are not split).
+.IP \(bu
+Theme / config / \fBcScale\fR styling is ignored.
+.IP \(bu
+Needs at least 3 axes (a polygon needs >= 3 points) \-\- fewer is an \fBAXES\fR error.
+.SS Options
+.PP
+\fB\-width\fR / \fB\-height\fR (default 600 each), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in 6x8 bitmap font with German umlauts via real codepoints), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+.SS Usage
+.CS
+package require tclutils::turadar
+set src {radar-beta
+    title Skill Assessment
+    axis Communication, Coding, Design, Testing
+    curve a["Alice"]{80, 90, 60, 75}
+    curve b["Bob"]{70, 65, 85, 80}
+    max 100
+    ticks 5
+    graticule polygon}
+::tclutils::turadar::writePng [::tclutils::turadar::parse $src] skills.png -scale 3
+.CE
+.PP
+In Markdown, \fBradar\-beta\fR rides on the \fB```mermaid\fR fence, so docir's raster sinks render it through \fBtuflow::toPng\fR; no docir change is needed.
+.SS Notes
+.IP \(bu
+Companion: \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (canvas; both provide the congruent \fBpolygon\fR / \fBcircle\fR / \fBline\fR primitives this uses), \fBtclutils::tuflow\fR (dispatch).
+.IP \(bu
+Spokes, rings, curves and dots use only line/polygon/circle primitives, so SVG and PNG stay congruent.
+.IP \(bu
+\fBtuflow::parse\fR rejects \fBradar\-beta\fR with \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR (it is not a node\-edge graph); the facade \fBtoSvg\fR/\fBtoPng\fR is the render path, exactly as for \fBpie\fR / \fBkanban\fR / \fBpacket\fR / \fBtreemap\fR.
+.SS "Error codes"
+.PP
+\fB\-errorcode {TCLUTILS TURADAR <REASON>}\fR \-\- \fBEMPTY\fR (no header / no curves), \fBAXES\fR (fewer than 3 axes), \fBVALUE\fR (non\-numeric value), \fBARG\fR (bad \fB\-scale\fR), \fBFONT\fR (font file not found).

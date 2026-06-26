@@ -26,7 +26,7 @@ The header line is \fBkanban\fR; columns and cards follow.
 .IP \(bu
 \fBIndentation decides the role.\fR The first content line after the header sets the column indent; lines at that indent are column titles, deeper lines are cards of the current column.
 .IP \(bu
-Card metadata after \fB@{ ... }\fR is shown as a small grey sub\-line (all parsed \fBkey: value\fR pairs, joined). The Mermaid keys \fBticket\fR, \fBassigned\fR, \fBpriority\fR are typical but not required \-\- any keys present are shown.
+Card metadata after \fB@{ ... }\fR: a \fBpriority\fR value is pulled out and shown as a colour badge in the card's top\-right (High = red, Medium = orange, Low = green, Critical/Blocked = dark red, anything else = grey). The remaining \fBkey: value\fR pairs are shown as a small grey sub\-line. The Mermaid keys \fBticket\fR, \fBassigned\fR, \fBpriority\fR are typical but not required.
 .IP \(bu
 Blank lines and \fB%%\fR comments are ignored.
 .SS "Layout (v1)"
@@ -34,9 +34,9 @@ Blank lines and \fB%%\fR comments are ignored.
 Columns are laid out left\-to\-right and fill the canvas evenly. Each column has a coloured header band (from a fixed qualitative palette), a light lane background, and its cards stacked top\-to\-bottom as rounded white boxes. A card with metadata is drawn taller to fit its sub\-line. The canvas size grows automatically with the column count and the tallest card stack when \fB\-width\fR / \fB\-height\fR are left at their default (\fB0\fR = auto).
 .SS "v1 limitations (honest)"
 .IP \(bu
-Metadata is rendered as a single joined text line, not styled per key.
+\fBpriority\fR is styled as a badge; other metadata is one joined grey line.
 .IP \(bu
-No card colours, priority\-based styling, or assignee avatars.
+No card background colours or assignee avatars; long text is clipped.
 .IP \(bu
 Long card text is clipped to the column width, not wrapped or shrunk.
 .IP \(bu

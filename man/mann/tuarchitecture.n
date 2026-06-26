@@ -21,7 +21,7 @@ Render the returned model with the tudiagram backends:
 .SS "Supported syntax (Mermaid subset)"
 .CS
 architecture-beta
-  group <id>(<icon>)[<Label>]            -> a group (flattened, see below)
+  group <id>(<icon>)[<Label>]            -> a group, drawn as a cluster frame
   service <id>(<icon>)[<Label>] in <g>   -> a service node (`in <group>` optional)
   junction <id>                          -> a routing point (drawn as a dot)
   <id>:<S> -- <S>:<id>                    -> edge, no arrowhead
@@ -49,12 +49,32 @@ icon	shape
 .TE
 .SS "v1 limitations (honest)"
 .IP \(bu
-\fBGroups are flattened.\fR A declared \fBgroup\fR is \fBnot\fR drawn as a container box, and \fBin <group>\fR is ignored for layout (tudiagram lays the graph out left\-to\-right). A group box is Phase 2. A group id that an edge references is drawn as a plain node.
+\fBGroups draw as cluster frames\fR (needs \fBtudiagram\fR >= 0.4). A \fBgroup\fR becomes a labelled box around the bounding box of its \fBin <group>\fR members; nested \fBgroup ... in <parent>\fR is honoured (members roll up). The frame is a post\-hoc bounding box over the laid\-out members, so it is tight when a group is a connected sub\-cluster and looser when the layout scatters them. A group id that an edge references is drawn as a plain node.
 .IP \(bu
 \fBSide hints are not routed.\fR \fB:L :R :T :B\fR are parsed but do not steer the edge ports \-\- the engine decides port positions (the same limitation as \fBtuc4\fR's \fBRel_U/D/L/R\fR hints). The declared topology survives; the exact approach side may differ from Mermaid.
 .IP \(bu
 \fBIcons are shapes, not glyphs\fR (no Iconify dependency).
-.SS Usage
+.SS "mermaid.js compatibility (read this before using a \fBmermaid\fR fence)"
+.PP
+There are \fBtwo independent parsers\fR for the same fence content. A raster sink (PDF, ODT, Tk, or a \fBflow\fR fence) renders through \fBtuflow \-> tuarchitecture\fR. An HTML export with \fBenableMermaid 1\fR hands a \fBmermaid\fR block to \fBmermaid.js\fR in the browser instead. \fBtuarchitecture\fR accepts a \fBlenient superset\fR of mermaid.js \fBarchitecture\-beta\fR, so a block that renders here can still throw \fBSyntax error in text\fR in a browser running mermaid.js 11.x.
+.PP
+Everything in the \fBofficial mermaid examples renders identically here\fR (verified against \fBtuflow::toSvg\fR/\fBtoPng\fR): write that subset and a \fBmermaid\fR block works in \fBboth\fR paths.
+.PP
+Safe\-subset checklist (renders in mermaid.js \fBand\fR tuflow):
+.IP \(bu
+Header \fBarchitecture\-beta\fR.
+.IP \(bu
+\fBgroup id(icon)[Label]\fR and \fBservice id(icon)[Label]\fR, optional \fBin <group>\fR (groups may nest: \fBgroup inner(icon)[..] in outer\fR).
+.IP \(bu
+Built\-in icons only: \fBcloud\fR, \fBdatabase\fR, \fBdisk\fR, \fBinternet\fR, \fBserver\fR (or a registered iconify pack like \fBlogos:aws\-lambda\fR).
+.IP \(bu
+Edges \fBa:S \-\- S:b\fR with sides \fBT|B|L|R\fR; arrowheads \fB\-\->\fR, \fB<\-\-\fR, \fB<\-\->\fR. The cross\-group modifier \fBa{group}:S \-\-> S:b{group}\fR is tolerated here (the modifier is stripped; the edge still connects).
+.IP \(bu
+\fBDeclare every id before an edge references it.\fR
+.IP \(bu
+Keep ids to plain \fB[A\-Za\-z0\-9_]\fR; prefer simple, single\-word labels. Labels with spaces appear in the official examples (\fB[Cloud Infrastructure]\fR); other characters (hyphens, slashes, umlauts) are \fBnot guaranteed\fR by mermaid.js and are a common cause of its "Syntax error".
+.PP
+If you need an architecture diagram in HTML that does \fBnot\fR depend on mermaid.js, use a \fBflow\fR fence: docir then renders inline SVG via \fBtuflow\fR, identical to the PDF output. (A docir\-side alternative is to treat \fBarchitecture\-beta\fR as native when \fBtuflow::toSvg\fR succeeds, instead of delegating to mermaid.js.)
 .CS
 package require tclutils::tuarchitecture
 set src {architecture-beta
@@ -75,4 +95,4 @@ Companion: \fBtclutils::tudiagram\fR (layout + render), \fBtclutils::tuflow\fR (
 Because it is a graph type, the same model also flows through every other tudiagram consumer unchanged.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUARCHITECTURE <REASON>}\fR \-\- \fBEMPTY\fR (no services; a diagram consisting only of flattened groups also yields no nodes).
+\fB\-errorcode {TCLUTILS TUARCHITECTURE <REASON>}\fR \-\- \fBEMPTY\fR (no services; a diagram consisting only of empty groups also yields no nodes).

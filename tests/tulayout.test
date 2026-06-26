@@ -1,0 +1,70 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tulayout 0.1
+namespace import ::tclutils::tulayout::*
+
+test tulayout-page-1 {a4 portrait and landscape} -body {
+    list [pageSize a4] [pageSize a4 landscape]
+} -result {{210 297} {297 210}}
+
+test tulayout-page-2 {unknown paper errors} -body {
+    catch {pageSize legal} e o; dict get $o -errorcode
+} -result {TCLUTILS TULAYOUT PAPER}
+
+test tulayout-conv-1 {mm and px round-trip} -body {
+    set s 3.5
+    set px [mmToPx 20 $s]
+    format %.4f [pxToMm $px $s]
+} -result {20.0000}
+
+test tulayout-snap-1 {snap to grid} -body {
+    list [snap 12.3] [snap 12.6 -grid 10]
+} -result {10.0 10}
+
+test tulayout-autoy-1 {auto y detection} -body {
+    list [isAutoY {y 0 w 40}] [isAutoY {y 10 lockedY 1}] [isAutoY {y 15}]
+} -result {1 1 0}
+
+test tulayout-merge-1 {mergeBlocks copies selected keys only} -body {
+    set base {a {x 1 y 2 w 30 h 8 show 1 label A} b {x 5 y 5 w 50 show 0}}
+    set preset {a {x 9 w 80 show 0 h 99} b {x 7 y 7 w 7 show 1}}
+    set m [mergeBlocks $base $preset]
+    list [dict get $m a x] [dict get $m a y] [dict get $m a w] [dict get $m a show] \
+         [dict exists $m a h] [dict get $m b y]
+} -result {9 2 80 0 1 7}
+
+test tulayout-merge-2 {mergeLayout wraps blocks dict} -body {
+    set target {paper a4 blocks {kopf {x 10 y 20 w 100 show 1}}}
+    set preset {blocks {kopf {x 30 show 0}}}
+    set out [mergeLayout $target $preset]
+    list [dict get $out blocks kopf x] [dict get $out blocks kopf y] \
+         [dict get $out blocks kopf show]
+} -result {30 20 0}
+
+test tulayout-validate-1 {validateBlocks normalises} -body {
+    set b [validateBlocks {hdr {x 1 y 2 w 40 show 0}}]
+    list [dict get $b hdr x] [dict get $b hdr show] [dict exists $b hdr h]
+} -result {1.0 0 1}
+
+test tulayout-validate-2 {bad width errors} -body {
+    catch {validateBlocks {x {w -1 x 0 y 0}}} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TULAYOUT VALUE}
+
+test tulayout-ensure-1 {ensureBlocks fills from definitions} -body {
+    set defs {a {label Alpha w 50 h 10} b {label Beta w 60}}
+    set out [ensureBlocks {a {x 5 y 5}} $defs]
+    list [dict exists $out b] [dict get $out b w] [dict get $out a label]
+} -result {1 60.0 Alpha}
+
+test tulayout-rect-1 {blockRect uses height option} -body {
+    blockRect {x 10 y 20 w 30} -height 12
+} -result {10.0 20.0 40.0 32.0}
+
+test tulayout-fit-1 {fitScale picks limiting axis} -body {
+    format %.3f [fitScale 210 297 420 594 -marginPx 0]
+} -result {2.000}
+
+cleanupTests

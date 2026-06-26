@@ -1,4 +1,4 @@
-.TH tunum n 0.1 tclutils
+.TH tunum n 0.3 tclutils
 .SH tclutils::tunum
 .PP
 Robust parsing and summation of human\-formatted numbers in pure Tcl.
@@ -6,31 +6,59 @@ Robust parsing and summation of human\-formatted numbers in pure Tcl.
 \fBtunum\fR reads numbers as people write them — with thousands grouping, a comma or dot as the decimal mark, currency symbols and stray whitespace — and turns them into plain Tcl doubles. It is GUI\-free and library\-neutral, usable on its own or as the numeric backend for table footers (\fBtkutils::tkutlfooter\fR).
 .SS Package
 .CS
-package require tclutils::tunum 0.1
+package require tclutils::tunum 0.3
 .CE
+.PP
+Version 0.2 adds the \fB\-locale\fR option to \fBparse\fR; version 0.3 adds \fBformat\fR. Both are fully backward compatible: the default \fBparse\fR locale \fBauto\fR behaves exactly like 0.1, so existing callers need no change.
 .SS Commands
 .CS
-::tclutils::tunum::parse    s ?-default {}?
+::tclutils::tunum::parse    s ?-default {}? ?-locale auto|de-strict?
 ::tclutils::tunum::sum      values ?-default 0?
 ::tclutils::tunum::isNumber s
+::tclutils::tunum::format   x ?-locale de? ?-decimals 2?
 .CE
 .SS parse
 .PP
 Parses a single value and returns a Tcl double, or \fB\-default\fR (empty by default) when the string is not a recognisable number.
 .CS
-::tclutils::tunum::parse "1.234,56"      ;# -> 1234.56   (EU grouping)
-::tclutils::tunum::parse "1,234.56"      ;# -> 1234.56   (US grouping)
-::tclutils::tunum::parse "1234.56"       ;# -> 1234.56
-::tclutils::tunum::parse "12 €"          ;# -> 12.0      (currency stripped)
-::tclutils::tunum::parse "-5,5"          ;# -> -5.5
-::tclutils::tunum::parse "abc"           ;# -> {}        (unparsable)
+::tclutils::tunum::parse "1.234,56"       ;# -> 1234.56   (EU grouping)
+::tclutils::tunum::parse "1,234.56"       ;# -> 1234.56   (US grouping)
+::tclutils::tunum::parse "1234.56"        ;# -> 1234.56
+::tclutils::tunum::parse "12 €"           ;# -> 12.0      (currency stripped)
+::tclutils::tunum::parse "-5,5"           ;# -> -5.5
+::tclutils::tunum::parse "abc"            ;# -> {}        (unparsable)
 ::tclutils::tunum::parse "abc" -default 0 ;# -> 0
 .CE
+.SS Locales
 .PP
-Format detection: a comma followed by digits at the end (\fB…,56\fR) is treated as the decimal mark (EU style) and dots are grouping; otherwise commas are grouping (US style) and the dot is the decimal mark. Stripped before parsing: the \fB€\fR, \fB$\fR, \fB£\fR, \fB¥\fR symbols and spaces/tabs.
+\fB\-locale\fR selects how the decimal mark and grouping are interpreted.
+.TS
+l l l l l.
+Locale	Decimal	Grouping	Currency strip	Use for
+\fBauto\fR (def)	\fB,\fR or \fB.\fR (autodetected)	the other	yes (\fB€ $ £ ¥\fR, spaces)	user\-entered amounts in mixed/unknown notation
+\fBde\-strict\fR	\fB,\fR only	\fB.\fR \fBalways\fR	no	strict German input where \fB.\fR is unconditionally a thousands separator
+.TE
+.PP
+\fBauto\fR (default): a comma followed by digits at the end (\fB…,56\fR) is treated as the decimal mark (EU style) and dots are grouping; otherwise commas are grouping (US style) and the dot is the decimal mark. The \fB€\fR, \fB$\fR, \fB£\fR, \fB¥\fR symbols and spaces/tabs are stripped before parsing.
+.PP
+\fBde\-strict\fR: the dot is \fIalways\fR a thousands separator and is removed; the comma is the decimal mark. No currency stripping is performed. Unparsable input (including the empty string) returns \fB\-default\fR. This reproduces the strict German convention exactly — useful as a drop\-in for legacy parsers such as the Lieferschein \fBnumDe\fR.
+.CS
+set o {-locale de-strict -default 0.0}
+::tclutils::tunum::parse "1.234,50" {*}$o   ;# -> 1234.5
+::tclutils::tunum::parse "1.000"    {*}$o   ;# -> 1000.0    (dot = thousands)
+::tclutils::tunum::parse "956.06"   {*}$o   ;# -> 95606.0   (dot = thousands!)
+::tclutils::tunum::parse ".5"       {*}$o   ;# -> 5.0       (dot removed)
+::tclutils::tunum::parse "-1.234,50" {*}$o  ;# -> -1234.5
+::tclutils::tunum::parse "12,5"     {*}$o   ;# -> 12.5
+::tclutils::tunum::parse ""         {*}$o   ;# -> 0.0       (-> -default)
+::tclutils::tunum::parse "abc"      {*}$o   ;# -> 0.0       (-> -default)
+::tclutils::tunum::parse "5 €"      {*}$o   ;# -> 0.0       (no currency strip)
+.CE
+.PP
+The \fB956.06 \-> 95606.0\fR result is intentional: under \fBde\-strict\fR a dot can only be a thousands separator. If your value uses the dot as a decimal mark, use \fBauto\fR (or normalise to a comma first).
 .SS sum
 .PP
-Sums a list of human\-formatted values. Unparsable entries are skipped. Returns a double, or \fB\-default\fR (0 by default) when nothing was parsable.
+Sums a list of human\-formatted values. Unparsable entries are skipped. Returns a double, or \fB\-default\fR (0 by default) when nothing was parsable. \fBsum\fR always parses with the \fBauto\fR locale.
 .CS
 ::tclutils::tunum::sum {1,50 2,00 4,20}          ;# -> 7.7
 ::tclutils::tunum::sum {1.000,00 250,50}         ;# -> 1250.5
@@ -39,18 +67,39 @@ Sums a list of human\-formatted values. Unparsable entries are skipped. Returns 
 .CE
 .SS isNumber
 .PP
-Returns 1 if the value parses as a number, else 0.
+Returns 1 if the value parses as a number (auto locale), else 0.
 .CS
 ::tclutils::tunum::isNumber "3,14"   ;# -> 1
 ::tclutils::tunum::isNumber "x"      ;# -> 0
 .CE
-.SS "Error codes"
+.SS format
 .PP
-Option errors are raised with \fB\-errorcode {TCLUTILS TUNUM OPTION}\fR.
+Formats a number as a grouped, locale\-specific string — the rough inverse of \fBparse \-locale de\-strict\fR. Locale \fBde\fR (the only locale, and the default): dot as thousands separator, comma as decimal mark, \fB\-decimals\fR fractional digits (default 2, rounded via Tcl's \fBformat\fR).
+.CS
+::tclutils::tunum::format 1234.5              ;# -> 1.234,50
+::tclutils::tunum::format -1234.5             ;# -> -1.234,50
+::tclutils::tunum::format 1000000             ;# -> 1.000.000,00
+::tclutils::tunum::format 1234.5 -decimals 0  ;# -> 1.234
+::tclutils::tunum::format 1234.5 -decimals 3  ;# -> 1.234,500
+.CE
+.PP
+For a currency string, append your own symbol/code: \fB"[::tclutils::tunum::format $n] EUR"\fR \-> \fB1.234,50 EUR\fR.
+.PP
+\fBformat\fR defines a command named \fBformat\fR inside the \fB::tclutils::tunum\fR namespace; it calls the Tcl builtin as \fB::format\fR internally. Callers always use the fully\-qualified \fB::tclutils::tunum::format\fR, so there is no clash.
+.SS "Error codes"
+.TS
+l l.
+errorcode	raised when
+\fB{TCLUTILS TUNUM OPTION}\fR	unknown option passed to \fBparse\fR/\fBsum\fR
+\fB{TCLUTILS TUNUM LOCALE}\fR	\fBparse \-locale\fR not \fBauto\fR/\fBde\-strict\fR, or \fBformat \-locale\fR not \fBde\fR
+\fB{TCLUTILS TUNUM DECIMALS}\fR	\fBformat \-decimals\fR is not a non\-negative integer
+.TE
 .SS Notes
 .IP \(bu
 Output is always a Tcl double (e.g. \fB7.7\fR, not \fB"7,70"\fR). Use \fBformat\fR for display formatting, e.g. \fBformat "%.2f" [::tclutils::tunum::sum $vals]\fR.
 .IP \(bu
 The currency symbol \fB€\fR is handled via the \fB\eu20AC\fR escape, so the module is safe to source from a \fB.tm\fR regardless of the channel encoding.
+.IP \(bu
+\fBauto\fR\fB vs \fR\fBde\-strict\fR\fB:\fR \fBauto\fR is forgiving and guesses the notation; pick it for free\-form user input. \fBde\-strict\fR is deterministic and never treats a dot as a decimal mark; pick it when the input contract is strictly German.
 .IP \(bu
 \fBRelation to \fR\fBtclutils::tunumfmt\fR\fB:\fR the two do \fInot\fR overlap. \fBtunum\fR parses locale\-grouped / currency numbers (\fB1.234,56 €\fR); \fBtunumfmt::fromHuman\fR parses SI/IEC unit notation (\fB1.5K\fR → 1500, \fB2Mi\fR → 2097152). Use \fBtunum\fR for user\-entered amounts, \fBtunumfmt\fR for engineering / byte\-size notation.
