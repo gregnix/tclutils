@@ -2,7 +2,7 @@
 #
 # This file may live in two places:
 #   a) directly in the directory that holds the library folders, e.g.
-#        ~/lib/tcltk/setup.tcl   next to   tclutils-0.53.0/  tkutils-0.40.0/
+#        ~/lib/tcltk/setup.tcl   next to   tclutils-0.53.0/  tkutils-0.41.0/
 #   b) inside a library, e.g.
 #        ~/lib/tcltk/tclutils-0.53.0/tools/setup.tcl
 #

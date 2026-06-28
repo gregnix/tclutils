@@ -89,8 +89,8 @@ that only exists on one Tcl version).
 2. `CHANGELOG.md`: prepend an entry under a new `## <newver> - <date>` heading.
 3. `README.md`: bump the version, the package count, the tm filename in the tree
    listing, and add a "New in <newver>" bullet.
-4. `docs/module-status.md`: add a row (Module | Scope status | Notes).
-5. `docs/coreutils-mapping.md`: add a row if the module maps to a Unix tool.
+4. `docs/guide/module-status.md`: add a row (Module | Scope status | Notes).
+5. `docs/guide/coreutils-mapping.md`: add a row if the module maps to a Unix tool.
 6. `man/man1/*.1`: bump the `.TH` version on existing pages if the release
    version changed; add the new page.
 

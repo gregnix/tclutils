@@ -35,7 +35,7 @@ package …" or "library not found" at startup.
 │   │   ├── setup.tcl
 │   │   └── setup.md
 │   └── lib/tm/…
-└── tkutils-0.40.0/
+└── tkutils-0.41.0/
     └── lib/tm/…
 ```
 
@@ -45,7 +45,7 @@ package …" or "library not found" at startup.
 ~/lib/tcltk/
 ├── setup.tcl
 ├── tclutils-0.53.0/
-└── tkutils-0.40.0/
+└── tkutils-0.41.0/
 ```
 
 In both cases `setup.tcl` searches **upward** from its own location until it

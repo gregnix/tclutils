@@ -24,8 +24,8 @@ package require tclutils::tucsv    ;# or just one module
 
 ## Module overview
 
-Detailed scope per module is in [`docs/module-status.md`](docs/module-status.md);
-the Unix-tool mapping is in [`docs/coreutils-mapping.md`](docs/coreutils-mapping.md).
+Detailed scope per module is in [`docs/guide/module-status.md`](docs/guide/module-status.md);
+the Unix-tool mapping is in [`docs/guide/coreutils-mapping.md`](docs/guide/coreutils-mapping.md).
 
 | Category | Modules |
 |----------|---------|
@@ -64,14 +64,14 @@ point of use, so the umbrella still loads without them.
 
 ## Command-line wrappers
 
-Thin CLI front-ends live in `bin/` — see [`docs/cli.md`](docs/cli.md).
+Thin CLI front-ends live in `bin/` — see [`docs/guide/cli.md`](docs/guide/cli.md).
 
 ## Output formats
 
 `tclutils` writes text, CSV (`tucsv`) and JSON (`tujson`) directly. Routes to
 PDF and OpenDocument (.odt/.ods/.odg) via the companion libraries `pdf4tcl`,
 `pdf4tcllib`, `odf` and `docir` are sketched in
-[`docs/todo-output.md`](docs/todo-output.md).
+[`docs/guide/todo-output.md`](docs/guide/todo-output.md).
 
 ## Testing
 
@@ -85,9 +85,9 @@ The suite passes on both Tcl 8.6 and Tcl 9.x.
 
 ## Conventions & status
 
-- House rules and module scope: [`docs/module-status.md`](docs/module-status.md)
-- Roadmap and backlog: [`docs/roadmap.md`](docs/roadmap.md)
-- Architecture notes: [`docs/architecture.md`](docs/architecture.md)
+- House rules and module scope: [`docs/guide/module-status.md`](docs/guide/module-status.md)
+- Roadmap and backlog: [`docs/guide/roadmap.md`](docs/guide/roadmap.md)
+- Architecture notes: [`docs/guide/architecture.md`](docs/guide/architecture.md)
 
 ## License
 
