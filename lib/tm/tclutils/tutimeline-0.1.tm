@@ -1,4 +1,6 @@
 # tutimeline-0.1.tm -- parse and render a Mermaid `timeline` block to SVG or PNG
+# Description: parse and render a Mermaid `timeline` block to SVG or PNG (pure-Tcl backends)
+# Category: Diagrams · Mermaid
 # through the pure-Tcl backends (tusvg / tupngdraw), so a timeline can be shown
 # natively everywhere -- no browser. Like `tupie` / `tuxychart`, this is NOT a
 # graph; it renders directly and is reached through the `tclutils::tuflow`

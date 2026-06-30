@@ -1,4 +1,6 @@
 # turadar-0.1.tm -- parse a Mermaid `radar-beta` block and render it as a radar
+# Description: parse a Mermaid `radar-beta` block and render a radar/spider chart to SVG or PNG
+# Category: Diagrams · Mermaid
 # (spider / Kiviat) chart to SVG or PNG through the pure-Tcl backends (tusvg /
 # tupngdraw) -- no browser. Like `tupie` / `tukanban` / `tupacket` / `tutreemap`,
 # this is NOT a node-edge graph: it renders directly and is reached through the

@@ -1,4 +1,6 @@
 # tclutils::tunotes -- hierarchical note store
+# Description: hierarchical note store
+# Category: Data · structures & formats
 #
 # A small, dependency-light engine for a tree of notes. Notes are plain dicts
 # with the fields: id parent_id title content created modified tags. The whole

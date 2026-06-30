@@ -1,4 +1,6 @@
 # tclutils::tulist -- functional list helpers that the Tcl core does not provide
+# Description: functional list helpers that the Tcl core does not provide directly.
+# Category: Data · structures & formats
 # directly. Pure Tcl, no dependencies. For what the core already does use that:
 # [lreverse], [lsort -unique] (if you don't need order), [lsearch], [lmap]
 # (script-body map/filter). The map/filter/reduce/all/any here take a *command

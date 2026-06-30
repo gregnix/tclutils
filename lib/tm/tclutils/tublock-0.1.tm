@@ -1,4 +1,6 @@
 # tublock-0.1.tm -- parse a Mermaid `block-beta` diagram into a tclutils::tudiagram
+# Description: parse a Mermaid `block-beta` diagram into a tclutils::tudiagram model (SVG or PNG)
+# Category: Diagrams · Mermaid
 # model (best-effort), so it can render natively (SVG or PNG) through the
 # pure-Tcl engine -- no browser. It is one of the graph-type parsers the
 # tclutils::tuflow facade dispatches to; you normally call tuflow::toPng /

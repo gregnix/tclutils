@@ -1,4 +1,6 @@
 # tclutils::tuappinfo -- collect application / system information into a plain
+# Description: collect Tcl/Tk, executable, platform and environment info into a plain text report
+# Category: System · runtime
 # text report: Tcl/Tk versions, executable, platform, selected environment,
 # search paths, loaded packages, and optionally a list of explicitly tracked
 # module files. Supports anonymisation of user/host/path data. Pure Tcl,

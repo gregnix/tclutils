@@ -1,4 +1,6 @@
 # tclutils::tuevent -- a small publish/subscribe event bus.
+# Description: a small publish/subscribe event bus.
+# Category: Data · structures & formats
 # Create independent bus tokens, subscribe command prefixes to named events,
 # and emit events with arguments. Pure Tcl. Tcl 8.6+ and 9.x.
 

@@ -1,4 +1,6 @@
 # tclutils::tudav -- a minimal WebDAV / CardDAV / CalDAV client.
+# Description: a minimal WebDAV / CardDAV / CalDAV client.
+# Category: Network · web
 #
 # Create a client bound to a base URL and credentials, then run PROPFIND /
 # REPORT / GET / PUT / DELETE. Multistatus responses are parsed into a list of

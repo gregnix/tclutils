@@ -1,4 +1,6 @@
 # tclutils::tuxml -- small XML text helper in pure Tcl
+# Description: small XML text helper in pure Tcl
+# Category: Data · structures & formats
 # Tcl 8.6+
 #
 # Scope of 0.1:

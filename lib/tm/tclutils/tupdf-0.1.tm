@@ -1,4 +1,6 @@
 # tclutils::tupdf -- minimal PDF structure inspector (read-only)
+# Description: minimal PDF structure inspector (read-only)
+# Category: Data · structures & formats
 # Tcl 8.6+
 #
 # Pragmatic pure-Tcl tools for inspecting/debugging PDF files: header version,

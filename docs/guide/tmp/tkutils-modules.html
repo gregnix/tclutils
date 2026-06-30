@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>tkutils-modules</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+       max-width: 50em; margin: 2em auto; padding: 0 1em;
+       line-height: 1.5; color: #222; }
+h1 { font-size: 1.6em; border-bottom: 2px solid #888; padding-bottom: 0.2em; }
+h2 { font-size: 1.3em; border-bottom: 1px solid #ccc; padding-bottom: 0.15em; }
+h3 { font-size: 1.1em; }
+h4, h5, h6 { font-size: 1.0em; }
+.docir-doc-header { font-size: 0.85em; color: #666; margin-bottom: 1.5em;
+                    border-bottom: 1px solid #ddd; padding-bottom: 0.5em; }
+.docir-doc-header .name { font-weight: bold; }
+header.manpage-header { margin-bottom: 1.5em; border-bottom: 1px solid #ddd; padding-bottom: 0.5em; }
+header.manpage-header h1 { display: inline; border: none; padding: 0; }
+.maninfo { display: inline; color: #666; font-size: 0.9em; margin-left: 1em; }
+.version, .part { color: #666; font-size: 0.85em; }
+nav.toc { background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;
+          padding: 0.6em 1em; margin: 1em 0 1.5em; font-size: 0.9em; }
+nav.toc ul { margin: 0; padding-left: 1.2em; }
+nav.toc li { margin: 0.15em 0; }
+nav.toc li.toc-level-2 { padding-left: 1em; }
+nav.toc li.toc-level-3 { padding-left: 2em; }
+pre { background: #f4f4f4; padding: 0.6em 0.9em; border-radius: 4px;
+      overflow-x: auto; font-size: 0.92em; }
+code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+       font-size: 0.92em; }
+pre code { background: none; padding: 0; }
+blockquote { border-left: 3px solid #ccc; padding-left: 1em;
+             color: #555; margin: 0 0 1em 0; }
+.docir-list-tp dt { font-weight: bold; margin-top: 0.5em; }
+.docir-list-tp dd { margin-left: 2em; margin-bottom: 0.5em; }
+.docir-list-ip { padding-left: 2em; }
+ul.iplist { list-style: disc; margin-left: 2em; padding-left: 0; }
+ul.iplist li { margin: 0.3em 0; }
+.indent-1 { margin-left: 2em; }
+.indent-2 { margin-left: 4em; }
+.indent-3 { margin-left: 6em; }
+.indent-4 { margin-left: 8em; }
+hr { border: none; border-top: 1px solid #ccc; margin: 1.5em 0; }
+table { border-collapse: collapse; margin: 1em 0; }
+table.docir-standard-options td { padding: 0.15em 1em 0.15em 0;
+                                   font-family: monospace; }
+table.docir-table td, table.docir-table th { padding: 0.3em 0.7em;
+                                              border: 1px solid #ccc; }
+table.docir-table th { background: #f4f4f4; text-align: left; }
+.docir-unknown { background: #fff8dc; padding: 0.3em 0.6em;
+                 border-left: 3px solid #d4b428; margin: 0.5em 0;
+                 font-size: 0.85em; color: #666; }
+.docir-blank { line-height: 1.0; }
+a { color: #0055aa; }
+a:hover { text-decoration: underline; }
+
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true});</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters:[
+        {left:'$$',right:'$$',display:true},
+        {left:'$',right:'$',display:false}
+    ]});"></script>
+</head>
+<body>
+<table class="docir-table">
+  <colgroup>
+    <col style="text-align:left"/>
+    <col style="text-align:left"/>
+    <col style="text-align:left"/>
+    <col style="text-align:left"/>
+    <col style="text-align:left"/>
+    <col style="text-align:left"/>
+    <col style="text-align:left"/>
+    <col style="text-align:left"/>
+    <col style="text-align:left"/>
+    <col style="text-align:left"/>
+  </colgroup>
+  <tr>
+    <th style="text-align:left">package</th>
+    <th style="text-align:left">version</th>
+    <th style="text-align:left">description</th>
+    <th style="text-align:left">category</th>
+    <th style="text-align:left">test</th>
+    <th style="text-align:left">doc</th>
+    <th style="text-align:left">man</th>
+    <th style="text-align:left">repo</th>
+    <th style="text-align:left">path</th>
+    <th style="text-align:left">deps</th>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuaction</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">action abstraction (one action, many widgets)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuaction-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuballoon</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">balloon help / tooltips for any widget</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuballoon-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkubase64</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">Base64 encode/decode panel</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkubase64-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tubase64</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkubind</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">platform key/context bindings (from uitoolkit uibindings)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkubind-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkucal</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">calendar view</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkucal-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tucal</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkucanvaspng</code></td>
+    <td style="text-align:left">0.2</td>
+    <td style="text-align:left">export a live Tk canvas widget to a PNG image, after pdf4tcl's <code>$pdf canvas</code> model</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkucanvaspng-0.2.tm</code></td>
+    <td style="text-align:left">tclutils::common,tclutils::tupngdraw,Glyphs</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkucontextmenu</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">generic right-click context menu (from uitoolkit)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkucontextmenu-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkucsv</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">CSV table viewer</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkucsv-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tucsv,tclutils::common</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkudateentry</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">date entry with a drop-down calendar picker.</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkudateentry-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkudavaccount</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">a DAV account form (URL / user / password / type) with a Test-connection button</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkudavaccount-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tudav</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkudavbrowser</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">a read-only navigation pane for a CalDAV/CardDAV server, built on tclutils::tudav.</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkudavbrowser-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tudav,tclutils::common</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkudialog</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">dialogs with copyable message text</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkudialog-0.1.tm</code></td>
+    <td style="text-align:left">tkutils::tkuform</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkudiff</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">line diff viewer</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkudiff-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tudiff,tclutils::common</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkueditor</code></td>
+    <td style="text-align:left">0.2</td>
+    <td style="text-align:left">text editor widget (v0.2 PROTOTYPE)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkueditor-0.2.tm</code></td>
+    <td style="text-align:left">tclutils::tuiconv,tkutils::tkuicon,tkutils::tkutoolbar,tkutils::tkustatus</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkufiletree</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">a lazy file-system tree built on tkutils::tkutree.</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkufiletree-0.1.tm</code></td>
+    <td style="text-align:left">tkutils::tkutree</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkufilterbar</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">a per-column filter bar: one small entry per column, each typing a substring that the consumer ANDs together.</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkufilterbar-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuform</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">declarative form widget</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuform-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkufuzzy</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">incremental fuzzy filter</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkufuzzy-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tufuzzy</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuhexedit</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">small Tk hex viewer/editor</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuhexedit-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tubin,tclutils::tuhexdump,tclutils::common</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuical</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">iCalendar event viewer/editor</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuical-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tuical</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuicon</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">SVG icon loader / generator for toolbars (from uitoolkit)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuicon-0.1.tm</code></td>
+    <td style="text-align:left">tksvg,tclutils::tusvg</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuimage</code></td>
+    <td style="text-align:left">0.2</td>
+    <td style="text-align:left">image helpers and a scrollable/zoomable viewer widget for Tk</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuimage-0.2.tm</code></td>
+    <td style="text-align:left">imgtools</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuini</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">INI viewer</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuini-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tuini</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkujson</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">JSON tree viewer</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkujson-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tujson,tclutils::common</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkukeynav</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">keyboard focus navigation helpers</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkukeynav-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkulabeled</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">labeled input composites (label + control in one)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkulabeled-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkulayoutcanvas</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">visual block layout designer on a Tk canvas</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkulayoutcanvas-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tulayout</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuldif</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">LDIF entry viewer/editor</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuldif-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tuldif</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuload</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">instantiate a tkudesigner <code>.tkd</code> layout as a live Tk widget tree (no code export)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuload-0.1.tm</code></td>
+    <td style="text-align:left">tkutils::tkurender</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkumarquee</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">rubber-band (marquee) rectangle selection on a canvas</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkumarquee-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkumd</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">Markdown outline viewer</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkumd-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tumd,tclutils::common</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkumdview</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">Markdown viewer (headings outline + rendered preview)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">N</td>
+    <td style="text-align:left">N</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkumdview-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tumd</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkumonthcanvas</code></td>
+    <td style="text-align:left">0.5</td>
+    <td style="text-align:left">canvas calendar widget (month/quarter/year) OPTIONAL: requires tical (engine).</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkumonthcanvas-0.5.tm</code></td>
+    <td style="text-align:left">tical::config,tical::locale,tical::holidays,tical::holidays::de,tical::view::month</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkunotes</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">hierarchical notes widget</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkunotes-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tunotes</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkunumentry</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">numeric entry with validation, fixed decimals and optional min/max clamping</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkunumentry-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkupdfinspect</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">PDF structure inspector (read-only)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">N</td>
+    <td style="text-align:left">N</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkupdfinspect-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tupdf</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkurender</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">shared render core for tkudesigner / tkuload.</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkurender-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuscrolledframe</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">scrollable frame container (thin scrollutil wrapper)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuscrolledframe-0.1.tm</code></td>
+    <td style="text-align:left">scrollutil</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkusearchbar</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">a search bar: entry with debounced change callback, a clear button, and an optional filter drop-down.</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkusearchbar-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkusqlite</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">SQLite table browser</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkusqlite-0.1.tm</code></td>
+    <td style="text-align:left">sqlite3</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkustatus</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">status bar widget</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkustatus-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkustrings</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">printable strings viewer</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkustrings-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tustrings</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutablelist</code></td>
+    <td style="text-align:left">0.2</td>
+    <td style="text-align:left">multi-column table (OPTIONAL: requires Tablelist)</td>
+    <td style="text-align:left">Tk · tablelist</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutablelist-0.2.tm</code></td>
+    <td style="text-align:left">tablelist_tile,Tablelist,tclutils::tunum,tclutils::tucsv,tclutils::tunotes</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutags</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">tag editor: tags shown as removable chips plus an input.</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutags-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutical</code></td>
+    <td style="text-align:left">0.2</td>
+    <td style="text-align:left">month/week calendar widget (OPTIONAL: requires tical)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutical-0.2.tm</code></td>
+    <td style="text-align:left">tical::view::month,tical::view::week,tical::render::canvas</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutimeentry</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">time entry with hour/minute (optional second) spinboxes.</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutimeentry-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutlclip</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">copy tablelist rows to the clipboard as TSV or CSV.</td>
+    <td style="text-align:left">Tk · tablelist</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutlclip-0.1.tm</code></td>
+    <td style="text-align:left">tablelist,tclutils::tucsv</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutlfind</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">incremental find with match highlighting for a tablelist widget.</td>
+    <td style="text-align:left">Tk · tablelist</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutlfind-0.1.tm</code></td>
+    <td style="text-align:left">tablelist</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutlfmt</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">per-column display formatting for a tablelist widget via tablelist's -formatcommand.</td>
+    <td style="text-align:left">Tk · tablelist</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutlfmt-0.1.tm</code></td>
+    <td style="text-align:left">tablelist,tclutils::tunum</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutlfooter</code></td>
+    <td style="text-align:left">0.2</td>
+    <td style="text-align:left">a footer row for a tablelist widget, realised as a second single-row tablelist (&quot;header at the bottom&quot; look).</td>
+    <td style="text-align:left">Tk · tablelist</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutlfooter-0.2.tm</code></td>
+    <td style="text-align:left">tablelist,tclutils::tunum</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutlsort</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">type-aware column sorting for a tablelist widget.</td>
+    <td style="text-align:left">Tk · tablelist</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutlsort-0.1.tm</code></td>
+    <td style="text-align:left">tablelist,tclutils::tunum</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutlstate</code></td>
+    <td style="text-align:left">0.2</td>
+    <td style="text-align:left">save and restore a tablelist's column layout: widths, hidden state, display order and the active sort.</td>
+    <td style="text-align:left">Tk · tablelist</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutlstate-0.2.tm</code></td>
+    <td style="text-align:left">tablelist</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutltools</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">umbrella for the tablelist extension family.</td>
+    <td style="text-align:left">Tk · tablelist</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutltools-0.1.tm</code></td>
+    <td style="text-align:left">tablelist,tclutils::tunum,tkutils::tkutlsort,tkutils::tkutlfmt,tkutils::tkutlclip,tkutils::tkutlfooter,tkutils::tkutlfind,tkutils::tkutlstate,tkutils::tkutltree</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutltree</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">convert between nested data and a tablelist tree, with free column mapping.</td>
+    <td style="text-align:left">Tk · tablelist</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutltree-0.1.tm</code></td>
+    <td style="text-align:left">tablelist</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutodo</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">a task-list widget for iCalendar VTODO components, built on tclutils::tuical (todos / todoInfo / setProperty).</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutodo-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tuical</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutoolbar</code></td>
+    <td style="text-align:left">0.2</td>
+    <td style="text-align:left">toolbar widget (v0.2)</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutoolbar-0.2.tm</code></td>
+    <td style="text-align:left">tkutils::tkuballoon,tkutils::tkuaction</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkutree</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">a thin ttk::treeview wrapper for hierarchical data.</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkutree-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuvalidate</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">inline validation feedback for input widgets</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuvalidate-0.1.tm</code></td>
+    <td style="text-align:left">tkutils::tkuballoon,tclutils::tuvalidate</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuvcard</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">vCard contact viewer</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuvcard-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tuvcard,tkutils::tkuimage</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuwheel</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">forward mouse-wheel events to a scrollable target</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuwheel-0.1.tm</code></td>
+    <td style="text-align:left"></td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuxml</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">XML tree viewer</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuxml-0.1.tm</code></td>
+    <td style="text-align:left">tdom,tclutils::common</td>
+  </tr>
+  <tr>
+    <td style="text-align:left"><code>tkutils::tkuzip</code></td>
+    <td style="text-align:left">0.1</td>
+    <td style="text-align:left">ZIP archive browser</td>
+    <td style="text-align:left">Tk · widgets</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">Y</td>
+    <td style="text-align:left">tkutils</td>
+    <td style="text-align:left"><code>lib/tm/tkutils/tkuzip-0.1.tm</code></td>
+    <td style="text-align:left">tclutils::tuzip</td>
+  </tr>
+</table>
+
+</body>
+</html>

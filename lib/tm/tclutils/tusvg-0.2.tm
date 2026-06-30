@@ -1,4 +1,6 @@
 # tusvg-0.2.tm – SVG canvas, congruent with the tupngdraw object API.
+# Description: SVG canvas, congruent with the tupngdraw object API.
+# Category: Graphics · raster/vector
 #
 # Goal of 0.2: tusvg and tupngdraw become drop-in swappable behind one drawing
 # loop. Both are TclOO canvases created via `<pkg> new -width W -height H`, with

@@ -1,4 +1,6 @@
 # tclutils::tucut -- cut-like helpers for simple delimited text and characters
+# Description: cut-like helpers for simple delimited text and characters
+# Category: Text · strings/coreutils
 package require Tcl 8.6-
 package require tclutils::common 0.1
 

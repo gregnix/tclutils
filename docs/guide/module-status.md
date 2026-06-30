@@ -67,6 +67,14 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tucodepng` | renderer | Character-code/codepage table to PNG grid; data from `tucode`. |
 | `tupngpad` | tool | Normalises (transparent) PNGs to a uniform size with margin on a background (trim/pad/flatten). Pure Tcl, for sprite/icon sizes. |
 | `tusvg` | generator | Pure-Tcl SVG generator: shapes/paths/text/gradients/groups to string or file, plus a library of ~110 named toolbar icons (`icon`/`icons`/`saveIcon`). No dependencies; vector counterpart to `tupng`. |
+| `tulayout` | helper | Page layout helpers: millimetre coordinates and block-dict placement; shared by the PNG/SVG renderers and PDF layout. |
+
+## Terminal / color
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tucolor` | basis complete | Named-color database; resolves names / hex / rgb to RGB, converts to hex and HSV, and finds the nearest named color. |
+| `tuterm` | toolkit | ANSI terminal styling (SGR): text attributes and 16/256/24-bit colors; global enable switch that honours `NO_COLOR`. |
 
 ## Data / serialization
 

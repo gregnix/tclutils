@@ -1,4 +1,6 @@
 # tclutils::tufmt -- reflow text paragraphs to a target width (like fmt(1)).
+# Description: reflow text paragraphs to a target width (like fmt(1)).
+# Category: Text · strings/coreutils
 # Paragraphs are separated by blank lines; within a paragraph, whitespace is
 # collapsed and words are greedily wrapped. Each paragraph keeps the leading
 # indentation of its first line. Tcl 8.6+ and 9.x.

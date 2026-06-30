@@ -1,4 +1,6 @@
 # tclutils::tubookmark -- read and write the Netscape bookmark file format,
+# Description: read and write the Netscape bookmark file format used by browsers for import/export
+# Category: Data · structures & formats
 # the de-facto interchange format browsers use to import/export bookmarks.
 # Pure Tcl; entity (un)escaping reuses tclutils::tuxml. Tcl 8.6+ and 9.x.
 #

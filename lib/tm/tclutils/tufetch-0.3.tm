@@ -1,4 +1,6 @@
 # tclutils::tufetch -- tiny HTTP(S) helper: GET/POST into memory or to a file.
+# Description: tiny HTTP(S) helper: GET/POST into memory or to a file.
+# Category: Network · web
 # Tcl 8.6+ and 9.x.
 #
 # Retrieves a URL (get -> text, download -> file), byte-safe. Transport order:

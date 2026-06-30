@@ -1,4 +1,6 @@
 # tuc4-0.1.tm -- parse a Mermaid C4 diagram into a tclutils::tudiagram model.
+# Description: parse a Mermaid C4 diagram into a tclutils::tudiagram model.
+# Category: Diagrams · Mermaid
 #
 # Handles C4Context / C4Container / C4Component / C4Dynamic / C4Deployment.
 #

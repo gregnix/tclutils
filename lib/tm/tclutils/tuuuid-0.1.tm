@@ -1,4 +1,6 @@
 # tclutils::tuuuid -- UUID generation and inspection (pure Tcl).
+# Description: UUID generation and inspection (pure Tcl).
+# Category: Encoding · binary/checksums
 # Supports version 4 (random) and version 7 (Unix-time-ordered, RFC 9562).
 # Tcl 8.6+ and 9.x.
 

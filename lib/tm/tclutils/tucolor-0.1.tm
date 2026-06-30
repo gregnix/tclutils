@@ -1,4 +1,6 @@
 # tclutils::tucolor -- named-color database and conversions. Resolves color
+# Description: named-color database and conversions.
+# Category: Terminal · color
 # names / hex / rgb triples to RGB, converts to hex and HSV, finds the nearest
 # named color. The name table (CSS3 / X11 standard colors) is embedded, so the
 # module is pure Tcl and GUI-free -- no Tk / X11 needed at runtime. The table

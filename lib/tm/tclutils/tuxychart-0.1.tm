@@ -1,4 +1,6 @@
 # tuxychart-0.1.tm -- parse and render a Mermaid `xychart-beta` block to SVG or
+# Description: parse and render a Mermaid `xychart-beta` block to SVG or PNG (pure-Tcl backends)
+# Category: Diagrams · Mermaid
 # PNG through the pure-Tcl backends (tusvg / tupngdraw), so an xychart can be
 # shown natively everywhere -- no browser. Like `tupie`, this is NOT a graph; it
 # renders directly and is reached through the `tclutils::tuflow` facade

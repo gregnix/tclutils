@@ -17,7 +17,7 @@
 #                       pure-lib modules have no CLI/GUI; optional modules are
 #                       deliberately kept out of the umbrella)
 #
-# Usage:  tclsh tools/check-modules.tcl [repo-root] [-require test,doc,man,...] [-manifest tsv|md]
+# Usage:  tclsh tools/check-modules.tcl [repo-root] [-require test,doc,man,...] [-manifest tsv|md] [-title text]
 #   repo-root  : defaults to the parent of this script's directory
 #   -require   : comma-separated subset of {test doc man bin demo umbr};
 #                default "test,doc,man". These drive the REQUIRED gap list and
@@ -26,7 +26,7 @@
 #                Formats:
 #                  tsv : tab-separated, one row per module
 #                  md  : a Markdown table (header + separator + rows)
-#                Columns: package version description test doc man repo path deps
+#                Columns: package version description category test doc man repo path deps
 #                "description" is read from a "# Description: ..." header line in
 #                the module's .tm file (empty if absent). "deps" lists the
 #                "package require" targets of the module (internal collection
@@ -40,6 +40,11 @@
 #                md: 2 lines):
 #                  check-modules.tcl <tclutils> -manifest tsv  >modules.tsv
 #                  check-modules.tcl <tkutils>  -manifest tsv | tail -n +2 >>modules.tsv
+#   -title     : with "-manifest md", prepend a "# <text>" H1 heading (and a
+#                blank line) before the table, so a renderer (e.g. docir) gets a
+#                page title. Ignored for tsv. Off by default, so existing md
+#                pipelines (and the "tail -n +N" combine trick above) are
+#                unaffected.
 #
 # Exit code: 1 if any module has multiple versions OR lacks a REQUIRED
 #            artifact; otherwise 0.
@@ -61,6 +66,17 @@ proc moduleDesc {path} {
     foreach line [split $data \n] {
         if {[regexp -nocase {^\s*#\s*Description:\s*(.*)$} $line -> d]} {
             return [string trim $d]
+        }
+    }
+    return ""
+}
+
+# Read the "# Category: ..." header line from a .tm file (empty if absent).
+proc moduleCat {path} {
+    if {[catch {readFile $path} data]} { return "" }
+    foreach line [split $data \n] {
+        if {[regexp -nocase {^\s*#\s*Category:\s*(.*)$} $line -> c]} {
+            return [string trim $c]
         }
     }
     return ""
@@ -88,12 +104,14 @@ proc main {argv} {
     set root ""
     set required {test doc man}
     set manifest ""
+    set mdTitle ""
     for {set i 0} {$i < [llength $argv]} {incr i} {
         set a [lindex $argv $i]
         switch -glob -- $a {
             -require { set required [split [lindex $argv [incr i]] ", "] }
             -manifest - --manifest { set manifest [lindex $argv [incr i]] }
-            -h - -help { puts "usage: check-modules.tcl \[repo-root\] \[-require test,doc,man,bin,demo,umbr\] \[-manifest tsv|md\]"; exit 0 }
+            -title { set mdTitle [lindex $argv [incr i]] }
+            -h - -help { puts "usage: check-modules.tcl \[repo-root\] \[-require test,doc,man,bin,demo,umbr\] \[-manifest tsv|md\] \[-title text\]"; exit 0 }
             -* { puts stderr "unknown option: $a"; exit 2 }
             default { set root [file normalize $a] }
         }
@@ -151,11 +169,19 @@ proc main {argv} {
     array set total {test 0 doc 0 man 0 bin 0 demo 0 umbr 0}
 
     if {$manifestMode} {
-        set manifestCols {package version description test doc man repo path deps}
+        fconfigure stdout -encoding utf-8
+        set manifestCols {package version description category test doc man repo path deps}
         if {$manifest eq "md"} {
+            if {$mdTitle ne ""} {
+                puts "# $mdTitle"
+                puts ""
+            }
             puts "| [join $manifestCols { | }] |"
             puts "|[string repeat {---|} [llength $manifestCols]]"
         } else {
+            if {$mdTitle ne ""} {
+                puts stderr "note: -title is only used with -manifest md; ignored"
+            }
             puts [join $manifestCols \t]
         }
     } else {
@@ -201,15 +227,19 @@ proc main {argv} {
             set desc [moduleDesc $full]
             regsub -all {\s+} $desc " " desc
             set desc [string trim $desc]
+            set cat [moduleCat $full]
+            regsub -all {\s+} $cat " " cat
+            set cat [string trim $cat]
             set deps [join [moduleDeps $full ${repo}::$name] ,]
             set tY [expr {$chk(test)?"Y":"N"}]
             set dY [expr {$chk(doc)?"Y":"N"}]
             set mY [expr {$chk(man)?"Y":"N"}]
             if {$manifest eq "md"} {
                 set mdDesc [string map {| \\|} $desc]
-                puts "| `${repo}::$name` | [join $vers ,] | $mdDesc | $tY | $dY | $mY | $repo | `$path` | $deps |"
+                set mdCat [string map {| \\|} $cat]
+                puts "| `${repo}::$name` | [join $vers ,] | $mdDesc | $mdCat | $tY | $dY | $mY | $repo | `$path` | $deps |"
             } else {
-                puts [join [list ${repo}::$name [join $vers ,] $desc $tY $dY $mY $repo $path $deps] \t]
+                puts [join [list ${repo}::$name [join $vers ,] $desc $cat $tY $dY $mY $repo $path $deps] \t]
             }
         } else {
             set verCol [join $vers ,]; if {$isDup} { append verCol " !" }

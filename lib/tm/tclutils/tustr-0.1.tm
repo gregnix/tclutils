@@ -1,4 +1,6 @@
 # tclutils::tustr -- small string helpers that the Tcl core does not provide
+# Description: small string helpers the Tcl core lacks (case, padding/centering, affixes, slug)
+# Category: Text · strings/coreutils
 # directly (case conversion, padding/centering, prefix/suffix handling,
 # slugify, occurrence counting). Pure Tcl, no dependencies. For things the core
 # already does well use those instead: [string reverse], [string map], etc.

@@ -1,4 +1,6 @@
 # tclutils::turrule -- expand iCalendar RRULE recurrence rules into occurrences.
+# Description: expand iCalendar RRULE recurrence rules into occurrences.
+# Category: Date · time/calendar
 #
 # Supported subset of RFC 5545: FREQ DAILY/WEEKLY/MONTHLY/YEARLY, INTERVAL,
 # COUNT, UNTIL, BYDAY (weekday list for WEEKLY; ordinal forms like 1MO/-1FR for

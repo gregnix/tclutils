@@ -1,4 +1,6 @@
 # tclutils::tupng -- a pure-Tcl PNG encoder (no Tk, no external packages; uses
+# Description: a pure-Tcl PNG encoder (no Tk, no external packages; uses only the core "zlib" command).
+# Category: Graphics · raster/vector
 # only the core "zlib" command). Writes 8-bit images in four colour types:
 #   indexed (palette, type 3) | RGB (type 2) | RGBA (type 6) | grayscale (type 0)
 #

@@ -1,4 +1,6 @@
 # tclutils::tupkgfinder -- inspect how Tcl resolves packages: known versions,
+# Description: inspect how Tcl resolves packages: versions, ifneeded scripts, locations, active vs shadowed
+# Category: System · runtime
 # their `ifneeded` scripts and source locations, which version is active vs.
 # shadowed, the relevant search paths, and an optional filesystem search by
 # pattern. Pure Tcl, library-neutral, no GUI.

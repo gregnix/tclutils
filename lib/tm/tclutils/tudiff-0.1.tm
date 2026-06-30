@@ -1,4 +1,6 @@
 # tclutils::tudiff -- portable line based diff tools in pure Tcl
+# Description: portable line based diff tools in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

@@ -1,4 +1,6 @@
 # tclutils::tujson -- small JSON helper in pure Tcl
+# Description: small JSON helper in pure Tcl
+# Category: Data · structures & formats
 # Tcl 8.6+
 #
 # Provides string quoting/escaping, minify/pretty formatting, validation,

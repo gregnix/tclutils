@@ -1,4 +1,6 @@
 # tclutils::tutee -- tee-like helpers
+# Description: tee-like helpers
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

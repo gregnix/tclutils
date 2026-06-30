@@ -1,4 +1,6 @@
 # tclutils::tuawk -- awk-style record/field processing
+# Description: awk-style record/field processing
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 #
 # Brings awk's *model* to Tcl: each record (line) is split into fields, and a

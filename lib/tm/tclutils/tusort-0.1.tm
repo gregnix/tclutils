@@ -1,4 +1,6 @@
 # tclutils::tusort -- sort-like helpers
+# Description: sort-like helpers
+# Category: Text · strings/coreutils
 package require Tcl 8.6-
 package require tclutils::common 0.1
 

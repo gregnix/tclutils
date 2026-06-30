@@ -1,4 +1,6 @@
 # tclutils::tucsv -- small CSV helpers
+# Description: small CSV helpers
+# Category: Data · structures & formats
 # Tcl 8.6+, pure Tcl
 
 package require Tcl 8.6-

@@ -1,4 +1,6 @@
 # tclutils::tutsort -- tsort-like topological sort in pure Tcl
+# Description: tsort-like topological sort in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

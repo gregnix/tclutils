@@ -1,4 +1,6 @@
 # tumindmap-0.1.tm -- parse a Mermaid mindmap into a tclutils::tudiagram model.
+# Description: parse a Mermaid mindmap into a tclutils::tudiagram model.
+# Category: Diagrams · Mermaid
 #
 #   mindmap                 -> header (ignored)
 #   leading whitespace      -> hierarchy. Indentation is relative: a line

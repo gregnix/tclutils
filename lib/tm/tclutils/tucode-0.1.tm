@@ -1,4 +1,6 @@
 # tclutils::tucode -- character code tables (ASCII, Latin-1/ANSI, signs)
+# Description: character code tables (ASCII, Latin-1/ANSI, signs)
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 
 package require Tcl 8.6-

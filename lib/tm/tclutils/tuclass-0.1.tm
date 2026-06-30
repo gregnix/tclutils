@@ -1,4 +1,6 @@
 # tuclass-0.1.tm -- parse Mermaid classDiagram into a tclutils::tudiagram model.
+# Description: parse Mermaid classDiagram into a tclutils::tudiagram model.
+# Category: Diagrams · Mermaid
 #
 #   class X { +int a; +m() }   /  X : +int a  /  X : +m()   -> box with
 #       three compartments (name / attributes / methods), separated by a

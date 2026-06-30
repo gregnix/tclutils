@@ -1,4 +1,6 @@
 # tclutils::tunumfmt -- numfmt-like human-readable number formatting in pure Tcl
+# Description: numfmt-like human-readable number formatting in pure Tcl
+# Category: Numeric · validation
 # Tcl 8.6+
 
 package require Tcl 8.6-

@@ -1,4 +1,6 @@
 # tuarchitecture-0.1.tm -- parse a Mermaid `architecture-beta` diagram into a
+# Description: parse a Mermaid `architecture-beta` diagram into a tclutils::tudiagram model (SVG or PNG)
+# Category: Diagrams · Mermaid
 # tclutils::tudiagram model, so an architecture block renders natively (SVG or
 # PNG) through the pure-Tcl engine everywhere -- no browser. Like `tuc4`, this
 # is a graph parser: it only builds a tudiagram model and is reached through the

@@ -31,7 +31,8 @@ the Unix-tool mapping is in [`docs/guide/coreutils-mapping.md`](docs/guide/coreu
 |----------|---------|
 | Text / coreutils filters | `tucat` `tutac` `turev` `tunl` `tuseq` `tuhead` `tutail` `tuwc` `tusort` `tutsort` `tuuniq` `tucut` `tupaste` `tujoin` `tucomm` `tucsplit` `tusplit` `tufold` `tuexpand` `tushuf` `tucolumn` `tupr` `tutr` `tused` `tugrep` `tuawk` `tuxargs` `tufmt` |
 | Compare / patch | `tucmp` `tudiff` `tupatch` |
-| Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` `tupngdraw` `tutablepng` `tumonthpng` `tucodepng` `tupngpad` `tusvg` |
+| Binary / encoding / checksums | `tubin` `tuhexdump` `tuod` `tuhexedit` `tubase64` `tucrc` `tuhash` `tustrings` `tuiconv` `tucode` `tubase32` `tuimage` `tupng` `tupngdraw` `tutablepng` `tumonthpng` `tucodepng` `tupngpad` `tusvg` `tulayout` |
+| Terminal / color | `tucolor` `tuterm` |
 | Data / serialization | `tucsv` `tujson` `tuxml` `tusqlite` `tummdb` |
 | Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` `tuexe` |
 | Fuzzy search | `tufuzzy` `tuagrep` |
@@ -46,7 +47,7 @@ the Unix-tool mapping is in [`docs/guide/coreutils-mapping.md`](docs/guide/coreu
 | Number parsing / formatting | `tunum` `tunumany` `tunumfmt` |
 | Archive | `tuzip` `tuzipfs` |
 | Deployment / packaging | `tudeploy` |
-| Diagrams (Mermaid-compatible) | `tuflow` `tudiagram` `tupie` `tuxychart` `tustate` `tuer` `tuclass` `turequirement` `tumindmap` `tuc4` `tublock` `tugit` `tuquadrant` `tujourney` `tutimeline` `tusankey` `tugantt` `tusequence` |
+| Diagrams (Mermaid-compatible) | `tuflow` `tudiagram` `tustate` `tuer` `tuclass` `turequirement` `tumindmap` `tuc4` `tublock` `tugit` `tuarchitecture` `tupie` `tuxychart` `tuquadrant` `tujourney` `tutimeline` `tusankey` `tugantt` `tusequence` `tukanban` `tupacket` `tutreemap` `turadar` |
 | Introspection / diagnostics | `tuappinfo` `tupkgfinder` |
 | Core | `common` |
 

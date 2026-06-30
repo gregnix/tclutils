@@ -1,4 +1,6 @@
 # tclutils::tubase32 -- RFC 4648 base32 (and base32hex) encode/decode.
+# Description: RFC 4648 base32 (and base32hex) encode/decode.
+# Category: Encoding · binary/checksums
 # Tcl core provides base64 but not base32, so this is a pure-Tcl implementation.
 # Tcl 8.6+ and 9.x.
 

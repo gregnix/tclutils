@@ -1,4 +1,6 @@
 # tclutils::tuholiday -- public-holiday dates from the Easter computus.
+# Description: public-holiday dates from the Easter computus.
+# Category: Date · time/calendar
 #
 # Computes Easter Sunday (Gregorian, Meeus/Jones/Butcher algorithm) and the
 # German nationwide statutory holidays for a given year. Pure Tcl on top of

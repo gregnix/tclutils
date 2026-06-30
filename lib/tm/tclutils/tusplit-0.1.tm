@@ -1,4 +1,6 @@
 # tclutils::tusplit -- split files into smaller parts
+# Description: split files into smaller parts
+# Category: Archive · filesystem
 # Tcl 8.6+
 
 package require Tcl 8.6-

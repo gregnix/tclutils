@@ -1,4 +1,6 @@
 # tclutils::tunl -- nl-like line numbering in pure Tcl
+# Description: nl-like line numbering in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

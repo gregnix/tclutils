@@ -1,4 +1,6 @@
 # tclutils::tuzip -- small ZIP/ODF helper in pure Tcl
+# Description: small ZIP/ODF helper in pure Tcl
+# Category: Archive · filesystem
 # Tcl 8.6+
 #
 # Scope of 0.1:

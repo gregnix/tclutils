@@ -1,4 +1,6 @@
 # tclutils::tufuzzy -- fuzzy matching primitives in pure Tcl
+# Description: fuzzy matching primitives in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

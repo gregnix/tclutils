@@ -1,4 +1,6 @@
 # tclutils::tuldif -- LDIF (RFC 2849) reader/writer
+# Description: LDIF (RFC 2849) reader/writer
+# Category: Data · structures & formats
 #
 # Parses LDIF text into a list of entries and serializes entries back to LDIF.
 # An entry is an ordered list of {attribute value} pairs (the dn is just the

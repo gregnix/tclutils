@@ -1,4 +1,6 @@
 # tustate-0.1.tm -- parse Mermaid stateDiagram / stateDiagram-v2 into a
+# Description: parse Mermaid stateDiagram / stateDiagram-v2 into a tclutils::tudiagram model.
+# Category: Diagrams · Mermaid
 # tclutils::tudiagram model.
 #
 #   states        -> rounded boxes

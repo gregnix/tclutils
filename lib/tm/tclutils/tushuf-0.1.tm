@@ -1,4 +1,6 @@
 # tclutils::tushuf -- shuf-like line shuffling in pure Tcl
+# Description: shuf-like line shuffling in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 #
 # Uses a small self-contained linear congruential generator so that a given

@@ -1,4 +1,6 @@
 # tclutils::tucomm -- comm-like helpers for sorted line sets
+# Description: comm-like helpers for sorted line sets
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

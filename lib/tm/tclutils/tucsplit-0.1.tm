@@ -1,4 +1,6 @@
 # tclutils::tucsplit -- split text files by content patterns
+# Description: split text files by content patterns
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

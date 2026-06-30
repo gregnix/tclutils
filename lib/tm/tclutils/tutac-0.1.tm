@@ -1,4 +1,6 @@
 # tclutils::tutac -- tac-like reversal of line order
+# Description: tac-like reversal of line order
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

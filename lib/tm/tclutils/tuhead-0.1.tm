@@ -1,4 +1,6 @@
 # tclutils::tuhead -- head-like helpers
+# Description: head-like helpers
+# Category: Text · strings/coreutils
 package require Tcl 8.6-
 
 namespace eval ::tclutils {}

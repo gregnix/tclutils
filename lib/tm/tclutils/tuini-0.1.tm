@@ -1,4 +1,6 @@
 # tclutils::tuini -- INI file reader/writer
+# Description: INI file reader/writer
+# Category: Data · structures & formats
 #
 # Parses INI text into a dict section -> (dict key -> value) and serializes it
 # back. Keys before any [section] live in the global section "". Section and key

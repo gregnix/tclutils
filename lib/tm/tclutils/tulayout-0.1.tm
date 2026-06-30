@@ -1,4 +1,6 @@
 # tclutils::tulayout -- page layout helpers (mm coordinates, block dicts)
+# Description: page layout helpers (mm coordinates, block dicts)
+# Category: Graphics · raster/vector
 #
 # Pure Tcl engine for document block layouts: paper sizes, mm<->px conversion,
 # grid snap, block normalisation/validation, and preset merging. No Tk dependency.

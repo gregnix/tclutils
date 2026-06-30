@@ -1,4 +1,6 @@
 # tclutils::tuvcard -- vCard (RFC 6350 / 2426) reader/writer
+# Description: vCard (RFC 6350 / 2426) reader/writer
+# Category: Data · structures & formats
 #
 # Parses vCard text into a list of cards and serializes back with line folding.
 # A card is a list of property dicts: {name NAME value VALUE params {k v ...}}.

@@ -1,4 +1,6 @@
 # tclutils::tucolumn -- column-like columnation in pure Tcl
+# Description: column-like columnation in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

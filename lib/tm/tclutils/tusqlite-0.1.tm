@@ -1,4 +1,6 @@
 # tclutils::tusqlite -- thin, safe helpers over an existing sqlite3 db command.
+# Description: thin, safe helpers over an existing sqlite3 db command.
+# Category: Data · structures & formats
 # Tcl 8.6+ and 9.x.
 #
 # Works on a db handle the caller already opened (e.g. `sqlite3 db file.db`); the

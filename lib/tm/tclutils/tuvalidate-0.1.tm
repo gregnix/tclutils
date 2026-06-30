@@ -1,4 +1,6 @@
 # tclutils::tuvalidate -- small format/type validation predicates. Each returns
+# Description: small format/type validation predicates.
+# Category: Numeric · validation
 # a boolean (1/0); they never throw on the value being validated (only on bad
 # *arguments*, e.g. a non-integer bound). Pure Tcl, no dependencies.
 #

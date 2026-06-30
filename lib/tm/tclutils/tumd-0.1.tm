@@ -1,4 +1,6 @@
 # tclutils::tumd -- minimal Markdown helpers (CommonMark subset)
+# Description: minimal Markdown helpers (CommonMark subset)
+# Category: Data · structures & formats
 # Tcl 8.6+
 #
 # A focused, dependency-free Markdown utility: convert a CommonMark subset to

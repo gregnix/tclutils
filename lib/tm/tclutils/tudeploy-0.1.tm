@@ -1,4 +1,6 @@
 # tclutils::tudeploy -- runtime discovery + loading of Tcl module packages from
+# Description: runtime discovery and loading of Tcl module packages from app-relative deployment roots
+# Category: System · runtime
 # application-relative deployment roots, plus locating bundled resource dirs.
 #
 # Pure Tcl, no external dependencies. Library-neutral: takes package lists and

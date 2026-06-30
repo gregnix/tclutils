@@ -1,4 +1,6 @@
 # tutreemap-0.1.tm -- parse a Mermaid `treemap-beta` block and render it as a
+# Description: parse a Mermaid `treemap-beta` block and render a squarified treemap to SVG or PNG
+# Category: Diagrams · Mermaid
 # squarified treemap (area-proportional nested rectangles) to SVG or PNG through
 # the pure-Tcl backends (tusvg / tupngdraw) -- no browser. Like `tupie` /
 # `tukanban` / `tupacket`, this is NOT a node-edge graph: it renders directly and

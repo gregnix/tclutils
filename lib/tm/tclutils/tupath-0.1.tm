@@ -1,4 +1,6 @@
 # tclutils::tupath -- path utilities (normalize, lexical clean, commonpath, ...)
+# Description: path utilities (normalize, lexical clean, commonpath, ...)
+# Category: Archive · filesystem
 # Tcl 8.6+
 #
 # Thin, predictable helpers around Tcl's `file` command plus two things the

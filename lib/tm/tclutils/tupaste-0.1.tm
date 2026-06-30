@@ -1,4 +1,6 @@
 # tclutils::tupaste -- paste-like helpers for combining line streams
+# Description: paste-like helpers for combining line streams
+# Category: Text · strings/coreutils
 package require Tcl 8.6-
 package require tclutils::common 0.1
 

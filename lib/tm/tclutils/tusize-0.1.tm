@@ -1,4 +1,6 @@
 # tclutils::tusize -- directory/file sizes (a small `du`)
+# Description: directory/file sizes (a small `du`)
+# Category: Archive · filesystem
 # Tcl 8.6+
 #
 # Recursive byte totals plus human-readable formatting. Symlinks are NOT

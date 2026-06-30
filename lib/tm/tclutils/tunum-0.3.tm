@@ -1,4 +1,6 @@
 # tclutils::tunum -- robust parsing of human-formatted numbers and summation.
+# Description: robust parsing of human-formatted numbers and summation.
+# Category: Numeric · validation
 # Handles EU (1.234,56) and US (1,234.56) grouping, plain decimals, currency
 # symbols and surrounding whitespace. Pure Tcl, library-neutral, no GUI.
 #

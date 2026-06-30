@@ -1,4 +1,6 @@
 # tclutils::tuwc -- portable word/line/char/byte counter in pure Tcl
+# Description: portable word/line/char/byte counter in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

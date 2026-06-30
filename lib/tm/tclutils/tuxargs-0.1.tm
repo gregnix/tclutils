@@ -1,4 +1,6 @@
 # tclutils::tuxargs -- xargs-like list batching helpers
+# Description: xargs-like list batching helpers
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

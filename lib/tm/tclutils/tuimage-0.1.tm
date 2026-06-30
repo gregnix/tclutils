@@ -1,4 +1,6 @@
 # tclutils::tuimage -- pure-Tcl image inspection: detect the format, MIME type
+# Description: pure-Tcl image inspection: format, MIME type and pixel dimensions, plus data: URI helpers
+# Category: Graphics · raster/vector
 # and pixel dimensions of an image from its raw bytes, plus data: URI helpers.
 # No decoding or pixel processing (that is Tk's or imgtools' job). Tcl 8.6+/9.x.
 #

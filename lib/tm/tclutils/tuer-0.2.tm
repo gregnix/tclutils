@@ -1,4 +1,6 @@
 # tuer-0.1.tm -- parse Mermaid erDiagram into a tclutils::tudiagram model.
+# Description: parse Mermaid erDiagram into a tclutils::tudiagram model.
+# Category: Diagrams · Mermaid
 #
 #   ENTITY { type name [key] ... }   -> a box: entity name + attribute lines
 #   A <cardinality> B : label        -> an arrowless edge A--B labelled <label>,

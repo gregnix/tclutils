@@ -1,4 +1,6 @@
 # tclutils::tuhexedit -- small binary read/write/search/patch helpers
+# Description: small binary read/write/search/patch helpers
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 
 package require Tcl 8.6-

@@ -1,4 +1,6 @@
 # tupacket-0.1.tm -- parse and render a Mermaid `packet-beta` block to SVG or
+# Description: parse and render a Mermaid `packet-beta` block to SVG or PNG (pure-Tcl backends)
+# Category: Diagrams · Mermaid
 # PNG through the pure-Tcl backends (tusvg / tupngdraw), so a packet/bit-field
 # layout can be shown natively everywhere -- no browser. Like `tupie` /
 # `tukanban`, this is NOT a node-edge graph: it renders directly and is reached

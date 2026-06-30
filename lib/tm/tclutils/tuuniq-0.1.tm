@@ -1,4 +1,6 @@
 # tclutils::tuuniq -- uniq-like helpers
+# Description: uniq-like helpers
+# Category: Text · strings/coreutils
 package require Tcl 8.6-
 package require tclutils::common 0.1
 

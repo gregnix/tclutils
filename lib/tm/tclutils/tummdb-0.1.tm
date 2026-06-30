@@ -1,4 +1,6 @@
 # tclutils::tummdb -- a pure-Tcl reader for the MaxMind DB (.mmdb) binary
+# Description: a pure-Tcl reader for the MaxMind DB (.mmdb) binary format, version 2.0 of the spec.
+# Category: Network · web
 # format, version 2.0 of the spec. Supports IPv4 and IPv6 lookups against
 # GeoLite2 / GeoIP2 / DB-IP style databases.
 #

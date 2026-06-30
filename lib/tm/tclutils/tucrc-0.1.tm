@@ -1,4 +1,6 @@
 # tclutils::tucrc -- CRC and Adler checksum helpers using Tcl core zlib
+# Description: CRC and Adler checksum helpers using Tcl core zlib
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 
 package require Tcl 8.6-

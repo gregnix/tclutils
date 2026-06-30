@@ -1,4 +1,6 @@
 # tclutils::turev -- rev-like reversal of characters within each line
+# Description: rev-like reversal of characters within each line
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

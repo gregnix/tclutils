@@ -1,4 +1,6 @@
 # tclutils::tuurl -- URL percent-encoding/decoding and query strings (UTF-8).
+# Description: URL percent-encoding/decoding and query strings (UTF-8).
+# Category: Network · web
 # Unreserved characters (A-Z a-z 0-9 - . _ ~) pass through; everything else is
 # percent-encoded over the UTF-8 bytes. Tcl 8.6+ and 9.x.
 

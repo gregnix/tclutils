@@ -1,4 +1,6 @@
 # tclutils::tutable -- render a text table from headers + rows. Two styles:
+# Description: render a text table from headers + rows.
+# Category: Text · strings/coreutils
 # markdown (GitHub-style pipe table, default) and box (ASCII +/-/| borders).
 # Per-column alignment is supported. Pure Tcl; uses tclutils::common for option
 # parsing. Distinct from tucolumn (the `column` coreutil filter).

@@ -1,4 +1,6 @@
 # tclutils::tutail -- tail-like helpers
+# Description: tail-like helpers
+# Category: Text · strings/coreutils
 package require Tcl 8.6-
 
 namespace eval ::tclutils {}

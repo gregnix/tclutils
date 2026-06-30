@@ -1,4 +1,6 @@
 # tclutils::common -- shared helpers for tclutils modules
+# Description: shared helpers for tclutils modules
+# Category: System · runtime
 # Tcl 8.6+
 
 package require Tcl 8.6-

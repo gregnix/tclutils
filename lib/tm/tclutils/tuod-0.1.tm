@@ -1,4 +1,6 @@
 # tclutils::tuod -- small od-like binary dump helpers in pure Tcl
+# Description: small od-like binary dump helpers in pure Tcl
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 
 package require Tcl 8.6-

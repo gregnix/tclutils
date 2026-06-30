@@ -1,4 +1,6 @@
 # tclutils::tuiconv -- small encoding conversion helpers in pure Tcl
+# Description: small encoding conversion helpers in pure Tcl
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 
 package require Tcl 8.6-

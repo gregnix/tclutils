@@ -1,4 +1,6 @@
 # tclutils::tucodepng -- render a character-code table (ASCII / Latin-1) to a
+# Description: render a character-code table (ASCII / Latin-1) to a PNG code-page grid
+# Category: Graphics · raster/vector
 # PNG image: a classic code-page grid where each cell shows the hex code and the
 # glyph. Data comes from tclutils::tucode (lookup); drawing from tclutils::tupngdraw.
 # Pure Tcl, no Tk.

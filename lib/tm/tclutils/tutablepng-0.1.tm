@@ -1,4 +1,6 @@
 # tclutils::tutablepng -- render tabular data to a PNG table image, using the
+# Description: render tabular data to a PNG table image via tclutils::tupngdraw (no Tk)
+# Category: Graphics · raster/vector
 # pure-Tcl drawing layer tclutils::tupngdraw (no Tk, no external packages).
 #
 # An "export adapter": data in -> a styled table image out (header row, column

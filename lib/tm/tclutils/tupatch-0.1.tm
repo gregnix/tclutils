@@ -1,4 +1,6 @@
 # tclutils::tupatch -- patch-like applier for unified diffs
+# Description: patch-like applier for unified diffs
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 #
 # Applies a unified diff (as produced by tclutils::tudiff, and also general

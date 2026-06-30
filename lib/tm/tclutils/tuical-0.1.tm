@@ -1,4 +1,6 @@
 # tclutils::tuical -- iCalendar (RFC 5545) reader/writer
+# Description: iCalendar (RFC 5545) reader/writer
+# Category: Date · time/calendar
 #
 # Parses iCalendar text into a tree of components and serializes it back with
 # proper line folding. A component is a dict:

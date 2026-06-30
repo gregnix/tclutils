@@ -1,4 +1,6 @@
 # tclutils::turegistry -- a small keyed value registry (service locator / bag).
+# Description: a small keyed value registry (service locator / bag).
+# Category: Data · structures & formats
 # Create independent registries, store values under keys, and fetch them with a
 # required-get that errors on a missing key (or returns a supplied default).
 # Pure Tcl. Tcl 8.6+ and 9.x.

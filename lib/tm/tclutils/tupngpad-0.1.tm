@@ -1,4 +1,6 @@
 # tclutils::tupngpad -- normalise a set of (transparent) PNGs to a uniform size.
+# Description: normalise a set of (transparent) PNGs to a uniform size.
+# Category: Graphics · raster/vector
 #
 # Typical use: object cut-outs saved as transparent PNGs, each cropped to its
 # own tight bounding box. This brings them all to ONE size, centres each one,

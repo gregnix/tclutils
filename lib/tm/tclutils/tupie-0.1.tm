@@ -1,4 +1,6 @@
 # tupie-0.1.tm -- a Mermaid-style pie chart renderer for the tuflow family.
+# Description: a Mermaid-style pie chart renderer for the tuflow family.
+# Category: Diagrams · Mermaid
 #
 # Parses a Mermaid `pie` block into a small model dict and renders it to SVG or
 # PNG with the pure-Tcl drawing backends (tusvg / tupngdraw). A pie chart is not

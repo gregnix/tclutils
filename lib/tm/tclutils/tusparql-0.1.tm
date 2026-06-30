@@ -1,4 +1,6 @@
 # tclutils::tusparql -- a thin SPARQL client.
+# Description: a thin SPARQL client.
+# Category: Network · web
 # Tcl 8.6+ and 9.x.
 #
 # It composes existing tclutils modules instead of reimplementing anything:

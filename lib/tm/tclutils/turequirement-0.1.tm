@@ -1,4 +1,6 @@
 # turequirement-0.1.tm -- parse Mermaid requirementDiagram into a
+# Description: parse Mermaid requirementDiagram into a tclutils::tudiagram model.
+# Category: Diagrams · Mermaid
 # tclutils::tudiagram model.
 #
 #   requirement <name> { id: .. text: .. risk: .. verifymethod: .. }  -> box

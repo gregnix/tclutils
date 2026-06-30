@@ -1,4 +1,6 @@
 # tuflow-0.1.tm – a compact flowchart text syntax for tudiagram.
+# Description: a compact flowchart text syntax for tudiagram.
+# Category: Diagrams · Mermaid
 #
 # Parses an arrow-based flowchart notation into a tudiagram model dict, so a
 # fenced flowchart block can render natively through the pure-Tcl engine

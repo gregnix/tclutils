@@ -1,4 +1,6 @@
 # tclutils::tuhash -- pure-Tcl cryptographic digests (SHA-256, SHA-1, MD5)
+# Description: pure-Tcl cryptographic digests (SHA-256, SHA-1, MD5)
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 #
 # These are clean-room implementations of the FIPS 180-4 / RFC 1321 digests so

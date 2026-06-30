@@ -1,4 +1,6 @@
 # tclutils::tuseq -- seq-like numeric sequence generation in pure Tcl
+# Description: seq-like numeric sequence generation in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

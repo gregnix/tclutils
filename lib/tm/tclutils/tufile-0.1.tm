@@ -1,4 +1,6 @@
 # tclutils::tufile -- file type detection by magic signatures
+# Description: file type detection by magic signatures
+# Category: Archive · filesystem
 # Tcl 8.6+
 #
 # Detect a file's type from its header bytes (magic numbers), like the Unix

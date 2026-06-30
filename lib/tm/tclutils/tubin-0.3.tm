@@ -1,4 +1,6 @@
 # tclutils::tubin -- binary helper primitives in pure Tcl
+# Description: binary helper primitives in pure Tcl
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 
 package require Tcl 8.6-

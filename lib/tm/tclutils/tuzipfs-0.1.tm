@@ -1,4 +1,6 @@
 # tclutils::tuzipfs -- small Tcl 9 zipfs convenience wrapper
+# Description: small Tcl 9 zipfs convenience wrapper
+# Category: Archive · filesystem
 # Tcl 8.6+: package can load everywhere; commands requiring zipfs throw a clear error.
 
 package require Tcl 8.6-

@@ -1,4 +1,6 @@
 # tclutils::tused -- small sed-like text replacement/filter routines in pure Tcl
+# Description: small sed-like text replacement/filter routines in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

@@ -1,4 +1,6 @@
 # tclutils::tumonthpng -- render a month calendar to a PNG image, mirroring the
+# Description: render a month calendar to a PNG image, mirroring the monthcanvas Tk widget
+# Category: Graphics · raster/vector
 # look of the monthcanvas Tk widget (themes, week numbers, weekday header,
 # today/weekend/holiday/note/other-month cell states). Pure Tcl: the month grid
 # is computed with the core clock command (no Tk, no gel::calendar); drawing is

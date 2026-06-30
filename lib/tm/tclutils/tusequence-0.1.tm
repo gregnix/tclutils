@@ -1,4 +1,6 @@
 # tusequence-0.1.tm -- parse and render a Mermaid `sequenceDiagram` block to SVG
+# Description: parse and render a Mermaid `sequenceDiagram` block to SVG or PNG.
+# Category: Diagrams · Mermaid
 # or PNG. A self-contained 2D renderer in the tuflow family (like tugantt /
 # tusankey): own parser, draws onto the shared abstract canvas (tusvg /
 # tupngdraw), so SVG and PNG output stay congruent.

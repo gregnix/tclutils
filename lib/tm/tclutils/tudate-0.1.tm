@@ -1,4 +1,6 @@
 # tclutils::tudate -- flexible date helpers on top of the Tcl clock command.
+# Description: flexible date helpers on top of the Tcl clock command.
+# Category: Date · time/calendar
 # Parse common formats, render ISO, do calendar arithmetic, day differences and
 # human-readable relative phrases. Works in local time. Tcl 8.6+ and 9.x.
 

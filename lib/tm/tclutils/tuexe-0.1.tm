@@ -1,4 +1,6 @@
 # tclutils::tuexe -- locate external executables
+# Description: locate external executables
+# Category: System · runtime
 #
 # Resolve a program by name across extra (bundled/vendor) directories and the
 # system PATH, trying a list of candidate names and platform-specific

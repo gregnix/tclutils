@@ -1,4 +1,6 @@
 # tclutils::tubase64 -- base64 helpers using Tcl core binary encode/decode
+# Description: base64 helpers using Tcl core binary encode/decode
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 
 package require Tcl 8.6-

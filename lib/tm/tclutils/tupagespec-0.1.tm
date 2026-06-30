@@ -1,4 +1,6 @@
 # tclutils::tupagespec -- parse and format page-range specifications
+# Description: parse and format page-range specifications
+# Category: Text · strings/coreutils
 #
 # Turn a human range string like "1-3,5,7-" into a concrete list of page
 # numbers, and the inverse: compact a list of numbers back into "1-3,5,7-9".

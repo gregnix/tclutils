@@ -1,4 +1,6 @@
 # tclutils::tucal -- cal-like calendar output in pure Tcl
+# Description: cal-like calendar output in pure Tcl
+# Category: Date · time/calendar
 # Tcl 8.6+
 
 package require Tcl 8.6-

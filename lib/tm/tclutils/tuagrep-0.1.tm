@@ -1,4 +1,6 @@
 # tclutils::tuagrep -- approximate grep-like routines in pure Tcl
+# Description: approximate grep-like routines in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

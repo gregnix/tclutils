@@ -1,4 +1,6 @@
 # tclutils::tumath -- small numeric helpers the core expr does not provide
+# Description: small numeric helpers the core expr does not provide directly.
+# Category: Numeric · validation
 # directly. Pure Tcl, no dependencies. (For round/ceil/floor/abs use the core
 # expr() math functions; those are not duplicated here.)
 #

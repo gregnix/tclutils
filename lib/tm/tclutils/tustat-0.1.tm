@@ -1,4 +1,6 @@
 # tclutils::tustat -- stat-like file metadata helpers
+# Description: stat-like file metadata helpers
+# Category: Archive · filesystem
 # Tcl 8.6+
 
 package require Tcl 8.6-

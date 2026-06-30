@@ -1,4 +1,6 @@
 # tusankey-0.1.tm -- parse and render a Mermaid `sankey-beta` block to SVG or
+# Description: parse and render a Mermaid `sankey-beta` block to SVG or PNG.
+# Category: Diagrams · Mermaid
 # PNG. A self-contained 2D renderer in the tuflow family (like tupie /
 # tuxychart / tuquadrant): it has its own parser and draws onto the shared
 # abstract canvas (tusvg / tupngdraw), so SVG and PNG output stay congruent.

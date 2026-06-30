@@ -1,4 +1,6 @@
 # tugantt-0.1.tm -- parse and render a Mermaid `gantt` block to SVG or PNG. A
+# Description: parse and render a Mermaid `gantt` block to SVG or PNG.
+# Category: Diagrams · Mermaid
 # self-contained 2D renderer in the tuflow family (like tupie / tusankey): own
 # parser, draws onto the shared abstract canvas (tusvg / tupngdraw), so SVG and
 # PNG output stay congruent.

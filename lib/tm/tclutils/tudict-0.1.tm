@@ -1,4 +1,6 @@
 # tclutils::tudict -- dict helpers beyond what the Tcl core dict already does.
+# Description: dict helpers beyond what the Tcl core dict already does.
+# Category: Data · structures & formats
 # Pure Tcl, no dependencies.
 #
 # NOTE: the Tcl core already handles nested access natively -- do NOT wrap these:

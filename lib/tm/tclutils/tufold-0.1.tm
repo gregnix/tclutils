@@ -1,4 +1,6 @@
 # tclutils::tufold -- fold-like text wrapping helpers
+# Description: fold-like text wrapping helpers
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

@@ -1,4 +1,6 @@
 # tclutils::tunumany -- a single entry point for "string -> number" that routes
+# Description: a single entry point for string-to-number that routes to the right backend
+# Category: Numeric · validation
 # to the right backend instead of merging them:
 #   * locale-grouped / currency amounts ("1.234,56 €", "1,234.56") -> tunum::parse
 #   * SI/IEC unit notation ("1.5K", "2Mi", "3G")                   -> tunumfmt::fromHuman

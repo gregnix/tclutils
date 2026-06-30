@@ -1,4 +1,6 @@
 # tclutils::tutr -- tr-like character translate/delete helpers
+# Description: tr-like character translate/delete helpers
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

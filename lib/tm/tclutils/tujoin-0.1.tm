@@ -1,4 +1,6 @@
 # tclutils::tujoin -- simple join-like helpers for delimited text
+# Description: simple join-like helpers for delimited text
+# Category: Text · strings/coreutils
 package require Tcl 8.6-
 package require tclutils::common 0.1
 

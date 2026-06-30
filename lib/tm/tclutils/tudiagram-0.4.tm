@@ -1,4 +1,6 @@
 # tudiagram-0.4.tm – box-and-arrow diagrams in pure Tcl.
+# Description: box-and-arrow diagrams in pure Tcl.
+# Category: Diagrams · Mermaid
 #
 # Model (dict) -> layered layout -> render on the shared canvas protocol.
 #

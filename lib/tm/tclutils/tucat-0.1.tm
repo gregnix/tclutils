@@ -1,4 +1,6 @@
 # tclutils::tucat -- small portable cat-like helpers
+# Description: small portable cat-like helpers
+# Category: Text · strings/coreutils
 package require Tcl 8.6-
 package require tclutils::common 0.1
 

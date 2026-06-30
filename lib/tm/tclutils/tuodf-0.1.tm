@@ -1,4 +1,6 @@
 # tclutils::tuodf -- minimal OpenDocument (ODF) text helpers
+# Description: minimal OpenDocument (ODF) text helpers
+# Category: Data · structures & formats
 # Tcl 8.6+
 #
 # Create and read simple ODF text documents (.odt). Pure Tcl: the container is

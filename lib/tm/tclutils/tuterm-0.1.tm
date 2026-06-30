@@ -1,4 +1,6 @@
 # tclutils::tuterm -- ANSI terminal styling (SGR): text attributes and 16- /
+# Description: ANSI terminal styling (SGR): attributes and 16/256/24-bit colors (honours NO_COLOR)
+# Category: Terminal · color
 # 256- / 24-bit colors, with a global enable switch (honours NO_COLOR), an ANSI
 # stripper, and optional Windows VT-mode initialisation. Pure Tcl, GUI-free.
 #

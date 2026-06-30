@@ -1,4 +1,6 @@
 # tclutils::tuopen -- open a URL or file path with the operating system's
+# Description: open a URL or file path with the operating system's default application (xdg-open / open / cmd start).
+# Category: System · runtime
 # default application (xdg-open / open / cmd start). Pure Tcl. Tcl 8.6+ and 9.x.
 #
 # "launch" runs the opener detached; "command" returns the command that would

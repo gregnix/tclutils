@@ -1,4 +1,6 @@
 # tukanban-0.1.tm -- a Mermaid-style kanban renderer for the tuflow family.
+# Description: a Mermaid-style kanban renderer for the tuflow family.
+# Category: Diagrams · Mermaid
 #
 # Parses a Mermaid `kanban` block into a small model dict and renders it to SVG
 # or PNG with the pure-Tcl drawing backends (tusvg / tupngdraw). A kanban board

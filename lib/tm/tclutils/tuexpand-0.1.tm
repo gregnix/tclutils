@@ -1,4 +1,6 @@
 # tclutils::tuexpand -- expand/unexpand (tabs <-> spaces) in pure Tcl
+# Description: expand/unexpand (tabs <-> spaces) in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-

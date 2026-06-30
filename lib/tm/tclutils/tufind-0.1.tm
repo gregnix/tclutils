@@ -1,4 +1,6 @@
 # tclutils::tufind -- portable file finder in pure Tcl
+# Description: portable file finder in pure Tcl
+# Category: Archive · filesystem
 # Tcl 8.6+
 
 package require Tcl 8.6-

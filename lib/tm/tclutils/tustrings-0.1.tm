@@ -1,4 +1,6 @@
 # tclutils::tustrings -- extract printable strings from binary data
+# Description: extract printable strings from binary data
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 
 package require Tcl 8.6-

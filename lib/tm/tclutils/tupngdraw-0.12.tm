@@ -1,4 +1,6 @@
 # tclutils::tupngdraw -- a tiny pure-Tcl 2D drawing layer that renders to a
+# Description: a tiny pure-Tcl 2D drawing layer that renders to a PNG via tclutils::tupng.
+# Category: Graphics · raster/vector
 # PNG via tclutils::tupng. No Tk, no external packages (TclOO is Tcl core).
 #
 # 0.12 (2026-06-20): rect accepts -rx/-ry for rounded corners (tessellated into

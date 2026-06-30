@@ -1,4 +1,6 @@
 # tclutils::tuhexdump -- classic hex/ascii dump in pure Tcl
+# Description: classic hex/ascii dump in pure Tcl
+# Category: Encoding · binary/checksums
 # Tcl 8.6+
 
 package require Tcl 8.6-

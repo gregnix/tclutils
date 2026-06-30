@@ -1,4 +1,6 @@
 # tclutils::tulog -- a small, dependency-free leveled logger. Pure Tcl, 8.6+/9.x.
+# Description: a small, dependency-free leveled logger. Pure Tcl, 8.6+/9.x.
+# Category: System · runtime
 #
 # A logger is a callable command object (so the level names "info"/"error" are
 # subcommands, not procs that would shadow the Tcl built-ins):

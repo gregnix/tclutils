@@ -1,4 +1,6 @@
 # tclutils::tupr -- pr-like simple page formatting in pure Tcl
+# Description: pr-like simple page formatting in pure Tcl
+# Category: Text · strings/coreutils
 # Tcl 8.6+
 
 package require Tcl 8.6-
