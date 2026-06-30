@@ -91,6 +91,7 @@ package require tclutils::tupngpad 0.1
 package require tclutils::tusvg 0.2
 package require tclutils::tupagespec 0.1
 package require tclutils::tuexe 0.1
+package require tclutis::tulayout 0.1
 # Deployment / packaging
 package require tclutils::tudeploy 0.1
 # Introspection / diagnostics

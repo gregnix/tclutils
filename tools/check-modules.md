@@ -5,13 +5,17 @@ module collections.
 
 It scans one repository's module tree (`lib/tm/<repo>/<mod>-X.Y.tm`) and reports,
 per module, which companion artifacts exist (tests, docs, man pages, …). It can
-also emit a machine-readable manifest (TSV or Markdown) listing every module with
-its version, description and dependencies.
+also emit a machine-readable manifest (TSV, Markdown or JSON) listing every module
+with its version, description and dependencies. The JSON form is shaped for the
+[tcltk-pkgs/registry](https://github.com/tcltk-pkgs/registry) `packages.json`, so
+the module list can be regenerated rather than hand-maintained.
 
 ## Synopsis
 
 ```
-tclsh tools/check-modules.tcl [repo-root] [-require test,doc,man,...] [-manifest tsv|md]
+tclsh tools/check-modules.tcl [repo-root] [-require test,doc,man,...] [-manifest tsv|md|json]
+                              [-title text] [-json-baseurl u] [-json-branch b]
+                              [-json-author a] [-json-license l]
 ```
 
 - `repo-root` — repository root to scan. Defaults to the parent of the script's
@@ -22,7 +26,16 @@ tclsh tools/check-modules.tcl [repo-root] [-require test,doc,man,...] [-manifest
   `{test doc man bin demo umbr}`. Default `test,doc,man`. Drives the REQUIRED gap
   list and the exit code.
 - `-manifest <fmt>` — emit a manifest instead of the human-readable report.
-  `<fmt>` is `tsv` or `md`.
+  `<fmt>` is `tsv`, `md` or `json`.
+- `-title <text>` — with `-manifest md`, prepend a `# <text>` H1 heading before
+  the table. Ignored for `tsv` and `json`.
+- `-json-baseurl <u>` — GitHub owner base for the JSON `sources` (default
+  `https://github.com/gregnix`); source `url` is `<u>/<repo>`, `web` is
+  `<u>/<repo>/tree/<branch>/docs/<mod>.md`.
+- `-json-branch <b>` — default branch for the `web` link (default `main`).
+- `-json-author <a>` — author string in the JSON `sources` (default
+  `Gregor Ebbing`).
+- `-json-license <l>` — license string in the JSON `sources` (default `MIT`).
 - `-h`, `-help` — print usage and exit.
 
 ## What it checks
@@ -99,6 +112,15 @@ package  version  description  test  doc  man  repo  path  deps
 - `tsv` — tab-separated, one header row plus one row per module.
 - `md` — a Markdown table (header + separator + rows). `package` and `path` are
   rendered as inline code; `|` characters inside a description are escaped.
+- `json` — a pretty-printed JSON array of registry-ready package objects, one per
+  module, matching the `packages.json` schema (`name` / `sources` / `tags` /
+  `description`). The umbrella package itself is not emitted (sub-modules only,
+  like `tsv`/`md`); add any top-level bundle entry by hand. `tags` are derived
+  from the module's `# Category:` header: the repo name first, then each
+  lowercased category word (split on space and the separators `/`, `&`, `,` and
+  the middle dot `·`), de-duplicated in order — e.g. `Text · strings/coreutils`
+  yields `["<repo>", "text", "strings", "coreutils"]`. `description` comes from
+  the same `# Description:` header used by `tsv`/`md`.
 
 ### The `# Description:` convention
 
@@ -136,6 +158,21 @@ tclsh tools/check-modules.tcl ../tkutils  -manifest tsv | tail -n +2 >> modules.
 
 tclsh tools/check-modules.tcl ../tclutils -manifest md            > modules.md
 tclsh tools/check-modules.tcl ../tkutils  -manifest md | tail -n +3 >> modules.md
+```
+
+Generate a registry-ready JSON block for one repository:
+
+```sh
+tclsh tools/check-modules.tcl ../tclutils -manifest json > tclutils-pkgs.json
+```
+
+Combine both repositories into one array for the registry (JSON arrays do not
+concatenate line-wise; merge them):
+
+```sh
+tclsh tools/check-modules.tcl ../tclutils -manifest json > tclutils-pkgs.json
+tclsh tools/check-modules.tcl ../tkutils  -manifest json > tkutils-pkgs.json
+jq -s 'add' tclutils-pkgs.json tkutils-pkgs.json > registry-block.json
 ```
 
 ## Exit code

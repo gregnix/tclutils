@@ -57,4 +57,41 @@ test tugrep-2.3 {context -C de-duplicates overlapping ranges} -body {
     ::tclutils::tugrep::search "a\nmatch1\nb\nmatch2\nc" {match} -C 1
 } -result {a match1 b match2 c}
 
+# Word, whole-line and max-count options for 0.1.2
+test tugrep-3.1 {word match selects whole words only} -body {
+    ::tclutils::tugrep::search "foobar\nfoo\nbarfoo" foo -word 1
+} -result {foo}
+
+test tugrep-3.2 {word match with -fixed quotes regex metacharacters} -body {
+    ::tclutils::tugrep::search "a.b\naxb" {a.b} -word 1 -fixed 1
+} -result {a.b}
+
+test tugrep-3.3 {word match honours -nocase} -body {
+    ::tclutils::tugrep::search "FOO\nfoobar" foo -word 1 -nocase 1
+} -result {FOO}
+
+test tugrep-3.4 {wholeline fixed matches the exact line} -body {
+    ::tclutils::tugrep::search "foo\nfoobar\nfoo bar" foo -wholeline 1
+} -result {foo}
+
+test tugrep-3.5 {wholeline regex anchors the pattern} -body {
+    ::tclutils::tugrep::search "abc\nabcd\nxabc" {a.c} -wholeline 1
+} -result {abc}
+
+test tugrep-3.6 {max limits the number of matches} -body {
+    ::tclutils::tugrep::search "a\nx\nb\nx\nc\nx" x -max 2
+} -result {x x}
+
+test tugrep-3.7 {max caps the count} -body {
+    ::tclutils::tugrep::search "x\nx\nx\nx" x -max 2 -count 1
+} -result 2
+
+test tugrep-3.8 {max keeps trailing context of the last match} -body {
+    ::tclutils::tugrep::search "x\ny\nx\nz\nx\nw" x -max 2 -A 1
+} -result {x y x z}
+
+test tugrep-3.9 {word combines with invert} -body {
+    ::tclutils::tugrep::search "foo\nfoobar" foo -word 1 -invert 1
+} -result {foobar}
+
 cleanupTests

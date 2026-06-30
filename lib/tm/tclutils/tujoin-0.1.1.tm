@@ -8,7 +8,7 @@ namespace eval ::tclutils {}
 namespace eval ::tclutils::tujoin { namespace export lines texts files }
 
 proc ::tclutils::tujoin::_parseOptions {args} {
-    set opts [dict create -delimiter "\t" -leftfield 1 -rightfield 1 -joiner {} -header 0 -outer none]
+    set opts [dict create -delimiter "\t" -leftfield 1 -rightfield 1 -joiner {} -header 0 -outer none -anti none]
     set i 0
     while {$i < [llength $args]} {
         set opt [lindex $args $i]
@@ -30,6 +30,13 @@ proc ::tclutils::tujoin::_parseOptions {args} {
     set outer [dict get $opts -outer]
     if {$outer ni {none left right full}} {
         return -code error "-outer must be one of: none, left, right, full"
+    }
+    set anti [dict get $opts -anti]
+    if {$anti ni {none left right both}} {
+        return -code error "-anti must be one of: none, left, right, both"
+    }
+    if {$outer ne "none" && $anti ne "none"} {
+        return -code error "cannot combine -outer and -anti"
     }
     if {[dict get $opts -joiner] eq {}} { dict set opts -joiner [dict get $opts -delimiter] }
     return $opts
@@ -88,6 +95,34 @@ proc ::tclutils::tujoin::lines {leftLines rightLines args} {
         dict lappend rightIndex $key [list $i $parts]
     }
 
+    set anti [dict get $opts -anti]
+    if {$anti ne "none"} {
+        set matchedRight [dict create]
+        set emitLeft [expr {$anti in {left both}}]
+        set emitRight [expr {$anti in {right both}}]
+        set out {}
+        for {set i $header} {$i < [llength $leftLines]} {incr i} {
+            set lp [::tclutils::common::splitDelimited [lindex $leftLines $i] $delimiter]
+            set key [lindex $lp $lf]
+            if {[dict exists $rightIndex $key]} {
+                foreach pair [dict get $rightIndex $key] {
+                    lassign $pair ri rp
+                    dict set matchedRight $ri 1
+                }
+            } elseif {$emitLeft} {
+                lappend out [_compose $key $lp $lf {} $rf $joiner]
+            }
+        }
+        if {$emitRight} {
+            foreach row $rightRows {
+                lassign $row ri key rp
+                if {[dict exists $matchedRight $ri]} { continue }
+                lappend out [_compose $key {} $lf $rp $rf $joiner]
+            }
+        }
+        return [join $out \n]
+    }
+
     set leftCols [_maxColumns $leftLines $delimiter $header]
     set rightCols [_maxColumns $rightLines $delimiter $header]
     if {$header && [llength $leftLines] > 0} {
@@ -140,4 +175,4 @@ proc ::tclutils::tujoin::files {leftPath rightPath args} {
     return [texts $left $right {*}$args]
 }
 
-package provide tclutils::tujoin 0.1
+package provide tclutils::tujoin 0.1.1

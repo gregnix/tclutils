@@ -34,7 +34,7 @@ Field numbers are 1-based. The joined result contains the key once, then the
 remaining left fields, then the remaining right fields.
 ## 0.24.0
 
-Outer joins are available through `-outer left`, `-outer right`, and `-outer full`. The default remains the existing inner join behavior (`-outer none`).
+Outer joins are available through `-outer left`, `-outer right`, and `-outer full`. The default remains the existing inner join behavior (`-outer none`). Anti-joins are available through `-anti left`, `-anti right`, and `-anti both`: they emit only the unmatched rows from the left, right, or both sides (the key plus that side's remaining fields, with no padding for the missing side). `-anti` cannot be combined with `-outer`.
 
 
 ## Additional exported commands

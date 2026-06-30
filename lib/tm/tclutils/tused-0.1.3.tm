@@ -9,7 +9,7 @@ package require tclutils::common 0.1
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tused {
     namespace export replace substitute delete process processFile script
-    variable version 0.1.2
+    variable version 0.1.3
 }
 
 proc ::tclutils::tused::ParseOptions {args} {
@@ -105,6 +105,9 @@ proc ::tclutils::tused::ParseAddressToken {token} {
     if {[string length $token] >= 2 && [string index $token 0] eq "/" && [string index $token end] eq "/"} {
         return [list regex [string range $token 1 end-1]]
     }
+    if {[regexp {^([0-9]+)~([0-9]+)$} $token -> sFirst sStep]} {
+        return [list step $sFirst $sStep]
+    }
     error "unsupported tused address: $token"
 }
 
@@ -127,6 +130,13 @@ proc ::tclutils::tused::AddressTokenMatches {token line lineNo lastNo} {
         line { return [expr {$lineNo == [lindex $token 1]}] }
         last { return [expr {$lineNo == $lastNo}] }
         regex { return [regexp -- [lindex $token 1] $line] }
+        step {
+            set first [lindex $token 1]
+            set stride [lindex $token 2]
+            if {$stride == 0} { return [expr {$lineNo == $first}] }
+            if {$first == 0} { set first $stride }
+            return [expr {$lineNo >= $first && (($lineNo - $first) % $stride) == 0}]
+        }
         default { error "unknown address token: $token" }
     }
 }
@@ -164,7 +174,7 @@ proc ::tclutils::tused::RuleApplies {rule line lineNo lastNo} {
 }
 
 proc ::tclutils::tused::MakeRule {op args} {
-    return [dict create address [list none] active 0 op $op args $args]
+    return [dict create address [list none] active 0 negate 0 op $op args $args]
 }
 
 proc ::tclutils::tused::replace {text pattern replacement args} {
@@ -245,6 +255,9 @@ proc ::tclutils::tused::process {text rules} {
             } else {
                 set currentRule $rule
                 set applies [RuleApplies $rule $line $lineNo $lastNo]
+                if {[dict exists $rule negate] && [dict get $rule negate]} {
+                    set applies [expr {!$applies}]
+                }
                 set ruleList [lreplace $ruleList $idx $idx $currentRule]
             }
             if {$applies} {
@@ -280,12 +293,17 @@ proc ::tclutils::tused::ParseScriptLine {line} {
         } else {
             set cmd $rest
         }
-    } elseif {[regexp {^([0-9]+|\$)(,([0-9]+|\$|/[^/]*/))?(.*)$} $line -> first dummy second tail]} {
+    } elseif {[regexp {^([0-9]+(?:~[0-9]+)?|\$)(,([0-9]+|\$|/[^/]*/))?(.*)$} $line -> first dummy second tail]} {
         set addr $first
         if {$second ne ""} { append addr , $second }
         set cmd $tail
     }
     set cmd [string trim $cmd]
+    set negate 0
+    if {[string index $cmd 0] eq "!"} {
+        set negate 1
+        set cmd [string trim [string range $cmd 1 end]]
+    }
     if {[regexp {^s/(.*)/(.*)/([A-Za-z]*)$} $cmd -> pattern replacement flags]} {
         set rule [MakeRule s $pattern $replacement $flags]
     } elseif {[regexp {^d(?:/(.*)/)?$} $cmd -> pattern]} {
@@ -298,6 +316,7 @@ proc ::tclutils::tused::ParseScriptLine {line} {
         error "unsupported tused script line: $line"
     }
     if {$addr ne ""} { dict set rule address [ParseAddress $addr] }
+    dict set rule negate $negate
     return $rule
 }
 
@@ -338,4 +357,4 @@ proc ::tclutils::tused::script {text scriptText} {
     return [process $text $rules]
 }
 
-package provide tclutils::tused 0.1
+package provide tclutils::tused 0.1.3

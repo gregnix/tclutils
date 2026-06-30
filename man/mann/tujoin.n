@@ -1,4 +1,4 @@
-.TH tujoin n 0.1 tclutils
+.TH tujoin n 0.1.1 tclutils
 .SH tclutils::tujoin
 .PP
 \fBtclutils::tujoin\fR joins two simple delimited text sources on a selected field. It is inspired by Unix \fBjoin\fR, but intentionally small.
@@ -28,7 +28,7 @@ Options:
 Field numbers are 1\-based. The joined result contains the key once, then the remaining left fields, then the remaining right fields.
 .SS 0.24.0
 .PP
-Outer joins are available through \fB\-outer left\fR, \fB\-outer right\fR, and \fB\-outer full\fR. The default remains the existing inner join behavior (\fB\-outer none\fR).
+Outer joins are available through \fB\-outer left\fR, \fB\-outer right\fR, and \fB\-outer full\fR. The default remains the existing inner join behavior (\fB\-outer none\fR). Anti\-joins are available through \fB\-anti left\fR, \fB\-anti right\fR, and \fB\-anti both\fR: they emit only the unmatched rows from the left, right, or both sides (the key plus that side's remaining fields, with no padding for the missing side). \fB\-anti\fR cannot be combined with \fB\-outer\fR.
 .SS "Additional exported commands"
 .PP
 Documented for completeness (same module, also covered by the test suite):

@@ -76,4 +76,33 @@ test tused-2.4 {last line address} -body {
     ::tclutils::tused::script "a\nb\nc" {$d}
 } -result "a\nb"
 
+# Negation (!) and step (first~step) address forms for 0.1.3
+test tused-2.5 {negated line address delete keeps only that line} -body {
+    ::tclutils::tused::script "1\n2\n3" {2!d}
+} -result "2"
+
+test tused-2.6 {negated line address substitute} -body {
+    ::tclutils::tused::script "a\nb\nc" {2!s/./X/}
+} -result "X\nb\nX"
+
+test tused-2.7 {negated numeric range delete keeps the range} -body {
+    ::tclutils::tused::script "a\nb\nc\nd" {2,3!d}
+} -result "b\nc"
+
+test tused-2.8 {negated regex address delete} -body {
+    ::tclutils::tused::script "a\nb\na\nc" {/a/!d}
+} -result "a\na"
+
+test tused-2.9 {step address 1~2 substitutes odd lines} -body {
+    ::tclutils::tused::script "a\nb\nc\nd\ne" {1~2s/.*/X/}
+} -result "X\nb\nX\nd\nX"
+
+test tused-2.10 {step address 2~3 delete} -body {
+    ::tclutils::tused::script "1\n2\n3\n4\n5\n6" {2~3d}
+} -result "1\n3\n4\n6"
+
+test tused-2.11 {step address 0~3 behaves as 3~3} -body {
+    ::tclutils::tused::script "a\nb\nc\nd\ne\nf" {0~3s/.*/X/}
+} -result "a\nb\nX\nd\ne\nX"
+
 cleanupTests

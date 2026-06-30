@@ -43,7 +43,7 @@
 | `tclutils::tufuzzy` | 0.1 | fuzzy matching primitives in pure Tcl | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tufuzzy-0.1.tm` |  |
 | `tclutils::tugantt` | 0.1 | parse and render a Mermaid `gantt` block to SVG or PNG. | Diagrams · Mermaid | Y | Y | Y | tclutils | `lib/tm/tclutils/tugantt-0.1.tm` | tclutils::common,Glyphs,tclutils::tusvg,tclutils::tupngdraw |
 | `tclutils::tugit` | 0.1 | parse a Mermaid `gitGraph` into a tclutils::tudiagram model (SVG or PNG) | Diagrams · Mermaid | Y | Y | Y | tclutils | `lib/tm/tclutils/tugit-0.1.tm` | tclutils::common,tclutils::tudiagram |
-| `tclutils::tugrep` | 0.1 | portable grep-like routines in pure Tcl | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tugrep-0.1.tm` |  |
+| `tclutils::tugrep` | 0.1.2 | portable grep-like routines in pure Tcl | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tugrep-0.1.2.tm` |  |
 | `tclutils::tuhash` | 0.1 | pure-Tcl cryptographic digests (SHA-256, SHA-1, MD5) | Encoding · binary/checksums | Y | Y | Y | tclutils | `lib/tm/tclutils/tuhash-0.1.tm` | tclutils::common |
 | `tclutils::tuhead` | 0.1 | head-like helpers | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tuhead-0.1.tm` |  |
 | `tclutils::tuhexdump` | 0.1 | classic hex/ascii dump in pure Tcl | Encoding · binary/checksums | Y | Y | Y | tclutils | `lib/tm/tclutils/tuhexdump-0.1.tm` | tclutils::common,tclutils::tubin |
@@ -53,11 +53,11 @@
 | `tclutils::tuiconv` | 0.1 | small encoding conversion helpers in pure Tcl | Encoding · binary/checksums | Y | Y | Y | tclutils | `lib/tm/tclutils/tuiconv-0.1.tm` | tclutils::common |
 | `tclutils::tuimage` | 0.1 | pure-Tcl image inspection: format, MIME type and pixel dimensions, plus data: URI helpers | Graphics · raster/vector | Y | Y | Y | tclutils | `lib/tm/tclutils/tuimage-0.1.tm` | tclutils::tubase64 |
 | `tclutils::tuini` | 0.1 | INI file reader/writer | Data · structures & formats | Y | Y | Y | tclutils | `lib/tm/tclutils/tuini-0.1.tm` |  |
-| `tclutils::tujoin` | 0.1 | simple join-like helpers for delimited text | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tujoin-0.1.tm` | tclutils::common |
+| `tclutils::tujoin` | 0.1.1 | simple join-like helpers for delimited text | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tujoin-0.1.1.tm` | tclutils::common |
 | `tclutils::tujourney` | 0.1 | parse and render a Mermaid `journey` block to SVG or PNG (pure-Tcl backends) | Diagrams · Mermaid | Y | Y | Y | tclutils | `lib/tm/tclutils/tujourney-0.1.tm` | tclutils::common,Glyphs,tclutils::tusvg,tclutils::tupngdraw |
 | `tclutils::tujson` | 0.1 | small JSON helper in pure Tcl | Data · structures & formats | Y | Y | Y | tclutils | `lib/tm/tclutils/tujson-0.1.tm` | tclutils::common |
 | `tclutils::tukanban` | 0.1 | a Mermaid-style kanban renderer for the tuflow family. | Diagrams · Mermaid | Y | Y | Y | tclutils | `lib/tm/tclutils/tukanban-0.1.tm` | tclutils::common,Glyphs,tclutils::tusvg,tclutils::tupngdraw |
-| `tclutils::tulayout` | 0.1 | page layout helpers (mm coordinates, block dicts) | Graphics · raster/vector | Y | Y | N | tclutils | `lib/tm/tclutils/tulayout-0.1.tm` |  |
+| `tclutils::tulayout` | 0.1 | page layout helpers (mm coordinates, block dicts) | Graphics · raster/vector | Y | Y | Y | tclutils | `lib/tm/tclutils/tulayout-0.1.tm` |  |
 | `tclutils::tuldif` | 0.1 | LDIF (RFC 2849) reader/writer | Data · structures & formats | Y | Y | Y | tclutils | `lib/tm/tclutils/tuldif-0.1.tm` | tclutils::tubase64 |
 | `tclutils::tulist` | 0.1 | functional list helpers that the Tcl core does not provide directly. | Data · structures & formats | Y | Y | Y | tclutils | `lib/tm/tclutils/tulist-0.1.tm` |  |
 | `tclutils::tulog` | 0.1 | a small, dependency-free leveled logger. Pure Tcl, 8.6+/9.x. | System · runtime | Y | Y | Y | tclutils | `lib/tm/tclutils/tulog-0.1.tm` | tclutils::common |
@@ -93,7 +93,7 @@
 | `tclutils::turev` | 0.1 | rev-like reversal of characters within each line | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/turev-0.1.tm` | tclutils::common |
 | `tclutils::turrule` | 0.1 | expand iCalendar RRULE recurrence rules into occurrences. | Date · time/calendar | Y | Y | Y | tclutils | `lib/tm/tclutils/turrule-0.1.tm` | tclutils::common,tclutils::tuical |
 | `tclutils::tusankey` | 0.1 | parse and render a Mermaid `sankey-beta` block to SVG or PNG. | Diagrams · Mermaid | Y | Y | Y | tclutils | `lib/tm/tclutils/tusankey-0.1.tm` | tclutils::common,Glyphs,tclutils::tusvg,tclutils::tupngdraw |
-| `tclutils::tused` | 0.1 | small sed-like text replacement/filter routines in pure Tcl | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tused-0.1.tm` | tclutils::common |
+| `tclutils::tused` | 0.1.3 | small sed-like text replacement/filter routines in pure Tcl | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tused-0.1.3.tm` | tclutils::common |
 | `tclutils::tuseq` | 0.1 | seq-like numeric sequence generation in pure Tcl | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tuseq-0.1.tm` | tclutils::common |
 | `tclutils::tusequence` | 0.1 | parse and render a Mermaid `sequenceDiagram` block to SVG or PNG. | Diagrams · Mermaid | Y | Y | Y | tclutils | `lib/tm/tclutils/tusequence-0.1.tm` | tclutils::common,Glyphs,tclutils::tusvg,tclutils::tupngdraw |
 | `tclutils::tushuf` | 0.1 | shuf-like line shuffling in pure Tcl | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tushuf-0.1.tm` | tclutils::common |

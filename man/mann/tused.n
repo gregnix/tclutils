@@ -1,4 +1,4 @@
-.TH tused n 0.1 tclutils
+.TH tused n 0.1.3 tclutils
 .SH tclutils::tused
 .PP
 \fBtused\fR ist ein kleines sed\-aehnliches Modul fuer portable Text\-Ersetzungen und Zeilenfilter in reinem Tcl.
@@ -49,6 +49,26 @@ set out [::tclutils::tused::script $text {
 .CE
 .PP
 Hinweis: Das Scriptformat ist bewusst klein und noch kein vollstaendiger sed\-Ersatz.
+.SS Adressen
+.PP
+Eine Script\-Zeile kann eine Adresse vor dem Kommando (\fBs///\fR oder \fBd\fR) tragen; das Kommando wirkt dann nur auf die passenden Zeilen:
+.IP \(bu
+\fBN\fR — Zeilennummer, 1\-basiert (z. B. \fB2s/foo/bar/\fR)
+.IP \(bu
+\fB$\fR — letzte Zeile (z. B. \fB$d\fR)
+.IP \(bu
+\fB/regex/\fR — Zeilen, die auf den regulaeren Ausdruck passen
+.IP \(bu
+\fBaddr1,addr2\fR — Bereich von der ersten passenden Startadresse bis zur naechsten passenden Endadresse; Start und Ende duerfen numerisch, \fB$\fR oder \fB/regex/\fR sein
+.IP \(bu
+\fBfirst~step\fR — jede \fBstep\fR\-te Zeile ab \fBfirst\fR (\fB1~2\fR = ungerade Zeilen; \fB0~3\fR verhaelt sich wie \fB3~3\fR); nur als Einzeladresse
+.IP \(bu
+\fBaddr!cmd\fR — Negation: das Kommando wirkt auf alle Zeilen, die die Adresse \fInicht\fR erfuellen; funktioniert auch fuer Bereiche
+.CS
+::tclutils::tused::script $text {1~2s/.*/X/}    ;# jede ungerade Zeile
+::tclutils::tused::script $text {/^#/!d}        ;# alles ausser Kommentarzeilen
+::tclutils::tused::script $text {2,4!d}         ;# alles ausser Zeilen 2..4
+.CE
 .SS "Additional exported commands"
 .PP
 Documented for completeness (same module, also covered by the test suite):

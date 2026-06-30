@@ -17,16 +17,21 @@
 #                       pure-lib modules have no CLI/GUI; optional modules are
 #                       deliberately kept out of the umbrella)
 #
-# Usage:  tclsh tools/check-modules.tcl [repo-root] [-require test,doc,man,...] [-manifest tsv|md] [-title text]
+# Usage:  tclsh tools/check-modules.tcl [repo-root] [-require test,doc,man,...] [-manifest tsv|md|json] [-title text]
 #   repo-root  : defaults to the parent of this script's directory
 #   -require   : comma-separated subset of {test doc man bin demo umbr};
 #                default "test,doc,man". These drive the REQUIRED gap list and
 #                the exit code.
 #   -manifest  : emit a machine-readable manifest instead of the human report.
 #                Formats:
-#                  tsv : tab-separated, one row per module
-#                  md  : a Markdown table (header + separator + rows)
-#                Columns: package version description category test doc man repo path deps
+#                  tsv  : tab-separated, one row per module
+#                  md   : a Markdown table (header + separator + rows)
+#                  json : a JSON array of registry-ready package objects, one
+#                         per module, matching the tcltk-pkgs/registry
+#                         packages.json schema (name / sources / tags /
+#                         description). See the JSON section below.
+#                Columns (tsv/md): package version description category test doc
+#                man repo path deps
 #                "description" is read from a "# Description: ..." header line in
 #                the module's .tm file (empty if absent). "deps" lists the
 #                "package require" targets of the module (internal collection
@@ -36,15 +41,41 @@
 #                stderr so the manifest on stdout stays clean. The exit code is
 #                unchanged, so "-manifest tsv >modules.tsv" still signals hygiene
 #                problems.
-#                Combine two repos (skip the second header -- tsv: 1 line,
-#                md: 2 lines):
+#                Combine two repos (tsv/md -- skip the second header; tsv: 1
+#                line, md: 2 lines):
 #                  check-modules.tcl <tclutils> -manifest tsv  >modules.tsv
 #                  check-modules.tcl <tkutils>  -manifest tsv | tail -n +2 >>modules.tsv
 #   -title     : with "-manifest md", prepend a "# <text>" H1 heading (and a
 #                blank line) before the table, so a renderer (e.g. docir) gets a
-#                page title. Ignored for tsv. Off by default, so existing md
-#                pipelines (and the "tail -n +N" combine trick above) are
-#                unaffected.
+#                page title. Ignored for tsv and json. Off by default, so
+#                existing md pipelines (and the "tail -n +N" combine trick above)
+#                are unaffected.
+#
+# JSON manifest (-manifest json):
+#   Emits a pretty-printed JSON array of objects of the form
+#     { "name": "<repo>::<mod>",
+#       "sources": [ { "url": "<baseurl>/<repo>", "method": "git",
+#                      "web": "<baseurl>/<repo>/tree/<branch>/docs/<mod>.md",
+#                      "author": "<author>", "license": "<license>" } ],
+#       "tags": [ "<repo>", <derived from Category> ],
+#       "description": "<Description header>" }
+#   so the block can be spliced straight into the registry's packages.json.
+#   "tags" are derived deterministically from the module's "# Category:" header:
+#   the repo name first, then each lowercased word of the category (split on
+#   space and the separators "/", "&", "," and the middle dot), de-duplicated
+#   in order. e.g.  "Text . strings/coreutils" -> [<repo>,text,strings,coreutils].
+#   The umbrella package itself (lib/tm/<repo>-*.tm) is NOT emitted -- this lists
+#   the sub-modules only, exactly like tsv/md; add any top-level bundle entry by
+#   hand.
+#   The following control the source metadata (sensible defaults for this
+#   project, override only when needed):
+#     -json-baseurl <u> : GitHub owner base, default "https://github.com/gregnix"
+#                         (source url = <u>/<repo>, web = <u>/<repo>/tree/<branch>/docs/<mod>.md)
+#     -json-branch  <b> : default branch for the web link, default "main"
+#     -json-author  <a> : author string, default "Gregor Ebbing"
+#     -json-license <l> : license string, default "MIT"
+#   Combine two repos (json): generate one array per repo and merge them, e.g.
+#     jq -s 'add' tclutils.json tkutils.json   (or paste both blocks).
 #
 # Exit code: 1 if any module has multiple versions OR lacks a REQUIRED
 #            artifact; otherwise 0.
@@ -100,18 +131,74 @@ proc moduleDeps {path selfPkg} {
     return $deps
 }
 
+# Quote a string as a JSON string literal (with surrounding quotes).
+# Escapes the mandatory JSON control characters; non-ASCII passes through as
+# literal UTF-8 (stdout is configured utf-8), matching the registry file style.
+proc jsonStr {s} {
+    set out ""
+    foreach ch [split $s ""] {
+        switch -- $ch {
+            "\"" { append out {\"} }
+            "\\" { append out {\\} }
+            "\b" { append out {\b} }
+            "\f" { append out {\f} }
+            "\n" { append out {\n} }
+            "\r" { append out {\r} }
+            "\t" { append out {\t} }
+            default {
+                scan $ch %c code
+                if {$code < 0x20} {
+                    append out [format {\u%04x} $code]
+                } else {
+                    append out $ch
+                }
+            }
+        }
+    }
+    return "\"$out\""
+}
+
+# Derive a registry "tags" list from a module's Category header: the repo name
+# first, then each lowercased category word (split on space and / & , and the
+# middle dot U+00B7), de-duplicated in order.
+proc catToTags {repo cat} {
+    set tags [list $repo]
+    foreach tok [split [string tolower $cat] " \u00b7/&,"] {
+        set tok [string trim $tok]
+        if {$tok eq ""} continue
+        if {$tok in $tags} continue
+        lappend tags $tok
+    }
+    return $tags
+}
+
+# Render a JSON array of strings on one line: ["a", "b", "c"]
+proc jsonStrArray {items} {
+    set parts {}
+    foreach it $items { lappend parts [jsonStr $it] }
+    return "\[[join $parts {, }]\]"
+}
+
 proc main {argv} {
     set root ""
     set required {test doc man}
     set manifest ""
     set mdTitle ""
+    set jsonBaseUrl "https://github.com/gregnix"
+    set jsonBranch  "main"
+    set jsonAuthor  "Gregor Ebbing"
+    set jsonLicense "MIT"
     for {set i 0} {$i < [llength $argv]} {incr i} {
         set a [lindex $argv $i]
         switch -glob -- $a {
             -require { set required [split [lindex $argv [incr i]] ", "] }
             -manifest - --manifest { set manifest [lindex $argv [incr i]] }
             -title { set mdTitle [lindex $argv [incr i]] }
-            -h - -help { puts "usage: check-modules.tcl \[repo-root\] \[-require test,doc,man,bin,demo,umbr\] \[-manifest tsv|md\] \[-title text\]"; exit 0 }
+            -json-baseurl { set jsonBaseUrl [lindex $argv [incr i]] }
+            -json-branch  { set jsonBranch  [lindex $argv [incr i]] }
+            -json-author  { set jsonAuthor  [lindex $argv [incr i]] }
+            -json-license { set jsonLicense [lindex $argv [incr i]] }
+            -h - -help { puts "usage: check-modules.tcl \[repo-root\] \[-require test,doc,man,bin,demo,umbr\] \[-manifest tsv|md|json\] \[-title text\] \[-json-baseurl u\] \[-json-branch b\] \[-json-author a\] \[-json-license l\]"; exit 0 }
             -* { puts stderr "unknown option: $a"; exit 2 }
             default { set root [file normalize $a] }
         }
@@ -121,8 +208,8 @@ proc main {argv} {
     foreach k $required { if {$k in $valid && $k ni $req} { lappend req $k } }
     set required $req
 
-    if {$manifest ne "" && $manifest ni {tsv md}} {
-        puts stderr "error: unknown -manifest format \"$manifest\" (supported: tsv, md)"; exit 2
+    if {$manifest ne "" && $manifest ni {tsv md json}} {
+        puts stderr "error: unknown -manifest format \"$manifest\" (supported: tsv, md, json)"; exit 2
     }
     set manifestMode [expr {$manifest ne ""}]
 
@@ -168,6 +255,9 @@ proc main {argv} {
     array set lacks {bin {} demo {} umbr {}}
     array set total {test 0 doc 0 man 0 bin 0 demo 0 umbr 0}
 
+    # JSON object blocks accumulate here and are emitted after the loop.
+    set jsonItems {}
+
     if {$manifestMode} {
         fconfigure stdout -encoding utf-8
         set manifestCols {package version description category test doc man repo path deps}
@@ -178,11 +268,16 @@ proc main {argv} {
             }
             puts "| [join $manifestCols { | }] |"
             puts "|[string repeat {---|} [llength $manifestCols]]"
-        } else {
+        } elseif {$manifest eq "tsv"} {
             if {$mdTitle ne ""} {
                 puts stderr "note: -title is only used with -manifest md; ignored"
             }
             puts [join $manifestCols \t]
+        } else {
+            # json: no header line; -title is meaningless here
+            if {$mdTitle ne ""} {
+                puts stderr "note: -title is only used with -manifest md; ignored"
+            }
         }
     } else {
         puts "Module hygiene check: $repo"
@@ -238,8 +333,28 @@ proc main {argv} {
                 set mdDesc [string map {| \\|} $desc]
                 set mdCat [string map {| \\|} $cat]
                 puts "| `${repo}::$name` | [join $vers ,] | $mdDesc | $mdCat | $tY | $dY | $mY | $repo | `$path` | $deps |"
-            } else {
+            } elseif {$manifest eq "tsv"} {
                 puts [join [list ${repo}::$name [join $vers ,] $desc $cat $tY $dY $mY $repo $path $deps] \t]
+            } else {
+                # json: build one registry object (indented for packages.json)
+                set url  "$jsonBaseUrl/$repo"
+                set web  "$jsonBaseUrl/$repo/tree/$jsonBranch/docs/$name.md"
+                set tags [catToTags $repo $cat]
+                set obj  "  {\n"
+                append obj "    \"name\": [jsonStr ${repo}::$name],\n"
+                append obj "    \"sources\": \[\n"
+                append obj "      {\n"
+                append obj "        \"url\": [jsonStr $url],\n"
+                append obj "        \"method\": \"git\",\n"
+                append obj "        \"web\": [jsonStr $web],\n"
+                append obj "        \"author\": [jsonStr $jsonAuthor],\n"
+                append obj "        \"license\": [jsonStr $jsonLicense]\n"
+                append obj "      }\n"
+                append obj "    \],\n"
+                append obj "    \"tags\": [jsonStrArray $tags],\n"
+                append obj "    \"description\": [jsonStr $desc]\n"
+                append obj "  }"
+                lappend jsonItems $obj
             }
         } else {
             set verCol [join $vers ,]; if {$isDup} { append verCol " !" }
@@ -247,6 +362,10 @@ proc main {argv} {
                 [expr {$chk(test)?$y:$n}] [expr {$chk(doc)?$y:$n}] [expr {$chk(man)?$y:$n}] \
                 [expr {$chk(bin)?$y:$n}]  [expr {$chk(demo)?$y:$n}] [expr {$chk(umbr)?$y:$n}]]
         }
+    }
+
+    if {$manifestMode && $manifest eq "json"} {
+        puts "\[[expr {[llength $jsonItems] ? "\n[join $jsonItems ,\n]\n" : ""}]\]"
     }
 
     set nMod [llength $names]

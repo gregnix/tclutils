@@ -1,0 +1,63 @@
+.TH tulayout n 0.1 tclutils
+.SH tclutils::tulayout
+.PP
+Page layout helpers for document block designers and renderers. Pure Tcl, no dependencies. Coordinates are in millimetres with origin at the top\-left of the page.
+.SS API
+.CS
+tulayout::pageSize paper ?portrait|landscape?   ;# -> {widthMm heightMm}
+tulayout::mmToPx mm scale
+tulayout::pxToMm px scale
+tulayout::snap mm ?-grid 5?
+tulayout::isAutoY block                         ;# y==0 or lockedY
+tulayout::normalizeBlock block ?-defaults dict?
+tulayout::validateBlocks blocks                   ;# id -> block dict
+tulayout::ensureBlocks blocks definitions         ;# fill missing ids
+tulayout::blockOrder blocks ?definitions?
+tulayout::blockRect block ?-height mm?
+tulayout::mergeBlocks base preset ?-keys {x y w show}?
+tulayout::mergeLayout target preset ?-keys {x y w show}?
+tulayout::fitScale pageWmm pageHmm viewWpx viewHpx ?-marginPx 20?
+tulayout::defaultBlockKeys
+.CE
+.SS "Block dict"
+.PP
+Each block is a dict. Common keys:
+.TS
+l l.
+Key	Meaning
+\fBlabel\fR	Human label in the designer
+\fBx\fR, \fBy\fR, \fBw\fR, \fBh\fR	Position/size in mm
+\fBshow\fR	\fB1\fR visible, \fB0\fR hidden
+\fBlockedY\fR	\fB1\fR = auto vertical placement (\fBy\fR stays \fB0\fR)
+.TE
+.PP
+\fBmergeBlocks\fR copies only the keys listed in \fB\-keys\fR (default \fB{x y w show}\fR) from \fBpreset\fR into \fBbase\fR for matching block ids. This is the usual “apply layout preset to a live document” operation.
+.PP
+\fBmergeLayout\fR expects full layout dicts with a \fBblocks\fR sub\-dict:
+.CS
+set doc [tulayout::mergeLayout $doc $preset]
+.CE
+.SS Papers
+.PP
+Supported names: \fBa4\fR, \fBa5\fR, \fBletter\fR. Unknown paper raises \fB{TCLUTILS TULAYOUT PAPER}\fR.
+.SS Example
+.CS
+package require tclutils::tulayout
+
+set blocks {
+    header {label Header x 20 y 30 w 170 h 15 show 1}
+    table  {label Table  x 20 y 0  w 170 h 40 show 1}
+}
+set preset {
+    header {x 25 show 1}
+}
+set merged [tulayout::mergeBlocks $blocks $preset]
+.CE
+.SS Tests
+.CS
+tclsh tests/tulayout.test
+tclsh examples/demo-tulayout.tcl
+.CE
+.SS "See also"
+.PP
+\fBtkutils::tkulayoutcanvas\fR — Tk megawidget built on this engine.

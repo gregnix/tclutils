@@ -8,7 +8,7 @@ package require Tcl 8.6-
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tugrep {
     namespace export search file files match
-    variable version 0.1.1
+    variable version 0.1.2
 }
 
 proc ::tclutils::tugrep::ParseOptions {args} {
@@ -17,6 +17,9 @@ proc ::tclutils::tugrep::ParseOptions {args} {
         -linenumbers 0 \
         -invert 0 \
         -fixed 0 \
+        -word 0 \
+        -wholeline 0 \
+        -max 0 \
         -count 0 \
         -fileswithmatches 0 \
         -filenames 0 \
@@ -54,15 +57,51 @@ proc ::tclutils::tugrep::ParseOptions {args} {
             error "option $key must be a non-negative integer"
         }
     }
+    if {![string is integer -strict [dict get $opts -max]] || [dict get $opts -max] < 0} {
+        error "option -max must be a non-negative integer"
+    }
     return [list $rest $opts]
+}
+
+proc ::tclutils::tugrep::RegexQuote {s} {
+    set map {}
+    foreach c [list \\ . ^ \$ \[ \] ( ) \{ \} * + ? |] {
+        lappend map $c \\$c
+    }
+    return [string map $map $s]
 }
 
 proc ::tclutils::tugrep::LineMatches {line pattern opts} {
     set nocase [dict get $opts -nocase]
     set fixed [dict get $opts -fixed]
     set invert [dict get $opts -invert]
+    set word [dict get $opts -word]
+    set whole [dict get $opts -wholeline]
 
-    if {$fixed} {
+    if {$whole} {
+        if {$fixed} {
+            if {$nocase} {
+                set ok [string equal -nocase $pattern $line]
+            } else {
+                set ok [string equal $pattern $line]
+            }
+        } elseif {$nocase} {
+            set ok [regexp -nocase -- "^(?:$pattern)\$" $line]
+        } else {
+            set ok [regexp -- "^(?:$pattern)\$" $line]
+        }
+    } elseif {$word} {
+        if {$fixed} {
+            set p [RegexQuote $pattern]
+        } else {
+            set p $pattern
+        }
+        if {$nocase} {
+            set ok [regexp -nocase -- "\\y(?:$p)\\y" $line]
+        } else {
+            set ok [regexp -- "\\y(?:$p)\\y" $line]
+        }
+    } elseif {$fixed} {
         if {$nocase} {
             set ok [expr {[string first [string tolower $pattern] [string tolower $line]] >= 0}]
         } else {
@@ -101,6 +140,7 @@ proc ::tclutils::tugrep::CollectMatches {lines filename pattern opts} {
     set nlines [llength $lines]
     set before [dict get $opts -before]
     set after  [dict get $opts -after]
+    set max    [dict get $opts -max]
     set count 0
     set matched 0
     set include {}
@@ -119,6 +159,7 @@ proc ::tclutils::tugrep::CollectMatches {lines filename pattern opts} {
                     dict set include $j 1
                 }
             }
+            if {$max > 0 && $count >= $max} { break }
         }
     }
     if {[dict get $opts -count]} { return [list $count $matched $result] }
@@ -182,4 +223,4 @@ proc ::tclutils::tugrep::files {fileList pattern args} {
     return $result
 }
 
-package provide tclutils::tugrep 0.1
+package provide tclutils::tugrep 0.1.2

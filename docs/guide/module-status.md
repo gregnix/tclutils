@@ -23,7 +23,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tuuniq` | basis complete | Adjacent unique and counts. |
 | `tucut` | subset | Field mode; no byte/character cut mode yet. |
 | `tupaste` | basis complete | Basic paste-style line joining. |
-| `tujoin` | subset | Inner join; no outer join options yet. |
+| `tujoin` | subset | Inner, outer (`-outer left\|right\|full`) and anti (`-anti left\|right\|both`) joins on a key field. |
 | `tucomm` | basis complete | Three-way comparison of sorted line sets. |
 | `tusplit` / `tucsplit` | basis complete | Line/byte split and regexp/glob csplit helpers. |
 | `tufold` | basis complete | Width-based folding for text. |
@@ -33,7 +33,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tupr` | filter | `pr`-like page formatting with a date/title/page header and optional line numbering. |
 | `tutr` | subset | Translate/delete/squeeze helpers; no POSIX character classes yet. |
 | `tused` | subset | Replace/delete/process mini-sed; no hold space, branching, or complete sed script syntax. |
-| `tugrep` | subset | Line-oriented regexp/fixed grep with context (-A/-B/-C); no multiline, PCRE, or recursive traversal by itself. |
+| `tugrep` | subset | Line-oriented regexp/fixed grep with context (-A/-B/-C), whole-word/whole-line/max-count; no multiline, PCRE, or recursive traversal by itself. |
 | `tuawk` | processor | awk-style record/field processing; Tcl expr patterns and Tcl actions, BEGIN/END, emit. Not an awk-language interpreter. |
 | `tuxargs` | subset | Batch command-prefix application; no parallel mode or `-0`. |
 | `tufmt` | filter | `fmt`-like paragraph reflow to a width; collapses whitespace, keeps per-paragraph indent. |
@@ -248,6 +248,4 @@ self-contained 2D renderer. Both paths draw through the shared `tusvg` /
 ## Highest-priority improvements
 
 1. Synchronize test corpora for `tuodf`, `tupdf`, `tumd`, `tufuzzy`, and `tuagrep`.
-2. Add `tugrep` context output and `tused` address support.
-3. Add broader CLI tests as CLI wrappers grow.
-4. Continue documenting scope boundaries explicitly per module.
+2. Add broader CLI tests as CLI wrappers grow.

@@ -30,11 +30,11 @@ tkutils::tkuldif	0.1	LDIF entry viewer/editor	Tk · widgets	Y	Y	Y	tkutils	lib/tm
 tkutils::tkuload	0.1	instantiate a tkudesigner `.tkd` layout as a live Tk widget tree (no code export)	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkuload-0.1.tm	tkutils::tkurender
 tkutils::tkumarquee	0.1	rubber-band (marquee) rectangle selection on a canvas	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkumarquee-0.1.tm	
 tkutils::tkumd	0.1	Markdown outline viewer	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkumd-0.1.tm	tclutils::tumd,tclutils::common
-tkutils::tkumdview	0.1	Markdown viewer (headings outline + rendered preview)	Tk · widgets	Y	N	N	tkutils	lib/tm/tkutils/tkumdview-0.1.tm	tclutils::tumd
+tkutils::tkumdview	0.1	Markdown viewer (headings outline + rendered preview)	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkumdview-0.1.tm	tclutils::tumd
 tkutils::tkumonthcanvas	0.5	canvas calendar widget (month/quarter/year) OPTIONAL: requires tical (engine).	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkumonthcanvas-0.5.tm	tical::config,tical::locale,tical::holidays,tical::holidays::de,tical::view::month
 tkutils::tkunotes	0.1	hierarchical notes widget	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkunotes-0.1.tm	tclutils::tunotes
 tkutils::tkunumentry	0.1	numeric entry with validation, fixed decimals and optional min/max clamping	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkunumentry-0.1.tm	
-tkutils::tkupdfinspect	0.1	PDF structure inspector (read-only)	Tk · widgets	Y	N	N	tkutils	lib/tm/tkutils/tkupdfinspect-0.1.tm	tclutils::tupdf
+tkutils::tkupdfinspect	0.1	PDF structure inspector (read-only)	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkupdfinspect-0.1.tm	tclutils::tupdf
 tkutils::tkurender	0.1	shared render core for tkudesigner / tkuload.	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkurender-0.1.tm	
 tkutils::tkuscrolledframe	0.1	scrollable frame container (thin scrollutil wrapper)	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkuscrolledframe-0.1.tm	scrollutil
 tkutils::tkusearchbar	0.1	a search bar: entry with debounced change callback, a clear button, and an optional filter drop-down.	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkusearchbar-0.1.tm	

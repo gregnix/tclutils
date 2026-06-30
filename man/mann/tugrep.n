@@ -1,4 +1,4 @@
-.TH tugrep n 0.1 tclutils
+.TH tugrep n 0.1.2 tclutils
 .SH tclutils::tugrep
 .PP
 Portable grep\-like routines in pure Tcl.
@@ -19,6 +19,9 @@ package require tclutils::tugrep
 -linenumbers 0|1        return {lineNumber line}
 -invert 0|1             return non-matching lines
 -fixed 0|1              use literal substring search instead of regexp
+-word 0|1               match only whole words (like grep -w)
+-wholeline 0|1          match only when the whole line matches (like grep -x)
+-max N                  stop after N matching lines, 0 = unlimited (like grep -m)
 -count 0|1              return match count
 -fileswithmatches 0|1   return only filenames with matches
 -filenames 0|1          prefix matches with filename in multi-file style

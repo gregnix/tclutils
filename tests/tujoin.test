@@ -55,5 +55,34 @@ test tujoin-2.4 {invalid outer mode} {
     string match {*-outer must be one of*} $msg
 } 1
 
+# Anti-join (-anti) for 0.1.1
+test tujoin-3.1 {anti-join left emits unmatched left rows only} {
+    ::tclutils::tujoin::texts $left $right -delimiter ";" -anti left
+} "3;Grace"
+
+test tujoin-3.2 {anti-join right emits unmatched right rows only} {
+    ::tclutils::tujoin::texts $left $right -delimiter ";" -anti right
+} "4;Paris"
+
+test tujoin-3.3 {anti-join both emits unmatched rows from both sides} {
+    ::tclutils::tujoin::texts $left $right -delimiter ";" -anti both
+} "3;Grace\n4;Paris"
+
+test tujoin-3.4 {anti-join skips header rows} {
+    set l "id;name\n1;Ada\n3;Grace\n"
+    set r "id;city\n1;Berlin\n"
+    ::tclutils::tujoin::texts $l $r -delimiter ";" -header 1 -anti left
+} "3;Grace"
+
+test tujoin-3.5 {-anti and -outer cannot be combined} {
+    catch {::tclutils::tujoin::texts $left $right -delimiter ";" -outer left -anti left} msg
+    string match {*cannot combine -outer and -anti*} $msg
+} 1
+
+test tujoin-3.6 {invalid -anti value errors} {
+    catch {::tclutils::tujoin::texts $left $right -delimiter ";" -anti sideways} msg
+    string match {*-anti must be one of*} $msg
+} 1
+
 file delete -force $tmp1 $tmp2
 cleanupTests

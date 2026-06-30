@@ -60,6 +60,27 @@ set out [::tclutils::tused::script $text {
 
 Hinweis: Das Scriptformat ist bewusst klein und noch kein vollstaendiger sed-Ersatz.
 
+## Adressen
+
+Eine Script-Zeile kann eine Adresse vor dem Kommando (`s///` oder `d`) tragen;
+das Kommando wirkt dann nur auf die passenden Zeilen:
+
+- `N` — Zeilennummer, 1-basiert (z. B. `2s/foo/bar/`)
+- `$` — letzte Zeile (z. B. `$d`)
+- `/regex/` — Zeilen, die auf den regulaeren Ausdruck passen
+- `addr1,addr2` — Bereich von der ersten passenden Startadresse bis zur naechsten
+  passenden Endadresse; Start und Ende duerfen numerisch, `$` oder `/regex/` sein
+- `first~step` — jede `step`-te Zeile ab `first` (`1~2` = ungerade Zeilen;
+  `0~3` verhaelt sich wie `3~3`); nur als Einzeladresse
+- `addr!cmd` — Negation: das Kommando wirkt auf alle Zeilen, die die Adresse
+  *nicht* erfuellen; funktioniert auch fuer Bereiche
+
+```tcl
+::tclutils::tused::script $text {1~2s/.*/X/}    ;# jede ungerade Zeile
+::tclutils::tused::script $text {/^#/!d}        ;# alles ausser Kommentarzeilen
+::tclutils::tused::script $text {2,4!d}         ;# alles ausser Zeilen 2..4
+```
+
 ## Additional exported commands
 
 Documented for completeness (same module, also covered by the test suite):
