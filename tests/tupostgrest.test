@@ -1,0 +1,94 @@
+# Tests for tclutils::tupostgrest. The network transport (_transport) is
+# replaced by a mock, so these run headless with no server: they exercise URL
+# and query building, the typed JSON body, headers/auth, response parsing and
+# error mapping. Pure Tcl (no Tk).
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+foreach d [list [file join $here .. lib tm] [file join $here lib tm]] {
+    catch {tcl::tm::path add [file normalize $d]}
+}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tupostgrest
+set ns ::tclutils::tupostgrest
+
+# --- mock transport ---------------------------------------------------------
+variable ::last {}
+variable ::resp {200 application/json {[]}}
+proc ${ns}::_transport {method url headers body timeout} {
+    set ::last [dict create method $method url $url headers $headers body $body]
+    return $::resp
+}
+proc client {} { return [${::ns}::new https://api.example.com -token TOK123] }
+
+# --- reads ------------------------------------------------------------------
+test pg-1.1 {get builds url with filters/select/order/limit, utf-8 encoded} -body {
+    set ::resp {200 application/json {[]}}
+    ${::ns}::get [client] documents \
+        -filters {extension eq.pdf name like.*müller*} \
+        -select id,filename -order modified_at.desc -limit 50
+    dict get $::last url
+} -result {https://api.example.com/documents?extension=eq.pdf&name=like.%2Am%C3%BCller%2A&select=id%2Cfilename&order=modified_at.desc&limit=50}
+
+test pg-1.2 {get parses a JSON array into a list of row dicts} -body {
+    set ::resp {200 application/json {[{"id":1,"filename":"a.pdf"},{"id":2,"filename":"b.pdf"}]}}
+    set rows [${::ns}::get [client] documents]
+    list [llength $rows] [dict get [lindex $rows 0] filename]
+} -result {2 a.pdf}
+
+test pg-1.3 {bearer token is sent as Authorization header} -body {
+    set ::resp {200 application/json {[]}}
+    ${::ns}::get [client] documents
+    expr {"Authorization" in [dict get $::last headers] \
+          && "Bearer TOK123" in [dict get $::last headers]}
+} -result 1
+
+# --- writes -----------------------------------------------------------------
+test pg-2.1 {insert sends POST with a typed JSON body and Prefer} -body {
+    set ::resp {201 application/json {[{"id":9}]}}
+    set ins [${::ns}::insert [client] documents \
+        [dict create filename report.pdf filesize [${::ns}::num 12345] \
+             active [${::ns}::bool 1] note [${::ns}::null]]]
+    list [dict get $::last method] [dict get $::last body] \
+         [expr {"return=representation" in [dict get $::last headers]}] \
+         [dict get [lindex $ins 0] id]
+} -result {POST {{"filename":"report.pdf","filesize":12345,"active":true,"note":null}} 1 9}
+
+test pg-2.2 {update sends PATCH with filter query and body} -body {
+    set ::resp {200 application/json {[]}}
+    ${::ns}::update [client] documents [dict create indexed_at now] -filters {id eq.42}
+    list [dict get $::last method] [dict get $::last url] [dict get $::last body]
+} -result {PATCH https://api.example.com/documents?id=eq.42 {{"indexed_at":"now"}}}
+
+test pg-2.3 {delete defaults to return=minimal} -body {
+    set ::resp {204 {} {}}
+    set r [${::ns}::delete [client] documents -filters {id eq.1}]
+    list [dict get $::last method] [expr {"return=minimal" in [dict get $::last headers]}] $r
+} -result {DELETE 1 {}}
+
+test pg-2.4 {rpc posts to /rpc/<fn> with the args as the body} -body {
+    set ::resp {200 application/json {[{"id":1}]}}
+    ${::ns}::rpc [client] search_documents [dict create q "rechnung müller"]
+    list [dict get $::last url] [dict get $::last body]
+} -result {https://api.example.com/rpc/search_documents {{"q":"rechnung müller"}}}
+
+# --- errors -----------------------------------------------------------------
+test pg-3.1 {HTTP >= 400 raises with the PostgREST message} -body {
+    set ::resp {403 application/json {{"message":"permission denied for table documents","code":"42501"}}}
+    set rc [catch {${::ns}::get [client] documents} e opts]
+    list $rc [lrange [dict get $opts -errorcode] 0 3] [string match "*permission denied*" $e]
+} -result {1 {TCLUTILS TUPOSTGREST HTTP 403} 1}
+
+test pg-3.2 {unknown option is reported} -body {
+    catch {${::ns}::get [client] documents -bogus 1} e o
+    lrange [dict get $o -errorcode] 0 2
+} -result {TCLUTILS TUPOSTGREST OPTION}
+
+test pg-3.3 {invalid number in a typed value is rejected} -body {
+    catch {${::ns}::insert [client] documents [dict create n [${::ns}::num abc]]} e o
+    lrange [dict get $o -errorcode] 0 2
+} -result {TCLUTILS TUJSON NUMBER}
+
+cleanupTests
