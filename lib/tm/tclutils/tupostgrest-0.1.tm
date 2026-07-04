@@ -53,15 +53,19 @@ proc ::tclutils::tupostgrest::_err {reason msg} {
 
 # --- client handle ----------------------------------------------------------
 # new baseUrl ?-token jwt? ?-timeout ms? ?-header {k v ...}? ?-schema name?
+#     ?-insecure 0|1?
+# -insecure 1 accepts a self-signed / unverified TLS certificate (typical for
+# an internal server reached by IP address).
 proc ::tclutils::tupostgrest::new {baseUrl args} {
-    array set o {token "" timeout 30000 header {} schema ""}
+    array set o {token "" timeout 30000 header {} schema "" insecure 0}
     foreach {k v} $args {
         switch -- $k {
-            -token   { set o(token)   $v }
-            -timeout { set o(timeout) $v }
-            -header  { set o(header)  $v }
-            -schema  { set o(schema)  $v }
-            default  { _err OPTION "unknown option \"$k\"" }
+            -token    { set o(token)    $v }
+            -timeout  { set o(timeout)  $v }
+            -header   { set o(header)   $v }
+            -schema   { set o(schema)   $v }
+            -insecure { set o(insecure) $v }
+            default   { _err OPTION "unknown option \"$k\"" }
         }
     }
     if {![string is integer -strict $o(timeout)] || $o(timeout) <= 0} {
@@ -69,7 +73,8 @@ proc ::tclutils::tupostgrest::new {baseUrl args} {
     }
     return [dict create \
         base [string trimright $baseUrl /] token $o(token) \
-        timeout $o(timeout) header $o(header) schema $o(schema)]
+        timeout $o(timeout) header $o(header) schema $o(schema) \
+        insecure $o(insecure)]
 }
 
 # Return a copy of the client with a (new) bearer token.
@@ -158,7 +163,8 @@ proc ::tclutils::tupostgrest::request {client method path args} {
     foreach {k v} [dict get $client header] { lappend headers $k $v }
     foreach {k v} $o(header)                { lappend headers $k $v }
 
-    lassign [_transport $method $url $headers $o(body) [dict get $client timeout]] \
+    lassign [_transport $method $url $headers $o(body) [dict get $client timeout] \
+                 [dict get $client insecure]] \
         status ctype data
 
     if {$status >= 400} {
@@ -187,12 +193,22 @@ proc ::tclutils::tupostgrest::request {client method path args} {
 
 # The only proc that touches the network -- override it in tests.
 # Returns {status contentType data}.
-proc ::tclutils::tupostgrest::_transport {method url headers body timeout} {
+proc ::tclutils::tupostgrest::_transport {method url headers body timeout {insecure 0}} {
     if {[string match -nocase https:* $url]} {
         if {[catch {package require tls}]} {
             _err TRANSPORT "https requested but the tls package is not available"
         }
-        ::http::register https 443 [list ::tls::socket -autoservername 1]
+        # host part, to decide on SNI
+        set host ""
+        regexp -nocase {^https://(\[[^\]]+\]|[^/:]+)} $url -> host
+        set isIP [expr {[regexp {^\d{1,3}(\.\d{1,3}){3}$} $host] || [string match *:* $host]}]
+        # SNI (-autoservername 1) must not be used with an IP literal -- some
+        # tls builds reject an IP as the SNI name and http then reports
+        # "failed to use socket". Send SNI only for real host names.
+        set opts [list -autoservername [expr {$isIP ? 0 : 1}]]
+        # self-signed / unverified certificate: don't demand validation.
+        if {$insecure} { lappend opts -request 0 -require 0 }
+        ::http::register https 443 [list ::tls::socket {*}$opts]
     }
     set cfg [list -method $method -timeout $timeout]
     if {[llength $headers]} { lappend cfg -headers $headers }

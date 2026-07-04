@@ -84,6 +84,7 @@ tclutils::tupkgfinder	0.1	inspect how Tcl resolves packages: versions, ifneeded 
 tclutils::tupng	0.4	a pure-Tcl PNG encoder (no Tk, no external packages; uses only the core "zlib" command).	Graphics · raster/vector	Y	Y	Y	tclutils	lib/tm/tclutils/tupng-0.4.tm	tclutils::common
 tclutils::tupngdraw	0.12	a tiny pure-Tcl 2D drawing layer that renders to a PNG via tclutils::tupng.	Graphics · raster/vector	Y	Y	Y	tclutils	lib/tm/tclutils/tupngdraw-0.12.tm	tclutils::common,tclutils::tupng,TclOO
 tclutils::tupngpad	0.1	normalise a set of (transparent) PNGs to a uniform size.	Graphics · raster/vector	Y	Y	Y	tclutils	lib/tm/tclutils/tupngpad-0.1.tm	tclutils::common,tclutils::tupng,tclutils::tupngdraw
+tclutils::tupostgrest	0.1	minimal PostgREST REST client (HTTP + JSON)	Network · clients	Y	Y	Y	tclutils	lib/tm/tclutils/tupostgrest-0.1.tm	http,tclutils::tujson,tclutils::tuurl,tls
 tclutils::tupr	0.1	pr-like simple page formatting in pure Tcl	Text · strings/coreutils	Y	Y	Y	tclutils	lib/tm/tclutils/tupr-0.1.tm	tclutils::common
 tclutils::tuquadrant	0.1	parse and render a Mermaid `quadrantChart` block to SVG or PNG (pure-Tcl backends)	Diagrams · Mermaid	Y	Y	Y	tclutils	lib/tm/tclutils/tuquadrant-0.1.tm	tclutils::common,Glyphs,tclutils::tusvg,tclutils::tupngdraw
 tclutils::turadar	0.1	parse a Mermaid `radar-beta` block and render a radar/spider chart to SVG or PNG	Diagrams · Mermaid	Y	Y	Y	tclutils	lib/tm/tclutils/turadar-0.1.tm	tclutils::common,Glyphs,tclutils::tusvg,tclutils::tupngdraw

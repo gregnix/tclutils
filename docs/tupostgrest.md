@@ -10,7 +10,7 @@ Dependencies: `http` (+ `tls` for https), `tclutils::tujson`, `tclutils::tuurl`.
 ## Commands
 
 ```tcl
-tupostgrest::new baseUrl ?-token jwt? ?-timeout ms? ?-header {k v ...}? ?-schema name?
+tupostgrest::new baseUrl ?-token jwt? ?-timeout ms? ?-header {k v ...}? ?-schema name? ?-insecure 0|1?
 tupostgrest::token  client jwt
 tupostgrest::get    client table ?-filters {col val ...}? ?-select s? ?-order s? ?-limit n? ?-offset n?
 tupostgrest::insert client table row   ?-return 0|1?
@@ -52,6 +52,26 @@ tupostgrest::insert $c documents [dict create \
 
 (PostgREST coerces JSON strings into the target column type, so plain strings
 are usually fine; the wrappers give explicit control where it matters.)
+
+### HTTPS and self-signed certificates
+
+For an `https://` base URL the client registers a TLS socket automatically (the
+`tls` package must be present). Two cases need attention when the server is an
+internal one reached by **IP address** with a **self-signed** certificate:
+
+- **SNI with an IP.** A TLS server name (SNI) must be a host name, not an IP
+  literal; some `tls` builds reject it and `http` then fails with
+  *"failed to use socket"*. The client therefore sends SNI only for real host
+  names and omits it for IPv4/IPv6 literals — no option needed.
+- **Certificate validation.** A self-signed certificate is not signed by a CA.
+  Pass `-insecure 1` to accept it without validation:
+
+```tcl
+set c [tupostgrest::new https://192.168.158.33 -token $jwt -insecure 1]
+```
+
+`-insecure` defaults to `0`. Use it only for trusted internal endpoints; with a
+CA-signed certificate and a host name, leave it off.
 
 ### Reading and writing
 

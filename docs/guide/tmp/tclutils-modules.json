@@ -1190,6 +1190,20 @@
     "description": "normalise a set of (transparent) PNGs to a uniform size."
   },
   {
+    "name": "tclutils::tupostgrest",
+    "sources": [
+      {
+        "url": "https://github.com/gregnix/tclutils",
+        "method": "git",
+        "web": "https://github.com/gregnix/tclutils/tree/main/docs/tupostgrest.md",
+        "author": "Gregor Ebbing",
+        "license": "MIT"
+      }
+    ],
+    "tags": ["tclutils", "network", "clients"],
+    "description": "minimal PostgREST REST client (HTTP + JSON)"
+  },
+  {
     "name": "tclutils::tupr",
     "sources": [
       {

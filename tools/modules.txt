@@ -1,0 +1,8 @@
+tclsh tools/check-modules.tcl ../tkutils -manifest md > ./docs/guide/tmp/tkutils-modules.md
+tclsh tools/check-modules.tcl ../tclutils -manifest md > ./docs/guide/tmp/tclutils-modules.md
+tclsh tools/check-modules.tcl ../tclutils -manifest tsv > ./docs/guide/tmp/tclutils-modules.tsv
+tclsh tools/check-modules.tcl ../tkutils -manifest tsv > ./docs/guide/tmp/tkutils-modules.tsv
+tclsh tools/check-modules.tcl ../tkutils -manifest json > ./docs/guide/tmp/tkutils-modules.json
+tclsh tools/check-modules.tcl ../tclutils -manifest json > ./docs/guide/tmp/tclutils-modules.json
+
+

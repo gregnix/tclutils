@@ -59,6 +59,6 @@
 | `tkutils::tkutree` | 0.1 | a thin ttk::treeview wrapper for hierarchical data. | Tk · widgets | Y | Y | Y | tkutils | `lib/tm/tkutils/tkutree-0.1.tm` |  |
 | `tkutils::tkuvalidate` | 0.1 | inline validation feedback for input widgets | Tk · widgets | Y | Y | Y | tkutils | `lib/tm/tkutils/tkuvalidate-0.1.tm` | tkutils::tkuballoon,tclutils::tuvalidate |
 | `tkutils::tkuvcard` | 0.1 | vCard contact viewer | Tk · widgets | Y | Y | Y | tkutils | `lib/tm/tkutils/tkuvcard-0.1.tm` | tclutils::tuvcard,tkutils::tkuimage |
-| `tkutils::tkuwheel` | 0.1 | forward mouse-wheel events to a scrollable target | Tk · widgets | Y | Y | Y | tkutils | `lib/tm/tkutils/tkuwheel-0.1.tm` |  |
+| `tkutils::tkuwheel` | 0.2 | forward mouse-wheel events to a scrollable target | Tk · widgets | Y | Y | Y | tkutils | `lib/tm/tkutils/tkuwheel-0.2.tm` |  |
 | `tkutils::tkuxml` | 0.1 | XML tree viewer | Tk · widgets | Y | Y | Y | tkutils | `lib/tm/tkutils/tkuxml-0.1.tm` | tdom,tclutils::common |
 | `tkutils::tkuzip` | 0.1 | ZIP archive browser | Tk · widgets | Y | Y | Y | tkutils | `lib/tm/tkutils/tkuzip-0.1.tm` | tclutils::tuzip |

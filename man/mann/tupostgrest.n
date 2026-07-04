@@ -1,0 +1,93 @@
+.TH tupostgrest n 0.1 tclutils
+.SH tclutils::tupostgrest
+.PP
+A minimal, Tk\-free client for a \fBPostgREST\fR backend. It builds the request URL / query / JSON body, sends it over http(s) with an optional bearer token, parses the JSON response into Tcl dicts/lists and turns a PostgREST error response into a Tcl error. Pure Tcl, Tcl/Tk 8.6+ / 9.x.
+.PP
+Dependencies: \fBhttp\fR (+ \fBtls\fR for https), \fBtclutils::tujson\fR, \fBtclutils::tuurl\fR.
+.SS Commands
+.CS
+tupostgrest::new baseUrl ?-token jwt? ?-timeout ms? ?-header {k v ...}? ?-schema name? ?-insecure 0|1?
+tupostgrest::token  client jwt
+tupostgrest::get    client table ?-filters {col val ...}? ?-select s? ?-order s? ?-limit n? ?-offset n?
+tupostgrest::insert client table row   ?-return 0|1?
+tupostgrest::update client table patch ?-filters {..}? ?-return 0|1?
+tupostgrest::delete client table       ?-filters {..}? ?-return 0|1?
+tupostgrest::rpc    client fn ?argsDict?
+tupostgrest::request client method path ?-query {..}? ?-body json? ?-header {..}? ?-prefer s?
+.CE
+.PP
+A \fBclient\fR is an opaque dict returned by \fBnew\fR; pass it as the first argument. \fBtoken\fR returns a copy carrying a (new) JWT.
+.SS Filters
+.PP
+\fB\-filters\fR is a flat list of \fBcolumn value\fR pairs where \fIvalue\fR is the native PostgREST operator expression; both sides are URL\-encoded (UTF\-8 safe):
+.CS
+-filters {extension eq.pdf name like.*müller* id in.(1,2,3)}
+# -> ?extension=eq.pdf&name=like.%2Am%C3%BCller%2A&id=in.%281%2C2%2C3%29
+.CE
+.PP
+\fB\-order\fR, \fB\-select\fR, \fB\-limit\fR, \fB\-offset\fR map straight to the PostgREST query parameters (\fBorder=modified_at.desc\fR, \fBselect=id,filename\fR, ...).
+.SS "Row values and types"
+.PP
+A row/patch is a Tcl dict. Values are JSON \fBstrings\fR unless wrapped:
+.CS
+tupostgrest::num 12345    ;# JSON number
+tupostgrest::bool 1       ;# JSON true / false
+tupostgrest::null         ;# JSON null
+
+tupostgrest::insert $c documents [dict create \
+    filename report.pdf filesize [tupostgrest::num 12345] active [tupostgrest::bool 1]]
+# body: {"filename":"report.pdf","filesize":12345,"active":true}
+.CE
+.PP
+(PostgREST coerces JSON strings into the target column type, so plain strings are usually fine; the wrappers give explicit control where it matters.)
+.SS "HTTPS and self\-signed certificates"
+.PP
+For an \fBhttps://\fR base URL the client registers a TLS socket automatically (the \fBtls\fR package must be present). Two cases need attention when the server is an internal one reached by \fBIP address\fR with a \fBself\-signed\fR certificate:
+.IP \(bu
+\fBSNI with an IP.\fR A TLS server name (SNI) must be a host name, not an IP literal; some \fBtls\fR builds reject it and \fBhttp\fR then fails with \fI"failed to use socket"\fR. The client therefore sends SNI only for real host names and omits it for IPv4/IPv6 literals — no option needed.
+.IP \(bu
+\fBCertificate validation.\fR A self\-signed certificate is not signed by a CA. Pass \fB\-insecure 1\fR to accept it without validation:
+.CS
+set c [tupostgrest::new https://192.168.158.33 -token $jwt -insecure 1]
+.CE
+.PP
+\fB\-insecure\fR defaults to \fB0\fR. Use it only for trusted internal endpoints; with a CA\-signed certificate and a host name, leave it off.
+.SS "Reading and writing"
+.PP
+\fBget\fR returns a Tcl list of row dicts. \fBinsert\fR/\fBupdate\fR/\fBdelete\fR default to \fBPrefer: return=representation\fR (\fBdelete\fR to \fBminimal\fR) — with \fB\-return 1\fR the affected rows are returned, with \fB\-return 0\fR an empty string. \fBrpc\fR calls a stored function via \fBPOST /rpc/<fn>\fR.
+.SS Example
+.CS
+package require tclutils::tupostgrest
+namespace import ::tclutils::tupostgrest::*
+
+set c [new https://dms.example.com -token $jwt]
+
+# newest 50 PDFs
+set docs [get $c documents -filters {extension eq.pdf} -order modified_at.desc -limit 50]
+foreach d $docs { puts "[dict get $d id]  [dict get $d filename]" }
+
+# add a document row
+set new [insert $c documents [dict create \
+    filename rechnung.pdf filepath /share/2026/rechnung.pdf \
+    filesize [num 84213] filehash $sha]]
+
+# mark it indexed
+update $c documents [dict create indexed_at now] -filters {id eq.[dict get [lindex $new 0] id]}
+
+# full-text search via a stored function
+set hits [rpc $c search_documents [dict create q "rechnung müller"]]
+.CE
+.SS Errors
+.PP
+Error code \fB{TCLUTILS TUPOSTGREST <REASON>}\fR:
+.TS
+l l.
+REASON	When
+\fBOPTION\fR	unknown option or bad usage
+\fBHTTP\fR	backend returned status >= 400 (4th element is the status; message from the error JSON)
+\fBTRANSPORT\fR	the request could not be sent / no response
+\fBPARSE\fR	the response body was not valid JSON
+.TE
+.SS Testing
+.PP
+\fBtests/tupostgrest.test\fR replaces the internal \fB_transport\fR proc with a mock, so the whole client (URL/query/body/headers/auth/parse/errors) is verified headless without a server. Set \fBTCLUTILS_TM\fR to the module directory and run with \fBtclsh\fR.
