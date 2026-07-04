@@ -1,0 +1,72 @@
+.TH tudhash n 0.1 tclutils
+.SH tclutils::tudhash
+.PP
+A perceptual \fBdifference hash\fR (dHash) in pure Tcl, Tk\-free. dHash turns an image into a 64\-bit fingerprint so that visually similar images get similar fingerprints: two pictures are "the same" when the \fBHamming distance\fR between their hashes is small. This finds near\-duplicate scans/photos (rescaled, recompressed, slightly adjusted) that an exact byte hash (\fBsha256\fR, \fBxxhash\fR) would never match.
+.PP
+Pure Tcl, 8.6+ / 9.x. The bit convention matches the common dHash (e.g. python \fBimagehash.dhash\fR), verified against it.
+.SS Commands
+.CS
+tudhash::fromGray w h grayList         ;# -> 16 hex chars (64-bit hash)
+tudhash::fromRGB  w h rgbList          ;# -> 16 hex chars
+tudhash::distance hexA hexB            ;# -> 0..64 (Hamming distance)
+tudhash::similar  hexA hexB ?maxDist?  ;# -> bool (default maxDist 10)
+.CE
+.IP \(bu
+\fBgrayList\fR: \fBw*h\fR integers 0..255, row\-major.
+.IP \(bu
+\fBrgbList\fR: \fBw*h*3\fR integers 0..255, row\-major (\fBr g b r g b ...\fR); reduced to luminance internally.
+.PP
+The image may be any size — it is box\-averaged down to 9×8 and each pixel is compared with its right neighbour, row by row, giving 8×8 = 64 bits.
+.SS "This is the Tk\-free core"
+.PP
+\fBtudhash\fR deliberately works on a \fBpixel grid\fR, not on image files. Decoding an image into that grid is a separate, format\-dependent step. Keeping it out of \fBtclutils\fR is what lets this module stay Tk\-free. Get the grid however suits the caller:
+.PP
+\fBWith Tk (photo + the \fR\fBImg\fR\fB package for JPEG/TIFF/…):\fR best for a GUI or a client that already has Tk. Belongs in a \fBtkutils\fR app, not here:
+.CS
+package require Tk
+# package require Img   ;# for JPEG/TIFF/etc.
+proc imageToGray {path} {
+    set img [image create photo -file $path]
+    set w [image width $img]; set h [image height $img]
+    set gray {}
+    for {set y 0} {$y < $h} {incr y} {
+        for {set x 0} {$x < $w} {incr x} {
+            lassign [$img get $x $y] r g b
+            lappend gray [expr {(77*$r + 150*$g + 29*$b) >> 8}]
+        }
+    }
+    image delete $img
+    return [list $w $h $gray]
+}
+lassign [imageToGray scan.png] w h gray
+set hash [tudhash::fromGray $w $h $gray]
+.CE
+.PP
+\fBWith an external tool\fR (headless server, no Tk): let \fBconvert\fR (ImageMagick) or \fBpnmscale\fR produce a small grayscale PGM/raw and read the bytes. Any route that yields \fBw\fR, \fBh\fR and the gray values works.
+.SS Example
+.CS
+package require tclutils::tudhash
+namespace import ::tclutils::tudhash::*
+
+set a [fromGray $w1 $h1 $gray1]
+set b [fromGray $w2 $h2 $gray2]
+if {[similar $a $b]} { puts "near-duplicate (distance [distance $a $b])" }
+.CE
+.PP
+Typical thresholds on the 64\-bit hash: \fB0\fR identical reduction, \fB≤ 5\fR almost certainly the same picture, \fB≤ 10\fR likely related, \fB> 15\fR different. Tune \fBmaxDist\fR to the corpus.
+.SS "dHash vs. exact hashes"
+.PP
+\fBxxhash\fR/\fBsha256\fR answer "are these the exact same bytes"; \fBtudhash\fR answers "do these look like the same image". A re\-saved JPEG has a different \fBsha256\fR but the same (or a very close) dHash. Use the byte hash first for exact dedup, then \fBtudhash\fR to catch the visual near\-duplicates that survived.
+.SS Errors
+.PP
+Error code \fB{TCLUTILS TUDHASH <REASON>}\fR:
+.TS
+l l.
+REASON	When
+\fBDIM\fR	width/height not positive integers
+\fBDATA\fR	grayList/rgbList has the wrong number of values
+\fBHASH\fR	a hash passed to \fBdistance\fR/\fBsimilar\fR is not 16 hex chars
+.TE
+.SS Testing
+.PP
+\fBtests/tudhash.test\fR checks the bit convention against a real 9×8 reduction from \fBimagehash\fR, the all\-ones/all\-zeros gradients, the distance/similar helpers, the RGB→gray path and the down\-scaler. Set \fBTCLUTILS_TM\fR and run with \fBtclsh\fR (passes on 8.6 and 9.0).

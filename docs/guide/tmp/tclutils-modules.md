@@ -27,6 +27,7 @@
 | `tclutils::tudate` | 0.1 | flexible date helpers on top of the Tcl clock command. | Date · time/calendar | Y | Y | Y | tclutils | `lib/tm/tclutils/tudate-0.1.tm` | tclutils::common |
 | `tclutils::tudav` | 0.1 | a minimal WebDAV / CardDAV / CalDAV client. | Network · web | Y | Y | Y | tclutils | `lib/tm/tclutils/tudav-0.1.tm` | tclutils::common,tclutils::tubase64,tclutils::tuxml,http,tls |
 | `tclutils::tudeploy` | 0.1 | runtime discovery and loading of Tcl module packages from app-relative deployment roots | System · runtime | Y | Y | Y | tclutils | `lib/tm/tclutils/tudeploy-0.1.tm` |  |
+| `tclutils::tudhash` | 0.1 |  |  | Y | Y | Y | tclutils | `lib/tm/tclutils/tudhash-0.1.tm` |  |
 | `tclutils::tudiagram` | 0.4 | box-and-arrow diagrams in pure Tcl. | Diagrams · Mermaid | Y | Y | Y | tclutils | `lib/tm/tclutils/tudiagram-0.4.tm` | tclutils::common,Glyphs,tclutils::tusvg,tclutils::tupngdraw |
 | `tclutils::tudict` | 0.1 | dict helpers beyond what the Tcl core dict already does. | Data · structures & formats | Y | Y | Y | tclutils | `lib/tm/tclutils/tudict-0.1.tm` |  |
 | `tclutils::tudiff` | 0.1 | portable line based diff tools in pure Tcl | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tudiff-0.1.tm` | tclutils::common |
@@ -126,6 +127,7 @@
 | `tclutils::tuwc` | 0.1 | portable word/line/char/byte counter in pure Tcl | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tuwc-0.1.tm` | tclutils::common |
 | `tclutils::tuxargs` | 0.1 | xargs-like list batching helpers | Text · strings/coreutils | Y | Y | Y | tclutils | `lib/tm/tclutils/tuxargs-0.1.tm` | tclutils::common |
 | `tclutils::tuxml` | 0.1 | small XML text helper in pure Tcl | Data · structures & formats | Y | Y | Y | tclutils | `lib/tm/tclutils/tuxml-0.1.tm` | tclutils::common |
+| `tclutils::tuxxhash` | 0.1 |  |  | Y | Y | Y | tclutils | `lib/tm/tclutils/tuxxhash-0.1.tm` |  |
 | `tclutils::tuxychart` | 0.1 | parse and render a Mermaid `xychart-beta` block to SVG or PNG (pure-Tcl backends) | Diagrams · Mermaid | Y | Y | Y | tclutils | `lib/tm/tclutils/tuxychart-0.1.tm` | tclutils::common,Glyphs,tclutils::tusvg,tclutils::tupngdraw |
 | `tclutils::tuzip` | 0.1 | small ZIP/ODF helper in pure Tcl | Archive · filesystem | Y | Y | Y | tclutils | `lib/tm/tclutils/tuzip-0.1.tm` | zlib,tclutils::common,tclutils::tubin |
 | `tclutils::tuzipfs` | 0.1 | small Tcl 9 zipfs convenience wrapper | Archive · filesystem | Y | Y | Y | tclutils | `lib/tm/tclutils/tuzipfs-0.1.tm` | tclutils::common |

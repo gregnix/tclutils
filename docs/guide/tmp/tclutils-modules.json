@@ -378,6 +378,20 @@
     "description": "runtime discovery and loading of Tcl module packages from app-relative deployment roots"
   },
   {
+    "name": "tclutils::tudhash",
+    "sources": [
+      {
+        "url": "https://github.com/gregnix/tclutils",
+        "method": "git",
+        "web": "https://github.com/gregnix/tclutils/tree/main/docs/tudhash.md",
+        "author": "Gregor Ebbing",
+        "license": "MIT"
+      }
+    ],
+    "tags": ["tclutils"],
+    "description": ""
+  },
+  {
     "name": "tclutils::tudiagram",
     "sources": [
       {
@@ -1762,6 +1776,20 @@
     ],
     "tags": ["tclutils", "data", "structures", "formats"],
     "description": "small XML text helper in pure Tcl"
+  },
+  {
+    "name": "tclutils::tuxxhash",
+    "sources": [
+      {
+        "url": "https://github.com/gregnix/tclutils",
+        "method": "git",
+        "web": "https://github.com/gregnix/tclutils/tree/main/docs/tuxxhash.md",
+        "author": "Gregor Ebbing",
+        "license": "MIT"
+      }
+    ],
+    "tags": ["tclutils"],
+    "description": ""
   },
   {
     "name": "tclutils::tuxychart",

@@ -10,6 +10,7 @@ tkutils::tkucsv	0.1	CSV table viewer	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/
 tkutils::tkudateentry	0.1	date entry with a drop-down calendar picker.	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkudateentry-0.1.tm	
 tkutils::tkudavaccount	0.1	a DAV account form (URL / user / password / type) with a Test-connection button	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkudavaccount-0.1.tm	tclutils::tudav
 tkutils::tkudavbrowser	0.1	a read-only navigation pane for a CalDAV/CardDAV server, built on tclutils::tudav.	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkudavbrowser-0.1.tm	tclutils::tudav,tclutils::common
+tkutils::tkudhash	0.1	image-file front end for the perceptual dHash	Tk · widgets	Y	Y	N	tkutils	lib/tm/tkutils/tkudhash-0.1.tm	tclutils::tudhash,Img
 tkutils::tkudialog	0.1	dialogs with copyable message text	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkudialog-0.1.tm	tkutils::tkuform
 tkutils::tkudiff	0.1	line diff viewer	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkudiff-0.1.tm	tclutils::tudiff,tclutils::common
 tkutils::tkueditor	0.2	text editor widget (v0.2 PROTOTYPE)	Tk · widgets	Y	Y	Y	tkutils	lib/tm/tkutils/tkueditor-0.2.tm	tclutils::tuiconv,tkutils::tkuicon,tkutils::tkutoolbar,tkutils::tkustatus

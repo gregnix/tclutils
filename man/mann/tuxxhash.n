@@ -1,0 +1,39 @@
+.TH tuxxhash n 0.1 tclutils
+.SH tclutils::tuxxhash
+.PP
+xxHash32 (XXH32) in pure Tcl, Tk\-free. A \fBfast, non\-cryptographic\fR hash for content de\-duplication and change detection — not for security. The pure\-Tcl implementation provides the 32\-bit variant and matches the reference xxHash32 bit for bit (verified against the canonical vectors and python\-xxhash).
+.PP
+Pure Tcl, 8.6+ / 9.x. No dependencies.
+.SS Commands
+.CS
+tuxxhash::xxh32     data ?seed?   ;# -> 8 hex chars
+tuxxhash::xxh32file path ?seed?   ;# -> 8 hex chars (whole file)
+.CE
+.PP
+\fBdata\fR is hashed as \fBbytes\fR. A binary string (e.g. a file's contents) is used as\-is; a plain text string is hashed as its UTF\-8 bytes — encode explicitly with \fBencoding convertto\fR if you need a specific encoding. \fBseed\fR is an optional 32\-bit integer (default 0).
+.SS Example
+.CS
+package require tclutils::tuxxhash
+namespace import ::tclutils::tuxxhash::*
+
+xxh32 "The quick brown fox jumps over the lazy dog"   ;# -> e85ea4de
+xxh32 "" 0                                            ;# -> 02cc5d05
+xxh32file /share/2026/rechnung.pdf                    ;# content fingerprint
+.CE
+.PP
+De\-duplication in a scanner: a cheap \fBxxh32file\fR groups candidates; compare the full bytes (or a strong hash) only within a colliding group.
+.SS "xxh32 vs. sha256"
+.PP
+\fBxxh32\fR is much faster but \fBnot\fR collision\-resistant against an adversary and is only 32 bits wide, so accidental collisions appear in large corpora. Use it to \fIdetect change\fR and to \fIbucket\fR likely duplicates; use \fBsha256\fR (tcllib) when you need a cryptographic guarantee or a wide digest. The 64/128\-bit xxHash variants are not available in pure Tcl — they need the native extension.
+.SS Errors
+.PP
+Error code \fB{TCLUTILS TUXXHASH <REASON>}\fR:
+.TS
+l l.
+REASON	When
+\fBSEED\fR	seed is not an integer
+\fBIO\fR	\fBxxh32file\fR could not open the file
+.TE
+.SS Testing
+.PP
+\fBtests/tuxxhash.test\fR checks the output against reference vectors (empty, short, 16\-byte block boundary, long, seeded, binary bytes) and the file path. Set \fBTCLUTILS_TM\fR to the module directory and run with \fBtclsh\fR (passes on 8.6 and 9.0).

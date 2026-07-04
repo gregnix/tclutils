@@ -154,6 +154,20 @@
     "description": "a read-only navigation pane for a CalDAV/CardDAV server, built on tclutils::tudav."
   },
   {
+    "name": "tkutils::tkudhash",
+    "sources": [
+      {
+        "url": "https://github.com/gregnix/tkutils",
+        "method": "git",
+        "web": "https://github.com/gregnix/tkutils/tree/main/docs/tkudhash.md",
+        "author": "Gregor Ebbing",
+        "license": "MIT"
+      }
+    ],
+    "tags": ["tkutils", "tk", "widgets"],
+    "description": "image-file front end for the perceptual dHash"
+  },
+  {
     "name": "tkutils::tkudialog",
     "sources": [
       {
