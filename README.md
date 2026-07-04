@@ -1,4 +1,4 @@
-# tclutils 0.58.0
+# tclutils 0.59.0
 
 `tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
 text filters, data-format parsers/encoders, binary and checksum helpers, and a
@@ -15,7 +15,7 @@ umbrella package (loads the core modules plus the `tuflow` diagram facade)
 or a single module:
 
 ```tcl
-::tcl::tm::path add /path/to/tclutils-0.55.0/lib/tm
+::tcl::tm::path add /path/to/tclutils-0.59.0/lib/tm
 package require tclutils          ;# umbrella: core modules + tuflow facade
 package require tclutils::tucsv    ;# or just one module
 ```

@@ -66,6 +66,8 @@ package require tclutils::tuical 0.1
 package require tclutils::tuini 0.1
 package require tclutils::tuvcard 0.1
 package require tclutils::tuhash 0.1
+package require tclutils::tuxxhash 0.1
+package require tclutils::tudhash 0.1
 package require tclutils::tupath 0.1
 package require tclutils::tusize 0.1
 package require tclutils::tubase32 0.1
@@ -73,6 +75,7 @@ package require tclutils::tuuuid 0.1
 package require tclutils::tufmt 0.1
 package require tclutils::tudate 0.1
 package require tclutils::tuurl 0.1
+package require tclutils::tupostgrest 0.1
 package require tclutils::tuevent 0.1
 package require tclutils::turegistry 0.1
 package require tclutils::tudav 0.1
@@ -91,7 +94,7 @@ package require tclutils::tupngpad 0.1
 package require tclutils::tusvg 0.2
 package require tclutils::tupagespec 0.1
 package require tclutils::tuexe 0.1
-package require tclutis::tulayout 0.1
+package require tclutils::tulayout 0.1
 # Deployment / packaging
 package require tclutils::tudeploy 0.1
 # Introspection / diagnostics
@@ -112,4 +115,4 @@ package require tclutils::tummdb 0.1
 # Diagram subsystem: the tuflow facade (it pulls in tudiagram; the individual
 # diagram parsers and 2D renderers load lazily on first use, not here)
 package require tclutils::tuflow 0.2
-package provide tclutils 0.58.0
+package provide tclutils 0.59.0

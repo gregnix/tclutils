@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.59.0
+
+- Fixed the umbrella typo `tclutis::tulayout` in `tclutils-0.58.0.tm`, which
+  broke `package require tclutils` entirely (the umbrella now loads).
+- Umbrella now also loads `tuxxhash`, `tudhash` and `tupostgrest`.
+- Added man pages for `tudhash` and `tuxxhash`.
+- Recommended pairing: tclutils 0.59.0 + tkutils 0.42.0.
+
 ## 0.58.0
 
 Adds a Mermaid-compatible diagram subsystem and a MaxMind DB reader; the library
