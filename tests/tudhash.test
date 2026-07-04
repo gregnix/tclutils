@@ -1,0 +1,86 @@
+# tudhash.test -- verifies the dHash core (bit convention matches the standard
+# imagehash dhash; Hamming distance; near-duplicate behaviour).
+# Run: TCLUTILS_TM=<dir> tclsh tudhash.test
+package require tcltest
+namespace import ::tcltest::*
+
+if {[info exists ::env(TCLUTILS_TM)]} { ::tcl::tm::path add $::env(TCLUTILS_TM) }
+package require tclutils::tudhash
+namespace import ::tclutils::tudhash::*
+
+# a 9-wide row that strictly increases -> every "right > left" is true
+proc gridInc {} {
+    set g {}
+    for {set y 0} {$y < 8} {incr y} {
+        for {set x 0} {$x < 9} {incr x} { lappend g [expr {$x * 10}] }
+    }
+    return $g
+}
+proc gridDec {} {
+    set g {}
+    for {set y 0} {$y < 8} {incr y} {
+        for {set x 0} {$x < 9} {incr x} { lappend g [expr {(8 - $x) * 10}] }
+    }
+    return $g
+}
+
+test dh-1 {strictly increasing rows -> all bits set} -body {
+    fromGray 9 8 [gridInc]
+} -result ffffffffffffffff
+
+test dh-2 {strictly decreasing rows -> no bits set} -body {
+    fromGray 9 8 [gridDec]
+} -result 0000000000000000
+
+test dh-3 {distance of opposite hashes is 64} -body {
+    distance ffffffffffffffff 0000000000000000
+} -result 64
+
+test dh-4 {identical hashes -> distance 0, similar} -body {
+    list [distance ffffffffffffffff ffffffffffffffff] \
+         [similar ffffffffffffffff ffffffffffffffff]
+} -result {0 1}
+
+# exact bit convention: a real 9x8 grayscale that python-imagehash reduced an
+# image to; feeding it (as a 9x8 grid, so no rescale) must give the same hash
+# imagehash computed for that image.
+test dh-5 {bit convention matches imagehash dhash} -body {
+    set g98 {16 26 35 45 54 64 73 83 92 41 51 61 70 79 89 98 108 115 68 77 87
+             96 106 115 124 138 115 93 103 112 122 131 141 150 160 108 119 128
+             138 148 157 166 181 164 114 143 152 162 171 181 189 205 158 139 178
+             187 197 207 215 228 226 166 159 150 159 169 178 186 203 156 107 119}
+    fromGray 9 8 $g98
+} -result fffffefefcfcf8f9
+
+test dh-6 {fromRGB equals fromGray on a gray image} -body {
+    set gray {}
+    set rgb {}
+    for {set i 0} {$i < 72} {incr i} {
+        set v [expr {($i * 3) % 200}]
+        lappend gray $v
+        lappend rgb $v $v $v      ;# R=G=B -> luminance == v
+    }
+    expr {[fromRGB 9 8 $rgb] eq [fromGray 9 8 $gray]}
+} -result 1
+
+test dh-7 {downscale: larger grid still hashes to 16 hex} -body {
+    # a 90x60 horizontal gradient
+    set g {}
+    for {set y 0} {$y < 60} {incr y} {
+        for {set x 0} {$x < 90} {incr x} { lappend g [expr {$x * 2}] }
+    }
+    set h [fromGray 90 60 $g]
+    list [string length $h] $h
+} -result {16 ffffffffffffffff}
+
+test dh-8 {wrong data length rejected} -body {
+    catch {fromGray 4 4 {1 2 3}} e opts
+    list $e [dict get $opts -errorcode]
+} -result {{grayList has 3 values, expected 16} {TCLUTILS TUDHASH DATA}}
+
+test dh-9 {bad hash rejected in distance} -body {
+    catch {distance zzz 0000000000000000} e opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUDHASH HASH}
+
+cleanupTests

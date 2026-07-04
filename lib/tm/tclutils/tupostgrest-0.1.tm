@@ -163,8 +163,10 @@ proc ::tclutils::tupostgrest::request {client method path args} {
     foreach {k v} [dict get $client header] { lappend headers $k $v }
     foreach {k v} $o(header)                { lappend headers $k $v }
 
-    lassign [_transport $method $url $headers $o(body) [dict get $client timeout] \
-                 [dict get $client insecure]] \
+    # pass the self-signed flag to _transport without changing its arity, so
+    # existing test mocks (5-arg _transport) keep working.
+    variable _insecure [dict get $client insecure]
+    lassign [_transport $method $url $headers $o(body) [dict get $client timeout]] \
         status ctype data
 
     if {$status >= 400} {
@@ -192,8 +194,11 @@ proc ::tclutils::tupostgrest::request {client method path args} {
 }
 
 # The only proc that touches the network -- override it in tests.
-# Returns {status contentType data}.
-proc ::tclutils::tupostgrest::_transport {method url headers body timeout {insecure 0}} {
+# Returns {status contentType data}.  The self-signed flag is read from the
+# namespace variable _insecure (set by request), keeping this signature stable.
+proc ::tclutils::tupostgrest::_transport {method url headers body timeout} {
+    variable _insecure
+    if {![info exists _insecure]} { set _insecure 0 }
     if {[string match -nocase https:* $url]} {
         if {[catch {package require tls}]} {
             _err TRANSPORT "https requested but the tls package is not available"
@@ -207,7 +212,7 @@ proc ::tclutils::tupostgrest::_transport {method url headers body timeout {insec
         # "failed to use socket". Send SNI only for real host names.
         set opts [list -autoservername [expr {$isIP ? 0 : 1}]]
         # self-signed / unverified certificate: don't demand validation.
-        if {$insecure} { lappend opts -request 0 -require 0 }
+        if {$_insecure} { lappend opts -request 0 -require 0 }
         ::http::register https 443 [list ::tls::socket {*}$opts]
     }
     set cfg [list -method $method -timeout $timeout]

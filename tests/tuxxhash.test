@@ -1,0 +1,41 @@
+# tuxxhash.test -- verifies XXH32 against reference vectors (python-xxhash /
+# the canonical xxHash test vectors). Run: TCLUTILS_TM=<dir> tclsh tuxxhash.test
+package require tcltest
+namespace import ::tcltest::*
+
+if {[info exists ::env(TCLUTILS_TM)]} { ::tcl::tm::path add $::env(TCLUTILS_TM) }
+package require tclutils::tuxxhash
+namespace import ::tclutils::tuxxhash::*
+
+test xxh-1 {empty string}        -body { xxh32 "" }        -result 02cc5d05
+test xxh-2 {single byte}         -body { xxh32 "a" }       -result 550d7456
+test xxh-3 {short < 4}           -body { xxh32 "abc" }     -result 32d153ff
+test xxh-4 {5 bytes}             -body { xxh32 "hello" }   -result fb0077f9
+test xxh-5 {15 bytes (no block)} -body { xxh32 "0123456789abcde" }  -result 1dbdfa0f
+test xxh-6 {16 bytes (one block)} -body { xxh32 "0123456789abcdef" } -result c2c45b69
+test xxh-7 {17 bytes}            -body { xxh32 "0123456789abcdefg" } -result cc79b217
+test xxh-8 {long, multi-block} \
+    -body { xxh32 "The quick brown fox jumps over the lazy dog" } -result e85ea4de
+test xxh-9 {with seed}   -body { xxh32 "The quick brown fox jumps over the lazy dog" 12345 } -result d1aad4aa
+test xxh-10 {seed = PRIME1} -body { xxh32 "abc" 2654435761 } -result a1ae7709
+
+test xxh-11 {binary bytes 0..255} -body {
+    set b {}
+    for {set i 0} {$i < 256} {incr i} { lappend b $i }
+    xxh32 [binary format c* $b] 0
+} -result 59441253
+
+test xxh-12 {file hashing matches in-memory} -body {
+    set f [makeFile {} xxh.tmp]
+    set ch [open $f wb]; puts -nonewline $ch "The quick brown fox jumps over the lazy dog"; close $ch
+    set a [xxh32file $f]
+    removeFile xxh.tmp
+    expr {$a eq "e85ea4de"}
+} -result 1
+
+test xxh-13 {bad seed rejected} -body {
+    catch {xxh32 "x" notanint} e opts
+    list $e [dict get $opts -errorcode]
+} -result {{seed must be an integer, got "notanint"} {TCLUTILS TUXXHASH SEED}}
+
+cleanupTests
