@@ -1,0 +1,116 @@
+# tutdbc.test -- tests for tclutils::tutdbc.
+#
+# tutdbc is fully testable wherever tdbc::sqlite3 is available (the `tdbc`
+# constraint guards the DB-backed tests; the pure helpers run anywhere).
+#
+# Module search path: TCLUTILS_TM (a tclutils tm tree that also holds common),
+# then the add-on layout (<root>/tclutils/*.tm) and a full-tree layout.
+
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+catch {tcl::tm::path add [file join $root lib tm]}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tutdbc 0.1
+
+testConstraint tdbc [expr {![catch {package require tdbc::sqlite3}]}]
+
+proc mkconn {} {
+    set c [tdbc::sqlite3::connection new :memory:]
+    $c allrows {CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT NOT NULL,
+                                nick TEXT, score REAL)}
+    return $c
+}
+
+# --- pure helpers -----------------------------------------------------------
+test tutdbc-null {null is a stable, non-empty sentinel} -body {
+    set s [::tclutils::tutdbc::null]
+    list [expr {$s eq [::tclutils::tutdbc::null]}] [expr {$s ne ""}]
+} -result {1 1}
+
+test tutdbc-quoteid {quoteId doubles embedded quotes} -body {
+    ::tclutils::tutdbc::quoteId {we"ird}
+} -result {"we""ird"}
+
+# --- insert / rows: NULL survives -------------------------------------------
+test tutdbc-insert-rows {inserted rows come back as dicts, NULL as ""} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    ::tclutils::tutdbc::insert $c t {id 1 name KING nick {} score 0}
+    ::tclutils::tutdbc::insert $c t {id 2 name ANNE nick a score 4.5}
+    ::tclutils::tutdbc::rows $c {SELECT id, name, nick, score FROM t ORDER BY id}
+} -result {{id 1 name KING nick {} score 0.0} {id 2 name ANNE nick a score 4.5}}
+
+test tutdbc-insert-null-sentinel {a null-sentinel value is stored as SQL NULL} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    ::tclutils::tutdbc::insert $c t [dict create id 1 name X nick [::tclutils::tutdbc::null]]
+    ::tclutils::tutdbc::value $c {SELECT nick IS NULL FROM t WHERE id=1}
+} -result 1
+
+test tutdbc-insert-omitted-null {an omitted column is stored as SQL NULL} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    ::tclutils::tutdbc::insert $c t {id 1 name X}
+    list [::tclutils::tutdbc::value $c {SELECT nick IS NULL FROM t WHERE id=1}] \
+         [::tclutils::tutdbc::value $c {SELECT score IS NULL FROM t WHERE id=1}]
+} -result {1 1}
+
+test tutdbc-insert-zero-not-null {a real 0 is stored, distinct from NULL} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    ::tclutils::tutdbc::insert $c t {id 1 name X score 0}
+    list [::tclutils::tutdbc::value $c {SELECT score FROM t WHERE id=1}] \
+         [::tclutils::tutdbc::value $c {SELECT score IS NULL FROM t WHERE id=1}]
+} -result {0.0 0}
+
+# --- value / binds ----------------------------------------------------------
+test tutdbc-value-default {value returns the default on an empty result} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    ::tclutils::tutdbc::value $c {SELECT name FROM t WHERE id=99} {} "n/a"
+} -result n/a
+
+test tutdbc-binds {bind dict parameterizes the query} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    ::tclutils::tutdbc::insert $c t {id 1 name KING}
+    ::tclutils::tutdbc::insert $c t {id 2 name ANNE}
+    ::tclutils::tutdbc::value $c {SELECT name FROM t WHERE id=:id} [dict create id 2]
+} -result ANNE
+
+# --- execute ----------------------------------------------------------------
+test tutdbc-execute-affected {execute returns the affected-row count} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    ::tclutils::tutdbc::insert $c t {id 1 name A score 1}
+    ::tclutils::tutdbc::insert $c t {id 2 name B score 1}
+    ::tclutils::tutdbc::execute $c {UPDATE t SET score=:s WHERE score=:old} \
+        [dict create s 9 old 1]
+} -result 2
+
+# --- transaction ------------------------------------------------------------
+test tutdbc-transaction-commit {a successful transaction commits} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    ::tclutils::tutdbc::transaction $c {
+        ::tclutils::tutdbc::insert $c t {id 1 name A}
+        ::tclutils::tutdbc::insert $c t {id 2 name B}
+    }
+    ::tclutils::tutdbc::value $c {SELECT count(*) FROM t}
+} -result 2
+
+test tutdbc-transaction-rollback {a failing transaction rolls back and re-raises} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    catch {
+        ::tclutils::tutdbc::transaction $c {
+            ::tclutils::tutdbc::insert $c t {id 1 name A}
+            error "boom"
+        }
+    } msg
+    list $msg [::tclutils::tutdbc::value $c {SELECT count(*) FROM t}]
+} -result {boom 0}
+
+test tutdbc-transaction-returns {transaction returns the script's value} \
+-constraints tdbc -setup {set c [mkconn]} -cleanup {$c close} -body {
+    ::tclutils::tutdbc::transaction $c {
+        ::tclutils::tutdbc::insert $c t {id 7 name Z}
+        ::tclutils::tutdbc::value $c {SELECT name FROM t WHERE id=7}
+    }
+} -result Z
+
+cleanupTests
