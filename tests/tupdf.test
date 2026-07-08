@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tupdf 0.1
+package require tclutils::tupdf 0.2
 
 set tmp [makeDirectory tupdf]
 
@@ -122,5 +122,44 @@ test tupdf-6.3 {summary includes zugferdDetected} -body {
     list [dict get [::tclutils::tupdf::summary $pdf] zugferdDetected] \
          [dict get [::tclutils::tupdf::summary $zfpdf] zugferdDetected]
 } -result {0 1}
+
+# ---- 0.2: compressed object streams (/ObjStm) + xref-stream trailer --------
+# A minimal PDF whose page (obj 10) and Info (obj 11) live inside a
+# zlib-compressed /ObjStm, with a /Type /XRef trailer -- all built in pure Tcl.
+set b10 {<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>}
+set b11 {<< /Producer (objstm test) /Title (Compressed) >>}
+set _off11 [string length "$b10 "]
+set _header "10 0 11 $_off11 "
+set _first  [string length $_header]
+set _comp   [zlib compress "$_header$b10 $b11 "]
+set _cbody "%PDF-1.5\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
+append _cbody "2 0 obj\n<< /Type /Pages /Kids \[10 0 R\] /Count 1 >>\nendobj\n"
+append _cbody "9 0 obj\n<< /Type /ObjStm /N 2 /First $_first /Length [string length $_comp] /Filter /FlateDecode >>\nstream\n"
+append _cbody $_comp
+append _cbody "\nendstream\nendobj\n"
+append _cbody "12 0 obj\n<< /Type /XRef /Root 1 0 R /Info 11 0 R /Size 13 /W \[1 2 1\] /Length 0 >>\nstream\n\nendstream\nendobj\nstartxref\n0\n%%EOF\n"
+set cpdf [file join $tmp objstm.pdf]
+set _ch [open $cpdf wb]; puts -nonewline $_ch $_cbody; close $_ch
+
+test tupdf-7.1 {objects hidden in /ObjStm become visible} -body {
+    ::tclutils::tupdf::objects $cpdf
+} -result {1 2 9 10 11 12}
+
+test tupdf-7.2 {a page inside /ObjStm is counted} -body {
+    dict get [::tclutils::tupdf::summary $cpdf] pages
+} -result 1
+
+test tupdf-7.3 {an object from /ObjStm can be dumped} -body {
+    string match {*/Type /Page*/MediaBox*} [::tclutils::tupdf::object $cpdf 10]
+} -result 1
+
+test tupdf-7.4 {trailer is read from the /Type /XRef dict} -body {
+    set tr [::tclutils::tupdf::trailer $cpdf]
+    list [string match {*/Root 1 0 R*} $tr] [string match {*/Info 11 0 R*} $tr]
+} -result {1 1}
+
+test tupdf-7.5 {metadata resolves via xref-stream Info inside /ObjStm} -body {
+    dict get [::tclutils::tupdf::metadata $cpdf] Title
+} -result Compressed
 
 cleanupTests

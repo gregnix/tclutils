@@ -7,6 +7,7 @@
 - Umbrella now also loads `tuxxhash`, `tudhash` and `tupostgrest`.
 - Added man pages for `tudhash` and `tuxxhash`.
 - Recommended pairing: tclutils 0.59.0 + tkutils 0.42.0.
+- tupdf 0.2
 
 ## 0.58.0
 

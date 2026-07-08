@@ -40,7 +40,7 @@ package require tclutils::tubase64 0.1
 package require tclutils::tucrc 0.1
 package require tclutils::tutr 0.1
 package require tclutils::tuodf 0.1
-package require tclutils::tupdf 0.1
+package require tclutils::tupdf 0.2
 package require tclutils::tumd 0.1
 package require tclutils::tufile 0.1
 package require tclutils::tuawk 0.1
