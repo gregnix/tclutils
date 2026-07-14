@@ -1,11 +1,16 @@
-# tclutils::tudeploy — Spec (0.1, Entwurf)
+# tclutils::tudeploy — Spec (0.1)
 
 Generisches Laufzeit-Auffinden und -Laden von Tcl-Modul-Paketen aus
 app-relativen „Deployment-Wurzeln" (`vendor/`, `libs/`, …) plus das Auffinden
 gebündelter Ressourcen-Verzeichnisse (für externe Binaries/Decoder).
 
-**Status:** Entwurf zur Abnahme. Noch kein Code. Sprache: Doku/Chat Deutsch,
-API + Fehler + Beispiele Englisch, **library-neutral** (keine App-Namen).
+**Status:** **UMGESETZT** — `lib/tm/tclutils/tudeploy-0.1.tm` liegt im Repo.
+Dieses Dokument ist die Referenz zur ausgelieferten 0.1, kein offener Entwurf
+mehr. (Bis 2026-07-13 stand hier „Noch kein Code" — wer das las, hielt ein
+fertiges Modul fuer eine offene Aufgabe.)
+
+Sprache: Doku/Chat Deutsch, API + Fehler + Beispiele Englisch,
+**library-neutral** (keine App-Namen).
 
 ---
 
