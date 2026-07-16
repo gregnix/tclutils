@@ -189,13 +189,14 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | Module | Scope status | Notes |
 |---|---|---|
 | `tuzip` | subset | Small ZIP/ODF-friendly create/read/extract; no Zip64, password, or streaming. |
-| `tuzipfs` | platform-limited | Tcl 9 ZipFS wrapper; Tcl 8.6 reports unavailable for ZipFS operations. |
+| `tuzipfs` | platform-limited | Tcl 9 ZipFS wrapper (mount / list / read); Tcl 8.6 reports unavailable for ZipFS operations. Since 0.2 also provides zipkit image primitives (`rcopy`, `copyStdlib`, `mkimg`, `buildImage`) used by the `build-app` application. |
 
 ## Deployment / packaging
 
 | Module | Scope status | Notes |
 |---|---|---|
 | `tudeploy` | helper | Runtime discovery and loading of Tcl module packages from app-relative deployment roots (`vendor`, `libs/common`, `libs`, `lib/tm`), plus locating bundled resource directories for external binaries; `require` / `resourceDirs` / `sourceModule`. Pairs with `tuexe`. |
+| `build-app` (app) | app | Turns a tclutils/tkutils app into a standalone Tcl 9 zipkit (single executable) via the `tuzipfs` image primitives: a dependency prober bundles only what actually loads, `-tm`/`-extlib`/`-include`/`-launch` control the assembly, and the target `-basekit` chooses the platform (Linux/Windows). `-writemanifest`/`-manifest` make builds reproducible without a display. Also shipped self-contained as `apps/bin/build-app-zipkit-linux`. See `docs/guide/build-app-guide.md`. |
 
 ## Introspection / diagnostics
 

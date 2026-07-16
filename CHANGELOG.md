@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.60.0
+
+Adds a standalone-application builder for Tcl 9 (zipkits) and the `zipfs` image
+primitives it uses. The runtime library stays pure Tcl on 8.6 and 9.x; the
+builder targets Tcl 9 (zipfs is a Tcl 9 core feature).
+
+- `tuzipfs` 0.2 — zipfs image primitives: `rcopy` (byte-exact recursive copy that
+  also works from a mounted zipfs, where `file copy` is unreliable), `copyStdlib`
+  (place `tcl_library` and, for GUI apps, `tk_library` into a VFS tree), `mkimg`
+  (a checked wrapper over `zipfs mkimg`), and `buildImage` (drop the stdlib into
+  an assembled tree and build in one call). The mount/read commands from 0.1 are
+  unchanged.
+- New app `build-app` — turns an app under `apps/` (tclutils or tkutils) into a
+  single standalone executable, a Tcl 9 zipkit. A dependency prober runs the app
+  once in the target basekit and bundles only the packages actually loaded; `-tm`
+  supplies module trees, `-extlib` the roots for external pkgIndex packages
+  (sqlite3, tdbc, tablelist …), `-include SRC=DEST` copies shared code an app
+  sources from a sibling directory, and `-launch` names the GUI entry proc. The
+  output platform is chosen by the target `-basekit`, so the same builder makes
+  Linux and Windows binaries; the standard library is taken from that basekit.
+- Self-hosting builder — `build-app` is also shipped as
+  `apps/bin/build-app-zipkit-linux`, a zipkit that carries `tuzipfs` embedded, so
+  a build host needs only that file plus the basekits (no installed Tcl or
+  tclutils).
+- Reproducible builds — `-writemanifest FILE` records the prober's dependency
+  closure as an editable list; `-manifest FILE` builds from that list without
+  probing (no display needed), for CI or for shipping an app as scripts plus a
+  package list. Native client libraries (libpq, the Oracle client) are not Tcl
+  packages and remain a target-system dependency either way.
+- Docs — `docs/guide/build-app-guide.md` (with a pipeline diagram),
+  `docs/guide/build-app-app-conventions.md`, `apps/build-app/README.md` and the
+  worked `EXAMPLE-*` tutorials, `apps/_template/` skeletons (GUI + CLI). The
+  `tuzipfs` man page and doc are updated to 0.2.
+- Recommended pairing: tclutils 0.60.0 + tkutils 0.42.2.
+
 ## 0.59.0
 
 - Fixed the umbrella typo `tclutis::tulayout` in `tclutils-0.58.0.tm`, which

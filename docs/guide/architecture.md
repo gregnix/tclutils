@@ -176,3 +176,6 @@ locator, `tulog` leveled logger); string helpers (`tustr`, `tuvalidate`, `tupage
 structure helpers (`tulist`, `tudict`); numeric/table helpers (`tumath`,
 `tutable`); and ZIP handling (`tuzip` byte-controlled create/read for ODF/OOXML
 containers, `tuzipfs` the Tcl 9 ZipFS wrapper that reports unavailable on 8.6).
+Since 0.2 `tuzipfs` also carries the zipkit image primitives (`rcopy`,
+`copyStdlib`, `mkimg`, `buildImage`) that back the `build-app` application — a
+standalone-application builder for Tcl 9; see `docs/guide/build-app-guide.md`.

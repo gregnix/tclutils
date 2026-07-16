@@ -195,8 +195,12 @@ Ziel: alle grün auf 8.6 **und** 9.0.
 
 ## 8. Abgrenzung — was NICHT hineinkommt
 
-- Build-Orchestrierung (Combo-Wahl, sdx-Wrap, VFS-Assembly, zipfs mkimg) bleibt
-  im Build-Repo. `tudeploy` ist **Laufzeit**-Discovery, keine Build-Engine.
+- Build-Orchestrierung (VFS-Assembly, `zipfs mkimg`) ist **nicht** Teil von
+  `tudeploy` — sie liegt jetzt in der App `apps/build-app/`, die auf den
+  `tuzipfs`-Image-Primitiven (`rcopy`/`copyStdlib`/`mkimg`) aufsetzt. `tudeploy`
+  bleibt reine **Laufzeit**-Discovery, keine Build-Engine; die verpackte App
+  findet ihre Module weiterhin über `tudeploy` bzw. den von `build-app`
+  erzeugten Bootstrap-Shim. Siehe `docs/guide/build-app-guide.md`.
 - Datei-Kopieren / String-Map-Patchen (`copyDir`, `patchFiles`, `resolveDir`)
   bleibt im Build-Skript (trivial, kein passendes Bestandsmodul; `tupatch` macht
   *unified diffs*, nicht String-Maps).

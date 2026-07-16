@@ -12,7 +12,10 @@ live in `bin/`.
   [`coreutils-mapping.md`](coreutils-mapping.md) (Unix-tool mapping),
   [`cli.md`](cli.md) (CLI front-ends),
   [`roadmap.md`](roadmap.md), [`todo-output.md`](todo-output.md),
-  [`tudeploy-0.1-spec.md`](tudeploy-0.1-spec.md).
+  [`tudeploy-0.1-spec.md`](tudeploy-0.1-spec.md),
+  [`build-app-guide.md`](build-app-guide.md) (standalone-app builder) and
+  [`build-app-app-conventions.md`](build-app-app-conventions.md) (rules an app
+  must follow to be packageable).
 - **Man pages**: `man/mann/<module>.n`. **Tests**: `tests/<module>.test`.
 
 ## Loading modules

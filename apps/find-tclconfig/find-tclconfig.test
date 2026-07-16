@@ -1,0 +1,88 @@
+# find-tclconfig.test -- verifies the config-file pairing logic.
+#
+# The tool is a standalone script (no package), so we run it as a subprocess
+# against a synthetic fixture of tclConfig.sh / tkConfig.sh files and assert on
+# its output. Version-neutral: uses only core commands, runs on 8.6 and 9.0.
+#
+#   tclsh tests/find-tclconfig.test
+#
+# The fixture covers the four cases the tool must get right:
+#   1. same directory (BAWT / Windows layout)      -> pair
+#   2. sibling tcl<ver>/tk<ver> (Debian layout)     -> pair
+#   3. version-less forwarder (Debian /usr/lib)     -> list as "->", never pair
+#   4. Tcl and Tk of same version in DIFFERENT trees -> must NOT pair
+
+package require tcltest
+namespace import ::tcltest::*
+
+set here   [file normalize [file dirname [info script]]]
+set script [file join $here .. find-tclconfig.tcl]
+
+# --- build the fixture --------------------------------------------------------
+set fix [makeDirectory fixture]
+
+proc writeConfig {path line} {
+    set d [file dirname $path]
+    file mkdir $d
+    set fh [open $path w]
+    puts $fh $line
+    close $fh
+}
+
+# 1) same dir, 8.6
+writeConfig [file join $fix bawt lib tclConfig.sh] "TCL_VERSION='8.6'"
+writeConfig [file join $fix bawt lib tkConfig.sh]  "TK_VERSION='8.6'"
+# 2) Debian siblings, 8.6
+writeConfig [file join $fix debian tcl8.6 tclConfig.sh] "TCL_VERSION='8.6'"
+writeConfig [file join $fix debian tk8.6  tkConfig.sh]  "TK_VERSION='8.6'"
+# 3) version-less forwarder (only sources the real file, no version line)
+writeConfig [file join $fix debian tclConfig.sh] \
+    ". [file join $fix debian tcl8.6 tclConfig.sh]"
+# 4) cross-tree 9.0: Tcl in treeA, Tk in treeB (not siblings)
+writeConfig [file join $fix treeA lib tclConfig.sh] "TCL_VERSION='9.0'"
+writeConfig [file join $fix treeB lib tkConfig.sh]  "TK_VERSION='9.0'"
+
+proc runTool {} {
+    global script fix
+    # capture stdout; the tool exits 0 when it finds something
+    return [exec [info nameofexecutable] $script $fix]
+}
+
+# -----------------------------------------------------------------------------
+test same-dir-pairs {BAWT/Windows same-dir Tcl+Tk are paired} -body {
+    set out [runTool]
+    set a [string match "*--with-tcl=[file join $fix bawt lib]*" $out]
+    set b [string match "*--with-tk=[file join $fix bawt lib]*"  $out]
+    list $a $b
+} -result {1 1}
+
+test debian-siblings-pair {Debian tcl8.6/tk8.6 siblings are paired} -body {
+    set out [runTool]
+    set a [string match "*--with-tcl=[file join $fix debian tcl8.6]*" $out]
+    set b [string match "*--with-tk=[file join $fix debian tk8.6]*"    $out]
+    list $a $b
+} -result {1 1}
+
+test forwarder-listed-not-paired {version-less forwarder shows "->" and is never used as a --with-tcl target} -body {
+    set out [runTool]
+    # it must appear in the listing
+    set listed [regexp -line {^Tcl\s+->\s+.*debian$} $out]
+    # but it must never become a configure target on its own
+    set paired [string match "*--with-tcl=[file join $fix debian] *" $out]
+    list $listed $paired
+} -result {1 0}
+
+test cross-tree-not-paired {Tcl 9.0 in treeA is NOT paired with Tk 9.0 in treeB} -body {
+    set out [runTool]
+    set warned [string match "*kein Tk daneben*" $out]
+    set wrongPair [string match "*--with-tk=[file join $fix treeB lib]*" $out]
+    list $warned $wrongPair
+} -result {1 0}
+
+test exit-code-success {finds something -> exit 0} -body {
+    catch {runTool} _ opts
+    dict get $opts -code
+} -result 0
+
+removeDirectory fixture
+cleanupTests

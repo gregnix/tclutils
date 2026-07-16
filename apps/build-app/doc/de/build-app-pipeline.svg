@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="440" viewBox="0 0 680 440" role="img" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <title>build-app: Zipkit-Build-Pipeline</title>
+  <desc>Die App-Quelle wird zu einem VFS-Baum zusammengebaut, per zipfs mkimg auf ein statisches Basekit gelegt und ergibt eine Standalone-Exe. Der Prober liefert die realen Abhaengigkeiten, die Basekit-Wahl entscheidet die Zielplattform.</desc>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="440" fill="#ffffff"/>
+  <text x="40" y="34" font-size="15" font-weight="500" fill="#2C2C2A">build-app: App &#8594; Einzeldatei</text>
+
+  <!-- A: App-Quelle -->
+  <rect x="210" y="52" width="260" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+  <text x="340" y="76" text-anchor="middle" font-size="14" font-weight="500" fill="#2C2C2A">App-Quelle</text>
+  <text x="340" y="94" text-anchor="middle" font-size="12" fill="#444441">app/ + Einstiegsskript</text>
+
+  <line x1="340" y1="108" x2="340" y2="142" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- B: VFS zusammenbauen -->
+  <rect x="210" y="148" width="260" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+  <text x="340" y="172" text-anchor="middle" font-size="14" font-weight="500" fill="#04342C">VFS zusammenbauen</text>
+  <text x="340" y="190" text-anchor="middle" font-size="12" fill="#0F6E56">Stdlib &#183; Module &#183; main.tcl</text>
+
+  <line x1="340" y1="204" x2="340" y2="238" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- C: zipfs mkimg -->
+  <rect x="210" y="244" width="260" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+  <text x="340" y="268" text-anchor="middle" font-size="14" font-weight="500" fill="#26215C">zipfs mkimg</text>
+  <text x="340" y="286" text-anchor="middle" font-size="12" fill="#534AB7">VFS + Basekit &#8594; Exe</text>
+
+  <line x1="340" y1="300" x2="340" y2="334" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- D: Standalone-Exe -->
+  <rect x="210" y="340" width="260" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+  <text x="340" y="364" text-anchor="middle" font-size="14" font-weight="500" fill="#04342C">Standalone-Exe</text>
+  <text x="340" y="382" text-anchor="middle" font-size="12" fill="#0F6E56">mountet //zipfs:/app</text>
+
+  <!-- Prober -> B -->
+  <rect x="505" y="148" width="135" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+  <text x="572" y="172" text-anchor="middle" font-size="14" font-weight="500" fill="#2C2C2A">Prober</text>
+  <text x="572" y="190" text-anchor="middle" font-size="12" fill="#444441">reale Deps</text>
+  <line x1="505" y1="176" x2="476" y2="176" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Basekit -> C -->
+  <rect x="505" y="244" width="135" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+  <text x="572" y="268" text-anchor="middle" font-size="14" font-weight="500" fill="#2C2C2A">Basekit</text>
+  <text x="572" y="286" text-anchor="middle" font-size="12" fill="#444441">statisch, 9.0.4</text>
+  <line x1="505" y1="272" x2="476" y2="272" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Basekit-Wahl -> C (left) -->
+  <rect x="40" y="244" width="135" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+  <text x="107" y="268" text-anchor="middle" font-size="14" font-weight="500" fill="#2C2C2A">Basekit-Wahl</text>
+  <text x="107" y="286" text-anchor="middle" font-size="12" fill="#444441">Linux / Windows</text>
+  <line x1="175" y1="272" x2="204" y2="272" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ah)"/>
+</svg>
