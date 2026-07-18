@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.61.0
+
+Adds a Windows icon container, pure Tcl and without Tk, as the writing
+counterpart to tklib's `ico` package.
+
+- `tuico` 0.1 — the `.ico` container format. `write` builds a file from
+  `{size pngData}` pairs and validates every payload first (PNG signature, IHDR
+  dimensions against the declared size), so a rejected call leaves no partial
+  file behind. `info` reports each entry as a dict (`width`, `height`, `bpp`,
+  `format`, `offset`, `length`) and recognises BMP payloads on read; `extract`
+  returns a payload, optionally to a file.
+- The entries carry **PNG payloads**, which Windows accepts since Vista and
+  which keep an alpha channel. This is the gap tklib's `ico` leaves open: it
+  reads icons from ICO/EXE/DLL/ICL, but by its own documentation cannot write a
+  true 32bpp alpha icon from a Tk image. Use tklib `ico` to extract, `tuico` to
+  write.
+- Errors use `errorCode {TCLUTILS TUICO <REASON>}`.
+- 15 tests, headless, green on Tcl 8.6.14 and 9.0.4.
+
+Recommended pairing: tclutils 0.61.0 + tkutils 0.43.0 (`tkutils::tkico` renders
+the icon sizes and hands the PNG payloads to this module).
+
 ## 0.60.0
 
 Adds a standalone-application builder for Tcl 9 (zipkits) and the `zipfs` image

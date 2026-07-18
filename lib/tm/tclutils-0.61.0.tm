@@ -23,6 +23,7 @@ package require tclutils::tupaste 0.1
 package require tclutils::tujoin 0.1
 package require tclutils::tuzip 0.1
 package require tclutils::tuzipfs 0.2
+package require tclutils::tuico 0.1
 package require tclutils::tujson 0.1
 package require tclutils::tuxml 0.1
 package require tclutils::tucsv 0.1
@@ -115,4 +116,4 @@ package require tclutils::tummdb 0.1
 # Diagram subsystem: the tuflow facade (it pulls in tudiagram; the individual
 # diagram parsers and 2D renderers load lazily on first use, not here)
 package require tclutils::tuflow 0.2
-package provide tclutils 0.60.0
+package provide tclutils 0.61.0

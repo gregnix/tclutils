@@ -191,6 +191,12 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tuzip` | subset | Small ZIP/ODF-friendly create/read/extract; no Zip64, password, or streaming. |
 | `tuzipfs` | platform-limited | Tcl 9 ZipFS wrapper (mount / list / read); Tcl 8.6 reports unavailable for ZipFS operations. Since 0.2 also provides zipkit image primitives (`rcopy`, `copyStdlib`, `mkimg`, `buildImage`) used by the `build-app` application. |
 
+## Icons
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tuico` | subset | Windows `.ico` container: writes entries with PNG payloads (alpha preserved, accepted by Windows since Vista), reads back `info`/`extract`, recognises BMP payloads on read. Writing BMP (DIB) payloads and reading icons out of EXE/DLL are out of scope -- tklib's `ico` covers extraction, this module covers writing icons with transparency. No Tk required.
+
 ## Deployment / packaging
 
 | Module | Scope status | Notes |

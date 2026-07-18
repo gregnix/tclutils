@@ -73,8 +73,11 @@ common  (Core: shared layer)
 |-- math / tables
 |   |-- tumath  `-- tutable
 |
-`-- archive
-    |-- tuzip   `-- tuzipfs
+|-- archive
+|   |-- tuzip   `-- tuzipfs
+|
+`-- icons
+    `-- tuico
 ```
 
 (`tuical` and `tucal` appear under two categories, mirroring the README's
@@ -179,3 +182,8 @@ containers, `tuzipfs` the Tcl 9 ZipFS wrapper that reports unavailable on 8.6).
 Since 0.2 `tuzipfs` also carries the zipkit image primitives (`rcopy`,
 `copyStdlib`, `mkimg`, `buildImage`) that back the `build-app` application — a
 standalone-application builder for Tcl 9; see `docs/guide/build-app-guide.md`.
+
+`tuico` writes and reads Windows `.ico` containers with PNG payloads, so icons
+keep their alpha channel; it needs no Tk. It complements tklib's `ico`, which
+extracts icons from ICO/EXE/DLL but cannot write a true 32bpp alpha icon from a
+Tk image.
