@@ -1,0 +1,46 @@
+.TH tutdbc n 0.1 tclutils
+.SH tclutils::tutdbc
+.PP
+Small, NULL\-safe helpers over an existing \fBTDBC\fR connection object — the tdbc analogue of \fBtclutils::tusqlite\fR. The module does \fBnot\fR \fBpackage require\fR any tdbc driver itself — you pass it a connection you opened — so it loads anywhere, and only the calls that actually touch the database need a driver present.
+.PP
+Why it exists: TDBC has two quiet traps. \fBallrows \-as dicts\fR silently \fBdrops\fR\fB\fR\fBNULL columns\fR from a row dict, so a \fBSELECT a, b\fR where \fBb\fR is NULL comes back as just \fB{a ...}\fR — the column vanishes instead of reading as \fB""\fR. And a bind dict that is \fBmissing a key\fR binds SQL \fBNULL\fR for that column. On top of that, tdbc::sqlite3's incremental \fBnextrow\fR/\fBnextlist\fR/\fBnextdict\fR cursor returns \fBno\fR\fB\fR\fBrows at all\fR for FTS5 / virtual\-table queries. \fBrows\fR and \fBinsert\fR hide all three: \fBrows\fR builds dicts from \fBallrows\fR (which works for FTS too) and re\-pads NULL columns from \fB$rs columns\fR, and \fBinsert\fR maps a missing/\fB[null]\fR value to SQL \fBNULL\fR on purpose while keeping a real \fB0\fR as \fB0\fR.
+.SS API
+.CS
+tdbc::sqlite3::connection create db mydata.db
+::tclutils::tutdbc::insert db people {name Alice age 30}     ;# -> affected rows
+::tclutils::tutdbc::insert db people {name Bob}              ;# age omitted -> NULL
+::tclutils::tutdbc::insert db people \
+    [list name Carol age [::tclutils::tutdbc::null]]         ;# explicit NULL
+foreach row [::tclutils::tutdbc::rows db \
+        {SELECT name, age FROM people WHERE age > :min} {min 18}] {
+    puts [dict get $row name]
+}
+set n [::tclutils::tutdbc::value db {SELECT count(*) FROM people} {} 0]
+::tclutils::tutdbc::execute db {UPDATE people SET age=:a WHERE name=:n} {a 31 n Bob}
+::tclutils::tutdbc::transaction db {
+    ::tclutils::tutdbc::insert db people {name Dave}
+    ::tclutils::tutdbc::insert db people {name Erin}
+}
+.CE
+.PP
+Bind parameters are \fB:name\fR in the SQL and supplied as a dict as the (optional) last argument, e.g. \fB{min 18}\fR above.
+.PP
+Commands:
+.IP \(bu
+\fBrows conn sql ?binds?\fR — run a query, return a list of column→value dicts, in row order (empty list if there are no rows). NULL\-safe: a NULL cell reads as \fB""\fR and its column stays. Works for FTS5 / virtual\-table queries, where the incremental cursor would return nothing.
+.IP \(bu
+\fBvalue conn sql ?binds? ?default?\fR — the first column of the first row, or \fBdefault\fR (default empty string) if the result is empty.
+.IP \(bu
+\fBexecute conn sql ?binds?\fR — run a non\-query statement (INSERT/UPDATE/DELETE/ DDL); returns the affected\-row count.
+.IP \(bu
+\fBinsert conn table dict\fR — INSERT a row from a column→value dict; returns the affected\-row count. A missing key, or a value equal to \fB[null]\fR, is stored as SQL \fBNULL\fR; a real \fB0\fR is stored as \fB0\fR. Identifiers are quoted, so reserved words and spaces in column names work. For a generated key use a \fBRETURNING\fR clause via \fBrows\fR/\fBexecute\fR (backend\-specific).
+.IP \(bu
+\fBtransaction conn script\fR — run \fBscript\fR in a transaction; commit on success, roll back and re\-raise on error. The script runs in the caller's scope and its value is returned.
+.IP \(bu
+\fBquoteId name\fR — quote an SQL identifier (wrap in double quotes, doubling any embedded ones).
+.IP \(bu
+\fBnull\fR — the sentinel value that \fBinsert\fR maps to SQL \fBNULL\fR.
+.PP
+Errors: an empty insert dict → \fB{TCLUTILS TUTDBC EMPTY}\fR. Verified on Tcl 8.6.14 and 9.0.2 with \fBtdbc::sqlite3\fR (including FTS5); the same shape works for \fBtdbc::postgres\fR and other drivers, which need to be present for the calls that touch the database.
+.PP
+See also: \fBtclutils::tusqlite\fR (the same idea over a native \fBsqlite3\fR handle).

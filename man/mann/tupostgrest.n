@@ -44,7 +44,7 @@ tupostgrest::insert $c documents [dict create \
 .PP
 For an \fBhttps://\fR base URL the client registers a TLS socket automatically (the \fBtls\fR package must be present). Two cases need attention when the server is an internal one reached by \fBIP address\fR with a \fBself\-signed\fR certificate:
 .IP \(bu
-\fBSNI with an IP.\fR A TLS server name (SNI) must be a host name, not an IP literal; some \fBtls\fR builds reject it and \fBhttp\fR then fails with \fI"failed to use socket"\fR. The client therefore sends SNI only for real host names and omits it for IPv4/IPv6 literals — no option needed.
+\fBSNI with an IP.\fR A TLS server name (SNI) must be a host name, not an IP literal; some \fBtls\fR builds reject it and \fBhttp\fR then fails with *"failed to use socket"*. The client therefore sends SNI only for real host names and omits it for IPv4/IPv6 literals — no option needed.
 .IP \(bu
 \fBCertificate validation.\fR A self\-signed certificate is not signed by a CA. Pass \fB\-insecure 1\fR to accept it without validation:
 .CS

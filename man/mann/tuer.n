@@ -26,9 +26,9 @@ The cardinality on each side of the connector becomes a \fBtudiagram\fR end\-mar
 .TS
 l l l.
 Mermaid (left / right)	meaning	end\-mark
-`\e	\e	\fB/\fR\e
-`\e	o\fB/\fRo\e	`
-`}\e	\fB/\fR\e	{`
+\fB||\fR / \fB||\fR	exactly one	\fBexactlyOne\fR
+\fB|o\fR / \fBo|\fR	zero or one	\fBzeroOrOne\fR
+\fB}|\fR / \fB|{\fR	one or many	\fBoneOrMany\fR
 \fB}o\fR / \fBo{\fR	zero or many	\fBzeroOrMany\fR
 .TE
 .PP

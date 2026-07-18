@@ -1,12 +1,12 @@
-.TH tupdf n 0.1 tclutils
+.TH tupdf n 0.2 tclutils
 .SH tclutils::tupdf
 .PP
 Read\-only PDF structure inspector in pure Tcl.
 .PP
-\fBtupdf\fR scans PDF files for common structural information: header version, object ids, page markers, trailer text, metadata, and raw uncompressed objects. It is a lightweight inspector, not a full PDF parser.
+\fBtupdf\fR scans PDF files for common structural information: header version, object ids, page markers, trailer text, metadata, and raw objects. Since \fB0.2\fR it also inflates compressed object streams (\fB/ObjStm\fR) with the built\-in \fBzlib\fR and reads the trailer from a cross\-reference stream (\fB/Type /XRef\fR), so objects, pages and metadata hidden inside them are resolved too. It is still a lightweight inspector, not a full PDF parser.
 .SS Package
 .CS
-package require tclutils::tupdf 0.1
+package require tclutils::tupdf 0.2
 .CE
 .SS API
 .CS
@@ -41,9 +41,18 @@ invoice XML snippets (\fBCrossIndustryInvoice\fR, …)
 .PP
 Returns a dict: \fBdetected\fR, \fBprofile\fR (\fBzugferd\fR, \fBfactur\-x\fR, \fBunknown\fR, or \fB""\fR), \fBattachmentNames\fR, \fBmimeTypes\fR, \fBhints\fR.
 .PP
-This is \fBnot\fR a PDF/A\-3 or EN 16931 conformance check. Attachments inside compressed object streams may be invisible to the scan.
+This is \fBnot\fR a PDF/A\-3 or EN 16931 conformance check. Since 0.2 attachments referenced from compressed object streams are resolved; attachment \fIcontents\fR inside encrypted streams remain invisible.
 .PP
 \fBsummary\fR adds \fBzugferdDetected\fR (and \fBzugferdProfile\fR when detected).
+.SS "Compressed PDFs (0.2)"
+.PP
+Modern PDFs pack most objects into zlib\-compressed \fBobject streams\fR (\fB/Type /ObjStm\fR) and replace the classic trailer with a \fBcross\-reference\fR\fB\fR\fBstream\fR (\fB/Type /XRef\fR). \fBtupdf\fR 0.2 handles both:
+.IP \(bu
+\fB/ObjStm\fR streams are inflated (\fBzlib\fR) and their embedded objects are exposed as normal \fBN 0 obj … endobj\fR text, so \fBobjects\fR, \fBobject\fR, \fBmetadata\fR and the page count in \fBsummary\fR see them.
+.IP \(bu
+\fBtrailer\fR falls back to the \fB/Type /XRef\fR dictionary (\fB/Root\fR, \fB/Info\fR, \fB/Size\fR) when there is no \fBtrailer\fR keyword.
+.PP
+As a result, \fBpages\fR and \fBobjects\fR are exact on Flate\-compressed PDFs, not just lower bounds. No external tool (qpdf) is required.
 .SS Limitations
 .PP
-Objects stored inside compressed object streams and pages hidden behind xref streams are not fully resolved. Counts can therefore be lower bounds on modern compressed PDFs. For deep inspection, convert to QDF with qpdf or use a full PDF parser/debugging tool.
+The binary cross\-reference table is not decoded (its plaintext dictionary is enough for the trailer). Object streams with a PNG/TIFF \fBpredictor\fR are rare and skipped \-\- counts then fall back to a lower bound. \fBEncrypted\fR streams are not decrypted, and attachments inside encrypted streams stay invisible. For deep inspection, convert to QDF with qpdf or use a full PDF parser.

@@ -7,7 +7,7 @@ A small \fBdu\fR: recursive byte totals and human\-readable formatting. Symlinks
 l l.
 Command	Result
 \fBbytes path\fR	size of a file, or recursive total of a directory (incl. dotfiles)
-`human n ?\-si 0\e	1?`
+\fBhuman n ?\-si 0|1?\fR	human\-readable size; binary units (KiB) by default, decimal (kB) with \fB\-si 1\fR
 \fBentries dir\fR	list of \fB{bytes path}\fR for each immediate child, sorted by path
 .TE
 .CS

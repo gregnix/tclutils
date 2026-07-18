@@ -19,7 +19,7 @@ counterpart to tklib's `ico` package.
 - Errors use `errorCode {TCLUTILS TUICO <REASON>}`.
 - 15 tests, headless, green on Tcl 8.6.14 and 9.0.4.
 
-Recommended pairing: tclutils 0.61.0 + tkutils 0.43.0 (`tkutils::tkico` renders
+Recommended pairing: tclutils 0.61.0 + tkutils 0.43.0 (`tkutils::tkuwinico` renders
 the icon sizes and hands the PNG payloads to this module).
 
 ## 0.60.0

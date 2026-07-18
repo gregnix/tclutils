@@ -1,7 +1,9 @@
-.TH tuzipfs n 0.1 tclutils
+.TH tuzipfs n 0.2 tclutils
 .SH tclutils::tuzipfs
 .PP
-\fBtclutils::tuzipfs\fR is a small Tcl 9 \fBzipfs\fR convenience wrapper.  The package loads under Tcl 8.6 as well, but commands that need \fBzipfs\fR throw a clear \fBTCLUTILS TUZIPFS UNAVAILABLE\fR error.
+\fBtclutils::tuzipfs\fR is a small Tcl 9 \fBzipfs\fR convenience wrapper. The package loads under Tcl 8.6 as well, but commands that need \fBzipfs\fR throw a clear \fBTCLUTILS TUZIPFS UNAVAILABLE\fR error.
+.PP
+Since 0.2 it also provides a handful of \fBimage primitives\fR for assembling self\-contained Tcl 9 applications (zipkits) with \fBzipfs mkimg\fR.
 .SS Commands
 .CS
 package require tclutils::tuzipfs
@@ -18,7 +20,22 @@ package require tclutils::tuzipfs
 ::tclutils::tuzipfs::readFile zipfsPath
 ::tclutils::tuzipfs::withMounted archive.zip mountVar body ?-mount mountName?
 .CE
-.SS Example
+.SS "Image primitives (0.2)"
+.CS
+::tclutils::tuzipfs::rcopy src dst
+::tclutils::tuzipfs::copyStdlib destDir ?-tk boolean? ?-from running|DIR?
+::tclutils::tuzipfs::mkimg outfile indir ?-strip DIR? ?-basekit FILE? ?-password PW?
+::tclutils::tuzipfs::buildImage -out FILE -vfs DIR ?-basekit FILE? ?-stdlib none|cli|gui? ?-stdlibfrom running|DIR?
+.CE
+.IP \(bu
+\fBrcopy\fR — recursive byte\-exact copy. Works from a mounted \fBzipfs\fR source, where a plain \fBfile copy\fR is unreliable.
+.IP \(bu
+\fBcopyStdlib\fR — copy \fBtcl_library\fR (and, with \fB\-tk 1\fR, \fBtk_library\fR) into \fBdestDir\fR. \fB\-from running\fR uses the current interpreter's \fB[info library]\fR / \fB$::tk_library\fR; \fB\-from DIR\fR reads them from \fBDIR/tcl_library\fR (and \fBDIR/tk_library\fR) — point this at a foreign basekit's mountpoint for cross\-platform builds.
+.IP \(bu
+\fBmkimg\fR — checked wrapper over \fBzipfs mkimg\fR. Files in \fBindir\fR land at the image's archive root because \fB\-strip\fR defaults to \fBindir\fR. \fB\-basekit\fR is the template interpreter (default: the running executable, which must itself be a static zipkit).
+.IP \(bu
+\fBbuildImage\fR — one\-call convenience: optionally drop the stdlib into an already\-assembled VFS tree (\fB\-stdlib cli|gui\fR), then \fBmkimg\fR.
+.SS "Example — read from an archive"
 .CS
 tcl::tm::path add lib/tm
 package require tclutils::tuzipfs
@@ -30,6 +47,24 @@ if {[::tclutils::tuzipfs::available]} {
     }
 }
 .CE
+.SS "Example — build a standalone application"
+.CS
+package require tclutils::tuzipfs
+namespace import ::tclutils::tuzipfs::*
+
+# Assemble a VFS tree: the app as main.tcl at the archive root.
+file mkdir app.vfs
+file copy myapp.tcl [file join app.vfs main.tcl]
+
+# Add the standard library and build the image onto a static basekit.
+# (mkimg REPLACES the basekit's own attached archive, so the stdlib must be
+#  carried in the VFS tree -- see Notes.)
+buildImage -out myapp -vfs app.vfs -basekit basekit-tcl -stdlib cli
+.CE
+.PP
+For the full application builder (dependency probing, GUI bootstrap, cross\-platform), see the \fBbuild\-app\fR app and \fBdocs/guide/build\-app.md\fR.
 .SS Notes
 .PP
-\fBzipfs\fR is part of Tcl 9.  For Tcl 8.6 or for byte\-level ZIP creation and ODF container control, use \fBtclutils::tuzip\fR instead.
+\fBzipfs mkimg\fR replaces the ZIP archive attached to the basekit. A BAWT or magicsplat basekit ships its own standard library inside that archive (mounted at \fB//zipfs:/app/tcl_library\fR); an image built with only the application would lose the stdlib and fail to start. Always put \fBtcl_library\fR (and \fBtk_library\fR for Tk apps) into the VFS tree first — \fBcopyStdlib\fR does this.
+.PP
+\fBzipfs\fR is part of Tcl 9. For Tcl 8.6 or for byte\-level ZIP creation and ODF container control, use \fBtclutils::tuzip\fR instead.

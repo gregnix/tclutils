@@ -1,0 +1,74 @@
+.TH tuico n 0.1 tclutils
+.SH "tclutils::tuico — Windows icon containers"
+.PP
+Reads and writes the \fB.ico\fR container format. Payloads go in and out as raw bytes; the module never rasterises anything, so it needs \fBno Tk\fR and runs headless.
+.CS
+package require tclutils::tuico 0.1
+.CE
+.SS "Why this exists next to tklib's \fBico\fR"
+.PP
+tklib ships an \fBico\fR package that reads icons from ICO, EXE, DLL, ICL and BMP files — useful, and this module does not try to replace it. But its documentation states two limits that matter for \fIwriting\fR modern icons:
+.PP
+There is currently no way to read alpha channel information from 32bpp icons.
+.PP
+Tk images do not have an alpha channel so the only way to write a true 32bpp icon is from a color list. Writing a 32bpp icon from a Tk image is identical to writing a 24bpp icon.
+.PP
+Tk photo images \fBdo\fR have an alpha channel since 8.6, and Tk writes PNG natively. \fBtuico\fR therefore stores \fBPNG payloads\fR, which Windows accepts for icon entries since Vista and which carry alpha as a matter of course.
+.PP
+Rule of thumb: use tklib \fBico\fR to \fIextract\fR icons from existing binaries, use \fBtuico\fR to \fIwrite\fR new ones with transparency.
+.SS Commands
+.PP
+All commands are also reachable through the ensemble \fBtclutils::tuico\fR.
+.SS "\fBwrite outFile entries\fR"
+.PP
+Writes an \fB.ico\fR file. \fBentries\fR is a list of \fB{size pngData}\fR pairs, where \fBsize\fR is the nominal edge length in pixels (1–256) and \fBpngData\fR is a PNG image as a byte string. Returns the number of bytes written.
+.PP
+Every payload is validated before anything is written, so a rejected call leaves no partial file behind: it must be a PNG, and its IHDR dimensions must match the declared size.
+.CS
+set entries {}
+foreach size {48 16} {
+    lappend entries [list $size [readPngSomehow $size]]
+}
+tclutils::tuico write app.ico $entries
+.CE
+.SS "\fBinfo icoFile\fR"
+.PP
+Returns a list of dicts, one per entry, with the keys \fBwidth\fR, \fBheight\fR, \fBbpp\fR, \fBformat\fR (\fBpng\fR or \fBbmp\fR), \fBoffset\fR and \fBlength\fR.
+.CS
+foreach entry [tclutils::tuico info app.ico] {
+    puts "[dict get $entry width]px [dict get $entry format]"
+}
+.CE
+.SS "\fBextract icoFile size ?outFile?\fR"
+.PP
+Returns the raw payload of the entry with the given width. With \fBoutFile\fR given, the payload is also written there.
+.CS
+tclutils::tuico extract app.ico 256 large.png
+.CE
+.SS "Format notes"
+.IP \(bu
+A dimension of \fB0\fR in the directory means \fB256\fR; \fBwrite\fR encodes this and \fBinfo\fR decodes it, so callers always see 256.
+.IP \(bu
+Entries are written in the order given. Largest first is conventional.
+.IP \(bu
+BMP (DIB) payloads are \fBrecognised on read\fR and reported as \fBformat bmp\fR. Writing them is out of scope — PNG covers every Windows version still in use.
+.SS Errors
+.PP
+\fBerrorCode\fR is always \fB{TCLUTILS TUICO <REASON>}\fR:
+.TS
+l l.
+Reason	When
+\fBNOENTRIES\fR	empty entry list
+\fBTOOMANY\fR	more than 65535 entries
+\fBBADENTRY\fR	an entry is not a \fB{size data}\fR pair
+\fBBADSIZE\fR	size outside 1..256
+\fBBADPNG\fR	payload is not a PNG
+\fBSIZEMISMATCH\fR	PNG dimensions differ from the declared size
+\fBBADFILE\fR	file is not an \fB.ico\fR
+\fBTRUNCATED\fR	directory entry is cut short
+\fBNOSUCHSIZE\fR	\fBextract\fR found no entry of that size
+\fBREADFAILED\fR / \fBWRITEFAILED\fR	file could not be opened
+.TE
+.SS Requirements
+.PP
+Tcl 8.6 or later. Nothing else — no Tk, no packages.

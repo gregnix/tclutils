@@ -6,7 +6,7 @@ Pure\-Tcl cryptographic digests: \fBSHA\-256\fR, \fBSHA\-1\fR, \fBMD5\fR. Clean\
 .TS
 l l.
 Command	Result
-`sha256 data ?\-encoding utf\-8\e	binary?`
+\fBsha256 data ?\-encoding utf\-8|binary?\fR	hex SHA\-256 of a string
 \fBsha1   data ?\-encoding ...?\fR	hex SHA\-1
 \fBmd5    data ?\-encoding ...?\fR	hex MD5
 \fBsha256File path\fR / \fBsha1File path\fR / \fBmd5File path\fR	digest of a file's bytes

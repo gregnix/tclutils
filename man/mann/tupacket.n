@@ -28,7 +28,7 @@ The label may be quoted (\fB"..."\fR / \fB'...'\fR) or bare.
 .IP \(bu
 Blank lines and \fB%%\fR comments are ignored. Bit indices are integers.
 .IP \(bu
-Fields are sorted by start bit; \fBoverlapping\fR ranges and an \fBend before start\fR are parse errors. Bits no field covers (within the used range) are drawn as light\-grey gap cells.
+Fields are sorted by start bit; \fBoverlapping\fR ranges and an \fBend before\fR\fB\fR\fBstart\fR are parse errors. Bits no field covers (within the used range) are drawn as light\-grey gap cells.
 .SS "Layout (v1)"
 .PP
 Bits are laid out \fB32 per row\fR (the Mermaid default). Each row draws the start/end bit index of every field segment along the top and the fields as filled cells below, coloured from a fixed qualitative palette. A field that crosses a row boundary is split into per\-row segments that share one colour; its label is drawn once, centred in its widest segment, and clipped (not wrapped) if longer than the cell. The canvas height grows automatically with the number of rows when \fB\-height\fR is left at its default (\fB0\fR = auto).

@@ -29,24 +29,24 @@ namespace eval ::tclutils::tuico {
     variable pngSignature "\x89PNG\r\n\x1a\n"
 }
 
-# throw --
+# _throw --
 #   Raise an error with the module's errorCode convention.
-proc ::tclutils::tuico::throw {reason message} {
+proc ::tclutils::tuico::_throw {reason message} {
     return -code error -errorcode [list TCLUTILS TUICO $reason] $message
 }
 
-# isPng --
+# _isPng --
 #   True if the byte string starts with the PNG signature.
-proc ::tclutils::tuico::isPng {bytes} {
+proc ::tclutils::tuico::_isPng {bytes} {
     variable pngSignature
     return [expr {[string range $bytes 0 7] eq $pngSignature}]
 }
 
-# pngSize --
+# _pngSize --
 #   Width and height from a PNG IHDR chunk, as a two-element list.
-proc ::tclutils::tuico::pngSize {bytes} {
-    if {![isPng $bytes]} {
-        throw BADPNG "not a PNG image"
+proc ::tclutils::tuico::_pngSize {bytes} {
+    if {![_isPng $bytes]} {
+        _throw BADPNG "not a PNG image"
     }
     # IHDR payload starts at offset 16: width and height as big-endian uint32.
     binary scan [string range $bytes 16 23] II width height
@@ -62,28 +62,28 @@ proc ::tclutils::tuico::pngSize {bytes} {
 #   Returns the number of bytes written.
 proc ::tclutils::tuico::write {outFile entries} {
     if {[llength $entries] == 0} {
-        throw NOENTRIES "no icon entries given"
+        _throw NOENTRIES "no icon entries given"
     }
     if {[llength $entries] > 65535} {
-        throw TOOMANY "an .ico file holds at most 65535 entries"
+        _throw TOOMANY "an .ico file holds at most 65535 entries"
     }
 
     # Validate before writing anything, so a bad call leaves no partial file.
     set checked {}
     foreach entry $entries {
         if {[llength $entry] != 2} {
-            throw BADENTRY "entry must be a {size data} pair, got: $entry"
+            _throw BADENTRY "entry must be a {size data} pair, got: $entry"
         }
         lassign $entry size data
         if {![string is integer -strict $size] || $size < 1 || $size > 256} {
-            throw BADSIZE "size must be an integer 1..256, got: $size"
+            _throw BADSIZE "size must be an integer 1..256, got: $size"
         }
-        if {![isPng $data]} {
-            throw BADPNG "payload for size $size is not a PNG image"
+        if {![_isPng $data]} {
+            _throw BADPNG "payload for size $size is not a PNG image"
         }
-        lassign [pngSize $data] pw ph
+        lassign [_pngSize $data] pw ph
         if {$pw != $size || $ph != $size} {
-            throw SIZEMISMATCH \
+            _throw SIZEMISMATCH \
                 "payload for size $size is ${pw}x${ph}, expected ${size}x${size}"
         }
         lappend checked [list $size $data]
@@ -116,7 +116,7 @@ proc ::tclutils::tuico::write {outFile entries} {
     set data $header$directory$payloads
 
     if {[catch {open $outFile wb} channel]} {
-        throw WRITEFAILED "cannot open $outFile for writing: $channel"
+        _throw WRITEFAILED "cannot open $outFile for writing: $channel"
     }
     try {
         puts -nonewline $channel $data
@@ -126,11 +126,11 @@ proc ::tclutils::tuico::write {outFile entries} {
     return [string length $data]
 }
 
-# readFile --
+# _readFile --
 #   Slurp a file as binary data.
-proc ::tclutils::tuico::readFile {path} {
+proc ::tclutils::tuico::_readFile {path} {
     if {[catch {open $path rb} channel]} {
-        throw READFAILED "cannot open $path for reading: $channel"
+        _throw READFAILED "cannot open $path for reading: $channel"
     }
     try {
         set data [read $channel]
@@ -144,13 +144,13 @@ proc ::tclutils::tuico::readFile {path} {
 #   Describe the entries of an .ico file. Returns a list of dicts with the keys
 #   width, height, bpp, format (png|bmp), offset and length.
 proc ::tclutils::tuico::info {icoFile} {
-    set data [readFile $icoFile]
+    set data [_readFile $icoFile]
     if {[string length $data] < 6} {
-        throw BADFILE "$icoFile is too short to be an .ico file"
+        _throw BADFILE "$icoFile is too short to be an .ico file"
     }
     binary scan $data sss reserved type count
     if {$reserved != 0 || $type != 1} {
-        throw BADFILE "$icoFile is not an .ico file (reserved=$reserved type=$type)"
+        _throw BADFILE "$icoFile is not an .ico file (reserved=$reserved type=$type)"
     }
 
     set result {}
@@ -158,7 +158,7 @@ proc ::tclutils::tuico::info {icoFile} {
         set base [expr {6 + 16 * $i}]
         set entry [string range $data $base [expr {$base + 15}]]
         if {[string length $entry] < 16} {
-            throw TRUNCATED "$icoFile: directory entry $i is truncated"
+            _throw TRUNCATED "$icoFile: directory entry $i is truncated"
         }
         binary scan $entry cucucucussii \
             width height colors res planes bpp length offset
@@ -168,7 +168,7 @@ proc ::tclutils::tuico::info {icoFile} {
         if {$height == 0} { set height 256 }
 
         set payload [string range $data $offset [expr {$offset + $length - 1}]]
-        set format [expr {[isPng $payload] ? "png" : "bmp"}]
+        set format [expr {[_isPng $payload] ? "png" : "bmp"}]
 
         lappend result [dict create \
             width  $width \
@@ -185,7 +185,7 @@ proc ::tclutils::tuico::info {icoFile} {
 #   Return the raw payload of the entry with the given width. With outFile
 #   given, the payload is also written there.
 proc ::tclutils::tuico::extract {icoFile size {outFile ""}} {
-    set data [readFile $icoFile]
+    set data [_readFile $icoFile]
     foreach entry [info $icoFile] {
         if {[dict get $entry width] != $size} {
             continue
@@ -195,7 +195,7 @@ proc ::tclutils::tuico::extract {icoFile size {outFile ""}} {
         set payload [string range $data $offset [expr {$offset + $length - 1}]]
         if {$outFile ne ""} {
             if {[catch {open $outFile wb} channel]} {
-                throw WRITEFAILED "cannot open $outFile for writing: $channel"
+                _throw WRITEFAILED "cannot open $outFile for writing: $channel"
             }
             try {
                 puts -nonewline $channel $payload
@@ -205,7 +205,7 @@ proc ::tclutils::tuico::extract {icoFile size {outFile ""}} {
         }
         return $payload
     }
-    throw NOSUCHSIZE "$icoFile has no entry of size $size"
+    _throw NOSUCHSIZE "$icoFile has no entry of size $size"
 }
 
 package provide tclutils::tuico 0.1
