@@ -1,0 +1,412 @@
+# tunotesdb.test -- tests for tclutils::tunotesdb.
+#
+# Needs the sqlite3 package; without it everything is skipped rather than
+# failed, the way the other optional-dependency tests in this repo behave.
+
+package require Tcl 8.6-
+package require tcltest 2
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+if {[info exists ::env(TCLUTILS_TM)]} { tcl::tm::path add $::env(TCLUTILS_TM) }
+
+testConstraint sqlite [expr {![catch {package require sqlite3}]}]
+
+if {[testConstraint sqlite]} {
+    package require tclutils::tunotesdb
+    package require tclutils::tunotes
+}
+
+set tmpDir [makeDirectory tunotesdb]
+set dbSeq 0
+
+# Every test gets its own database: state that leaks between tests is the
+# classic source of order-dependent failures.
+proc freshDb {} {
+    set path [file join $::tmpDir [format "n%03d.db" [incr ::dbSeq]]]
+    # Delete first: an aborted earlier run leaves its files behind, and a
+    # reused database turns later runs into a puzzle -- counts that are off by
+    # exactly the number of notes the previous attempt had created.
+    foreach f [glob -nocomplain ${path}*] { file delete -force $f }
+    sqlite3 ::testdb $path
+    ::tclutils::tunotesdb::init ::testdb
+    return ::testdb
+}
+proc closeDb {} {
+    catch {::testdb close}
+}
+
+# --------------------------------------------------------------- schema ---
+
+test tunotesdb-1.1 {init creates an empty store} -constraints sqlite -setup {
+    set db [freshDb]
+} -body {
+    ::tclutils::tunotesdb::count $db
+} -result 0 -cleanup {closeDb}
+
+test tunotesdb-1.2 {init is idempotent} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "A" "text"
+} -body {
+    ::tclutils::tunotesdb::init $db
+    ::tclutils::tunotesdb::count $db
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-1.3 {a handle that is not a database is refused} -constraints sqlite -body {
+    catch {::tclutils::tunotesdb::init ::no::such::db} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUNOTESDB NODB}
+
+# ---------------------------------------------------------------- CRUD ----
+
+test tunotesdb-2.1 {create returns an id and stores the fields} -constraints sqlite -setup {
+    set db [freshDb]
+} -body {
+    set id [::tclutils::tunotesdb::create $db "Title" "Body" {a b}]
+    set note [::tclutils::tunotesdb::get $db $id]
+    list [dict get $note title] [dict get $note content] [dict get $note tags] \
+         [dict get $note parent_id]
+} -result {Title Body {a b} {}} -cleanup {closeDb}
+
+test tunotesdb-2.2 {the note layout matches tunotes} -constraints sqlite -setup {
+    set db [freshDb]
+    set id [::tclutils::tunotesdb::create $db "T" "C"]
+} -body {
+    set store [dict create]
+    set otherId [::tclutils::tunotes::create store "T" "C"]
+    set a [lsort [dict keys [::tclutils::tunotesdb::get $db $id]]]
+    set b [lsort [dict keys [::tclutils::tunotes::get $store $otherId]]]
+    expr {$a eq $b}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-2.3 {update changes fields and keeps the parent} -constraints sqlite -setup {
+    set db [freshDb]
+    set p [::tclutils::tunotesdb::create $db "Parent" ""]
+    set id [::tclutils::tunotesdb::create $db "Old" "old" {} $p]
+} -body {
+    ::tclutils::tunotesdb::update $db $id "New" "new" {x}
+    set note [::tclutils::tunotesdb::get $db $id]
+    expr {[dict get $note title] eq "New" && [dict get $note tags] eq "x"
+          && [dict get $note parent_id] eq $p}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-2.4 {exists distinguishes present from absent} -constraints sqlite -setup {
+    set db [freshDb]
+    set id [::tclutils::tunotesdb::create $db "T" "C"]
+} -body {
+    list [::tclutils::tunotesdb::exists $db $id] \
+         [::tclutils::tunotesdb::exists $db 999]
+} -result {1 0} -cleanup {closeDb}
+
+test tunotesdb-2.5 {get on a missing note is refused} -constraints sqlite -setup {
+    set db [freshDb]
+} -body {
+    catch {::tclutils::tunotesdb::get $db 4711} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUNOTESDB NOTFOUND} -cleanup {closeDb}
+
+test tunotesdb-2.6 {a missing parent is refused} -constraints sqlite -setup {
+    set db [freshDb]
+} -body {
+    catch {::tclutils::tunotesdb::create $db "T" "C" {} 4711} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUNOTESDB NOTFOUND} -cleanup {closeDb}
+
+# ----------------------------------------------------------- hierarchy ----
+
+test tunotesdb-3.1 {roots and children} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+    set c [::tclutils::tunotesdb::create $db "C" ""]
+} -body {
+    expr {[llength [::tclutils::tunotesdb::roots $db]] == 2
+          && [::tclutils::tunotesdb::children $db $a] eq $b}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-3.2 {descendants walks the whole subtree} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+    set c [::tclutils::tunotesdb::create $db "C" "" {} $b]
+    set d [::tclutils::tunotesdb::create $db "D" "" {} $c]
+} -body {
+    llength [::tclutils::tunotesdb::descendants $db $a]
+} -result 3 -cleanup {closeDb}
+
+test tunotesdb-3.3 {ancestors runs from the parent upwards} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+    set c [::tclutils::tunotesdb::create $db "C" "" {} $b]
+} -body {
+    expr {[::tclutils::tunotesdb::ancestors $db $c] eq [list $b $a]}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-3.4 {path runs root first, note last} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+    set c [::tclutils::tunotesdb::create $db "C" "" {} $b]
+} -body {
+    expr {[::tclutils::tunotesdb::path $db $c] eq [list $a $b $c]}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-3.5 {depth counts the ancestors} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+} -body {
+    list [::tclutils::tunotesdb::depth $db $a] [::tclutils::tunotesdb::depth $db $b]
+} -result {0 1} -cleanup {closeDb}
+
+test tunotesdb-3.6 {siblings leaves out the note itself} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+    set c [::tclutils::tunotesdb::create $db "C" "" {} $a]
+} -body {
+    expr {[::tclutils::tunotesdb::siblings $db $b] eq [list $c]}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-3.7 {subtree includes the note itself} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+} -body {
+    expr {[lsort [::tclutils::tunotesdb::subtree $db $a]] eq [lsort [list $a $b]]}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-3.8 {move re-parents} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" ""]
+    set c [::tclutils::tunotesdb::create $db "C" "" {} $a]
+} -body {
+    ::tclutils::tunotesdb::move $db $c $b
+    expr {[::tclutils::tunotesdb::parent $db $c] eq $b}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-3.9 {moving a note under its own descendant is refused} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+} -body {
+    catch {::tclutils::tunotesdb::move $db $a $b} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUNOTESDB CYCLE} -cleanup {closeDb}
+
+test tunotesdb-3.10 {moving a note under itself is refused} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+} -body {
+    catch {::tclutils::tunotesdb::move $db $a $a} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUNOTESDB CYCLE} -cleanup {closeDb}
+
+# -------------------------------------------------------------- delete ----
+
+test tunotesdb-4.1 {delete takes the subtree with it} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+    set c [::tclutils::tunotesdb::create $db "C" "" {} $b]
+} -body {
+    ::tclutils::tunotesdb::delete $db $a
+    ::tclutils::tunotesdb::count $db
+} -result 0 -cleanup {closeDb}
+
+test tunotesdb-4.2 {without cascade the children become roots} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" ""]
+    set b [::tclutils::tunotesdb::create $db "B" "" {} $a]
+} -body {
+    ::tclutils::tunotesdb::delete $db $a 0
+    expr {[::tclutils::tunotesdb::count $db] == 1
+          && [::tclutils::tunotesdb::roots $db] eq $b}
+} -result 1 -cleanup {closeDb}
+
+# -------------------------------------------------------------- search ----
+
+test tunotesdb-5.1 {search finds a word in the content} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "Build" "litehtml with nmake"
+    ::tclutils::tunotesdb::create $db "Shopping" "milk and bread"
+} -body {
+    set hits [::tclutils::tunotesdb::search $db nmake]
+    list [llength $hits] [dict get [lindex $hits 0] title]
+} -result {1 Build} -cleanup {closeDb}
+
+test tunotesdb-5.2 {search finds a word in the title} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "Shopping" "milk"
+} -body {
+    llength [::tclutils::tunotesdb::search $db Shopping]
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-5.3 {the snippet marks the hit} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "T" "a very particular word here"
+} -body {
+    set hit [lindex [::tclutils::tunotesdb::search $db particular] 0]
+    string match {*\[particular\]*} [dict get $hit snippet]
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-5.4 {several words mean AND} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "A" "alpha beta"
+    ::tclutils::tunotesdb::create $db "B" "alpha only"
+} -body {
+    llength [::tclutils::tunotesdb::search $db "alpha beta"]
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-5.5 {prefix search} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "A" "configure and configuration"
+} -body {
+    llength [::tclutils::tunotesdb::search $db "config*"]
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-5.6 {-limit caps the result} -constraints sqlite -setup {
+    set db [freshDb]
+    for {set i 0} {$i < 5} {incr i} {
+        ::tclutils::tunotesdb::create $db "N$i" "common word"
+    }
+} -body {
+    llength [::tclutils::tunotesdb::search $db common -limit 2]
+} -result 2 -cleanup {closeDb}
+
+test tunotesdb-5.7 {an unusable query is reported, not swallowed} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "A" "text"
+} -body {
+    catch {::tclutils::tunotesdb::search $db {"unbalanced}} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUNOTESDB BADQUERY} -cleanup {closeDb}
+
+test tunotesdb-5.8 {an update reaches the index} -constraints sqlite -setup {
+    set db [freshDb]
+    set id [::tclutils::tunotesdb::create $db "T" "before"]
+} -body {
+    ::tclutils::tunotesdb::update $db $id "T" "afterwards"
+    list [llength [::tclutils::tunotesdb::search $db before]] \
+         [llength [::tclutils::tunotesdb::search $db afterwards]]
+} -result {0 1} -cleanup {closeDb}
+
+test tunotesdb-5.9 {a deleted note leaves the index} -constraints sqlite -setup {
+    set db [freshDb]
+    set id [::tclutils::tunotesdb::create $db "T" "vanishing"]
+} -body {
+    ::tclutils::tunotesdb::delete $db $id
+    llength [::tclutils::tunotesdb::search $db vanishing]
+} -result 0 -cleanup {closeDb}
+
+test tunotesdb-5.10 {an unknown option is refused} -constraints sqlite -setup {
+    set db [freshDb]
+} -body {
+    catch {::tclutils::tunotesdb::search $db word -bogus 1} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUNOTESDB BADOPTION} -cleanup {closeDb}
+
+# ---------------------------------------------------------------- tags ----
+
+test tunotesdb-6.1 {byTag matches exactly} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" "" {work urgent}]
+    set b [::tclutils::tunotesdb::create $db "B" "" {work}]
+    set c [::tclutils::tunotesdb::create $db "C" "" {private}]
+} -body {
+    expr {[::tclutils::tunotesdb::byTag $db work] eq [list $a $b]
+          && [::tclutils::tunotesdb::byTag $db urgent] eq [list $a]}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-6.2 {tags are collected without duplicates} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "A" "" {b a}
+    ::tclutils::tunotesdb::create $db "B" "" {a c}
+} -body {
+    ::tclutils::tunotesdb::tags $db
+} -result {a b c} -cleanup {closeDb}
+
+test tunotesdb-6.3 {a tag with a space stays one tag} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" "" [list "two words"]]
+} -body {
+    expr {[::tclutils::tunotesdb::tags $db] eq [list "two words"]
+          && [::tclutils::tunotesdb::byTag $db "two words"] eq [list $a]}
+} -result 1 -cleanup {closeDb}
+
+# -------------------------------------------------------------- bridge ----
+
+test tunotesdb-7.1 {toStore yields a usable tunotes store} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" "text" {t}]
+    set b [::tclutils::tunotesdb::create $db "B" "more" {} $a]
+} -body {
+    set store [::tclutils::tunotesdb::toStore $db]
+    expr {[dict size $store] == 2
+          && [::tclutils::tunotes::children $store $a] eq $b
+          && [dict get [::tclutils::tunotes::get $store $a] title] eq "A"}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-7.2 {fromStore imports} -constraints sqlite -setup {
+    set db [freshDb]
+    set store [dict create]
+    set x [::tclutils::tunotes::create store "X" "content x" {tag}]
+    set y [::tclutils::tunotes::create store "Y" "content y" {} $x]
+} -body {
+    set n [::tclutils::tunotesdb::fromStore $db $store]
+    expr {$n == 2 && [::tclutils::tunotesdb::count $db] == 2
+          && [::tclutils::tunotesdb::children $db $x] eq $y}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-7.3 {imported notes are searchable} -constraints sqlite -setup {
+    set db [freshDb]
+    set store [dict create]
+    ::tclutils::tunotes::create store "T" "imported content"
+} -body {
+    ::tclutils::tunotesdb::fromStore $db $store
+    llength [::tclutils::tunotesdb::search $db imported]
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-7.4 {a round trip preserves the notes} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" "alpha" {x y}]
+    set b [::tclutils::tunotesdb::create $db "B" "beta" {} $a]
+} -body {
+    set store [::tclutils::tunotesdb::toStore $db]
+    ::tclutils::tunotesdb::fromStore $db $store -clear 1
+    set again [::tclutils::tunotesdb::toStore $db]
+    expr {$store eq $again}
+} -result 1 -cleanup {closeDb}
+
+test tunotesdb-7.5 {an incomplete note is refused} -constraints sqlite -setup {
+    set db [freshDb]
+} -body {
+    set store [dict create 1 [dict create id 1 title "T"]]
+    catch {::tclutils::tunotesdb::fromStore $db $store} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUNOTESDB BADNOTE} -cleanup {closeDb}
+
+test tunotesdb-7.6 {a failed import leaves nothing behind} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "Keep" "me"
+} -body {
+    set store [dict create 1 [dict create id 1 title "T"]]
+    catch {::tclutils::tunotesdb::fromStore $db $store -clear 1}
+    ::tclutils::tunotesdb::count $db
+} -result 1 -cleanup {closeDb}
+
+# ------------------------------------------------------------ ensemble ----
+
+test tunotesdb-8.1 {the ensemble works} -constraints sqlite -setup {
+    set db [freshDb]
+} -body {
+    set id [tclutils::tunotesdb create $db "T" "C"]
+    tclutils::tunotesdb count $db
+} -result 1 -cleanup {closeDb}
+
+removeDirectory tunotesdb
+cleanupTests

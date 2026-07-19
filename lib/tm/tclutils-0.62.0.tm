@@ -62,6 +62,7 @@ package require tclutils::tunumany 0.1
 package require tclutils::tuterm 0.1
 package require tclutils::tucolor 0.1
 package require tclutils::tunotes 0.1
+package require tclutils::tunotesdb 0.1
 package require tclutils::tuldif 0.1
 package require tclutils::tuical 0.1
 package require tclutils::tuini 0.1
@@ -116,4 +117,4 @@ package require tclutils::tummdb 0.1
 # Diagram subsystem: the tuflow facade (it pulls in tudiagram; the individual
 # diagram parsers and 2D renderers load lazily on first use, not here)
 package require tclutils::tuflow 0.2
-package provide tclutils 0.61.0
+package provide tclutils 0.62.0

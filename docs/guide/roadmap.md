@@ -4,8 +4,9 @@ For the per-module scope status see [`module-status.md`](module-status.md);
 the wishlist/backlog detail lives with the reviews. This file is the
 high-level history and forward view.
 
-_As of 2026-06-30: 128 modules; hygiene gate green (test / doc / man 128 / 128,
-0 duplicate-version)._
+_As of 2026-07-19: 133 modules; hygiene gate green (test 137, doc 133, man 134,
+0 duplicate-version). Umbrella `tclutils` 0.61.0; recommended pairing
+tclutils 0.61.0 + tkutils 0.43.0._
 
 ## Recently shipped
 
@@ -18,7 +19,8 @@ _As of 2026-06-30: 128 modules; hygiene gate green (test / doc / man 128 / 128,
   (`first~step`); the GNU-style address set (line, `$`, `/regex/`, ranges) is now
   complete. Version → 0.1.3, with new tests `tused-2.5`…`2.11`.
 - **Repository hygiene & metadata.** `# Description:` + `# Category:` headers on
-  all 128 modules; `README.md` and `module-status.md` now cover 128 / 128; a
+  all modules of that release (128 at the time); `README.md` and
+  `module-status.md` cover them completely; a
   unified path resolver `tools/setup.tcl` (env / install / share / XDG /
   side-by-side, versioned or not). `check-modules.tcl` gained a category column,
   UTF-8 manifest output and an optional `-title`, plus the

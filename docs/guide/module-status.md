@@ -110,6 +110,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | Module | Scope status | Notes |
 |---|---|---|
 | `tunotes` | basis complete | Hierarchical note store (id/parent/title/content/tags); create/update/move/cascade-delete, `tujson` persistence. Value-based, no external packages. |
+| `tunotesdb` | basis complete | The same note store on SQLite: one row per note, `WITH RECURSIVE` for the hierarchy, FTS5 search with ranking and snippets, WAL. Bridges to `tunotes` with `toStore`/`fromStore`. Needs an `sqlite3` package with FTS5 at the point of use; the module does not require it itself. |
 | `tuical` | basis complete | iCalendar (RFC 5545) reader/writer; component/property navigation, VEVENT helpers, 75-char folding; pairs with `turrule`. |
 | `tuini` | basis complete | INI reader/writer; parses to section→(key→value) with a global section `""`, order preserved, comments dropped. |
 | `tuvcard` | basis complete | vCard (RFC 6350/2426) reader/writer; 75-char folding, raw round-tripping, FN/property helpers. |

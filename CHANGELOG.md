@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.62.0
+
+### Added
+
+- **`tunotesdb` 0.1** — the persistent counterpart to `tunotes`: one row per
+  note in SQLite instead of one Tcl dict saved as JSON.
+  - Same note layout (`id parent_id title content created modified tags`) and
+    the same timestamp format, so both engines are interchangeable and
+    `tkutils::tkunotes` works with either.
+  - The hierarchy lives in `parent_id` and is queried with `WITH RECURSIVE`:
+    `descendants`, `ancestors`, `path`, `depth`, `siblings` and `subtree` do
+    their work in the database rather than loading every note to follow a chain
+    of parents.
+  - **Full-text search through FTS5** with ranking and snippets, as an
+    external-content index (`content='notes'`) kept in step by three triggers —
+    the text is not stored twice and no application code has to reindex. A
+    syntactically wrong query raises `BADQUERY` instead of looking like an empty
+    result.
+  - `init` is idempotent and switches the database to WAL, so readers do not
+    block the writer.
+  - Bridges both ways: `toStore` returns a `tunotes` store (and thus a JSON
+    export via `tunotes::toJson`), `fromStore` imports one in a single
+    transaction.
+  - Builds on `tusqlite` for the SQL layer and, like that module, does **not**
+    `package require sqlite3` itself — the caller opens the database and passes
+    the handle.
+  - Errors use `errorCode {TCLUTILS TUNOTESDB <REASON>}`.
+  - 41 tests, green on Tcl 8.6 (SQLite 3.45) and 9.0 (SQLite 3.53); without the
+    `sqlite3` package they are skipped, not failed.
+
+`tunotes` remains the right choice for a handful of notes and for anywhere that
+must stay free of external packages. `tunotesdb` is for many notes, several
+writers, or a server.
+
 ## 0.61.0
 
 Adds a Windows icon container, pure Tcl and without Tk, as the writing

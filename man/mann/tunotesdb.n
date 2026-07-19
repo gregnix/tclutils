@@ -1,0 +1,121 @@
+.TH tunotesdb n 0.1 tclutils
+.SH "tclutils::tunotesdb — SQLite\-backed note store"
+.PP
+The persistent counterpart to \fBtunotes\fR. Same note layout, so both engines are interchangeable and \fBtkutils::tkunotes\fR works with either.
+.CS
+package require sqlite3
+package require tclutils::tunotesdb 0.1
+
+sqlite3 db notes.db
+tclutils::tunotesdb::init db
+
+set id [tclutils::tunotesdb::create db "Build notes" "litehtml with nmake" {build}]
+foreach hit [tclutils::tunotesdb::search db nmake] {
+    puts "[dict get $hit title]: [dict get $hit snippet]"
+}
+.CE
+.SS "Which of the two engines"
+.TS
+l l l.
+	\fBtunotes\fR	\fBtunotesdb\fR
+Storage	one Tcl dict, saved as JSON	one row per note in SQLite
+Saving	rewrites the whole file	transactional, per note
+Search	linear \fBstring match\fR	FTS5 index, ranked, with snippets
+Hierarchy	walked in Tcl	\fBWITH RECURSIVE\fR in the database
+Dependencies	none	\fBsqlite3\fR (FTS5)
+Good for	a handful of notes, no extra packages	many notes, several writers, a server
+.TE
+.PP
+The note dict is identical in both:
+.CS
+id parent_id title content created modified tags
+.CE
+.PP
+\fBparent_id\fR is the empty string for a root note; \fBtags\fR is a Tcl list; timestamps are \fB%Y\-%m\-%d %H:%M:%S\fR, as in \fBtunotes\fR.
+.SS "Opening the database"
+.PP
+Like \fBtusqlite\fR, this module does \fBnot\fR \fBpackage require sqlite3\fR itself — the caller opens the database and passes the handle. That keeps the module sourceable anywhere and leaves the choice of file, flags and lifetime with the application.
+.SS "\fBinit db\fR"
+.PP
+Creates the schema if it is not there yet and switches the database to WAL, so readers do not block the writer. Safe to call on every start.
+.PP
+The full\-text index is an FTS5 table with \fBcontent='notes'\fR: it does not store the text a second time, and three triggers keep it in step with the table — no application code has to remember to reindex. \fBinit\fR raises \fBNOFTS5\fR if the SQLite build has no FTS5 (part of the standard build since 3.9).
+.SS Commands
+.PP
+All commands are also reachable through the ensemble \fBtclutils::tunotesdb\fR.
+.SS Notes
+.TS
+l l.
+Command	Returns
+\fBcreate db title content ?tags? ?parentId?\fR	the new id
+\fBupdate db id title content ?tags? ?parentId?\fR	the id; \fBparentId\fR defaults to \fBKEEP\fR
+\fBget db id\fR	the note dict
+\fBexists db id\fR	boolean
+\fBdelete db id ?cascade?\fR	—; with \fBcascade\fR (default 1) the subtree goes, without it the children become roots
+\fBmove db id newParentId\fR	the id; refuses cycles
+\fBids db\fR / \fBcount db\fR	all ids / how many
+.TE
+.SS Hierarchy
+.TS
+l l.
+Command	Returns
+\fBroots db\fR	ids without a parent
+\fBchildren db parentId\fR	direct children (\fB""\fR for the roots)
+\fBdescendants db id\fR	everything below, depth\-first
+\fBancestors db id\fR	from the parent up to the root
+\fBparent db id\fR	the parent id, \fB""\fR for a root
+\fBpath db id\fR	root first, the note itself last
+\fBdepth db id\fR	0 for a root
+\fBsiblings db id\fR	the other children of the same parent
+\fBsubtree db id\fR	the note plus everything below
+.TE
+.PP
+The tree lives in \fBparent_id\fR and is walked with \fBWITH RECURSIVE\fR. The work stays in the database instead of loading every note to follow a chain of parents.
+.SS Search
+.CS
+search db query ?-limit N? ?-snippet N?
+.CE
+.PP
+Returns a list of dicts with the keys \fBid\fR, \fBtitle\fR, \fBsnippet\fR and \fBrank\fR, best match first. \fB\-limit\fR defaults to 50 (\fB0\fR for all), \fB\-snippet\fR to 10 words of context.
+.PP
+The query goes to FTS5, so its syntax applies:
+.TS
+l l.
+Query	Meaning
+\fBnmake\fR	the word
+\fBalpha beta\fR	both words (AND)
+\fB"exact phrase"\fR	literally
+\fBconfig*\fR	prefix
+\fBalpha OR beta\fR, \fBalpha NOT beta\fR	as written
+.TE
+.PP
+A syntactically wrong query raises \fBBADQUERY\fR rather than returning nothing — a typo should not look like an empty result.
+.SS Tags
+.PP
+\fBbyTag db tag\fR returns the ids carrying the tag, \fBtags db\fR every tag in use, sorted and without duplicates. Tags are stored as a Tcl list in one column and compared in Tcl, so a tag containing a space stays one tag.
+.SS "Bridge to tunotes"
+.TS
+l l.
+Command	Purpose
+\fBtoStore db\fR	the whole database as a \fBtunotes\fR store
+\fBfromStore db store ?\-clear 1?\fR	import a \fBtunotes\fR store; returns how many notes
+.TE
+.PP
+\fBtoStore\fR hands the data to code that expects the in\-memory engine — including \fBtclutils::tunotes::toJson\fR for a JSON export. \fBfromStore\fR runs in one transaction: a failure half\-way leaves the database as it was.
+.SS Errors
+.PP
+\fBerrorCode\fR is always \fB{TCLUTILS TUNOTESDB <REASON>}\fR:
+.TS
+l l.
+Reason	When
+\fBNODB\fR	the handle is not a usable sqlite3 command
+\fBNOFTS5\fR	SQLite without FTS5
+\fBNOTFOUND\fR	no note with that id, or no such parent
+\fBCYCLE\fR	a move would put a note under itself or a descendant
+\fBBADQUERY\fR	FTS5 could not parse the search query
+\fBBADOPTION\fR	unknown option, or an unusable \fB\-limit\fR
+\fBBADNOTE\fR	a note handed to \fBfromStore\fR is missing a field
+.TE
+.SS Requirements
+.PP
+Tcl 8.6 or later, \fBtclutils::tusqlite\fR, and an \fBsqlite3\fR package with FTS5 at the point of use. Tested against SQLite 3.45 (Tcl 8.6) and 3.53 (Tcl 9.0).
