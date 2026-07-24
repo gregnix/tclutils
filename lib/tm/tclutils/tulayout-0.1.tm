@@ -40,11 +40,26 @@ proc ::tclutils::tulayout::defaultBlockKeys {} {
 proc ::tclutils::tulayout::pageSize {paper {orientation portrait}} {
     variable papers
     set key [string tolower $paper]
-    if {![dict exists $papers $key]} {
+    if {[dict exists $papers $key]} {
+        lassign [dict get $papers $key] w h
+    } elseif {[llength $paper] == 2
+              && [string is double -strict [lindex $paper 0]]
+              && [string is double -strict [lindex $paper 1]]} {
+        # Freies Format als {Breite Hoehe} in mm -- fuer Etiketten,
+        # Bons und alles andere, was kein Normpapier ist.
+        lassign $paper w h
+    } elseif {[regexp {^([0-9.]+)[xX]([0-9.]+)$} $paper -> pw ph]} {
+        # Gleiches als "54x56".
+        set w $pw ; set h $ph
+    } else {
         return -code error -errorcode {TCLUTILS TULAYOUT PAPER} \
-            "unknown paper '$paper': must be a4, letter or a5"
+            "unknown paper '$paper': must be a4, letter, a5,\
+             {width height} or WxH in mm"
     }
-    lassign [dict get $papers $key] w h
+    if {$w <= 0 || $h <= 0} {
+        return -code error -errorcode {TCLUTILS TULAYOUT PAPER} \
+            "paper dimensions must be positive, got ${w}x${h}"
+    }
     if {[string tolower $orientation] eq "landscape"} {
         return [list $h $w]
     }
