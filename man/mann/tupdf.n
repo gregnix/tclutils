@@ -46,7 +46,7 @@ This is \fBnot\fR a PDF/A\-3 or EN 16931 conformance check. Since 0.2 attachment
 \fBsummary\fR adds \fBzugferdDetected\fR (and \fBzugferdProfile\fR when detected).
 .SS "Compressed PDFs (0.2)"
 .PP
-Modern PDFs pack most objects into zlib\-compressed \fBobject streams\fR (\fB/Type /ObjStm\fR) and replace the classic trailer with a \fBcross\-reference\fR\fB\fR\fBstream\fR (\fB/Type /XRef\fR). \fBtupdf\fR 0.2 handles both:
+Modern PDFs pack most objects into zlib\-compressed \fBobject streams\fR (\fB/Type /ObjStm\fR) and replace the classic trailer with a \fBcross\-reference\fR\fB \fR\fBstream\fR (\fB/Type /XRef\fR). \fBtupdf\fR 0.2 handles both:
 .IP \(bu
 \fB/ObjStm\fR streams are inflated (\fBzlib\fR) and their embedded objects are exposed as normal \fBN 0 obj … endobj\fR text, so \fBobjects\fR, \fBobject\fR, \fBmetadata\fR and the page count in \fBsummary\fR see them.
 .IP \(bu

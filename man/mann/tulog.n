@@ -1,7 +1,7 @@
 .TH tulog n 0.1 tclutils
 .SH tclutils::tulog
 .PP
-A small, dependency\-free leveled logger. A logger is a \fBcallable command\fR\fB\fR\fBobject\fR, so the level names \fBinfo\fR/\fBerror\fR are subcommands rather than procs that would shadow the Tcl built\-ins.
+A small, dependency\-free leveled logger. A logger is a \fBcallable command\fR\fB \fR\fBobject\fR, so the level names \fBinfo\fR/\fBerror\fR are subcommands rather than procs that would shadow the Tcl built\-ins.
 .SS API
 .CS
 set log [::tclutils::tulog::new -name app -level info -channel stderr]

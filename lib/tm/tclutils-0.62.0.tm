@@ -117,4 +117,11 @@ package require tclutils::tummdb 0.1
 # Diagram subsystem: the tuflow facade (it pulls in tudiagram; the individual
 # diagram parsers and 2D renderers load lazily on first use, not here)
 package require tclutils::tuflow 0.2
+# Storage-provider interface + backends (local built in; zip/dav register their
+# schemes on load). Consumers browse any backend as one path-with-children tree.
+package require tclutils::tuprovider 0.1
+package require tclutils::tuprovider::zip 0.1
+package require tclutils::tuprovider::dav 0.1
+package require tclutils::tuprovider::ftp 0.1
+
 package provide tclutils 0.62.0

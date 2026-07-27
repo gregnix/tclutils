@@ -74,15 +74,23 @@ proc main {argv} {
         if {$hasDoc && !$hasMan} { incr nOneSided; puts [format "%-20s %-9s %-6s %-6s %s" $mod doc-only - - "(man fehlt)"]; continue }
         if {!$hasDoc && $hasMan} { incr nOneSided; puts [format "%-20s %-9s %-6s %-6s %s" $mod man-only - - "(doc fehlt)"]; continue }
 
+        # Source .tm may be flat (<mod>-*.tm) or a sub-module in a subdirectory
+        # (<parent>/<child>-*.tm, displayed as <parent>-<child>). The sub-module's
+        # namespace uses :: not -, so pass the :: form to publicNames.
         set tm [lindex [lsort [glob -nocomplain [file join $tmDir $mod-*.tm]]] end]
+        set nsMod $mod
+        if {$tm eq "" && [regexp {^(.+?)-(.+)$} $mod -> parent child]} {
+            set tm [lindex [lsort [glob -nocomplain [file join $tmDir $parent $child-*.tm]]] end]
+            if {$tm ne ""} { set nsMod ${parent}::$child }
+        }
         if {$tm eq ""} { incr nNoSrc; puts [format "%-20s %-9s %-6s %-6s %s" $mod both ? ? "(keine Quelle - uebersprungen)"]; continue }
-        set exports [publicNames [readFile $tm] $repo $mod]
+        set exports [publicNames [readFile $tm] $repo $nsMod]
         if {[llength $exports] == 0} { puts [format "%-20s %-9s %-6s %-6s %s" $mod both - - "(keine Exports)"]; continue }
         set docTxt [readFile $md]; set manTxt [readFile $n]
         set missDoc {}; set missMan {}
         foreach e $exports {
-            if {![mentioned $docTxt $repo $mod $e]} { lappend missDoc $e }
-            if {![mentioned $manTxt $repo $mod $e]} { lappend missMan $e }
+            if {![mentioned $docTxt $repo $nsMod $e]} { lappend missDoc $e }
+            if {![mentioned $manTxt $repo $nsMod $e]} { lappend missMan $e }
         }
         set N [llength $exports]
         set dc [expr {$N - [llength $missDoc]}]; set mc [expr {$N - [llength $missMan]}]

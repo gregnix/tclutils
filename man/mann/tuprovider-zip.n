@@ -1,0 +1,43 @@
+.TH tuprovider-zip n 0.1 tclutils
+.SH tclutils::tuprovider::zip
+.PP
+A read\-only ZIP backend for the \fBtuprovider\fR interface, built on \fBtuzip\fR.
+.PP
+It lets the same tree and list consumers that work over the local filesystem browse the contents of a ZIP archive without change: for the consumer, an entry in the archive is just a path with children.
+.SS Load
+.CS
+tcl::tm::path add /path/to/tclutils/lib/tm
+package require tclutils::tuprovider::zip
+.CE
+.PP
+Loading the package registers the \fBzip\fR scheme with \fBtuprovider\fR.
+.SS Open
+.CS
+set p [::tclutils::tuprovider open zip /path/to/archive.zip]
+.CE
+.SS Capabilities
+.PP
+\fBzip\fR reports the read\-only subset:
+.CS
+list stat get
+.CE
+.PP
+Writing operations (\fBput\fR, \fBdelete\fR, \fBmkdir\fR, \fBmove\fR, \fBcopy\fR) are not reported, so a UI driven by \fBcaps\fR will not offer them. To copy a file \fIout\fR of an archive, read it with \fBget\fR and write it into a writable provider with \fBput\fR (this is what a cross\-provider copy does at the application level).
+.SS Operations
+.IP \(bu
+\fBlist $path\fR \-\- returns entry dicts for the children of \fB$path\fR.
+.IP \(bu
+\fBstat $path\fR \-\- returns the entry dict for a single path.
+.IP \(bu
+\fBget $path\fR \-\- returns the raw bytes of an archived file.
+.SS "Directory synthesis"
+.PP
+A ZIP archive stores a flat list of member names; intermediate directories are not always present as their own entries. This provider \fBsynthesizes\fR the directory tree from the member paths: given \fBsub/deep/x.txt\fR, it presents \fBsub\fR and \fBsub/deep\fR as directories even when no explicit entry for them exists. This is what lets a plain tree widget walk an archive as if it were a filesystem.
+.SS "Notes and limits"
+.IP \(bu
+Read\-only by design: an archive is treated as an immutable source.
+.IP \(bu
+The archive is opened once when the provider is created; \fBtuzip\fR handles the actual reading.
+.SS "See also"
+.PP
+\fBtuprovider\fR, \fBtuprovider::dav\fR, \fBtuzip\fR

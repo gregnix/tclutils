@@ -1,0 +1,62 @@
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuprovider 0.1
+
+if {![catch {package require tclutils::tuprovider::dav}]} {
+    testConstraint haveDav 1
+} else {
+    testConstraint haveDav 0
+}
+
+# The dav provider forwards to tudav. Rather than reach a live WebDAV server
+# (none is available in a test run), stand in a tiny tudav stub that returns
+# fixed collections/resources. Defined AFTER the package require so it
+# OVERRIDES the real tudav procedures pulled in as a dependency -- this
+# exercises the adapter's own logic (href -> entry mapping, caps subset), which
+# is all that is new here; the HTTP traffic is tudav's concern, tested there.
+namespace eval ::tclutils::tudav {}
+proc ::tclutils::tudav::client {url args} { return "stubclient" }
+proc ::tclutils::tudav::destroy {c} { return }
+proc ::tclutils::tudav::listCollections {c args} {
+    return {{href /dav/sub/}}
+}
+proc ::tclutils::tudav::listResources {c args} {
+    return {{href /dav/file.txt} {href /dav/report.pdf}}
+}
+proc ::tclutils::tudav::getProperties {c args} { return {} }
+
+test tuprovider-dav-1.1 {dav loads and registers the scheme} -constraints haveDav -body {
+    set p [::tclutils::tuprovider open dav http://example/dav/]
+    expr {$p ne ""}
+} -result 1
+
+test tuprovider-dav-1.2 {caps are the read/write subset dav supports} -constraints haveDav -body {
+    # dav can list/stat/get/put/delete but not mkdir/move/copy (tudav has no
+    # public MKCOL/MOVE/COPY), and caps must report that honestly.
+    set p [::tclutils::tuprovider open dav http://example/dav/]
+    set c [lsort [$p caps]]
+    list [expr {"list" in $c}] [expr {"get" in $c}] [expr {"put" in $c}] \
+         [expr {"mkdir" in $c}] [expr {"move" in $c}] [expr {"copy" in $c}]
+} -result {1 1 1 0 0 0}
+
+test tuprovider-dav-1.3 {list maps hrefs to entries, dirs first by name} -constraints haveDav -body {
+    set p [::tclutils::tuprovider open dav http://example/dav/]
+    set out {}
+    foreach e [$p list /dav/] {
+        lappend out [list [dict get $e name] [dict get $e type]]
+    }
+    lsort $out
+} -result {{file.txt file} {report.pdf file} {sub dir}}
+
+test tuprovider-dav-1.4 {a trailing-slash href yields a clean leaf name} -constraints haveDav -body {
+    set p [::tclutils::tuprovider open dav http://example/dav/]
+    set names {}
+    foreach e [$p list /dav/] { lappend names [dict get $e name] }
+    expr {"sub" in $names}
+} -result 1
+
+cleanupTests

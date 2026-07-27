@@ -1,0 +1,67 @@
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuprovider 0.1
+
+# a scratch tree for the local provider
+set ::d [makeDirectory tuprov]
+makeDirectory sub $::d
+makeFile "hello" a.txt $::d
+makeFile "world" [file join sub b.txt] $::d
+
+test tuprovider-1.1 {local provider lists a directory} -body {
+    set p [::tclutils::tuprovider open local]
+    set names {}
+    foreach e [$p list $::d] { lappend names [dict get $e name] }
+    lsort $names
+} -result {a.txt sub}
+
+test tuprovider-1.2 {stat reports type and size} -body {
+    set p [::tclutils::tuprovider open local]
+    set e [$p stat [file join $::d a.txt]]
+    list [dict get $e type] [dict get $e size]
+} -result {file 6}
+
+test tuprovider-1.3 {get returns raw bytes} -body {
+    set p [::tclutils::tuprovider open local]
+    string trim [$p get [file join $::d a.txt]]
+} -result hello
+
+test tuprovider-1.4 {local provider reports all caps} -body {
+    set p [::tclutils::tuprovider open local]
+    lsort [$p caps]
+} -result {copy delete get list mkdir move put stat}
+
+test tuprovider-1.5 {put then get round-trips} -body {
+    set p [::tclutils::tuprovider open local]
+    $p put [file join $::d new.txt] "data"
+    set r [$p get [file join $::d new.txt]]
+    file delete [file join $::d new.txt]
+    set r
+} -result data
+
+test tuprovider-1.6 {caps of a read-only subclass excludes writers} -setup {
+    # a provider that inherits Base and implements only readers reports exactly
+    # those as caps -- the introspection walks the resolution chain.
+    oo::class create ROProv {
+        superclass ::tclutils::tuprovider::Base
+        method list {dir}  { return {} }
+        method stat {path} { return {} }
+        method get  {path} { return "" }
+    }
+} -body {
+    set p [ROProv new]
+    lsort [$p caps]
+} -cleanup {
+    ROProv destroy
+} -result {get list stat}
+
+test tuprovider-1.7 {unknown scheme is an error} -body {
+    catch {::tclutils::tuprovider open nosuchscheme} e
+    string match {*unknown scheme*} $e
+} -result 1
+
+cleanupTests

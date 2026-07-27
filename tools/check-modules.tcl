@@ -235,17 +235,35 @@ proc main {argv} {
             set umbrellaNote "WARNING: multiple umbrella files: [join [lmap u $umbrellas {file tail $u}] {, }]"
         }
         foreach line [split [readFile [lindex $umbrellas 0]] \n] {
-            if {[regexp "^\\s*package require ${repo}::(\\w+)" $line -> m]} { dict set umbrellaSet $m 1 }
+            if {[regexp "^\\s*package require ${repo}::(\[\\w:\]+)" $line -> m]} {
+                # a sub-module tclutils::parent::child is displayed as parent-child
+                dict set umbrellaSet [string map {:: -} $m] 1
+            }
         }
     }
 
     set mods [dict create]
+    # Top-level modules: lib/tm/<repo>/<name>-<ver>.tm
     foreach f [lsort [glob -nocomplain [file join $modDir *.tm]]] {
         set base [file tail $f]
         if {[regexp {^(.+)-([0-9]+\.[0-9]+(?:\.[0-9]+)?)\.tm$} $base -> name ver]} {
             dict lappend mods $name $ver
         } else {
             puts stderr "?? cannot parse module file name: $base"
+        }
+    }
+    # Sub-modules one level down: lib/tm/<repo>/<parent>/<child>-<ver>.tm, whose
+    # package name is <repo>::<parent>::<child>. Report them as <parent>-<child>
+    # so doc/man/test files stay flat (docs/<parent>-<child>.md, etc.).
+    foreach d [lsort [glob -nocomplain -types d [file join $modDir *]]] {
+        set parent [file tail $d]
+        foreach f [lsort [glob -nocomplain [file join $d *.tm]]] {
+            set base [file tail $f]
+            if {[regexp {^(.+)-([0-9]+\.[0-9]+(?:\.[0-9]+)?)\.tm$} $base -> child ver]} {
+                dict lappend mods "$parent-$child" $ver
+            } else {
+                puts stderr "?? cannot parse module file name: $base"
+            }
         }
     }
 

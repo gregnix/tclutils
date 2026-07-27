@@ -1,0 +1,86 @@
+.TH tuprovider n 0.1 tclutils
+.SH "Provider\-Interface \-\- Entwurf"
+.PP
+Das Provider\-Interface ist das Architektur\-Herz des Explorer\-Frameworks. Es abstrahiert ueber jeden Speicherort: lokales Dateisystem, ZIP, WebDAV, FTP. Fuer Baum und Liste ist alles nur ein Pfad mit Kindern \-\- wo die Bytes liegen, spielt keine Rolle.
+.PP
+Begleitmodul: \fBtuprovider\-0.1.tm\fR (lauffaehig, getestet).
+.SS "Grundsatz: klein und an der Realitaet gemessen"
+.PP
+Das Interface ist bewusst minimal. Es ist genau die Operationsmenge, die sowohl das lokale \fBfile\fR als auch der vorhandene tudav\-WebDAV\-Client bereits koennen \-\- nicht mehr. Es wurde nicht im luftleeren Raum entworfen, sondern gegen diese zwei realen Faelle geprueft.
+.CS
+list    path            Kinder eines Verzeichnisses (eine Ebene, on demand)
+stat    path            ein Eintrag, oder Fehler wenn nicht vorhanden
+get     path            Inhalt lesen (Bytes)
+put     path data       Inhalt schreiben
+delete  path            entfernen
+mkdir   path            Verzeichnis/Collection anlegen
+move    from to         umbenennen/verschieben innerhalb des Providers
+copy    from to         kopieren innerhalb des Providers
+caps                    welche der obigen wirklich unterstuetzt werden
+.CE
+.SS "Der Eintrag ist ein dict"
+.PP
+Ein Verzeichniseintrag \-\- und damit jedes Listenelement \-\- ist ein dict. Dieses Format stammt direkt aus tudav, das seine Ressourcen schon so zurueckgibt.
+.CS
+name    Anzeigename (Blatt, ohne Pfad)     Pflicht
+path    Provider-Pfad zu diesem Eintrag    Pflicht
+type    file | dir                         Pflicht
+size    Bytes, oder "" wenn unbekannt      best effort
+mtime   Epoch-Sekunden, oder ""            best effort
+.CE
+.PP
+Provider duerfen weitere Schluessel hinzufuegen (etag, contenttype, mode); Konsumenten ignorieren unbekannte. \fBsize\fR/\fBmtime\fR sind best effort, damit ein entfernter Provider nicht pro Eintrag ein stat bezahlen muss.
+.SS "Faehigkeiten ergeben sich, sie werden nicht deklariert"
+.PP
+Die Basisklasse gibt jeder Methode eine Vorgabe, die "nicht unterstuetzt" sagt. Ein read\-only\-Provider ueberschreibt einfach die schreibenden Methoden nicht \-\- und \fBcaps\fR meldet automatisch die Wahrheit. Kein doppeltes Pflegen einer Faehigkeitenliste.
+.PP
+Geprueft: ein Provider, der nur \fBlist\fR/\fBstat\fR/\fBget\fR ueberschreibt, meldet \fBcaps = list stat get\fR, und ein \fBput\fR\-Versuch scheitert sauber mit "does not support 'put'". So kann der Copy\-Dialog vorab fragen, ob das Ziel ueberhaupt schreiben kann, statt es zu versuchen und zu scheitern.
+.SS "Provider sind Objekte, keine Globals"
+.PP
+\fBtuprovider open <scheme> ?args?\fR liefert ein tcloo\-Objekt; der Explorer spricht es per Methode an. Das folgt dem Handle\-Modell von tudav (ein Client, den man herumreicht), nicht einer globalen Instanz \-\- so koennen mehrere Provider gleichzeitig leben (zwei Panes, zwei Server, lokal + ZIP nebeneinander).
+.CS
+set p [tuprovider open local]
+$p list /home/greg
+$p caps
+.CE
+.PP
+Neue Provider registrieren sich unter einem Scheme:
+.CS
+tuprovider register zip ::tclutils::tuprovider::Zip
+.CE
+.SS "Passung an die zwei realen Faelle"
+.PP
+\fBLokal\fR (Referenzimplementierung, im Modul enthalten): bildet \fBlist\fR auf \fBglob\fR+\fBfile\fR ab, alle acht Operationen unterstuetzt. Dieselbe Klasse ersetzt die heute fest verdrahteten glob/file\-Aufrufe in \fBtkufiletree::_populate\fR \-\- belegt: die Baumfuellung braucht dann nur noch \fB$provider list $dir\fR.
+.PP
+\fBWebDAV\fR (tudav, existiert): jede tudav\-Operation bildet 1:1 ab.
+.CS
+tudav                            Interface
+---------------------------      ---------
+listCollections/listResources -> list   (dir/file per type)
+getProperties                 -> stat
+get                           -> get
+put                           -> put
+delete                        -> delete
+mkcol                         -> mkdir
+MOVE/COPY                     -> move/copy
+.CE
+.PP
+Der WebDAV\-Provider ist damit ein duenner Adapter um tudav, kein Neubau.
+.SS "Was als Naechstes daraus folgt"
+.IP [1]
+\fBLocal ist fertig\fR (im Modul, getestet). Erster echter Schritt in der App: \fBtkufiletree\fR so erweitern, dass es optional einen Provider bekommt (\fB\-provider\fR), Vorgabe bleibt lokal \-\- rueckwaertskompatibel.
+.IP [2]
+\fBWebDAV\-Adapter\fR: duenne Klasse ueber tudav, ~40 Zeilen.
+.IP [3]
+\fBZIP\-Adapter\fR: ueber tuzip/tuzipfs, read\-only zuerst (nur list/stat/get) \-\- \fBcaps\fR macht das ehrlich.
+.IP [4]
+\fBFTP/SFTP\fR: echte Neubauten, aber gegen dasselbe Interface.
+.PP
+Erst wenn zwei oder drei Adapter am selben Interface haengen, zeigt sich, ob der Zuschnitt stimmt. Local und WebDAV sind die zwei, an denen der Entwurf schon jetzt gemessen ist.
+.SS "Offen / bewusst nicht drin"
+.IP \(bu
+\fBStreaming\fR: \fBget\fR/\fBput\fR gehen ueber den ganzen Inhalt. Fuer grosse Dateien braeuchte es Kanal\-basierte Varianten (\fBgetchan\fR). Bewusst spaeter \-\- erst wenn ein Provider es braucht.
+.IP \(bu
+\fBVerschieben ueber Provider\-Grenzen\fR (lokal \-> WebDAV): kann das Interface nicht, \fBmove\fR ist provider\-intern. Das ist Aufgabe der App (get aus A, put in B, delete in A), nicht des Interfaces.
+.IP \(bu
+\fBWatch/Monitoring\fR: eigenes Modul (siehe Inventar), nicht Teil des Providers \-\- nicht jeder Speicherort kann Aenderungen melden.

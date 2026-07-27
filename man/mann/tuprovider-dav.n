@@ -1,0 +1,48 @@
+.TH tuprovider-dav n 0.1 tclutils
+.SH tclutils::tuprovider::dav
+.PP
+A WebDAV backend for the \fBtuprovider\fR interface, built on \fBtudav\fR.
+.PP
+It lets the same tree and list consumers that work over the local filesystem work over a WebDAV server without change: for the consumer, a DAV path is just a path with children.
+.SS Load
+.CS
+tcl::tm::path add /path/to/tclutils/lib/tm
+package require tclutils::tuprovider::dav
+.CE
+.PP
+Loading the package registers the \fBdav\fR scheme with \fBtuprovider\fR.
+.SS Open
+.CS
+set p [::tclutils::tuprovider open dav https://host/remote.php/dav/files/me/]
+.CE
+.PP
+Extra arguments after the URL are passed through to \fBtudav::client\fR (for credentials and options).
+.SS Capabilities
+.PP
+\fBdav\fR reports:
+.CS
+list stat get put delete
+.CE
+.PP
+It deliberately does \fBnot\fR report \fBmkdir\fR, \fBmove\fR or \fBcopy\fR: \fBtudav\fR has no public MKCOL/MOVE/COPY, so the provider reports honestly what it can do. A UI driven by \fBcaps\fR will not offer operations that would fail.
+.SS Operations
+.IP \(bu
+\fBlist $path\fR \-\- returns entry dicts for the collections and resources under \fB$path\fR. Collections become \fBtype dir\fR, resources \fBtype file\fR. The entry \fBname\fR is derived from the href tail (\fB/a/b/\fR \-> \fBb\fR, \fB/a/f.txt\fR \-> \fBf.txt\fR).
+.IP \(bu
+\fBstat $path\fR \-\- a cheap existence/type check via a depth\-0 request.
+.IP \(bu
+\fBget $path\fR \-\- fetches the resource bytes.
+.IP \(bu
+\fBput $path $bytes\fR, \fBdelete $path\fR \-\- the writing half.
+.SS "Notes and limits"
+.IP \(bu
+Paths are DAV hrefs, relative to the client URL; the consumer treats them as opaque paths.
+.IP \(bu
+\fBstat\fR derives dir/file heuristically from a trailing slash, because \fBtudav\fR's property lookup does not report the type reliably across servers.
+.IP \(bu
+\fBname\fR derivation keeps percent\-decoding minimal; hrefs are usually clean.
+.IP \(bu
+The HTTP traffic itself is \fBtudav\fR's concern. What this adapter adds is the href \-> entry mapping and the honest \fBcaps\fR subset.
+.SS "See also"
+.PP
+\fBtuprovider\fR, \fBtuprovider::zip\fR, \fBtudav\fR

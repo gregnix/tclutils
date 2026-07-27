@@ -1,0 +1,56 @@
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuprovider 0.1
+
+# The zip provider needs tuzip; skip cleanly if it is unavailable.
+if {![catch {package require tclutils::tuprovider::zip}]
+ && ![catch {package require tclutils::tuzip}]} {
+    testConstraint haveZip 1
+} else {
+    testConstraint haveZip 0
+}
+
+if {[testConstraint haveZip]} {
+    set ::zip [file join [makeDirectory tuprovz] t.zip]
+    ::tclutils::tuzip::createMembers $::zip {
+        {name top.txt        content "at the root"}
+        {name sub/inner.txt  content "one level down"}
+        {name sub/deep/x.txt content "two levels down"}
+    }
+}
+
+test tuprovider-zip-1.1 {zip provider reports read-only caps} -constraints haveZip -body {
+    set p [::tclutils::tuprovider open zip $::zip]
+    lsort [$p caps]
+} -result {get list stat}
+
+test tuprovider-zip-1.2 {list synthesizes directories from flat entries} -constraints haveZip -body {
+    set p [::tclutils::tuprovider open zip $::zip]
+    set names {}
+    foreach e [$p list /] { lappend names [list [dict get $e name] [dict get $e type]] }
+    lsort $names
+} -result {{sub dir} {top.txt file}}
+
+test tuprovider-zip-1.3 {a synthesized subdirectory can be listed} -constraints haveZip -body {
+    set p [::tclutils::tuprovider open zip $::zip]
+    set names {}
+    foreach e [$p list /sub] { lappend names [list [dict get $e name] [dict get $e type]] }
+    lsort $names
+} -result {{deep dir} {inner.txt file}}
+
+test tuprovider-zip-1.4 {get returns a deeply nested file} -constraints haveZip -body {
+    set p [::tclutils::tuprovider open zip $::zip]
+    $p get /sub/deep/x.txt
+} -result {two levels down}
+
+test tuprovider-zip-1.5 {writing operations are refused} -constraints haveZip -body {
+    set p [::tclutils::tuprovider open zip $::zip]
+    catch {$p put /new.txt data} e
+    string match {*put*} $e
+} -result 1
+
+cleanupTests
