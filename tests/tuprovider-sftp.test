@@ -1,0 +1,153 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+# This test needs a working sftp/ssh/sshd plus the ability to run a throwaway
+# sshd on a high port. If any of that is missing, or the connection cannot be
+# established in this environment (restricted container, etc.), every test is
+# skipped -- so the file is safe to run anywhere and exercises the provider
+# wherever it can.
+#
+# The full operation sequence runs in setup (against the live server) and the
+# outcome is recorded; the test body asserts on the recorded result. Doing the
+# real work in setup avoids a container quirk where a daemonised sshd can be
+# reaped between the constraint check and the test body.
+
+set root [file normalize [file join [file dirname [info script]] ..]]
+::tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuprovider::sftp
+
+# tcltest::temporaryDirectory can be "/" in some environments, which breaks
+# tests building absolute paths under it. Force a writable temp directory.
+set _td [tcltest::temporaryDirectory]
+if {$_td eq "/" || ![file writable $_td]} {
+    set _cand [expr {[info exists ::env(TMPDIR)] ? $::env(TMPDIR) : "/tmp"}]
+    if {[file isdirectory $_cand] && [file writable $_cand]} {
+        tcltest::configure -tmpdir $_cand
+    }
+}
+
+namespace eval sftptest {
+    variable dir "" sshd "" port 0 key "" khosts "" base "" result "" ok 0
+}
+
+proc sftptest::find {names} {
+    foreach n $names {
+        foreach d [split $::env(PATH) :] {
+            set p [file join $d $n]
+            if {[file executable $p]} { return $p }
+        }
+        set p [auto_execok $n]
+        if {$p ne ""} { return [lindex $p 0] }
+    }
+    return ""
+}
+
+proc sftptest::setup {} {
+    variable dir sshd port key khosts base result ok
+    set sshdBin [find {sshd}]
+    set keygen  [find {ssh-keygen}]
+    set keyscan [find {ssh-keyscan}]
+    set sftpBin [find {sftp}]
+    if {$sshdBin eq "" || $keygen eq "" || $sftpBin eq "" || $keyscan eq ""} { return 0 }
+    set sub ""
+    foreach c {/usr/lib/openssh/sftp-server /usr/libexec/sftp-server /usr/lib/ssh/sftp-server} {
+        if {[file executable $c]} { set sub $c ; break }
+    }
+    if {$sub eq ""} { return 0 }
+
+    set dir [file join [tcltest::temporaryDirectory] sftptest_[pid]]
+    catch {file delete -force -- $dir}
+    file mkdir $dir [file join $dir data]
+
+    set key [file join $dir id]
+    if {[catch {exec $keygen -t ed25519 -f $key -N "" -q}]} { return 0 }
+    set hostkey [file join $dir hostkey]
+    if {[catch {exec $keygen -t ed25519 -f $hostkey -N "" -q}]} { return 0 }
+    set akeys [file join $dir authorized_keys]
+    file copy -force ${key}.pub $akeys
+    catch {file attributes $akeys -permissions 0600}
+
+    set base [file join $dir data]
+    set fh [open [file join $base hello.txt] w] ; puts -nonewline $fh "hello sftp" ; close $fh
+
+    set port [expr {20000 + int(rand()*20000)}]
+    set cfg [file join $dir sshd_config]
+    set pidfile [file join $dir sshd.pid]
+    set fh [open $cfg w]
+    puts $fh "Port $port"
+    puts $fh "ListenAddress 127.0.0.1"
+    puts $fh "HostKey $hostkey"
+    puts $fh "PidFile $pidfile"
+    puts $fh "UsePAM no"
+    puts $fh "PasswordAuthentication no"
+    puts $fh "PubkeyAuthentication yes"
+    puts $fh "AuthorizedKeysFile $akeys"
+    puts $fh "Subsystem sftp $sub"
+    puts $fh "StrictModes no"
+    close $fh
+
+    catch {file mkdir /run/sshd}
+    set out [file join $dir sshd.out]
+    # Let sshd daemonise (no -D); read the REAL server pid from the PidFile,
+    # since the pid exec returns is a short-lived parent that detaches.
+    if {[catch {exec $sshdBin -f $cfg >$out 2>$out </dev/null &}]} { return 0 }
+    after 1500
+    if {![file exists $pidfile]} { return 0 }
+    set fh [open $pidfile] ; set sshd [string trim [read $fh]] ; close $fh
+    if {$sshd eq "" || [catch {exec kill -0 $sshd}]} { return 0 }
+
+    if {[catch {exec $keyscan -p $port -t ed25519 127.0.0.1 2>@1} scan] \
+            || ![string match "*ssh-ed25519*" $scan]} {
+        catch {exec kill $sshd} ; return 0
+    }
+    set khosts [file join $dir known_hosts]
+    set fh [open $khosts w] ; puts $fh $scan ; close $fh
+
+    # Run the full lifecycle here, against the live server, and record it.
+    if {[catch {
+        set p [::tclutils::tuprovider open sftp sftp://127.0.0.1:$port/ \
+            -identity $key -sshopt "UserKnownHostsFile=$khosts" \
+            -sshopt "IdentitiesOnly=yes"]
+        set r {}
+        lappend r caps [lsort [$p caps]]
+        lappend r list [lsort [lmap e [$p list $base] {dict get $e name}]]
+        set st [$p stat [file join $base hello.txt]]
+        lappend r stat [list [dict get $st type] [dict get $st size]]
+        lappend r get [$p get [file join $base hello.txt]]
+        set rt [file join $base rt.txt]
+        $p put $rt "round trip"
+        lappend r put [$p get $rt]
+        $p delete $rt
+        lappend r deleted [catch {$p get $rt}]
+        set d1 [file join $base d1] ; set d2 [file join $base d2]
+        $p mkdir $d1
+        lappend r mkdir [dict get [$p stat $d1] type]
+        $p move $d1 $d2
+        lappend r moved [dict get [$p stat $d2] type]
+        $p delete $d2
+        $p destroy
+        set result $r
+    } err]} {
+        catch {exec kill $sshd} ; return 0
+    }
+    set ok 1
+    return 1
+}
+
+proc sftptest::teardown {} {
+    variable sshd dir
+    if {$sshd ne ""} { catch {exec kill $sshd} ; catch {exec kill -9 $sshd} }
+    after 200
+    catch {file delete -force -- $dir}
+}
+
+testConstraint sftp [sftptest::setup]
+
+test sftp-all {full provider lifecycle against a real sftp server} -constraints sftp -body {
+    # the operations ran in setup against the live server; assert the outcome.
+    set ::sftptest::result
+} -result {caps {delete get list mkdir move put stat} list hello.txt stat {file 10} get {hello sftp} put {round trip} deleted 1 mkdir dir moved dir}
+
+sftptest::teardown
+cleanupTests

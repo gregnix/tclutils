@@ -110,6 +110,15 @@ oo::class create ::tclutils::tuprovider::Base {
     method list   {path}        { my _nope list }
     method stat   {path}        { my _nope stat }
     method get    {path}        { my _nope get }
+    # head: return at most len bytes from the start of a file. Default reads the
+    # whole file via get and truncates; providers that can read a prefix cheaply
+    # (Local) override this. Lets a UI preview a large binary without loading it
+    # all. len<=0 means "no limit" (same as get).
+    method head   {path len}    {
+        set d [my get $path]
+        if {$len > 0 && [string length $d] > $len} { return [string range $d 0 [expr {$len-1}]] }
+        return $d
+    }
     method put    {path data}   { my _nope put }
     method delete {path}        { my _nope delete }
     method mkdir  {path}        { my _nope mkdir }
@@ -154,6 +163,11 @@ oo::class create ::tclutils::tuprovider::Local {
     }
 
     method get    {path}      { set fh [open $path rb]; set d [read $fh]; close $fh; return $d }
+    method head   {path len}  {
+        set fh [open $path rb]
+        set d [expr {$len > 0 ? [read $fh $len] : [read $fh]}]
+        close $fh ; return $d
+    }
     method put    {path data} { set fh [open $path wb]; puts -nonewline $fh $data; close $fh }
     method delete {path}      { file delete -force -- $path }
     method mkdir  {path}      { file mkdir $path }

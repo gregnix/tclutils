@@ -1,86 +1,79 @@
 .TH tuprovider n 0.1 tclutils
-.SH "Provider\-Interface \-\- Entwurf"
+.SH tclutils::tuprovider
 .PP
-Das Provider\-Interface ist das Architektur\-Herz des Explorer\-Frameworks. Es abstrahiert ueber jeden Speicherort: lokales Dateisystem, ZIP, WebDAV, FTP. Fuer Baum und Liste ist alles nur ein Pfad mit Kindern \-\- wo die Bytes liegen, spielt keine Rolle.
-.PP
-Begleitmodul: \fBtuprovider\-0.1.tm\fR (lauffaehig, getestet).
-.SS "Grundsatz: klein und an der Realitaet gemessen"
-.PP
-Das Interface ist bewusst minimal. Es ist genau die Operationsmenge, die sowohl das lokale \fBfile\fR als auch der vorhandene tudav\-WebDAV\-Client bereits koennen \-\- nicht mehr. Es wurde nicht im luftleeren Raum entworfen, sondern gegen diese zwei realen Faelle geprueft.
+A storage\-provider interface: one small abstraction over every storage back end (local filesystem, ZIP, WebDAV, ...). For a consumer \-\- a directory tree, a file list \-\- everything is just a path with children; where the bytes actually live does not matter.
+.SS Load
 .CS
-list    path            Kinder eines Verzeichnisses (eine Ebene, on demand)
-stat    path            ein Eintrag, oder Fehler wenn nicht vorhanden
-get     path            Inhalt lesen (Bytes)
-put     path data       Inhalt schreiben
-delete  path            entfernen
-mkdir   path            Verzeichnis/Collection anlegen
-move    from to         umbenennen/verschieben innerhalb des Providers
-copy    from to         kopieren innerhalb des Providers
-caps                    welche der obigen wirklich unterstuetzt werden
-.CE
-.SS "Der Eintrag ist ein dict"
-.PP
-Ein Verzeichniseintrag \-\- und damit jedes Listenelement \-\- ist ein dict. Dieses Format stammt direkt aus tudav, das seine Ressourcen schon so zurueckgibt.
-.CS
-name    Anzeigename (Blatt, ohne Pfad)     Pflicht
-path    Provider-Pfad zu diesem Eintrag    Pflicht
-type    file | dir                         Pflicht
-size    Bytes, oder "" wenn unbekannt      best effort
-mtime   Epoch-Sekunden, oder ""            best effort
+tcl::tm::path add /path/to/tclutils/lib/tm
+package require tclutils::tuprovider
 .CE
 .PP
-Provider duerfen weitere Schluessel hinzufuegen (etag, contenttype, mode); Konsumenten ignorieren unbekannte. \fBsize\fR/\fBmtime\fR sind best effort, damit ein entfernter Provider nicht pro Eintrag ein stat bezahlen muss.
-.SS "Faehigkeiten ergeben sich, sie werden nicht deklariert"
-.PP
-Die Basisklasse gibt jeder Methode eine Vorgabe, die "nicht unterstuetzt" sagt. Ein read\-only\-Provider ueberschreibt einfach die schreibenden Methoden nicht \-\- und \fBcaps\fR meldet automatisch die Wahrheit. Kein doppeltes Pflegen einer Faehigkeitenliste.
-.PP
-Geprueft: ein Provider, der nur \fBlist\fR/\fBstat\fR/\fBget\fR ueberschreibt, meldet \fBcaps = list stat get\fR, und ein \fBput\fR\-Versuch scheitert sauber mit "does not support 'put'". So kann der Copy\-Dialog vorab fragen, ob das Ziel ueberhaupt schreiben kann, statt es zu versuchen und zu scheitern.
-.SS "Provider sind Objekte, keine Globals"
-.PP
-\fBtuprovider open <scheme> ?args?\fR liefert ein tcloo\-Objekt; der Explorer spricht es per Methode an. Das folgt dem Handle\-Modell von tudav (ein Client, den man herumreicht), nicht einer globalen Instanz \-\- so koennen mehrere Provider gleichzeitig leben (zwei Panes, zwei Server, lokal + ZIP nebeneinander).
+The \fBlocal\fR backend is built in. Other schemes register themselves when their package is loaded (\fBtuprovider::zip\fR, \fBtuprovider::dav\fR).
+.SS "Open a provider"
 .CS
-set p [tuprovider open local]
-$p list /home/greg
-$p caps
+set p [::tclutils::tuprovider open local]
+set p [::tclutils::tuprovider open zip /path/archive.zip]
+set p [::tclutils::tuprovider open dav https://host/dav/]
 .CE
 .PP
-Neue Provider registrieren sich unter einem Scheme:
+\fBopen $scheme ?args?\fR returns a provider object; extra args go to the backend. An unknown scheme is an error.
+.SS "The interface"
+.PP
+A provider answers these operations. Each takes provider paths (opaque to the consumer) and returns entry dicts or bytes:
+.TS
+l l l.
+Operation	Signature	Result
+\fBlist\fR	\fBlist $path\fR	list of entry dicts, one level, on demand
+\fBstat\fR	\fBstat $path\fR	one entry dict, or error if absent
+\fBget\fR	\fBget $path\fR	file contents as \fBraw bytes\fR
+\fBput\fR	\fBput $path $data\fR	write contents
+\fBdelete\fR	\fBdelete $path\fR	remove
+\fBmkdir\fR	\fBmkdir $path\fR	create a directory/collection
+\fBmove\fR	\fBmove $from $to\fR	rename/move within the provider
+\fBcopy\fR	\fBcopy $from $to\fR	copy within the provider
+\fBcaps\fR	\fBcaps\fR	which of the above are supported
+.TE
+.PP
+\fBget\fR returns \fBraw bytes\fR (no encoding applied); a text consumer decodes them itself. Copying \fIacross\fR providers is done at the application level with \fBget\fR+\fBput\fR, not with \fBcopy\fR (which is provider\-internal only).
+.SS "Entry dicts"
+.PP
+\fBlist\fR and \fBstat\fR return dicts with at least:
 .CS
-tuprovider register zip ::tclutils::tuprovider::Zip
+name   the leaf name
+path   the provider path (feed back into list/stat/get)
+type   file | dir
+size   byte size (files)
+mtime  modification time (where the backend provides it)
 .CE
-.SS "Passung an die zwei realen Faelle"
+.SS Capabilities
 .PP
-\fBLokal\fR (Referenzimplementierung, im Modul enthalten): bildet \fBlist\fR auf \fBglob\fR+\fBfile\fR ab, alle acht Operationen unterstuetzt. Dieselbe Klasse ersetzt die heute fest verdrahteten glob/file\-Aufrufe in \fBtkufiletree::_populate\fR \-\- belegt: die Baumfuellung braucht dann nur noch \fB$provider list $dir\fR.
-.PP
-\fBWebDAV\fR (tudav, existiert): jede tudav\-Operation bildet 1:1 ab.
+Not every backend can do everything \-\- a ZIP is read\-only, WebDAV has no copy/move. \fBcaps\fR reports the truth so a UI never offers an operation that would fail:
 .CS
-tudav                            Interface
----------------------------      ---------
-listCollections/listResources -> list   (dir/file per type)
-getProperties                 -> stat
-get                           -> get
-put                           -> put
-delete                        -> delete
-mkcol                         -> mkdir
-MOVE/COPY                     -> move/copy
+if {"put" in [$p caps]} { $p put $dest $bytes }
 .CE
 .PP
-Der WebDAV\-Provider ist damit ein duenner Adapter um tudav, kein Neubau.
-.SS "Was als Naechstes daraus folgt"
-.IP [1]
-\fBLocal ist fertig\fR (im Modul, getestet). Erster echter Schritt in der App: \fBtkufiletree\fR so erweitern, dass es optional einen Provider bekommt (\fB\-provider\fR), Vorgabe bleibt lokal \-\- rueckwaertskompatibel.
-.IP [2]
-\fBWebDAV\-Adapter\fR: duenne Klasse ueber tudav, ~40 Zeilen.
-.IP [3]
-\fBZIP\-Adapter\fR: ueber tuzip/tuzipfs, read\-only zuerst (nur list/stat/get) \-\- \fBcaps\fR macht das ehrlich.
-.IP [4]
-\fBFTP/SFTP\fR: echte Neubauten, aber gegen dasselbe Interface.
-.PP
-Erst wenn zwei oder drei Adapter am selben Interface haengen, zeigt sich, ob der Zuschnitt stimmt. Local und WebDAV sind die zwei, an denen der Entwurf schon jetzt gemessen ist.
-.SS "Offen / bewusst nicht drin"
+Capabilities are discovered by introspection: a method counts as supported when a class other than the \fBBase\fR class implements it. A backend therefore just inherits \fBBase\fR and overrides the operations it can do \-\- its \fBcaps\fR follow automatically, at any inheritance depth.
+.SS "Public commands"
 .IP \(bu
-\fBStreaming\fR: \fBget\fR/\fBput\fR gehen ueber den ganzen Inhalt. Fuer grosse Dateien braeuchte es Kanal\-basierte Varianten (\fBgetchan\fR). Bewusst spaeter \-\- erst wenn ein Provider es braucht.
+\fB::tclutils::tuprovider::open $scheme ?args?\fR \-\- create a provider.
 .IP \(bu
-\fBVerschieben ueber Provider\-Grenzen\fR (lokal \-> WebDAV): kann das Interface nicht, \fBmove\fR ist provider\-intern. Das ist Aufgabe der App (get aus A, put in B, delete in A), nicht des Interfaces.
+\fB::tclutils::tuprovider::register $scheme $class\fR \-\- register a backend class under a scheme (backends call this on load).
 .IP \(bu
-\fBWatch/Monitoring\fR: eigenes Modul (siehe Inventar), nicht Teil des Providers \-\- nicht jeder Speicherort kann Aenderungen melden.
+\fB::tclutils::tuprovider::schemes\fR \-\- list the registered schemes.
+.SS "Writing a backend"
+.PP
+Subclass \fB::tclutils::tuprovider::Base\fR, override the operations you support, and register the class:
+.CS
+oo::class create ::tclutils::tuprovider::MyBack {
+    superclass ::tclutils::tuprovider::Base
+    method list {path} { ... }
+    method stat {path} { ... }
+    method get  {path} { ... }
+}
+::tclutils::tuprovider::register myscheme ::tclutils::tuprovider::MyBack
+.CE
+.PP
+Only the overridden operations appear in \fBcaps\fR; the rest inherit \fBBase\fR's "not supported" default.
+.SS "See also"
+.PP
+\fBtuprovider::zip\fR, \fBtuprovider::dav\fR

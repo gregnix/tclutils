@@ -42,7 +42,7 @@ package require tclutils::tujson
 package require tclutils::tuurl
 
 namespace eval ::tclutils::tupostgrest {
-    namespace export new configure token get insert update delete rpc request \
+    namespace export new token get insert update delete rpc request \
         num bool null
     variable version 0.1
 }

@@ -317,6 +317,41 @@ if {$o(-manifest) ne ""} {
 }
 
 # 4) application code + bootstrap shim + main.tcl
+#
+# First, process -include so we know which extra directories were bundled: a
+# DEST that is (or lives under) a "pkgs" directory holds Tcl packages, and its
+# pkgs root must go on auto_path or `package require` will not find them. build
+# used to write the auto_path line only for prober/-manifest bundles, so manual
+# `-include SRC=pkgs/Foo` copied the package but left it unreachable -- a silent
+# trap that only surfaces at runtime with "can't find package Foo". We collect
+# the pkgs roots here and emit auto_path entries for them below.
+set extIncludeRoots {}
+foreach spec $o(-include) {
+    set eq [string first = $spec]
+    if {$eq >= 0} {
+        set src [string range $spec 0 [expr {$eq - 1}]]
+        set dst [string range $spec [expr {$eq + 1}] end]
+    } else {
+        set src $spec
+        set dst [file tail $spec]
+    }
+    if {![file exists $src]} { die "-include source not found: $src" }
+    rcopy $src [file join $vfs $dst]
+    # if DEST is <root>/pkgs/<pkg> or exactly <root>/pkgs, the auto_path root is
+    # everything up to and including "pkgs".
+    set parts [file split $dst]
+    set pi [lsearch -exact $parts pkgs]
+    if {$pi >= 0} {
+        set root [file join {*}[lrange $parts 0 $pi]]
+        if {$root ni $extIncludeRoots} { lappend extIncludeRoots $root }
+    }
+}
+# auto_path lines to emit in the bootstrap: the extlib "lib/pkgs" (when the
+# prober/-manifest bundled it) plus every pkgs root from -include.
+set autoPathDirs {}
+if {$extBundled} { lappend autoPathDirs //zipfs:/app/lib/pkgs }
+foreach r $extIncludeRoots { lappend autoPathDirs //zipfs:/app/$r }
+
 if {$o(-launch) eq "" && $o(-bootstrap) eq "none"} {
     # CLI-simple: the entry runs at source time -> it IS main.tcl
     file copy $entryPath [file join $vfs main.tcl]
@@ -333,13 +368,13 @@ if {$o(-launch) eq "" && $o(-bootstrap) eq "none"} {
         set sh [open [file join $vfs _lib paths.tcl] w]
         puts $sh {# zipkit bootstrap shim: bundled modules live under //zipfs:/app/lib/tm}
         puts $sh {tcl::tm::path add //zipfs:/app/lib/tm}
-        if {$extBundled} { puts $sh {lappend auto_path //zipfs:/app/lib/pkgs} }
+        foreach d $autoPathDirs { puts $sh "lappend auto_path $d" }
         close $sh
     }
     set m [open [file join $vfs main.tcl] w]
     if {$o(-kind) eq "gui"} { puts $m {package require Tk} }
     puts $m {tcl::tm::path add //zipfs:/app/lib/tm}
-    if {$extBundled} { puts $m {lappend auto_path //zipfs:/app/lib/pkgs} }
+    foreach d $autoPathDirs { puts $m "lappend auto_path $d" }
     puts $m "source //zipfs:/app/app/[file tail $o(-main)]"
     if {$o(-launch) ne ""} { puts $m $o(-launch) }
     if {$o(-kind) eq "gui"} {
@@ -348,24 +383,6 @@ if {$o(-launch) eq "" && $o(-bootstrap) eq "none"} {
         puts $m {vwait forever}
     }
     close $m
-}
-
-# 4b) extra content requested with -include SRC[=DEST]. SRC is copied into the
-#     VFS at DEST (relative to the archive root; default: SRC's basename). Use
-#     this for shared code an app sources from a sibling directory, or for data
-#     files/icons. Example: an editor whose launcher sources ../shared-core/ can
-#     bundle it with -include /path/shared-core=shared-core.
-foreach spec $o(-include) {
-    set eq [string first = $spec]
-    if {$eq >= 0} {
-        set src [string range $spec 0 [expr {$eq - 1}]]
-        set dst [string range $spec [expr {$eq + 1}] end]
-    } else {
-        set src $spec
-        set dst [file tail $spec]
-    }
-    if {![file exists $src]} { die "-include source not found: $src" }
-    rcopy $src [file join $vfs $dst]
 }
 
 # 5) build the image

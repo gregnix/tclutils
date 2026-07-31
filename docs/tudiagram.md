@@ -58,6 +58,7 @@ edge was reversed to break a cycle), and `meta` carries `laid 1` and the overall
 ::tclutils::tudiagram::addNode d id ?-label L? ?-shape S? ?-style D? ;# -> diagram dict
 ::tclutils::tudiagram::addEdge d from to ?-label L? ?-style E? ?-arrow A? \
                                ?-startMark M? ?-endMark M?              ;# -> diagram dict
+::tclutils::tudiagram::addGroup d id ?-label L? ?-members {id ...}?  ;# -> diagram dict
 ```
 
 `create` starts an empty diagram. `-direction` is the rank flow (default `LR`).
@@ -77,6 +78,11 @@ compatible.
 (default), `dashed`, `dotted` or `thick` (a wider stroke, e.g. for a Mermaid
 `==>` link). `-arrow` is `end` (default, head at the target), `none`, `both` or
 `start`.
+
+`addGroup` records a named set of node ids as a group. `id` must be unique among
+groups; `-label` defaults to the id; `-members` is the list of node ids that
+belong to the group. Groups are metadata a renderer or consumer (e.g. a subgraph
+box) can use; adding a group does not change node or edge layout by itself.
 
 `-startMark` / `-endMark` add a crow's-foot cardinality mark at the `from` /
 `to` end, independent of the arrow head. Value `M` is `none` (default),

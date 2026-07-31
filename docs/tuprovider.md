@@ -81,6 +81,11 @@ automatically, at any inheritance depth.
   under a scheme (backends call this on load).
 - `::tclutils::tuprovider::schemes` -- list the registered schemes.
 
+A provider also offers `head $path $len` -- return at most `$len` bytes from the
+start of a file (`$len <= 0` means the whole file). The base class implements it
+via `get` + truncate; the local provider overrides it to read only the prefix,
+so a UI can preview a large binary without loading it entirely.
+
 ## Writing a backend
 
 Subclass `::tclutils::tuprovider::Base`, override the operations you support,

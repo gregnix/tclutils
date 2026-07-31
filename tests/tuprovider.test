@@ -64,4 +64,39 @@ test tuprovider-1.7 {unknown scheme is an error} -body {
     string match {*unknown scheme*} $e
 } -result 1
 
+
+test tuprovider-1.8 {local head reads only a prefix} -setup {
+    set f [file join [tcltest::temporaryDirectory] head_test.bin]
+    set ch [open $f wb]; puts -nonewline $ch [string repeat "ABCD" 10000]; close $ch
+} -body {
+    set p [::tclutils::tuprovider open local]
+    set h [$p head $f 16]
+    list [string length $h] $h
+} -cleanup {
+    file delete [file join [tcltest::temporaryDirectory] head_test.bin]
+} -result {16 ABCDABCDABCDABCD}
+
+test tuprovider-1.9 {head len<=0 returns the whole file} -setup {
+    set f [file join [tcltest::temporaryDirectory] head_test2.bin]
+    set ch [open $f wb]; puts -nonewline $ch "hello world"; close $ch
+} -body {
+    set p [::tclutils::tuprovider open local]
+    $p head $f 0
+} -cleanup {
+    file delete [file join [tcltest::temporaryDirectory] head_test2.bin]
+} -result {hello world}
+
+test tuprovider-1.10 {base head default truncates get output} -setup {
+    oo::class create HeadProv {
+        superclass ::tclutils::tuprovider::Base
+        method get {path} { return "0123456789" }
+    }
+} -body {
+    set p [HeadProv new]
+    # no head override -> base default: get then truncate
+    list [$p head x 4] [$p head x 0]
+} -cleanup {
+    HeadProv destroy
+} -result {0123 0123456789}
+
 cleanupTests
