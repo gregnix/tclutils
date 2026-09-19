@@ -1,4 +1,6 @@
 # tuico-0.1.tm -- Windows icon (.ico) container, pure Tcl.
+# Description: Windows icon (.ico) container with PNG payloads, pure Tcl
+# Category: Graphics · raster/vector
 #
 # Copyright (c) 2026 Gregor
 # MIT licensed.

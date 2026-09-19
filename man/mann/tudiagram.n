@@ -34,6 +34,7 @@ After \fBlayout\fR each node additionally carries \fBx y width height\fR (top\-l
 ::tclutils::tudiagram::addNode d id ?-label L? ?-shape S? ?-style D? ;# -> diagram dict
 ::tclutils::tudiagram::addEdge d from to ?-label L? ?-style E? ?-arrow A? \
                                ?-startMark M? ?-endMark M?              ;# -> diagram dict
+::tclutils::tudiagram::addGroup d id ?-label L? ?-members {id ...}?  ;# -> diagram dict
 .CE
 .PP
 \fBcreate\fR starts an empty diagram. \fB\-direction\fR is the rank flow (default \fBLR\fR). \fB\-theme\fR is a theme name (see \fIThemes\fR) or an inline theme dict. \fBsetMeta\fR overrides any \fBmeta\fR key after creation (e.g. \fB\-direction TB\fR, \fB\-nodeGap 40\fR); it re\-validates \fBdirection\fR.
@@ -41,6 +42,8 @@ After \fBlayout\fR each node additionally carries \fBx y width height\fR (top\-l
 \fBaddNode\fR adds a node; \fBid\fR must be unique. \fB\-label\fR defaults to the id. \fB\-shape\fR is one of \fBbox\fR (default), \fBrounded\fR, \fBdot\fR, \fBcircle\fR, \fBstadium\fR, \fBdiamond\fR, \fBhexagon\fR, \fBcylinder\fR. \fB\-style\fR is an optional per\-node colour override — a dict with any of the keys \fBfill\fR, \fBstroke\fR, \fBtext\fR (6\-digit hex), e.g. \fB\-style {fill #e3f2fd stroke #1565c0}\fR; absent keys fall back to the theme, and a malformed or empty value is ignored (theme is used), so it is backward compatible.
 .PP
 \fBaddEdge\fR adds a directed edge between two node ids. \fB\-style\fR is \fBsolid\fR (default), \fBdashed\fR, \fBdotted\fR or \fBthick\fR (a wider stroke, e.g. for a Mermaid \fB==>\fR link). \fB\-arrow\fR is \fBend\fR (default, head at the target), \fBnone\fR, \fBboth\fR or \fBstart\fR.
+.PP
+\fBaddGroup\fR records a named set of node ids as a group. \fBid\fR must be unique among groups; \fB\-label\fR defaults to the id; \fB\-members\fR is the list of node ids that belong to the group. Groups are metadata a renderer or consumer (e.g. a subgraph box) can use; adding a group does not change node or edge layout by itself.
 .PP
 \fB\-startMark\fR / \fB\-endMark\fR add a crow's\-foot cardinality mark at the \fBfrom\fR / \fBto\fR end, independent of the arrow head. Value \fBM\fR is \fBnone\fR (default), \fBexactlyOne\fR, \fBzeroOrOne\fR, \fBoneOrMany\fR or \fBzeroOrMany\fR — each drawn as a "max" symbol nearest the node (bar = one, crow's foot = many) plus a "min" symbol toward the line (bar = one, ring = zero). An unknown value draws nothing. \fBtclutils::tuer\fR uses these to render ER cardinality.
 .SS Validation

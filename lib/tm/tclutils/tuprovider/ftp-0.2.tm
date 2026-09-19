@@ -1,4 +1,6 @@
 # tclutils::tuprovider::ftp -- FTP provider, an adapter over the tcllib ftp client.
+# Description: FTP storage provider over the tcllib ftp client (loaded on open)
+# Category: Archive · filesystem
 #
 # Brings a remote FTP server to the provider interface. It is an adapter, not a
 # reimplementation: every method forwards to the tcllib ftp package.
@@ -19,7 +21,11 @@
 package require Tcl 8.6-
 package require TclOO
 package require tclutils::tuprovider
-package require ftp
+# The tcllib ftp client is loaded when a connection is opened, not here.
+# Up to 0.1 this file did `package require ftp` at load time -- and since the
+# tclutils umbrella loads this provider, `package require tclutils` failed on
+# every system without tcllib (measured 2026-09-19 with Tcl 8.6 and no tcllib).
+# CONTRIBUTING rule 1: tcllib is never a hard requirement.
 
 oo::class create ::tclutils::tuprovider::Ftp {
     superclass ::tclutils::tuprovider::Base
@@ -28,6 +34,12 @@ oo::class create ::tclutils::tuprovider::Ftp {
     # url (ftp://host[:port][/base]) plus ftp::Open options (-user, -password,
     # -port, -mode passive|active, -timeout ...)
     constructor {url args} {
+        # load the tcllib client on first use; an ::ftp::Open that already
+        # exists (a test double, or an application's own copy) is kept
+        if {[info commands ::ftp::Open] eq "" && [catch {package require ftp} err]} {
+            return -code error -errorcode {TCLUTILS TUPROVIDER FTP NOPKG} \
+                "the ftp provider needs the tcllib ftp package: $err"
+        }
         # parse a minimal ftp:// url into host / port / base
         set host "" ; set port 21 ; set base "/"
         if {[regexp {^ftp://([^/:]+)(?::(\d+))?(/.*)?$} $url -> h p b]} {
@@ -128,4 +140,4 @@ oo::class create ::tclutils::tuprovider::Ftp {
 
 ::tclutils::tuprovider::register ftp ::tclutils::tuprovider::Ftp
 
-package provide tclutils::tuprovider::ftp 0.1
+package provide tclutils::tuprovider::ftp 0.2

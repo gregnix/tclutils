@@ -6,7 +6,7 @@ set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
 
-package require tclutils::common 0.1
+package require tclutils::common 0.2
 
 set tmp [file join $here tmp_common]
 file delete -force $tmp
@@ -43,4 +43,68 @@ test common-1.6 {splitLines drops final empty line only when text ends in newlin
 } -result {{a b} {a b}}
 
 file delete -force $tmp
+# --- 0.2: parseOptions names the known options ------------------------------
+test common-2.1 {unknown option lists the known ones} -body {
+    catch {::tclutils::common::parseOptions {-type a -timeout 1} -typ x} m
+    set m
+} -result "unknown option \"-typ\"\nKnown: -type -timeout"
+
+test common-2.2 {errorcode unchanged: TCLUTILS COMMON OPTION <opt>} -body {
+    catch {::tclutils::common::parseOptions {-a 1} -b 2} m o
+    dict get $o -errorcode
+} -result {TCLUTILS COMMON OPTION -b}
+
+# --- 0.2: readFile / writeFile -encoding ------------------------------------
+# The sample is written as explicit UTF-8 bytes, independent of the system
+# encoding of the interpreter running the test (\u escapes keep this file ASCII).
+set ::cmTmp [file join [::tcltest::temporaryDirectory] common-enc.txt]
+proc cmWriteUtf8Bytes {path s} {
+    set fh [open $path wb]; puts -nonewline $fh [encoding convertto utf-8 $s]; close $fh
+}
+
+test common-3.1 {readFile -encoding utf-8 returns the characters} -body {
+    cmWriteUtf8Bytes $::cmTmp "Schl\u00fcssel-\u00c4\u00d6\u00dc"
+    ::tclutils::common::readFile $::cmTmp -encoding utf-8
+} -result "Schl\u00fcssel-\u00c4\u00d6\u00dc"
+
+test common-3.2 {counter-check: the same bytes read as iso8859-1 differ} -body {
+    cmWriteUtf8Bytes $::cmTmp "Schl\u00fcssel"
+    expr {[::tclutils::common::readFile $::cmTmp -encoding iso8859-1] eq "Schl\u00fcssel"}
+} -result 0
+
+test common-3.3 {writeFile -encoding utf-8 writes UTF-8 bytes} -body {
+    ::tclutils::common::writeFile $::cmTmp "\u00e4" -encoding utf-8
+    set fh [open $::cmTmp rb]; set b [read $fh]; close $fh
+    binary encode hex $b
+} -result c3a4
+
+test common-3.4 {writeFile keeps the positional mode (append)} -body {
+    ::tclutils::common::writeFile $::cmTmp a -encoding utf-8
+    ::tclutils::common::writeFile $::cmTmp b a
+    ::tclutils::common::writeFile $::cmTmp c a -encoding utf-8
+    ::tclutils::common::readFile $::cmTmp -encoding utf-8
+} -result abc
+
+test common-3.5 {readFile rejects an unknown option with Known:} -body {
+    catch {::tclutils::common::readFile $::cmTmp -encodng utf-8} m
+    set m
+} -match glob -result "unknown option \"-encodng\"\nKnown: -encoding"
+
+file delete -force $::cmTmp
+
+# --- ensureOneOf (0.2) --------------------------------------------------------
+test common-4.1 {ensureOneOf returns an allowed value} -body {
+    ::tclutils::common::ensureOneOf photo {invoice photo script} "document type"
+} -result photo
+
+test common-4.2 {ensureOneOf names the known values next to the rejected one} -body {
+    catch {::tclutils::common::ensureOneOf quatsch {invoice photo} "document type"} m o
+    list $m [dict get $o -errorcode]
+} -result [list "unknown document type: quatsch\nKnown: invoice photo" {TCLUTILS COMMON VALUE {document type}}]
+
+test common-4.3 {ensureOneOf matches exactly: case and prefix are not enough} -body {
+    list [catch {::tclutils::common::ensureOneOf Photo {photo} kind}] \
+         [catch {::tclutils::common::ensureOneOf pho {photo} kind}]
+} -result {1 1}
+
 cleanupTests

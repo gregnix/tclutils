@@ -8,7 +8,7 @@ package require Tcl 8.6-
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tufind {
     namespace export files directories all walk
-    variable version 0.1.3
+    variable version 0.1
 }
 
 proc ::tclutils::tufind::NormalizePatterns {patterns} {

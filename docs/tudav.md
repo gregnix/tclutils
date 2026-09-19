@@ -26,7 +26,10 @@ foreach r [::tclutils::tudav::listResources $c] {
 
 Commands:
 
-- `client url ?-user u? ?-password p? ?-headers {k v ...}?` → client token.
+- `client url ?-user u? ?-password p? ?-headers {k v ...}? ?-cafile path? ?-insecure 0|1?`
+  → client token. `-cafile` verifies https against that CA bundle (an internal
+  CA, or the server's own self-signed certificate); `-insecure 1` accepts any
+  certificate, for a trusted internal server only. `configure` accepts both too.
 - `propfind c ?-path p? ?-depth 0|1|infinity? ?-props {...}? ?-body xml?` →
   list of resource dicts.
 - `report c path xmlBody ?-depth d?` → resource dicts (multiget / calendar-query).
@@ -61,6 +64,20 @@ Commands:
 
 Verified end to end against Radicale 3.7 (provision, PUT, REPORT, GET, DELETE)
 on Tcl 8.6 and 9.x.
+
+### Certificate verification (0.2)
+
+https is verified through `tclutils::tuhttps` and registered only for the
+duration of each request. Up to 0.1 the client registered `https` once,
+globally and for good, without `-require` — under `tls` 1.x (Tcl 8.6) that meant
+**no verification at all** (measured 2026-09-19 against a self-signed server),
+and any later registration by another module changed the policy for this client.
+
+**Behaviour change:** a server with a self-signed or internal certificate that
+0.1 accepted silently is now rejected; pass `-cafile` (preferred) or
+`-insecure 1`. Under tls 1.x without any CA bundle the request fails with
+`{TCLUTILS TUDAV TLS}` and the message names the way out (`-cafile`,
+`SSL_CERT_FILE`).
 
 Errors: HTTP failures → `{TCLUTILS TUDAV HTTP}`; missing tls for https →
 `{TCLUTILS TUDAV TLS}`.

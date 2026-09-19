@@ -1,4 +1,6 @@
 # tclutils::tuprovider::zip -- read-only ZIP provider over tuzip.
+# Description: read-only ZIP storage provider over tuzip
+# Category: Archive · filesystem
 #
 # A ZIP archive is a flat list of entries ("a/b/c.txt"); there are no real
 # directories, only implied ones. This provider synthesises the tree: given a

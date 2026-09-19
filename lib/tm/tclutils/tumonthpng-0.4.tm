@@ -27,7 +27,7 @@ package require tclutils::tupngdraw 0.12
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tumonthpng {
     namespace export render write renderQuarter writeQuarter renderYear writeYear
-    variable version 0.3
+    variable version 0.4
     variable themes
 }
 

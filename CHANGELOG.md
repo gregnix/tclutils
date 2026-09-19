@@ -1,5 +1,169 @@
 # Changelog
 
+## 0.63.0
+
+Security and robustness release. Recommended pairing: tclutils 0.63.0 +
+tkutils 0.44.0 + ctrlutils 0.2.
+
+
+### The test runner says where the modules come from
+
+Before the tests run, `tests/all.tcl` prints which file each library
+(tclutils) resolves to -- found without loading anything -- and which
+module-path variables are set; an old file beside a new one shows as
+`(also: <version>)`. (Idea 5 of ideen-tclutils-tkutils.md.)
+
+Own trees first: when the tree is already listed in `TCL8_6_TM_PATH` /
+`TCL9_0_TM_PATH` behind a directory with an installed copy of the same version
+(e.g. `site-tcl`), `tcl::tm::path add` does nothing and the installed copy
+wins -- the suite then tests that copy, not the tree (reproduced with Tcl 8.6:
+`TCL8_6_TM_PATH=<tree>:<site-tcl>`). The runner now removes its own trees from
+those variables for the test processes and puts them in front in its own
+interpreter, so the banner shows what the tests load. A test file started
+directly, without the runner, is still exposed to this.
+
+### `common::ensureOneOf` (in `common` 0.2)
+
+`ensureOneOf value allowed what` returns the value or raises
+`unknown <what>: <value>` / `Known: ...` with `{TCLUTILS COMMON VALUE <what>}`
+-- the enum counterpart to `parseOptions` (idea 2). `common` was already
+counted up to 0.2 in this release.
+
+### Security: HTTPS certificates are verified again — and the check stays local
+
+Measured 2026-09-19 against a local self-signed server: after **one**
+`tufetch` call, every later `::http::geturl https://…` in the process accepted
+the forged certificate. `::http::register` is global to the interpreter, and
+three modules each registered `https` with their own policy and never undid it:
+
+| module | registered | verified? |
+|---|---|---|
+| `tufetch` 0.3 | on every call | no (`-require 0`) |
+| `tupostgrest` 0.1 | on every request | yes, unless `-insecure 1` |
+| `tudav` 0.1 | once, for good | tls 2.0 yes; **tls 1.x (Tcl 8.6) never** |
+
+- **`tuhttps` 0.1 (new)** — one place for the rule. `socketCmd` builds a
+  verifying `::tls::socket` prefix (`-insecure 1` is the only way to switch the
+  check off; `-cafile` for an internal CA; no SNI for IP literals). `with`
+  registers `https` only for the duration of a script and restores the previous
+  registration afterwards, also on error. tls 1.x does not find the system CA
+  store by itself; `socketCmd` then looks for a CA bundle (`SSL_CERT_FILE`, the
+  usual Linux/BSD/macOS paths) and raises `NOCA` with the way out if there is
+  none — it never falls back to "unverified".
+- **`tufetch` 0.4** — verifies on all three transports; `-insecure 0|1` and
+  `-cafile` now apply to native, curl (`-k`/`--cacert`) and wget
+  (`--no-check-certificate`/`--ca-certificate`) alike. A `CONNECT` error on
+  https names `-cafile`/`-insecure`. tls 1.x without a CA bundle: the native
+  path steps aside for curl/wget; with neither, `NOMETHOD` names the way out.
+  New errorcode `{TCLUTILS TUFETCH CAFILE}`.
+  Also fixed: the wget fallback passed each header as two arguments
+  (`--header=Name:` and the value), so wget took the value for a second URL.
+  The old test matched the joined list as a string and stayed green.
+- **`tudav` 0.2** — client and `configure` take `-cafile` and `-insecure`;
+  https is registered per request. `configure` lists the known options on an
+  unknown one.
+- **`tupostgrest` 0.2** — `-cafile` added; `-insecure` now affects only that
+  client's requests. `new` lists the known options on an unknown one and checks
+  that `-insecure` is a boolean.
+- `tuprovider::dav` passes `-cafile`/`-insecure` through to `tudav`.
+
+**Behaviour change.** Code that relied on a self-signed or internal certificate
+being accepted silently now gets an error that suggests `-cafile` (preferred)
+or `-insecure 1`. On Tcl 8.6 with tls 1.x and no CA bundle (typical on
+Windows), `tudav` and `tupostgrest` fail with the way out in the message, and
+`tufetch` uses curl/wget or fails with `NOMETHOD`. Not measured: tls 2.0 on
+Windows; if its OpenSSL build finds no CA store the handshake fails loudly and
+`-cafile` is the way out.
+
+Tests run offline: `tests/data/https-server.tcl` serves a self-signed
+certificate (`tests/data/tuhttps-localhost.crt`, test use only) from a child
+process — in the test's own interpreter the blocking tls handshake hung. Each
+new test was run against the previous module version first: `tufetch` 10,
+`tudav` 5 (under 8.6 the old `tudav` accepted the forged certificate),
+`tupostgrest` 4 failures.
+
+### The umbrella loads without tcllib again (`tuprovider::ftp` 0.2)
+
+`tuprovider::ftp` did `package require ftp` (tcllib) when it was loaded, and
+the umbrella loads it — so `package require tclutils` failed on every system
+without tcllib, against CONTRIBUTING rule 1. Found 2026-09-19 because
+tkutils' `stack.test` exited 1 under Tcl 8.6 (no tcllib in that environment);
+under 9.0 tcllib was installed and nothing showed. The tcllib client is now
+loaded when a connection is opened; without it, `open ftp …` fails with
+`{TCLUTILS TUPROVIDER FTP NOPKG}` and says what is missing. A new test checks
+in a fresh process that loading the provider does not load `ftp`; against 0.1
+it fails, with or without tcllib installed.
+
+### Every module has a description and a category
+
+8 modules had neither a `# Description:` nor a `# Category:` header line, so
+`tools/check-modules.tcl` and its GUI showed empty columns for them (the storage providers, `tuico`, `tudhash`, `tuxxhash`).
+Added, with categories from the existing list. `tests/headers.test` (new)
+fails when a module lacks either line (counter-checked by removing one).
+
+### `tools/md2man.tcl`: sub-modules
+
+`md2man.tcl` converts only docs that belong to a module, and looked for the
+module as `lib/tm/<repo>/<mod>-X.Y.tm` only. The docs of sub-modules
+(`docs/tuprovider-ftp.md` for `lib/tm/tclutils/tuprovider/ftp-0.2.tm`) counted
+as "no module" and were skipped without a word — hence the missing man pages
+for `tuprovider-ftp` and `tuprovider-sftp` (and stale ones for `-dav`/`-zip`),
+the same gap `check-modules.tcl` had. It now also tries
+`lib/tm/<repo>/<parent>/<child>-X.Y.tm`. Measured into a scratch directory:
+136 pages before, 140 after, `tuprovider-ftp.n` with `.TH … 0.2`.
+
+### `tools/check-modules.tcl`: sub-modules
+
+For modules in a sub-directory (`lib/tm/tclutils/tuprovider/dav-0.1.tm`) the
+manifest rebuilt the path as `lib/tm/tclutils/tuprovider-dav-0.1.tm`, which
+does not exist. Description, category and dependencies of the four provider
+backends therefore came out empty — also after the header lines were added —,
+the path column was wrong, and the package column said
+`tclutils::tuprovider-dav` instead of `tclutils::tuprovider::dav`. The GUI
+opens the module from that path, so a click on such a row pointed at a missing
+file. The tool now keeps the real file and package name of every module. The
+human report is unchanged; in the manifest only the four provider rows change.
+Checked: every manifest path in tclutils, tkutils and ctrlutils exists, and
+the GUI shows the category of all five providers and opens
+`tuprovider/dav-0.1.tm`.
+
+### One version per module
+
+`tests/versions.test` (new) checks that the version in the file name, in
+`package provide` and in `variable version` agree. Five modules had a stale
+`variable version`: `tumonthpng` (0.3 in a 0.4 file), `tupng` (0.2 / 0.4),
+`tupngdraw` (0.11 / 0.12), `tufind` (0.1.3 / 0.1), `tudiff` (0.1.2 / 0.1). They
+now say what `package provide` says. Nothing reads the variable. The test does
+not look for old files lying next to new ones; `tools/check-modules.tcl`
+reports those as multi-version.
+
+### Documentation
+
+`docs/guide/architecture.md` knows the storage providers (new section, with
+the model/view/controller split of the Explorer stack), `tuhttps`,
+`tupostgrest`, `tutdbc` and the hash modules `tudhash`/`tuxxhash`.
+
+### `common` 0.2
+
+- `parseOptions` names the known options on an unknown one:
+  `unknown option "-typ"` / `Known: -type -timeout`. The errorcode is
+  unchanged (`{TCLUTILS COMMON OPTION <opt>}`); no existing test compared the
+  full message. Every module that uses `parseOptions` gets the new message.
+- `readFile` and `writeFile` take `-encoding enc`. Without it they keep using
+  the system encoding (utf-8 on Linux, usually cp1252 under Tcl 8.6 on
+  Windows) — pass `-encoding utf-8` where non-ASCII text is compared.
+
+### Tests independent of the environment
+
+`tudhash.test` and `tuxxhash.test` found their module only through
+`TCLUTILS_TM`; under a plain `tclsh tests/all.tcl` they aborted without a
+summary. They now add `lib/tm` themselves, like the other test files.
+
+Measured 2026-09-19 without any module path in the environment (145 test
+files, each with a summary): Tcl 9.0.4 / tls 2.0 — 1819 passed, 12 skipped;
+Tcl 8.6.14 / tls 1.7.22, no tcllib — 1758 passed, 73 skipped; 0 failed on
+both, `all.tcl` exit 0.
+
 ## 0.62.0
 
 ### Added

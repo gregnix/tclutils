@@ -82,4 +82,16 @@ test tuprovider-ftp-1.6 {stat reports dir for a cd-able path} -constraints haveF
     dict get [$p stat /pub] type
 } -result dir
 
+# 0.2: loading the provider must not load tcllib's ftp -- otherwise the tclutils
+# umbrella fails on every system without tcllib. Checked in a fresh process, so
+# it holds whether or not tcllib is installed here.
+test tuprovider-ftp-2.1 {loading the provider does not load the tcllib ftp package} -body {
+    set tm [file normalize [file join [file dirname [info script]] .. lib tm]]
+    set script "tcl::tm::path add [list $tm]; package require tclutils::tuprovider::ftp; puts \[package provide ftp\]"
+    set f [makeFile $script ftp-lazy.tcl]
+    set r [exec [info nameofexecutable] $f]
+    removeFile ftp-lazy.tcl
+    set r
+} -result {}
+
 cleanupTests

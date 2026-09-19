@@ -1,4 +1,6 @@
 # tclutils::tuprovider -- storage provider interface for the Explorer framework.
+# Description: storage provider interface: one API over local files, ZIP, WebDAV, FTP and SFTP
+# Category: Archive · filesystem
 #
 # One abstraction over every storage back end: local filesystem, ZIP, WebDAV,
 # FTP, ... For a consumer (the directory tree, the file list) everything is

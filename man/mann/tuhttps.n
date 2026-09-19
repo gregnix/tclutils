@@ -1,0 +1,79 @@
+.TH tuhttps n 0.1 tclutils
+.SH tclutils::tuhttps
+.PP
+One place for the HTTPS policy of the modules that use the core \fBhttp\fR package with \fBtls\fR: \fBtufetch\fR, \fBtudav\fR, \fBtupostgrest\fR. Builds a \fBverifying\fR \fB::tls::socket\fR command and registers \fBhttps\fR only for the duration of a script.
+.PP
+Needs the \fBtls\fR package when \fBsocketCmd\fR is called (loaded lazily). Tcl 8.6+ and 9.x.
+.SS "Why it exists"
+.PP
+\fB::http::register\fR is \fBglobal\fR to the interpreter. Up to tclutils 0.62.0 the three modules each registered \fBhttps\fR themselves, with three different policies, and never undid it — whoever registered last decided for everybody:
+.TS
+l l l.
+module (≤ 0.62.0)	registered	verified?
+\fBtufetch\fR 0.3	on every call	no (\fB\-require 0\fR)
+\fBtupostgrest\fR 0.1	on every request	yes, unless \fB\-insecure 1\fR
+\fBtudav\fR 0.1	once, for good	tls 2.0 yes; \fBtls 1.x no\fR
+.TE
+.PP
+Measured 2026\-09\-19 against a local self\-signed server: after one \fBtufetch\fR call, every later \fB::http::geturl https://…\fR in the process accepted the forged certificate. Under Tcl 8.6 \fBtudav\fR never verified at all.
+.SS API
+.CS
+::tclutils::tuhttps::socketCmd ?-insecure 0|1? ?-cafile path? ?-host name?
+::tclutils::tuhttps::with prefix script
+::tclutils::tuhttps::caFile
+.CE
+.IP \(bu
+\fBsocketCmd\fR — returns a command prefix for \fB::http::register https 443 …\fR.
+.RS 4
+.IP \(bu
+Default: verifies (\fB\-require 1\fR).
+.IP \(bu
+\fB\-cafile path\fR — verify against this CA bundle.
+.IP \(bu
+\fB\-insecure 1\fR — accept any certificate. The only way to \fB\-require 0\fR.
+.IP \(bu
+\fB\-host name\fR — the request's host; an IP literal gets no SNI, because some tls builds reject an IP as SNI name ("failed to use socket").
+.RE
+.IP \(bu
+\fBwith prefix script\fR — runs \fBscript\fR in the caller's frame with \fBhttps\fR registered to \fBprefix\fR; afterwards the previous registration is restored (or removed, if there was none), also when the script raises an error. Returns the script's result. Do not use \fBreturn\fR inside the script.
+.IP \(bu
+\fBcaFile\fR — the CA bundle used for tls 1.x, or \fB""\fR.
+.CS
+set prefix [::tclutils::tuhttps::socketCmd -host example.org]
+set tok [::tclutils::tuhttps::with $prefix {::http::geturl https://example.org/}]
+.CE
+.SS "tls 1.x and the CA store"
+.PP
+\fBtls\fR 2.0 (Tcl 9) uses the OpenSSL default paths and needs no file. \fBtls\fR 1.x (the usual package on Tcl 8.6, also on Windows) does \fBnot\fR find the system CA store: with \fB\-require 1\fR and no \fB\-cafile\fR, every real HTTPS request fails. For tls < 2.0 \fBsocketCmd\fR therefore looks for a bundle, in this order:
+.IP [1]
+\fB$env(SSL_CERT_FILE)\fR
+.IP [2]
+\fB/etc/ssl/certs/ca\-certificates.crt\fR (Debian, Ubuntu)
+.IP [3]
+\fB/etc/pki/tls/certs/ca\-bundle.crt\fR (RHEL, Fedora)
+.IP [4]
+\fB/etc/ssl/ca\-bundle.pem\fR (openSUSE)
+.IP [5]
+\fB/etc/ssl/cert.pem\fR (macOS, Alpine, BSD)
+.IP [6]
+\fB/usr/local/etc/openssl/cert.pem\fR
+.PP
+If none is found it raises \fBNOCA\fR, whose message names the way out (\fB\-cafile\fR, \fBSSL_CERT_FILE\fR). It does not fall back to "no verification". On Windows with tls 1.x, set \fBSSL_CERT_FILE\fR or pass \fB\-cafile\fR.
+.PP
+Not measured: tls 2.0 on Windows. Whether its default paths find a CA store there depends on the OpenSSL build. If not, the handshake fails loudly (\fBcertificate verify failed\fR), and \fB\-cafile\fR is the way out.
+.SS Errors
+.TS
+l l.
+errorcode	meaning
+\fB{TCLUTILS TUHTTPS NOTLS}\fR	the \fBtls\fR package is not available
+\fB{TCLUTILS TUHTTPS CAFILE}\fR	\fB\-cafile\fR is not a readable file
+\fB{TCLUTILS TUHTTPS NOCA}\fR	tls < 2.0 and no CA bundle found
+\fB{TCLUTILS COMMON OPTION <opt>}\fR	unknown option (message lists the known ones)
+\fB{TCLUTILS COMMON BOOLEAN \-insecure}\fR	\fB\-insecure\fR is not a boolean
+.TE
+.SS "What it does not see"
+.PP
+The registration is scoped, not locked. A caller that registers \fBhttps\fR itself after \fBwith\fR has started, or an asynchronous \fB::http::geturl \-command …\fR the application started while a \fBwith\fR script runs, can still meet a different registration.
+.SS Tests
+.PP
+\fBtests/tuhttps.test\fR runs a local HTTPS server in a child process (\fBtests/data/https\-server.tcl\fR, self\-signed certificate for localhost and 127.0.0.1 in \fBtests/data/\fR, test use only). Both directions are checked: rejected by default, accepted with the certificate as \fB\-cafile\fR or with \fB\-insecure 1\fR, and the registration restored — also after an error.

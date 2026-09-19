@@ -10,7 +10,7 @@ Dependencies: `http` (+ `tls` for https), `tclutils::tujson`, `tclutils::tuurl`.
 ## Commands
 
 ```tcl
-tupostgrest::new baseUrl ?-token jwt? ?-timeout ms? ?-header {k v ...}? ?-schema name? ?-insecure 0|1?
+tupostgrest::new baseUrl ?-token jwt? ?-timeout ms? ?-header {k v ...}? ?-schema name? ?-insecure 0|1? ?-cafile path?
 tupostgrest::token  client jwt
 tupostgrest::get    client table ?-filters {col val ...}? ?-select s? ?-order s? ?-limit n? ?-offset n?
 tupostgrest::insert client table row   ?-return 0|1?
@@ -64,14 +64,22 @@ internal one reached by **IP address** with a **self-signed** certificate:
   *"failed to use socket"*. The client therefore sends SNI only for real host
   names and omits it for IPv4/IPv6 literals — no option needed.
 - **Certificate validation.** A self-signed certificate is not signed by a CA.
-  Pass `-insecure 1` to accept it without validation:
+  Prefer `-cafile` with the server's certificate (or the internal CA): the
+  connection stays verified. `-insecure 1` accepts any certificate:
 
 ```tcl
+set c [tupostgrest::new https://192.168.158.33 -token $jwt -cafile server.crt]
 set c [tupostgrest::new https://192.168.158.33 -token $jwt -insecure 1]
 ```
 
 `-insecure` defaults to `0`. Use it only for trusted internal endpoints; with a
 CA-signed certificate and a host name, leave it off.
+
+Since 0.2 the certificate check goes through `tclutils::tuhttps`, and `https`
+is registered only for the duration of each request. Up to 0.1 the
+registration was global and stayed: a client with `-insecure 1` left every
+later https request in the process — other clients and the application's own
+`::http::geturl` included — unverified.
 
 ### Reading and writing
 

@@ -1,4 +1,6 @@
 # tuxxhash-0.1.tm -- xxHash32 (XXH32) in pure Tcl, Tk-free.
+# Description: xxHash32 (XXH32), a fast non-cryptographic hash, pure Tcl
+# Category: Encoding · binary/checksums
 #
 # A fast non-cryptographic hash for content de-duplication and change detection
 # (not for security). The pure-Tcl implementation provides the 32-bit variant;

@@ -1,5 +1,7 @@
 # tclutils::tuprovider::sftp -- SFTP provider, an adapter over the OpenSSH
 # `sftp` client run in batch mode (`sftp -b`).
+# Description: SFTP storage provider over the OpenSSH sftp client
+# Category: Archive · filesystem
 #
 # Brings a remote SFTP server to the provider interface. Unlike the ftp provider
 # (which wraps tcllib's ftp package), there is no pure-Tcl SFTP client, so this

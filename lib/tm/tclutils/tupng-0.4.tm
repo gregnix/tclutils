@@ -32,7 +32,7 @@ namespace eval ::tclutils::tupng {
     namespace export encodeRGB encodeRGBA encodeGray encodeIndexed \
         writeRGB writeRGBA writeGray writeIndexed encodeRGBARaw writeRGBARaw \
         decode readPNG
-    variable version 0.2
+    variable version 0.4
 }
 
 # --- option / value validation ----------------------------------------

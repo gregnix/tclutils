@@ -1,4 +1,4 @@
-.TH common n 0.1 tclutils
+.TH common n 0.2 tclutils
 .SH tclutils::common
 .PP
 Internal shared helper package for \fBtclutils\fR.
@@ -27,4 +27,14 @@ Documented for completeness (same module, also covered by the test suite):
 .CS
 common::ensureBoolean value optionName         ;# return the canonical boolean for VALUE, or throw an OPTION error naming OPTIONNAME
 common::ensurePositiveInteger value what       ;# return VALUE if it is a positive integer, else throw an error naming WHAT
+common::ensureOneOf value allowed what         ;# return VALUE if it is in ALLOWED, else an error listing ALLOWED (0.2)
 .CE
+.SS "Messages name the way out (0.2)"
+.PP
+An unknown option or value is reported together with what would have been accepted, so the reader does not have to open the source:
+.CS
+unknown option "-typ"                 unknown document type: quatsch
+Known: -type -timeout                 Known: invoice delivery_note warranty
+.CE
+.PP
+\fBparseOptions\fR does this for options, \fBensureOneOf\fR for enumerated values (errorcode \fB{TCLUTILS COMMON VALUE <what>}\fR). The errorcodes of \fBparseOptions\fR are unchanged from 0.1.

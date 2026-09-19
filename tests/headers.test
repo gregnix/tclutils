@@ -1,0 +1,48 @@
+# headers.test -- every module carries "# Description:" and "# Category:".
+#
+# tools/check-modules.tcl (and its GUI) read both header lines; without them
+# the description and category columns stay empty. On 2026-09-19 21 modules
+# across tclutils, tkutils and ctrlutils had neither (the storage providers,
+# the Explorer widgets, the hash modules, all ctrlutils controllers) -- seen in
+# the check-modules GUI. The umbrella file (lib/tm/<repo>-<ver>.tm) is not a
+# module and is not checked.
+#
+# What this does NOT check: whether the category is a sensible one, or whether
+# the description still matches the code.
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+set repo [file tail $root]
+set tmRoot [file join $root lib tm $repo]
+if {![file isdirectory $tmRoot]} {
+    # checkout directory named differently (e.g. tclutils-0.63.0)
+    set tmRoot [lindex [glob -nocomplain -type d -directory [file join $root lib tm] *] 0]
+}
+
+proc tmFiles {dir} {
+    set out [glob -nocomplain -directory $dir -type f *.tm]
+    foreach sub [glob -nocomplain -directory $dir -type d *] {
+        lappend out {*}[tmFiles $sub]
+    }
+    return $out
+}
+
+set missing {}
+foreach f [lsort [tmFiles $tmRoot]] {
+    set fh [open $f r]; fconfigure $fh -encoding utf-8; set src [read $fh]; close $fh
+    set rel [string range $f [string length $tmRoot]+1 end]
+    foreach h {Description Category} {
+        if {![regexp -line "^\\s*#\\s*${h}:\\s*\\S" $src]} {
+            lappend missing "$rel: no # $h:"
+        }
+    }
+}
+
+test headers-1.1 {every module has a Description and a Category header} -body {
+    join $missing \n
+} -result {}
+
+cleanupTests

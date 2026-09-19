@@ -1,0 +1,57 @@
+.TH tuprovider-sftp n 0.1 tclutils
+.SH "tuprovider::sftp \-\- SFTP provider"
+.PP
+An SFTP backend for the \fBtuprovider\fR interface, built on the OpenSSH \fBsftp\fR client run in batch mode (\fBsftp \-b\fR).
+.PP
+There is no pure\-Tcl SFTP client, so this adapter shells out to the system \fBsftp\fR binary: each operation runs a small batch script and its output is parsed. That keeps the dependency to something every SSH install already has, and inherits OpenSSH's authentication (keys, agent, \fBknown_hosts\fR) rather than reimplementing it.
+.SS Load
+.CS
+tcl::tm::path add /path/to/tclutils/lib/tm
+package require tclutils::tuprovider::sftp
+.CE
+.PP
+Loading the package registers the \fBsftp\fR scheme with \fBtuprovider\fR.
+.SS Open
+.CS
+set p [::tclutils::tuprovider open sftp sftp://user@host/pub \
+        -identity ~/.ssh/id_ed25519]
+.CE
+.PP
+The URL is \fBsftp://[user@]host[:port][/base]\fR. Options after it:
+.IP \(bu
+\fB\-identity FILE\fR  ssh private key (passed as \fB\-i\fR)
+.IP \(bu
+\fB\-port N\fR         port (overrides one given in the URL)
+.IP \(bu
+\fB\-sshopt {...}\fR   extra \fB\-o\fR options for sftp, repeatable, e.g. \fB\-sshopt {StrictHostKeyChecking=accept\-new}\fR
+.IP \(bu
+\fB\-batchcmd CMD\fR   override the sftp executable (default \fBsftp\fR)
+.PP
+Authentication is OpenSSH's: use a key via \fB\-identity\fR or an ssh\-agent. The host must be in \fBknown_hosts\fR (or use \fB\-sshopt {StrictHostKeyChecking=accept\-new}\fR to add it on first connect) \-\- because sftp runs non\-interactively here, it cannot prompt to accept an unknown host key.
+.SS Capabilities
+.CS
+list stat get put delete mkdir move
+.CE
+.PP
+\fBcopy\fR is \fBnot\fR reported: SFTP has no server\-side copy. Copying a file is done at the application level with get+put (a cross\-provider copy does exactly this). \fBmove\fR maps to sftp's \fBrename\fR.
+.SS Operations
+.IP \(bu
+\fBlist $path\fR \-\- runs \fBls \-l $path\fR over sftp and parses the Unix long listing. sftp prints the full path in the name column, so the leaf is taken with \fBfile tail\fR.
+.IP \(bu
+\fBstat $path\fR \-\- sftp's \fBls\fR has no \fB\-d\fR, so stat lists the PARENT directory and picks the matching entry (root \fB/\fR is reported as a directory).
+.IP \(bu
+\fBget\fR / \fBput\fR \-\- transfer via a local temp file (sftp works on paths, not in\-memory data), read/written back as bytes.
+.IP \(bu
+\fBdelete\fR \-\- tries \fBrm\fR, falls back to \fBrmdir\fR for directories.
+.IP \(bu
+\fBmkdir\fR / \fBmove\fR \-\- forward to sftp's \fBmkdir\fR / \fBrename\fR.
+.SS "Notes and limits"
+.IP \(bu
+\fBWhole\-file transfers.\fR Plain sftp transfers whole files, so \fBhead\fR uses the base default (get + truncate) \-\- a large\-file preview reads the whole file.
+.IP \(bu
+\fBls \-l\fR\fB format.\fR The common Unix long listing is assumed. The link\-count column may be \fB?\fR on some servers; only the perms (field 1), size (field 5) and name (field 9+) columns are used, so that is fine.
+.IP \(bu
+\fBOne process per operation.\fR Each call spawns an sftp process. Fine for interactive browsing; a batch of many small operations pays per\-call startup.
+.SS "See also"
+.PP
+\fBtuprovider\fR, \fBtuprovider::ftp\fR, \fBtuprovider::dav\fR, \fBtuprovider::zip\fR

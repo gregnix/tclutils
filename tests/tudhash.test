@@ -4,6 +4,11 @@
 package require tcltest
 namespace import ::tcltest::*
 
+# Find this repo's modules from the test file itself; TCLUTILS_TM is only an
+# addition. (Up to 0.62.0 this file relied on TCLUTILS_TM alone and could not
+# load its module under a plain `tclsh tests/all.tcl`.)
+set here [file dirname [file normalize [info script]]]
+tcl::tm::path add [file join [file dirname $here] lib tm]
 if {[info exists ::env(TCLUTILS_TM)]} { ::tcl::tm::path add $::env(TCLUTILS_TM) }
 package require tclutils::tudhash
 namespace import ::tclutils::tudhash::*

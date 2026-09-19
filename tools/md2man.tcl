@@ -70,10 +70,24 @@ proc frontmatterKey {mdText key} {
 }
 proc frontmatterSection {mdText} { return [frontmatterKey $mdText section] }
 
-# module version from lib/tm/<repo>/<mod>-X.Y.tm (highest), else ""
+# module files for a doc name: lib/tm/<repo>/<mod>-X.Y.tm, or for a sub-module
+# documented as docs/<parent>-<child>.md: lib/tm/<repo>/<parent>/<child>-X.Y.tm
+# (e.g. tuprovider-ftp -> lib/tm/tclutils/tuprovider/ftp-0.2.tm). Up to
+# 2026-09-19 only the first form was tried, so the docs of sub-modules counted
+# as "no module" and were skipped without a word -- tuprovider-ftp and
+# tuprovider-sftp had no man page (tools/check-modules.tcl had the same gap).
+proc moduleFiles {repoRoot repo mod} {
+    set files [glob -nocomplain [file join $repoRoot lib tm $repo $mod-*.tm]]
+    if {![llength $files] && [regexp {^([^-]+)-(.+)$} $mod -> parent child]} {
+        set files [glob -nocomplain [file join $repoRoot lib tm $repo $parent $child-*.tm]]
+    }
+    return $files
+}
+
+# module version from its file name (highest), else ""
 proc moduleVersion {repoRoot repo mod} {
     set vers {}
-    foreach f [glob -nocomplain [file join $repoRoot lib tm $repo $mod-*.tm]] {
+    foreach f [moduleFiles $repoRoot $repo $mod] {
         if {[regexp -- {-([0-9]+\.[0-9]+(?:\.[0-9]+)?)\.tm$} [file tail $f] -> v]} { lappend vers $v }
     }
     if {[llength $vers] == 0} { return "" }
@@ -81,10 +95,9 @@ proc moduleVersion {repoRoot repo mod} {
 }
 
 proc moduleExists {repoRoot repo mod} {
-    return [expr {[llength [glob -nocomplain [file join $repoRoot lib tm $repo $mod-*.tm]]] > 0}]
+    return [expr {[llength [moduleFiles $repoRoot $repo $mod]] > 0}]
 }
 
-# md -> roff(.n), with a proper .TH injected
 proc mdToMan {mdText name section version part} {
     set ast [mdstack::parser::parse $mdText]
     set ir  [docir::md::fromAst $ast]

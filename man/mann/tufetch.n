@@ -1,4 +1,4 @@
-.TH tufetch n 0.3 tclutils
+.TH tufetch n 0.4 tclutils
 .SH tclutils::tufetch
 .PP
 A tiny HTTP(S) helper: fetch a URL into memory (\fBget\fR) or to a file (\fBdownload\fR), byte\-safe. Transport order: native Tcl \fBhttp\fR + \fBtls\fR (the \fBtls\fR package is loaded lazily, like \fBtclutils::tudav\fR); if that is unavailable it falls back to \fBcurl\fR or \fBwget\fR located via \fBauto_execok\fR. Supports GET and POST with custom headers and a request body, so higher\-level clients (e.g. \fBtclutils::tusparql\fR) can build on it.
@@ -27,11 +27,24 @@ Options (both commands):
 .IP \(bu
 \fB\-method get|post\fR (default get).
 .IP \(bu
-\fB\-headers {k v k v ...}\fR — extra request headers.
+\fB\-headers {k v k v ...}\fR — extra request headers. (0.4 fixes the wget fallback: up to 0.3 each header became two arguments there, and wget took the value for a second URL.)
 .IP \(bu
 \fB\-data <body>\fR — request body (pair with \fB\-method post\fR).
 .IP \(bu
 \fB\-type <content\-type>\fR — content type for the body.
+.IP \(bu
+\fB\-cafile <file>\fR — verify the server certificate against this CA bundle (an internal CA, or a server's own self\-signed certificate).
+.IP \(bu
+\fB\-insecure 0|1\fR (default 0) — accept \fBany\fR certificate. For a trusted internal server only; prefer \fB\-cafile\fR.
+.SS "Certificate verification (0.4)"
+.PP
+Every transport verifies the server certificate, and \fB\-insecure 1\fR switches it off on every transport (\fBcurl \-k\fR, \fBwget \-\-no\-check\-certificate\fR). The same URL now gives the same answer whichever transport is used.
+.PP
+Up to 0.3 the native path registered \fBhttps\fR \fBglobally\fR with \fB\-require 0\fR: after one \fBtufetch\fR call, every \fB::http::geturl https://…\fR in the process — the application's own included — accepted any certificate, while the curl/wget paths did verify. Since 0.4 the native path goes through \fBtclutils::tuhttps\fR: \fBhttps\fR is registered only for the duration of the request, and the previous registration is restored afterwards.
+.PP
+\fBtls\fR 1.x (the usual package on Tcl 8.6, also on Windows) does not find the system CA store by itself. \fBtufetch\fR then looks for a CA bundle (\fBSSL_CERT_FILE\fR, then the usual Linux/BSD/macOS paths, see \fBtuhttps\fR). If none is found the native path steps aside and curl/wget are tried — they bring their own CA store. If neither exists, the error is \fBNOMETHOD\fR and its message names the way out (\fB\-cafile\fR, \fBSSL_CERT_FILE\fR). It does \fBnot\fR fall back to fetching unverified.
+.PP
+\fBBehaviour change:\fR a caller that relied on 0.3 silently accepting a self\-signed or internal certificate now gets \fBCONNECT\fR (the message suggests \fB\-cafile\fR / \fB\-insecure 1\fR). On Windows with Tcl 8.6 and no curl, an HTTPS fetch without a CA bundle now fails with \fBNOMETHOD\fR instead of succeeding unverified.
 .SS Errors
 .PP
 Errors carry a structured errorcode (modelled on the \fBwww\fR package) so callers can match at the granularity they need with \fBtry\fR/\fBtrap\fR — errorcodes are prefix\-matched:
@@ -43,7 +56,8 @@ errorcode	meaning
 \fB{TCLUTILS TUFETCH TIMEOUT}\fR	the request timed out
 \fB{TCLUTILS TUFETCH CONNECT}\fR	connection/DNS/transport failure
 \fB{TCLUTILS TUFETCH REDIRECT}\fR	too many redirects
-\fB{TCLUTILS TUFETCH NOMETHOD}\fR	no transport available
+\fB{TCLUTILS TUFETCH NOMETHOD}\fR	no transport available (also: tls 1.x without CA bundle and no curl/wget)
+\fB{TCLUTILS TUFETCH CAFILE}\fR	the \fB\-cafile\fR given is not readable
 .TE
 .CS
 try {
@@ -61,4 +75,4 @@ try {
 .PP
 The HTTP and transport classification lives in pure helpers (\fB_httpClass\fR, \fB_statusReason\fR, \fB_curlExitReason\fR), so the taxonomy is tested without a network. The \fBwget\fR fallback does not translate HTTP status — a 4xx/5xx there surfaces as a \fBCHILDSTATUS\fR error. NOTE: as of 0.3 the HTTP errorcode gained the \fB<class>\fR element; code that trapped the old 3\-element \fB{TCLUTILS TUFETCH HTTP <code>}\fR exactly should use the prefix \fB{TCLUTILS TUFETCH HTTP}\fR.
 .PP
-The request\-line construction lives in pure helpers (\fB_nativeOpts\fR, \fB_curlArgs\fR, \fB_wgetArgs\fR), so it can be tested without a network. Verified on Tcl 8.6 and 9.x; the native \fBhttp\fR+\fBtls\fR path and the curl fallback were exercised against live endpoints.
+The request\-line construction lives in pure helpers (\fB_nativeOpts\fR, \fB_curlArgs\fR, \fB_wgetArgs\fR), so it can be tested without a network. Verified on Tcl 8.6 and 9.x; the native \fBhttp\fR+\fBtls\fR path and the curl fallback were exercised against live endpoints. Certificate handling is tested offline against a local self\-signed server (\fBtests/data/https\-server.tcl\fR), in both directions: rejected by default, accepted with \fB\-cafile\fR or \fB\-insecure 1\fR, and the process\-wide \fBhttps\fR registration left as it was found.

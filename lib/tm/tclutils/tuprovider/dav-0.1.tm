@@ -1,4 +1,6 @@
 # tclutils::tuprovider::dav -- WebDAV provider, a thin adapter over tudav.
+# Description: WebDAV storage provider, a thin adapter over tudav
+# Category: Archive · filesystem
 #
 # Brings the existing tudav WebDAV client to the provider interface. It is an
 # adapter, not a reimplementation: every method forwards to tudav.
@@ -26,7 +28,7 @@ oo::class create ::tclutils::tuprovider::Dav {
     superclass ::tclutils::tuprovider::Base
     variable client
 
-    # url plus tudav client options (-user, -password, -headers)
+    # url plus tudav client options (-user, -password, -headers, -cafile, -insecure)
     constructor {url args} {
         set client [::tclutils::tudav::client $url {*}$args]
     }

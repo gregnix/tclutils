@@ -1,6 +1,6 @@
 # tclutils -- umbrella package for selected Tcl utility modules
 package require Tcl 8.6-
-package require tclutils::common 0.1
+package require tclutils::common 0.2
 package require tclutils::tufind 0.1
 package require tclutils::tugrep 0.1
 package require tclutils::tufuzzy 0.1
@@ -77,10 +77,10 @@ package require tclutils::tuuuid 0.1
 package require tclutils::tufmt 0.1
 package require tclutils::tudate 0.1
 package require tclutils::tuurl 0.1
-package require tclutils::tupostgrest 0.1
+package require tclutils::tupostgrest 0.2
 package require tclutils::tuevent 0.1
 package require tclutils::turegistry 0.1
-package require tclutils::tudav 0.1
+package require tclutils::tudav 0.2
 package require tclutils::tuholiday 0.1
 package require tclutils::turrule 0.1
 package require tclutils::tuopen 0.1
@@ -109,7 +109,8 @@ package require tclutils::tudict 0.1
 package require tclutils::tumath 0.1
 package require tclutils::tutable 0.1
 # HTTP / SPARQL / SQLite helpers (optional, not dependency-free)
-package require tclutils::tufetch 0.3
+package require tclutils::tuhttps 0.1
+package require tclutils::tufetch 0.4
 package require tclutils::tusqlite 0.1
 package require tclutils::tusparql 0.1
 # MaxMind DB reader
@@ -122,6 +123,6 @@ package require tclutils::tuflow 0.2
 package require tclutils::tuprovider 0.1
 package require tclutils::tuprovider::zip 0.1
 package require tclutils::tuprovider::dav 0.1
-package require tclutils::tuprovider::ftp 0.1
+package require tclutils::tuprovider::ftp 0.2
 
-package provide tclutils 0.62.0
+package provide tclutils 0.63.0

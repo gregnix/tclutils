@@ -243,11 +243,15 @@ proc main {argv} {
     }
 
     set mods [dict create]
+    set files [dict create] ;# name -> version -> real file
+    set pkgs  [dict create] ;# name -> package name
     # Top-level modules: lib/tm/<repo>/<name>-<ver>.tm
     foreach f [lsort [glob -nocomplain [file join $modDir *.tm]]] {
         set base [file tail $f]
         if {[regexp {^(.+)-([0-9]+\.[0-9]+(?:\.[0-9]+)?)\.tm$} $base -> name ver]} {
             dict lappend mods $name $ver
+            dict set files $name $ver $f
+            dict set pkgs $name ${repo}::$name
         } else {
             puts stderr "?? cannot parse module file name: $base"
         }
@@ -261,6 +265,12 @@ proc main {argv} {
             set base [file tail $f]
             if {[regexp {^(.+)-([0-9]+\.[0-9]+(?:\.[0-9]+)?)\.tm$} $base -> child ver]} {
                 dict lappend mods "$parent-$child" $ver
+                # the real file and package name: up to 2026-09-19 the manifest
+                # rebuilt the path as lib/tm/<repo>/<parent>-<child>-<ver>.tm,
+                # which does not exist -- description, category, deps and path
+                # of every sub-module came out empty or wrong
+                dict set files "$parent-$child" $ver $f
+                dict set pkgs "$parent-$child" ${repo}::${parent}::$child
             } else {
                 puts stderr "?? cannot parse module file name: $base"
             }
@@ -331,7 +341,8 @@ proc main {argv} {
         }
 
         if {$manifestMode} {
-            set full [file join $modDir $name-[lindex $vers end].tm]
+            set full [dict get $files $name [lindex $vers end]]
+            set pkg  [dict get $pkgs $name]
             if {[string match "$root/*" $full]} {
                 set path [string range $full [expr {[string length $root] + 1}] end]
             } else {
@@ -343,23 +354,23 @@ proc main {argv} {
             set cat [moduleCat $full]
             regsub -all {\s+} $cat " " cat
             set cat [string trim $cat]
-            set deps [join [moduleDeps $full ${repo}::$name] ,]
+            set deps [join [moduleDeps $full $pkg] ,]
             set tY [expr {$chk(test)?"Y":"N"}]
             set dY [expr {$chk(doc)?"Y":"N"}]
             set mY [expr {$chk(man)?"Y":"N"}]
             if {$manifest eq "md"} {
                 set mdDesc [string map {| \\|} $desc]
                 set mdCat [string map {| \\|} $cat]
-                puts "| `${repo}::$name` | [join $vers ,] | $mdDesc | $mdCat | $tY | $dY | $mY | $repo | `$path` | $deps |"
+                puts "| `$pkg` | [join $vers ,] | $mdDesc | $mdCat | $tY | $dY | $mY | $repo | `$path` | $deps |"
             } elseif {$manifest eq "tsv"} {
-                puts [join [list ${repo}::$name [join $vers ,] $desc $cat $tY $dY $mY $repo $path $deps] \t]
+                puts [join [list $pkg [join $vers ,] $desc $cat $tY $dY $mY $repo $path $deps] \t]
             } else {
                 # json: build one registry object (indented for packages.json)
                 set url  "$jsonBaseUrl/$repo"
                 set web  "$jsonBaseUrl/$repo/tree/$jsonBranch/docs/$name.md"
                 set tags [catToTags $repo $cat]
                 set obj  "  {\n"
-                append obj "    \"name\": [jsonStr ${repo}::$name],\n"
+                append obj "    \"name\": [jsonStr $pkg],\n"
                 append obj "    \"sources\": \[\n"
                 append obj "      {\n"
                 append obj "        \"url\": [jsonStr $url],\n"

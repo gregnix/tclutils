@@ -51,6 +51,8 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | Module | Scope status | Notes |
 |---|---|---|
 | `tubin` | basis complete | Binary primitive helpers used by other modules. |
+| `tudhash` | helper | Perceptual difference hash (dHash, 64 bit) and Hamming distance for near-duplicate images; pure Tcl, Tk-free. |
+| `tuxxhash` | basis complete | xxHash32 (XXH32) in pure Tcl, bit-exact against the reference vectors; non-cryptographic. |
 | `tuhexdump` / `tuod` | subset | Practical dump helpers; not full hexdump/od format language. |
 | `tuhexedit` | helper | Read/write/search/patch/dump helpers; GUI is separate future work. |
 | `tubase64` / `tucrc` | basis complete | Thin wrappers over Tcl core binary/zlib facilities. |
@@ -83,6 +85,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tucsv` | basis complete | CSV parse/join with quoting and multiline handling. |
 | `tujson` | helper + parser + encoder | Escape, quote, pretty, minify, validate, `parse`/`fromJson`/`parseTyped`, and `toJson` (typed value -> JSON, with `str`/`num`/`bool`/`null`/`obj`/`arr` builders). |
 | `tuxml` | helper | Escape and tag builder; no DOM/XPath. |
+| `tutdbc` | helper | The TDBC analogue of `tusqlite`: NULL-safe helpers over a caller-supplied TDBC connection; requires no driver itself. **Not in the umbrella** — `package require tclutils::tutdbc`. |
 | `tusqlite` | helper | NULL-safe helpers over a caller-supplied `sqlite3` handle: `insert` (omitted key or `null` → SQL NULL), `rows` → list of dicts, `value`, `quoteId`. Does not `require sqlite3` itself. |
 | `tummdb` | reader | Pure-Tcl reader for MaxMind DB (`.mmdb`) binary geolocation databases. |
 
@@ -133,10 +136,22 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tudate` | helper | Flexible date parse/format/arithmetic on `clock`; ISO, day diff, relative phrases. Local time. |
 | `tuurl` | basis complete | RFC 3986 percent-encoding/decoding and query strings (UTF-8). |
 | `tuuuid` | basis complete | UUID v4 and v7 generate/validate/version; `/dev/urandom` with `rand()` fallback. |
-| `tudav` | basis complete | Minimal WebDAV/CardDAV/CalDAV client (PROPFIND/REPORT/GET/PUT/DELETE, calendarQuery/addressbookMultiget); core `http`, https via `tls`. Collection provisioning (mkCalendar/mkAddressbook) added; verified vs Radicale 3.7. |
+| `tudav` | basis complete | Minimal WebDAV/CardDAV/CalDAV client (PROPFIND/REPORT/GET/PUT/DELETE, calendarQuery/addressbookMultiget); core `http`, https via `tls`. Collection provisioning (mkCalendar/mkAddressbook) added; verified vs Radicale 3.7. 0.2: certificate verified through `tuhttps`, `-cafile`/`-insecure`. |
 | `tuexe` | helper | Locate external executables: candidate-name list, bundled `-dirs` plus PATH (`auto_execok`), platform extensions; `find`/`all`/`exists`. |
-| `tufetch` | helper | Tiny HTTP(S) `get`/`download` (to memory or file), GET/POST with headers and body; native `http`+`tls` else curl/wget via `auto_execok`. Optional, not dependency-free. |
+| `tufetch` | helper | Tiny HTTP(S) `get`/`download` (to memory or file), GET/POST with headers and body; native `http`+`tls` else curl/wget via `auto_execok`. 0.4: verifies certificates on all transports, `-cafile`/`-insecure`. Optional, not dependency-free. |
+| `tupostgrest` | helper | Minimal PostgREST client: URL/query/JSON body, bearer token, JSON response to dicts, PostgREST errors as Tcl errors. 0.2: `-cafile`; `-insecure` per client. Optional, not dependency-free. |
+| `tuhttps` | helper | One HTTPS policy for `tufetch`/`tudav`/`tupostgrest`: verifying `::tls::socket` prefix (`-insecure` the only way off), CA bundle search for tls 1.x, `https` registered only for the duration of a script. Needs `tls` at the point of use. |
 | `tusparql` | helper | Thin SPARQL client (`query` → row dicts, `ask` → 0/1) composing `tufetch`/`tuurl`/`tujson`; GET or POST, English labels via `wikibase:label`. Optional, not dependency-free. |
+
+## Storage providers
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tuprovider` | basis complete | One storage API (`list`/`stat`/`get`/`put`/…, `caps`) over local files; the base of the Explorer stack in tkutils/ctrlutils. |
+| `tuprovider::zip` | subset | ZIP archive as a provider (read-only caps where writing is not supported). |
+| `tuprovider::dav` | helper | WebDAV provider over `tudav`; passes `-cafile`/`-insecure` through. Needs a server. |
+| `tuprovider::ftp` | helper | FTP provider. Needs a server. |
+| `tuprovider::sftp` | helper | SFTP provider over the OpenSSH `sftp` client in batch mode. **Not in the umbrella** — `package require tclutils::tuprovider::sftp`. `head` transfers the whole file. |
 
 ## Calendar / recurrence
 

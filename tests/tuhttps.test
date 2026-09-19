@@ -1,0 +1,155 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuhttps 0.1
+package require http
+
+testConstraint tls  [expr {![catch {package require tls}]}]
+testConstraint tls1 [expr {[testConstraint tls] && [package vcompare [package provide tls] 2.0] < 0}]
+
+# Self-signed certificate for localhost / 127.0.0.1, valid until 2126.
+# Only used by these tests; it signs nothing else.
+set crt [file join $here data tuhttps-localhost.crt]
+set key [file join $here data tuhttps-localhost.key]
+
+# --- the local HTTPS server (child process, see data/https-server.tcl) ------
+set port 0
+if {[testConstraint tls]} {
+    set srvPipe [open |[list [info nameofexecutable] \
+        [file join $here data https-server.tcl] $crt $key] r+]
+    gets $srvPipe port
+}
+set url https://localhost:$port/
+
+# fetch prefix -- one request with https registered to PREFIX; "ok 200" or
+# "error: ...". Uses `with`, so it also exercises the restore.
+proc fetch {prefix} {
+    if {[catch {
+        ::tclutils::tuhttps::with $prefix {
+            set t [::http::geturl $::url -timeout 5000]
+            set r "[::http::status $t] [::http::ncode $t]"
+            ::http::cleanup $t
+            set r
+        }
+    } m]} { return "error: $m" }
+    return $m
+}
+proc httpsReg {} {
+    if {[info exists ::http::urlTypes(https)]} { return $::http::urlTypes(https) }
+    return <none>
+}
+
+# --- socketCmd ----------------------------------------------------------------
+test tuhttps-1.1 {default verifies (-require 1)} -constraints tls -body {
+    set c [::tclutils::tuhttps::socketCmd]
+    list [lindex $c 0] [dict get [lrange $c 1 end] -require]
+} -result {::tls::socket 1}
+
+test tuhttps-1.2 {-insecure 1 is the only way to -require 0} -constraints tls -body {
+    set c [::tclutils::tuhttps::socketCmd -insecure 1]
+    list [dict get [lrange $c 1 end] -require] [dict get [lrange $c 1 end] -request]
+} -result {0 0}
+
+test tuhttps-1.3 {an IP literal gets no SNI, a host name does} -constraints tls -body {
+    list [dict get [lrange [::tclutils::tuhttps::socketCmd -host 192.168.1.2] 1 end] -autoservername] \
+         [dict get [lrange [::tclutils::tuhttps::socketCmd -host example.org] 1 end] -autoservername]
+} -result {0 1}
+
+test tuhttps-1.4 {-cafile that does not exist -> CAFILE} -constraints tls -body {
+    catch {::tclutils::tuhttps::socketCmd -cafile /nonexistent/ca.pem} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUHTTPS CAFILE}
+
+test tuhttps-1.5 {unknown option names the known ones} -body {
+    catch {::tclutils::tuhttps::socketCmd -insecur 1} m
+    set m
+} -match glob -result "unknown option \"-insecur\"\nKnown: -insecure -cafile -host"
+
+test tuhttps-1.6 {-insecure must be boolean} -body {
+    catch {::tclutils::tuhttps::socketCmd -insecure maybe} m o
+    lrange [dict get $o -errorcode] 0 2
+} -result {TCLUTILS COMMON BOOLEAN}
+
+test tuhttps-1.7 {tls 1.x without any CA bundle -> NOCA, not silent -require 0} \
+    -constraints tls1 -setup {
+    set saved $::tclutils::tuhttps::caCandidates
+    set ::tclutils::tuhttps::caCandidates {}
+    set hadEnv [info exists ::env(SSL_CERT_FILE)]
+    if {$hadEnv} { set savedEnv $::env(SSL_CERT_FILE); unset ::env(SSL_CERT_FILE) }
+} -body {
+    catch {::tclutils::tuhttps::socketCmd} m o
+    list [dict get $o -errorcode] [string match {*-cafile*-insecure 1*} $m]
+} -cleanup {
+    set ::tclutils::tuhttps::caCandidates $saved
+    if {$hadEnv} { set ::env(SSL_CERT_FILE) $savedEnv }
+} -result {{TCLUTILS TUHTTPS NOCA} 1}
+
+test tuhttps-1.8 {SSL_CERT_FILE wins over the built-in list} -setup {
+    set hadEnv [info exists ::env(SSL_CERT_FILE)]
+    if {$hadEnv} { set savedEnv $::env(SSL_CERT_FILE) }
+    set ::env(SSL_CERT_FILE) $crt
+} -body {
+    expr {[::tclutils::tuhttps::caFile] eq $crt}
+} -cleanup {
+    if {$hadEnv} { set ::env(SSL_CERT_FILE) $savedEnv } else { unset ::env(SSL_CERT_FILE) }
+} -result 1
+
+# --- with: scoped registration ----------------------------------------------
+test tuhttps-2.1 {with restores the previous registration} -setup {
+    ::http::register https 443 [list MarkerSocket a]
+} -body {
+    ::tclutils::tuhttps::with [list OtherSocket] { set inside [httpsReg] }
+    list [lindex $inside 1] [lindex [httpsReg] 1]
+} -cleanup {
+    ::http::unregister https
+} -result {OtherSocket {MarkerSocket a}}
+
+test tuhttps-2.2 {with removes its registration when there was none} -setup {
+    catch {::http::unregister https}
+} -body {
+    ::tclutils::tuhttps::with [list OtherSocket] { set x 1 }
+    httpsReg
+} -result <none>
+
+test tuhttps-2.3 {with restores also when the script fails} -setup {
+    ::http::register https 443 [list MarkerSocket b]
+} -body {
+    catch {::tclutils::tuhttps::with [list OtherSocket] { error boom }} m
+    list $m [lindex [httpsReg] 1]
+} -cleanup {
+    ::http::unregister https
+} -result {boom {MarkerSocket b}}
+
+test tuhttps-2.4 {with returns the script result} -body {
+    ::tclutils::tuhttps::with [list OtherSocket] { expr {6 * 7} }
+} -result 42
+
+# --- against the local self-signed server -----------------------------------
+test tuhttps-3.1 {default rejects a self-signed certificate} -constraints tls -body {
+    string match error:* [fetch [::tclutils::tuhttps::socketCmd -host localhost]]
+} -result 1
+
+test tuhttps-3.2 {the same certificate as -cafile is accepted} -constraints tls -body {
+    fetch [::tclutils::tuhttps::socketCmd -host localhost -cafile $crt]
+} -result {ok 200}
+
+test tuhttps-3.3 {-insecure 1 accepts it} -constraints tls -body {
+    fetch [::tclutils::tuhttps::socketCmd -host localhost -insecure 1]
+} -result {ok 200}
+
+test tuhttps-3.4 {after an insecure request, a plain geturl verifies again} -constraints tls -setup {
+    ::http::register https 443 [::tclutils::tuhttps::socketCmd -host localhost]
+} -body {
+    fetch [::tclutils::tuhttps::socketCmd -host localhost -insecure 1]
+    list [catch {set t [::http::geturl $url -timeout 5000]; ::http::cleanup $t}] \
+         [lindex [httpsReg] 0]
+} -cleanup {
+    ::http::unregister https
+} -result {1 443}
+
+if {[info exists srvPipe]} { catch {close $srvPipe} }
+cleanupTests

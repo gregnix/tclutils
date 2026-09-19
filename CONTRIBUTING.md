@@ -39,6 +39,7 @@ Prefer `tclutils::common` over re-rolling basics:
 - `splitDelimited line delim`  (multi-char delimiters supported)
 - `parseOptions defaults args` (defaults is a dict; rejects unknown options)
 - `ensureBoolean value name`, `ensurePositiveInteger value what`
+- `ensureOneOf value allowed what` (unknown value -> error listing the allowed ones)
 
 ## 3. File layout (one module = five files)
 

@@ -37,4 +37,19 @@ Documented for completeness (same module, also covered by the test suite):
 ```tcl
 common::ensureBoolean value optionName         ;# return the canonical boolean for VALUE, or throw an OPTION error naming OPTIONNAME
 common::ensurePositiveInteger value what       ;# return VALUE if it is a positive integer, else throw an error naming WHAT
+common::ensureOneOf value allowed what         ;# return VALUE if it is in ALLOWED, else an error listing ALLOWED (0.2)
 ```
+
+## Messages name the way out (0.2)
+
+An unknown option or value is reported together with what would have been
+accepted, so the reader does not have to open the source:
+
+```
+unknown option "-typ"                 unknown document type: quatsch
+Known: -type -timeout                 Known: invoice delivery_note warranty
+```
+
+`parseOptions` does this for options, `ensureOneOf` for enumerated values
+(errorcode `{TCLUTILS COMMON VALUE <what>}`). The errorcodes of
+`parseOptions` are unchanged from 0.1.

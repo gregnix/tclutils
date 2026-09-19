@@ -9,7 +9,7 @@ package require tclutils::common 0.1
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tudiff {
     namespace export text files unified unifiedText context contextText directory
-    variable version 0.1.2
+    variable version 0.1
 }
 
 proc ::tclutils::tudiff::SplitLines {data} {

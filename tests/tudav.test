@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tudav 0.1
+package require tclutils::tudav 0.2
 
 # ---- pure helpers ----
 test tudav-1.1 {basic auth header} -body {
@@ -286,5 +286,53 @@ test tudav-8.3 {getProperties parses text values and the component set} -setup {
     rename ::tclutils::tudav::_request ""
     rename ::tclutils::tudav::_req8 ::tclutils::tudav::_request
 } -result {Cal #112233ff desc {VEVENT VTODO}}
+
+# ---- 0.2: certificate verification, scoped https registration ----
+set here [file dirname [file normalize [info script]]]
+testConstraint tls [expr {![catch {package require tls}]}]
+set crt [file join $here data tuhttps-localhost.crt]
+set key [file join $here data tuhttps-localhost.key]
+set lport 0
+if {[testConstraint tls]} {
+    set srvPipe [open |[list [info nameofexecutable] \
+        [file join $here data https-server.tcl] $crt $key] r+]
+    gets $srvPipe lport
+}
+proc davReg {} {
+    if {[info exists ::http::urlTypes(https)]} { return $::http::urlTypes(https) }
+    return <none>
+}
+
+test tudav-9.1 {self-signed server rejected by default} -constraints tls -body {
+    set c [::tclutils::tudav::client https://localhost:$lport/]
+    catch {::tclutils::tudav::get $c x}
+} -cleanup { ::tclutils::tudav::destroy $c } -result 1
+
+test tudav-9.2 {-cafile with the server certificate: accepted} -constraints tls -body {
+    set c [::tclutils::tudav::client https://localhost:$lport/ -cafile $crt]
+    ::tclutils::tudav::get $c x
+} -cleanup { ::tclutils::tudav::destroy $c } -result ok
+
+test tudav-9.3 {-insecure 1: accepted; registration left as found} -constraints tls -setup {
+    catch {::http::unregister https}
+} -body {
+    set c [::tclutils::tudav::client https://localhost:$lport/ -insecure 1]
+    list [::tclutils::tudav::get $c x] [davReg]
+} -cleanup { ::tclutils::tudav::destroy $c } -result {ok <none>}
+
+test tudav-9.4 {configure -insecure / -cafile; unknown option names the known ones} -body {
+    set c [::tclutils::tudav::client https://localhost:$lport/]
+    ::tclutils::tudav::configure $c -insecure yes -cafile /x.pem
+    catch {::tclutils::tudav::configure $c -insecur 1} m
+    list $::tclutils::tudav::state($c,insecure) $::tclutils::tudav::state($c,cafile) \
+         [string match "*Known:*-cafile -insecure" $m]
+} -cleanup { ::tclutils::tudav::destroy $c } -result {1 /x.pem 1}
+
+test tudav-9.5 {client -insecure must be boolean} -body {
+    catch {::tclutils::tudav::client https://h/ -insecure maybe} m o
+    lrange [dict get $o -errorcode] 0 2
+} -result {TCLUTILS COMMON BOOLEAN}
+
+if {[info exists srvPipe]} { catch {close $srvPipe} }
 
 cleanupTests

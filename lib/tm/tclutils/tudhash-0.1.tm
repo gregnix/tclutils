@@ -1,4 +1,6 @@
 # tudhash-0.1.tm -- perceptual "difference hash" (dHash) in pure Tcl, Tk-free.
+# Description: perceptual difference hash (dHash) for near-duplicate images, pure Tcl
+# Category: Encoding · binary/checksums
 #
 # dHash turns an image into a 64-bit fingerprint so that visually similar images
 # get similar fingerprints. Two images are "the same picture" when the Hamming

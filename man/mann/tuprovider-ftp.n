@@ -1,0 +1,44 @@
+.TH tuprovider-ftp n 0.2 tclutils
+.SH tclutils::tuprovider::ftp
+.PP
+An FTP backend for the \fBtuprovider\fR interface, built on the tcllib \fBftp\fR client.
+.PP
+It lets the same tree and list consumers that work over the local filesystem work over a remote FTP server without change: for the consumer, an FTP path is just a path with children.
+.SS Load
+.CS
+tcl::tm::path add /path/to/tclutils/lib/tm
+package require tclutils::tuprovider::ftp
+.CE
+.PP
+Loading the package registers the \fBftp\fR scheme with \fBtuprovider\fR.
+.SS Open
+.CS
+set p [::tclutils::tuprovider open ftp ftp://host/pub -user me -password secret]
+.CE
+.PP
+The URL is \fBftp://host[:port][/base]\fR. Options after it go to \fBftp::Open\fR: \fB\-user\fR, \fB\-password\fR, \fB\-port\fR, \fB\-mode passive|active\fR, \fB\-timeout\fR. Anonymous is the default. A \fB/base\fR in the URL is entered with \fBCD\fR after connecting.
+.SS Capabilities
+.PP
+\fBftp\fR reports the full read/write set FTP supports:
+.CS
+list stat get put delete mkdir move
+.CE
+.PP
+It does \fBnot\fR report \fBcopy\fR: FTP has no server\-side copy. To copy a file, read it with \fBget\fR and write it back with \fBput\fR (a cross\-provider copy does exactly this at the application level). \fBmove\fR maps to the FTP \fBRENAME\fR command.
+.SS Operations
+.IP \(bu
+\fBlist $path\fR \-\- parses the server's \fBLIST\fR output into entry dicts. The common Unix listing format is assumed (\fBperms links owner group size date name\fR); the leading char of the perms column marks a directory. Names with spaces are kept whole.
+.IP \(bu
+\fBstat $path\fR \-\- derives dir/file by trying to \fBCD\fR into the path (dir if it succeeds), with \fBFileSize\fR for files.
+.IP \(bu
+\fBget\fR / \fBput\fR / \fBdelete\fR / \fBmkdir\fR / \fBmove\fR \-\- forward to the matching ftp commands.
+.SS "Notes and limits"
+.IP \(bu
+\fBLIST is not standardized.\fR This adapter parses the common Unix format; a server emitting a different format (some Windows FTP servers) may not parse cleanly. \fBNLST\fR\-only servers are not handled.
+.IP \(bu
+Paths are absolute FTP paths; the consumer treats them as opaque.
+.IP \(bu
+The FTP traffic itself is tcllib's concern. What this adapter adds is the LIST parsing, the path \-> entry mapping, and the honest \fBcaps\fR set.
+.SS "See also"
+.PP
+\fBtuprovider\fR, \fBtuprovider::dav\fR, \fBtuprovider::zip\fR

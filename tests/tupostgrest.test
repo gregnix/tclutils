@@ -14,6 +14,10 @@ if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS
 package require tclutils::tupostgrest
 set ns ::tclutils::tupostgrest
 
+# Keep the real transport under another name (same namespace) before the mock
+# replaces it: the 0.2 TLS tests at the end call it against a local server.
+rename ${ns}::_transport ${ns}::_realTransport
+
 # --- mock transport ---------------------------------------------------------
 variable ::last {}
 variable ::resp {200 application/json {[]}}
@@ -90,5 +94,46 @@ test pg-3.3 {invalid number in a typed value is rejected} -body {
     catch {${::ns}::insert [client] documents [dict create n [${::ns}::num abc]]} e o
     lrange [dict get $o -errorcode] 0 2
 } -result {TCLUTILS TUJSON NUMBER}
+
+# --- 0.2: TLS against a local self-signed server (real transport) ------------
+testConstraint tls [expr {![catch {package require tls}]}]
+set crt [file join $here data tuhttps-localhost.crt]
+set key [file join $here data tuhttps-localhost.key]
+set lport 0
+if {[testConstraint tls]} {
+    set srvPipe [open |[list [info nameofexecutable] \
+        [file join $here data https-server.tcl] $crt $key] r+]
+    gets $srvPipe lport
+}
+proc realGet {insecure cafile} {
+    set ${::ns}::_insecure $insecure
+    set ${::ns}::_cafile   $cafile
+    lindex [${::ns}::_realTransport GET https://localhost:$::lport/ {} {} 5000] 0
+}
+
+test pg-9.1 {self-signed server rejected by default, message names the way out} -constraints tls -body {
+    catch {realGet 0 ""} m o
+    list [dict get $o -errorcode] [string match {*-cafile*-insecure 1*} $m]
+} -result {{TCLUTILS TUPOSTGREST TRANSPORT} 1}
+
+test pg-9.2 {-cafile with the server certificate: accepted} -constraints tls -body {
+    realGet 0 $crt
+} -result 200
+
+test pg-9.3 {-insecure 1 accepted; https registration left as found} -constraints tls -setup {
+    catch {::http::unregister https}
+} -body {
+    list [realGet 1 ""] [info exists ::http::urlTypes(https)]
+} -result {200 0}
+
+test pg-9.4 {new: -cafile stored; unknown option names the known ones; -insecure boolean} -body {
+    set c [${::ns}::new https://h -cafile /ca.pem -insecure yes]
+    catch {${::ns}::new https://h -cafil x} m
+    catch {${::ns}::new https://h -insecure maybe} m2 o2
+    list [dict get $c cafile] [dict get $c insecure] [string match "*Known:*-cafile" $m] \
+         [dict get $o2 -errorcode]
+} -result {/ca.pem 1 1 {TCLUTILS TUPOSTGREST OPTION}}
+
+if {[info exists srvPipe]} { catch {close $srvPipe} }
 
 cleanupTests

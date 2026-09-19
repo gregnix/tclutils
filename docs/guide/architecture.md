@@ -26,7 +26,8 @@ common  (Core: shared layer)
 |
 |-- binary / encoding / checksums
 |   |-- tubin   |-- tuhexdump |-- tuod   |-- tuhexedit |-- tubase64
-|   |-- tucrc   |-- tuhash    |-- tustrings |-- tuiconv |-- tucode
+|   |-- tucrc   |-- tuhash    |-- tuxxhash  |-- tudhash  |-- tustrings
+|   |-- tuiconv |-- tucode
 |   |-- tubase32|-- tuimage   |-- tupng   |-- tupngdraw  |-- tutablepng
 |   |-- tumonthpng |-- tucodepng |-- tupngpad `-- tusvg
 |
@@ -38,7 +39,7 @@ common  (Core: shared layer)
 |
 |-- data / serialization
 |   |-- tucsv   |-- tujson  |-- tuxml   |-- tunumfmt |-- tusqlite
-|   `-- tummdb
+|   |-- tummdb  `-- tutdbc (own package require)
 |
 |-- stream / filesystem
 |   |-- tufile  |-- tufind  |-- tustat  |-- tutee   |-- tupath
@@ -56,7 +57,11 @@ common  (Core: shared layer)
 |
 |-- date / web / IDs
 |   |-- tudate  |-- tuurl   |-- tuuuid  |-- tudav   |-- tufetch |-- tuexe
-|   `-- tusparql
+|   |-- tusparql |-- tupostgrest `-- tuhttps (HTTPS policy of the three clients)
+|
+|-- storage providers
+|   |-- tuprovider (local)  |-- tuprovider::zip  |-- tuprovider::dav
+|   |-- tuprovider::ftp     `-- tuprovider::sftp (own package require)
 |
 |-- calendar / recurrence
 |   |-- tuical  |-- turrule |-- tuholiday `-- tucal
@@ -165,6 +170,34 @@ web clients. The web clients are the only **not dependency-free** modules:
 - `tudav`: minimal WebDAV/CardDAV/CalDAV client on `http`(+`tls`).
 - `tusparql`: thin SPARQL client (`query`/`ask`) composed from `tufetch`,
   `tuurl`, and `tujson` — no transport or parsing logic of its own.
+- `tupostgrest`: minimal PostgREST client (URL/query/JSON body, bearer token,
+  JSON response to dicts).
+- `tuhttps`: the one HTTPS policy of `tufetch`, `tudav` and `tupostgrest`
+  (since 0.63.0). It builds a verifying `::tls::socket` prefix and registers
+  `https` only for the duration of a request, restoring the previous
+  registration afterwards. `::http::register` is global to the interpreter;
+  before 0.63.0 each client registered its own policy and never undid it, so
+  one `tufetch` call left the whole process unverified.
+
+## Storage providers
+
+`tuprovider` is one small storage API — `list`, `stat`, `get`, `put`,
+`delete`, `mkdir`, `move`, and `caps` to ask what a backend can do — over the
+local filesystem. Backends plug in as `tuprovider::zip`, `::dav` (over
+`tudav`), `::ftp` (tcllib's ftp client, loaded when a connection is opened)
+and `::sftp` (the OpenSSH `sftp` client; not in the umbrella). Consumers see
+paths with children and do not know where the bytes live.
+
+This is the model layer of the Explorer stack:
+
+```
+tclutils  tuprovider (+ backends)          model
+tkutils   tkufiletree/-list/-path/-preview  view
+ctrlutils cufileops/cumonitor/cuundo/…     controller
+```
+
+A capability a backend lacks is reported by `caps` and not offered by the
+controllers (a ZIP is read-only), rather than failing when used.
 
 ## Calendar and recurrence
 

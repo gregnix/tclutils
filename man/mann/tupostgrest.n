@@ -1,4 +1,4 @@
-.TH tupostgrest n 0.1 tclutils
+.TH tupostgrest n 0.2 tclutils
 .SH tclutils::tupostgrest
 .PP
 A minimal, Tk\-free client for a \fBPostgREST\fR backend. It builds the request URL / query / JSON body, sends it over http(s) with an optional bearer token, parses the JSON response into Tcl dicts/lists and turns a PostgREST error response into a Tcl error. Pure Tcl, Tcl/Tk 8.6+ / 9.x.
@@ -6,7 +6,7 @@ A minimal, Tk\-free client for a \fBPostgREST\fR backend. It builds the request 
 Dependencies: \fBhttp\fR (+ \fBtls\fR for https), \fBtclutils::tujson\fR, \fBtclutils::tuurl\fR.
 .SS Commands
 .CS
-tupostgrest::new baseUrl ?-token jwt? ?-timeout ms? ?-header {k v ...}? ?-schema name? ?-insecure 0|1?
+tupostgrest::new baseUrl ?-token jwt? ?-timeout ms? ?-header {k v ...}? ?-schema name? ?-insecure 0|1? ?-cafile path?
 tupostgrest::token  client jwt
 tupostgrest::get    client table ?-filters {col val ...}? ?-select s? ?-order s? ?-limit n? ?-offset n?
 tupostgrest::insert client table row   ?-return 0|1?
@@ -46,12 +46,15 @@ For an \fBhttps://\fR base URL the client registers a TLS socket automatically (
 .IP \(bu
 \fBSNI with an IP.\fR A TLS server name (SNI) must be a host name, not an IP literal; some \fBtls\fR builds reject it and \fBhttp\fR then fails with *"failed to use socket"*. The client therefore sends SNI only for real host names and omits it for IPv4/IPv6 literals — no option needed.
 .IP \(bu
-\fBCertificate validation.\fR A self\-signed certificate is not signed by a CA. Pass \fB\-insecure 1\fR to accept it without validation:
+\fBCertificate validation.\fR A self\-signed certificate is not signed by a CA. Prefer \fB\-cafile\fR with the server's certificate (or the internal CA): the connection stays verified. \fB\-insecure 1\fR accepts any certificate:
 .CS
+set c [tupostgrest::new https://192.168.158.33 -token $jwt -cafile server.crt]
 set c [tupostgrest::new https://192.168.158.33 -token $jwt -insecure 1]
 .CE
 .PP
 \fB\-insecure\fR defaults to \fB0\fR. Use it only for trusted internal endpoints; with a CA\-signed certificate and a host name, leave it off.
+.PP
+Since 0.2 the certificate check goes through \fBtclutils::tuhttps\fR, and \fBhttps\fR is registered only for the duration of each request. Up to 0.1 the registration was global and stayed: a client with \fB\-insecure 1\fR left every later https request in the process — other clients and the application's own \fB::http::geturl\fR included — unverified.
 .SS "Reading and writing"
 .PP
 \fBget\fR returns a Tcl list of row dicts. \fBinsert\fR/\fBupdate\fR/\fBdelete\fR default to \fBPrefer: return=representation\fR (\fBdelete\fR to \fBminimal\fR) — with \fB\-return 1\fR the affected rows are returned, with \fB\-return 0\fR an empty string. \fBrpc\fR calls a stored function via \fBPOST /rpc/<fn>\fR.

@@ -30,6 +30,12 @@
 # (PostgREST coerces JSON strings into the target column type, so plain
 #  strings are usually fine; the wrappers give explicit control.)
 #
+# TLS (0.2): the certificate is verified through tclutils::tuhttps, and https
+# is registered only for the duration of each request. Up to 0.1 the
+# registration was global and stayed: a client with -insecure 1 left every
+# later https request in the process unverified. -cafile <file> verifies an
+# internal server against its own CA instead of switching verification off.
+#
 # Error codes: {TCLUTILS TUPOSTGREST <REASON>} with REASON in
 #   OPTION   -- bad option / usage
 #   HTTP     -- backend returned status >= 400 (message from the error JSON)
@@ -40,11 +46,13 @@ package require Tcl 8.6-
 package require http
 package require tclutils::tujson
 package require tclutils::tuurl
+package require tclutils::common 0.2
+package require tclutils::tuhttps 0.1
 
 namespace eval ::tclutils::tupostgrest {
     namespace export new token get insert update delete rpc request \
         num bool null
-    variable version 0.1
+    variable version 0.2
 }
 
 proc ::tclutils::tupostgrest::_err {reason msg} {
@@ -53,11 +61,12 @@ proc ::tclutils::tupostgrest::_err {reason msg} {
 
 # --- client handle ----------------------------------------------------------
 # new baseUrl ?-token jwt? ?-timeout ms? ?-header {k v ...}? ?-schema name?
-#     ?-insecure 0|1?
-# -insecure 1 accepts a self-signed / unverified TLS certificate (typical for
-# an internal server reached by IP address).
+#     ?-insecure 0|1? ?-cafile path?
+# -cafile verifies the server against this CA bundle (an internal CA, or the
+# server's own self-signed certificate) -- prefer it over -insecure.
+# -insecure 1 accepts any TLS certificate, for a trusted internal server only.
 proc ::tclutils::tupostgrest::new {baseUrl args} {
-    array set o {token "" timeout 30000 header {} schema "" insecure 0}
+    array set o {token "" timeout 30000 header {} schema "" insecure 0 cafile ""}
     foreach {k v} $args {
         switch -- $k {
             -token    { set o(token)    $v }
@@ -65,8 +74,14 @@ proc ::tclutils::tupostgrest::new {baseUrl args} {
             -header   { set o(header)   $v }
             -schema   { set o(schema)   $v }
             -insecure { set o(insecure) $v }
-            default   { _err OPTION "unknown option \"$k\"" }
+            -cafile   { set o(cafile)   $v }
+            default   {
+                _err OPTION "unknown option \"$k\"\nKnown: -token -timeout -header -schema -insecure -cafile"
+            }
         }
+    }
+    if {![string is boolean -strict $o(insecure)]} {
+        _err OPTION "bad -insecure \"$o(insecure)\": must be a boolean"
     }
     if {![string is integer -strict $o(timeout)] || $o(timeout) <= 0} {
         _err OPTION "bad -timeout \"$o(timeout)\": must be a positive integer (ms)"
@@ -74,7 +89,7 @@ proc ::tclutils::tupostgrest::new {baseUrl args} {
     return [dict create \
         base [string trimright $baseUrl /] token $o(token) \
         timeout $o(timeout) header $o(header) schema $o(schema) \
-        insecure $o(insecure)]
+        insecure [expr {$o(insecure) ? 1 : 0}] cafile $o(cafile)]
 }
 
 # Return a copy of the client with a (new) bearer token.
@@ -166,6 +181,8 @@ proc ::tclutils::tupostgrest::request {client method path args} {
     # pass the self-signed flag to _transport without changing its arity, so
     # existing test mocks (5-arg _transport) keep working.
     variable _insecure [dict get $client insecure]
+    variable _cafile ""
+    if {[dict exists $client cafile]} { set _cafile [dict get $client cafile] }
     lassign [_transport $method $url $headers $o(body) [dict get $client timeout]] \
         status ctype data
 
@@ -194,32 +211,41 @@ proc ::tclutils::tupostgrest::request {client method path args} {
 }
 
 # The only proc that touches the network -- override it in tests.
-# Returns {status contentType data}.  The self-signed flag is read from the
-# namespace variable _insecure (set by request), keeping this signature stable.
+# Returns {status contentType data}.  The TLS flags are read from the namespace
+# variables _insecure / _cafile (set by request), keeping this signature stable.
 proc ::tclutils::tupostgrest::_transport {method url headers body timeout} {
     variable _insecure
+    variable _cafile
     if {![info exists _insecure]} { set _insecure 0 }
+    if {![info exists _cafile]}   { set _cafile "" }
+    set prefix ""
     if {[string match -nocase https:* $url]} {
-        if {[catch {package require tls}]} {
-            _err TRANSPORT "https requested but the tls package is not available"
-        }
-        # host part, to decide on SNI
+        # host part: an IP literal gets no SNI (tuhttps decides)
         set host ""
         regexp -nocase {^https://(\[[^\]]+\]|[^/:]+)} $url -> host
-        set isIP [expr {[regexp {^\d{1,3}(\.\d{1,3}){3}$} $host] || [string match *:* $host]}]
-        # SNI (-autoservername 1) must not be used with an IP literal -- some
-        # tls builds reject an IP as the SNI name and http then reports
-        # "failed to use socket". Send SNI only for real host names.
-        set opts [list -autoservername [expr {$isIP ? 0 : 1}]]
-        # self-signed / unverified certificate: don't demand validation.
-        if {$_insecure} { lappend opts -request 0 -require 0 }
-        ::http::register https 443 [list ::tls::socket {*}$opts]
+        set sopts [list -host $host -insecure $_insecure]
+        if {$_cafile ne ""} { lappend sopts -cafile $_cafile }
+        try {
+            set prefix [::tclutils::tuhttps::socketCmd {*}$sopts]
+        } trap {TCLUTILS TUHTTPS} {msg} {
+            _err TRANSPORT $msg
+        }
     }
     set cfg [list -method $method -timeout $timeout]
     if {[llength $headers]} { lappend cfg -headers $headers }
     if {$body ne ""}        { lappend cfg -query $body -type application/json }
-    if {[catch {::http::geturl $url {*}$cfg} tok]} {
-        _err TRANSPORT "request failed: $tok"
+    if {$prefix ne ""} {
+        set rc [catch {::tclutils::tuhttps::with $prefix [list ::http::geturl $url {*}$cfg]} tok]
+    } else {
+        set rc [catch {::http::geturl $url {*}$cfg} tok]
+    }
+    if {$rc} {
+        set msg "request failed: $tok"
+        if {$prefix ne "" && !$_insecure} {
+            append msg " (self-signed or internal certificate? -cafile <file>;\
+                -insecure 1 only for a trusted internal server)"
+        }
+        _err TRANSPORT $msg
     }
     set status [::http::ncode $tok]
     set ctype  ""
@@ -295,4 +321,4 @@ proc ::tclutils::tupostgrest::rpc {client fn {args_ {}}} {
     return [request $client POST /rpc/$fn -body [_rowJson $args_]]
 }
 
-package provide tclutils::tupostgrest 0.1
+package provide tclutils::tupostgrest 0.2

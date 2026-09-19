@@ -4,9 +4,15 @@ For the per-module scope status see [`module-status.md`](module-status.md);
 the wishlist/backlog detail lives with the reviews. This file is the
 high-level history and forward view.
 
-_As of 2026-07-19: 133 modules; hygiene gate green (test 137, doc 133, man 134,
-0 duplicate-version). Umbrella `tclutils` 0.61.0; recommended pairing
-tclutils 0.61.0 + tkutils 0.43.0._
+_As of 2026-09-19: 140 modules. Umbrella `tclutils` 0.63.0; recommended
+pairing tclutils 0.63.0 + tkutils 0.44.0 + ctrlutils 0.2. Man pages are
+generated from the Markdown docs by a script, so the hygiene gate reports
+missing man pages until that has run._
+
+_Done since 2026-07-19 and not yet reflected in the backlog below: the storage
+providers (`tuprovider` + zip/dav/ftp/sftp), `tupostgrest`, `tutdbc`,
+`tudhash`, `tuxxhash`, `tunotesdb`, and in 0.63.0 the HTTPS
+verification through `tuhttps`._
 
 ## Recently shipped
 

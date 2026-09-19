@@ -1,0 +1,52 @@
+# versions.test -- one module, one version number.
+#
+# For every module file lib/tm/**/<name>-<ver>.tm the version in the FILE NAME
+# (which Tcl's module loader uses), the version in `package provide` (the last
+# `package provide <pkg> <ver>` line) and, if present, `variable version` must
+# agree. Added 2026-09-19 after a review found the ctrlutils umbrella saying
+# `package provide ctrlutils 0.2` next to `variable version 0.1`, and six
+# older modules with a stale `variable version`.
+#
+# What this does NOT see: two files of the same module side by side (e.g. an
+# old -0.1.tm left next to -0.2.tm) -- tools/check-modules.tcl reports those
+# as multi-version. And it reads the source text: a version computed at run
+# time would not be checked.
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set tmRoot [file join [file dirname $here] lib tm]
+
+proc tmFiles {dir} {
+    set out [glob -nocomplain -directory $dir -type f *.tm]
+    foreach sub [glob -nocomplain -directory $dir -type d *] {
+        lappend out {*}[tmFiles $sub]
+    }
+    return $out
+}
+
+set mismatches {}
+foreach f [lsort [tmFiles $tmRoot]] {
+    if {![regexp {^.+-([0-9][0-9.]*)\.tm$} [file tail $f] -> fileVer]} continue
+    set fh [open $f r]; fconfigure $fh -encoding utf-8; set src [read $fh]; close $fh
+    set provideVer ""
+    foreach {-> v} [regexp -all -inline -line {^\s*package provide \S+ ([0-9][0-9.]*)\s*$} $src] {
+        set provideVer $v
+    }
+    set varVer ""
+    regexp -line {^\s*variable version ([0-9][0-9.]*)\s*$} $src -> varVer
+    set rel [string range $f [string length $tmRoot]+1 end]
+    if {$provideVer ne "" && $provideVer ne $fileVer} {
+        lappend mismatches "$rel: file $fileVer, package provide $provideVer"
+    }
+    if {$varVer ne "" && $varVer ne $fileVer} {
+        lappend mismatches "$rel: file $fileVer, variable version $varVer"
+    }
+}
+
+test versions-1.1 {file name, package provide and variable version agree} -body {
+    join $mismatches \n
+} -result {}
+
+cleanupTests

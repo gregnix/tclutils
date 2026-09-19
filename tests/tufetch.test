@@ -16,7 +16,7 @@ set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 catch {tcl::tm::path add [file join $root lib tm]}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
-package require tclutils::tufetch 0.3
+package require tclutils::tufetch 0.4
 
 proc opts {args} {
     ::tclutils::common::parseOptions $::tclutils::tufetch::defaults {*}$args
@@ -84,12 +84,119 @@ test tufetch-1.7 {native (http::geturl) options for POST} -body {
          [string match {*-type CT*} $a] [string match {*-headers {Accept A}*} $a]
 } -result {1 1 1 1}
 
-test tufetch-1.8 {wget arg list for POST} -body {
+test tufetch-1.8 {wget arg list for POST: one argument per header} -body {
+    # Checked per LIST ELEMENT, not by string match on the whole list: up to
+    # 0.3 "--header=Accept:" and "A" were two elements, and a string match on
+    # "--header=Accept: A" still found them side by side and passed.
     set a [::tclutils::tufetch::_wgetArgs https://ep /tmp/o \
         [opts -method post -headers {Accept A} -data BODY -type CT]]
-    list [string match {*--method=POST*} $a] [string match {*--header=Accept: A*} $a] \
-         [string match {*--body-data=BODY*} $a]
-} -result {1 1 1}
+    list [expr {[lsearch -exact $a --method=POST] >= 0}] \
+         [expr {[lsearch -exact $a "--header=Accept: A"] >= 0}] \
+         [expr {[lsearch -exact $a "--header=Content-Type: CT"] >= 0}] \
+         [expr {[lsearch -exact $a --body-data=BODY] >= 0}] \
+         [expr {[lsearch -exact $a A] < 0}]
+} -result {1 1 1 1 1}
+
+test tufetch-1.9 {curl: verifies by default, -insecure -> -k, -cafile -> --cacert} -body {
+    list [expr {[lsearch -exact [::tclutils::tufetch::_curlArgs https://x /o [opts]] -k] >= 0}] \
+         [expr {[lsearch -exact [::tclutils::tufetch::_curlArgs https://x /o [opts -insecure 1]] -k] >= 0}] \
+         [lrange [lindex [lsearch -all -inline -exact -index 0 \
+             [lmap {a b} [::tclutils::tufetch::_curlArgs https://x /o [opts -cafile /ca.pem]] {list $a $b}] \
+             --cacert] 0] 1 1]
+} -result {0 1 /ca.pem}
+
+test tufetch-1.10 {wget: verifies by default, -insecure / -cafile map to its flags} -body {
+    list [expr {[lsearch -glob [::tclutils::tufetch::_wgetArgs https://x /o [opts]] --no-check*] >= 0}] \
+         [expr {[lsearch -exact [::tclutils::tufetch::_wgetArgs https://x /o [opts -insecure 1]] --no-check-certificate] >= 0}] \
+         [expr {[lsearch -exact [::tclutils::tufetch::_wgetArgs https://x /o [opts -cafile /ca.pem]] --ca-certificate=/ca.pem] >= 0}]
+} -result {0 1 1}
+
+test tufetch-1.11 {-insecure must be boolean} -body {
+    catch {::tclutils::tufetch::download https://x [file join [temporaryDirectory] t.tmp] -insecure maybe} m o
+    lrange [dict get $o -errorcode] 0 2
+} -result {TCLUTILS COMMON BOOLEAN}
+
+test tufetch-1.12 {unknown option names the known ones} -body {
+    catch {::tclutils::tufetch::get https://x -insecur 1} m
+    string match "*Known:*-insecure*-cafile*" $m
+} -result 1
+
+# ---------------------------------------------------------------------------
+# certificate verification against a local self-signed server (no network)
+# ---------------------------------------------------------------------------
+testConstraint tls  [expr {![catch {package require tls}]}]
+testConstraint tls1 [expr {[testConstraint tls] && [package vcompare [package provide tls] 2.0] < 0}]
+set crt [file join $here data tuhttps-localhost.crt]
+set key [file join $here data tuhttps-localhost.key]
+set lport 0
+if {[testConstraint tls]} {
+    set srvPipe [open |[list [info nameofexecutable] \
+        [file join $here data https-server.tcl] $crt $key] r+]
+    gets $srvPipe lport
+}
+set lurl https://localhost:$lport/
+proc httpsReg {} {
+    if {[info exists ::http::urlTypes(https)]} { return $::http::urlTypes(https) }
+    return <none>
+}
+
+test tufetch-3.1 {a self-signed certificate is rejected by default, with the way out} -constraints tls -body {
+    catch {::tclutils::tufetch::get $lurl -timeout 5000} m o
+    list [dict get $o -errorcode] [string match {*-cafile*-insecure 1*} $m]
+} -result {{TCLUTILS TUFETCH CONNECT} 1}
+
+test tufetch-3.2 {the same certificate as -cafile is accepted} -constraints tls -body {
+    ::tclutils::tufetch::get $lurl -timeout 5000 -cafile $crt
+} -result ok
+
+test tufetch-3.3 {-insecure 1 accepts it} -constraints tls -body {
+    ::tclutils::tufetch::get $lurl -timeout 5000 -insecure 1
+} -result ok
+
+test tufetch-3.4 {tufetch leaves the https registration as it found it} -constraints tls -setup {
+    catch {::http::unregister https}
+} -body {
+    ::tclutils::tufetch::get $lurl -timeout 5000 -insecure 1
+    set a [httpsReg]
+    ::http::register https 443 [list MarkerSocket]
+    ::tclutils::tufetch::get $lurl -timeout 5000 -insecure 1
+    list $a [lindex [httpsReg] 1]
+} -cleanup {
+    catch {::http::unregister https}
+} -result {<none> MarkerSocket}
+
+test tufetch-3.5 {after tufetch -insecure 1, the application's own geturl still verifies} \
+    -constraints tls -setup {
+    package require tclutils::tuhttps
+    ::http::register https 443 [::tclutils::tuhttps::socketCmd -host localhost]
+} -body {
+    # The case measured on 2026-09-19 with 0.3: after one tufetch call every
+    # later geturl in the process accepted any certificate.
+    ::tclutils::tufetch::get $lurl -timeout 5000 -insecure 1
+    catch {set t [::http::geturl $lurl -timeout 5000]; ::http::cleanup $t}
+} -cleanup {
+    catch {::http::unregister https}
+} -result 1
+
+test tufetch-3.6 {tls 1.x without CA bundle and without curl/wget: NOMETHOD names the way out} \
+    -constraints tls1 -setup {
+    set savedCa $::tclutils::tuhttps::caCandidates
+    set ::tclutils::tuhttps::caCandidates {}
+    set hadEnv [info exists ::env(SSL_CERT_FILE)]
+    if {$hadEnv} { set savedEnv $::env(SSL_CERT_FILE); unset ::env(SSL_CERT_FILE) }
+    rename ::auto_execok ::tufetch_saved_auto_execok
+    proc ::auto_execok {name} { return "" }
+} -body {
+    catch {::tclutils::tufetch::get $lurl -timeout 5000} m o
+    list [dict get $o -errorcode] [string match {*-cafile*} $m]
+} -cleanup {
+    rename ::auto_execok {}
+    rename ::tufetch_saved_auto_execok ::auto_execok
+    set ::tclutils::tuhttps::caCandidates $savedCa
+    if {$hadEnv} { set ::env(SSL_CERT_FILE) $savedEnv }
+} -result {{TCLUTILS TUFETCH NOMETHOD} 1}
+
+if {[info exists srvPipe]} { catch {close $srvPipe} }
 
 # ---------------------------------------------------------------------------
 # real network (only with TUFETCH_NET=1)

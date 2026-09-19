@@ -1,4 +1,4 @@
-.TH tudav n 0.1 tclutils
+.TH tudav n 0.2 tclutils
 .SH tclutils::tudav
 .PP
 A minimal WebDAV / CardDAV / CalDAV client. Create a client bound to a base URL and credentials, then run PROPFIND / REPORT / GET / PUT / DELETE. Multistatus responses are parsed into resource dicts (href, status, code, etag, contenttype, collection, displayname, and \fBdata\fR for inline calendar/address data).
@@ -18,7 +18,7 @@ foreach r [::tclutils::tudav::listResources $c] {
 .PP
 Commands:
 .IP \(bu
-\fBclient url ?\-user u? ?\-password p? ?\-headers {k v ...}?\fR → client token.
+\fBclient url ?\-user u? ?\-password p? ?\-headers {k v ...}? ?\-cafile path? ?\-insecure 0|1?\fR → client token. \fB\-cafile\fR verifies https against that CA bundle (an internal CA, or the server's own self\-signed certificate); \fB\-insecure 1\fR accepts any certificate, for a trusted internal server only. \fBconfigure\fR accepts both too.
 .IP \(bu
 \fBpropfind c ?\-path p? ?\-depth 0|1|infinity? ?\-props {...}? ?\-body xml?\fR → list of resource dicts.
 .IP \(bu
@@ -61,6 +61,11 @@ Commands:
 \fBsyncCollection c path ?\-token t?\fR — RFC 6578 incremental sync. Returns \fB{token <new> changes <resource dicts>}\fR; empty \fB\-token\fR does the initial sync, a returned token feeds the next call. In incremental results a change with \fBcode\fR 404 means the resource was removed.
 .PP
 Verified end to end against Radicale 3.7 (provision, PUT, REPORT, GET, DELETE) on Tcl 8.6 and 9.x.
+.SS "Certificate verification (0.2)"
+.PP
+https is verified through \fBtclutils::tuhttps\fR and registered only for the duration of each request. Up to 0.1 the client registered \fBhttps\fR once, globally and for good, without \fB\-require\fR — under \fBtls\fR 1.x (Tcl 8.6) that meant \fBno verification at all\fR (measured 2026\-09\-19 against a self\-signed server), and any later registration by another module changed the policy for this client.
+.PP
+\fBBehaviour change:\fR a server with a self\-signed or internal certificate that 0.1 accepted silently is now rejected; pass \fB\-cafile\fR (preferred) or \fB\-insecure 1\fR. Under tls 1.x without any CA bundle the request fails with \fB{TCLUTILS TUDAV TLS}\fR and the message names the way out (\fB\-cafile\fR, \fBSSL_CERT_FILE\fR).
 .PP
 Errors: HTTP failures → \fB{TCLUTILS TUDAV HTTP}\fR; missing tls for https → \fB{TCLUTILS TUDAV TLS}\fR.
 .SS "Additional exported commands"

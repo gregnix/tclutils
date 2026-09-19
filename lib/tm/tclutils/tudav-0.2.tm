@@ -9,11 +9,19 @@
 # lazily on first use). Basic auth uses tclutils::tubase64; href/etag text is
 # entity-decoded with tclutils::tuxml. Tcl 8.6+ and 9.x.
 #
+# 0.2 verifies the server certificate (via tclutils::tuhttps) and registers
+# https only for the duration of each request. Up to 0.1 it registered https
+# once, globally and for good, without -require -- under tls 1.x (Tcl 8.6) that
+# meant no verification at all, and any later registration by another module
+# silently changed the policy for this client. Client options -cafile <file>
+# and -insecure 0|1 give the way out for internal servers.
+#
 # This client does not parse the resource bodies themselves -- feed a fetched
 # vCard to tclutils::tuvcard or an iCalendar to tclutils::tuical.
 
 package require Tcl 8.6-
-package require tclutils::common 0.1
+package require tclutils::common 0.2
+package require tclutils::tuhttps 0.1
 package require tclutils::tubase64 0.1
 package require tclutils::tuxml 0.1
 package require http
@@ -25,7 +33,6 @@ namespace eval ::tclutils::tudav {
         calendarQuery addressbookMultiget
     variable state
     variable seq 0
-    variable tlsReady 0
 }
 
 proc ::tclutils::tudav::_check {c} {
@@ -129,16 +136,19 @@ xmlns:D=\"DAV:\">\n  <D:prop>\n$inner  </D:prop>\n</D:propfind>"
 # --- client lifecycle ----------------------------------------------------
 
 # Create a client. Options: -user, -password, -headers {k v ...} (extra headers
-# sent on every request). Returns a client token.
+# sent on every request), -cafile <CA bundle> (verify https against it),
+# -insecure 0|1 (accept any certificate; default 0). Returns a client token.
 proc ::tclutils::tudav::client {url args} {
     variable state
     variable seq
     set opts [::tclutils::common::parseOptions \
-        {-user "" -password "" -headers {}} {*}$args]
+        {-user "" -password "" -headers {} -cafile "" -insecure 0} {*}$args]
     set c "tudav[incr seq]"
     set state($c) 1
     set state($c,url) $url
     set state($c,headers) [dict get $opts -headers]
+    set state($c,cafile) [dict get $opts -cafile]
+    set state($c,insecure) [::tclutils::common::ensureBoolean [dict get $opts -insecure] -insecure]
     set state($c,auth) ""
     if {[dict get $opts -user] ne ""} {
         set state($c,auth) [_basicAuth [dict get $opts -user] [dict get $opts -password]]
@@ -158,9 +168,13 @@ proc ::tclutils::tudav::configure {c args} {
             }
             -headers { set state($c,headers) $val }
             -url { set state($c,url) $val }
+            -cafile { set state($c,cafile) $val }
+            -insecure {
+                set state($c,insecure) [::tclutils::common::ensureBoolean $val -insecure]
+            }
             default {
                 return -code error -errorcode {TCLUTILS TUDAV OPTION} \
-                    "unknown option: \"$opt\""
+                    "unknown option: \"$opt\"\nKnown: -user -password -headers -url -cafile -insecure"
             }
         }
     }
@@ -188,16 +202,20 @@ proc ::tclutils::tudav::destroy {c} {
 
 # --- request plumbing ----------------------------------------------------
 
-proc ::tclutils::tudav::_ensureTls {url} {
-    variable tlsReady
-    if {![string match -nocase https://* $url]} return
-    if {$tlsReady} return
-    if {[catch {package require tls}]} {
-        return -code error -errorcode {TCLUTILS TUDAV TLS} \
-            "https requires the tls package"
+# _tlsPrefix c url -- the ::tls::socket prefix for this client and URL, or ""
+# for plain http. Errors {TCLUTILS TUDAV TLS} with the way out.
+proc ::tclutils::tudav::_tlsPrefix {c url} {
+    variable state
+    if {![string match -nocase https://* $url]} { return "" }
+    set host ""
+    regexp -nocase {^https://(\[[^\]]+\]|[^/:]+)} $url -> host
+    set sopts [list -host $host -insecure $state($c,insecure)]
+    if {$state($c,cafile) ne ""} { lappend sopts -cafile $state($c,cafile) }
+    try {
+        return [::tclutils::tuhttps::socketCmd {*}$sopts]
+    } trap {TCLUTILS TUHTTPS} {msg} {
+        return -code error -errorcode {TCLUTILS TUDAV TLS} $msg
     }
-    ::http::register https 443 [list ::tls::socket -autoservername true]
-    set tlsReady 1
 }
 
 # Perform a request; returns a dict {code ncode body}. Sets lastStatus.
@@ -207,7 +225,7 @@ proc ::tclutils::tudav::_request {c method path args} {
     set opts [::tclutils::common::parseOptions \
         {-query "" -type "" -depth "" -headers {}} {*}$args]
     set url [_resolve $state($c,url) $path]
-    _ensureTls $url
+    set prefix [_tlsPrefix $c $url]
 
     set hdrs $state($c,headers)
     if {$state($c,auth) ne ""} { lappend hdrs Authorization $state($c,auth) }
@@ -221,7 +239,11 @@ proc ::tclutils::tudav::_request {c method path args} {
         if {$type eq ""} { set type "application/xml; charset=utf-8" }
         lappend cmd -type $type
     }
-    set tok [{*}$cmd]
+    if {$prefix ne ""} {
+        set tok [::tclutils::tuhttps::with $prefix $cmd]
+    } else {
+        set tok [{*}$cmd]
+    }
     set ncode [::http::ncode $tok]
     set body [::http::data $tok]
     set status [::http::code $tok]
@@ -624,4 +646,4 @@ proc ::tclutils::tudav::_mkcolExtended {c path kind displayname} {
     return ""
 }
 
-package provide tclutils::tudav 0.1
+package provide tclutils::tudav 0.2

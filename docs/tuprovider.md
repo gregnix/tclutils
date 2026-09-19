@@ -106,4 +106,6 @@ Only the overridden operations appear in `caps`; the rest inherit `Base`'s
 
 ## See also
 
-`tuprovider::zip`, `tuprovider::dav`
+`tuprovider::zip`, `tuprovider::dav`, `tuprovider::ftp`, `tuprovider::sftp`
+(the last is not in the umbrella: `package require tclutils::tuprovider::sftp`;
+`open sftp://…` is described in `tuprovider-sftp.md`)
