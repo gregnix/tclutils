@@ -61,7 +61,19 @@ Capabilities are discovered by introspection: a method counts as supported when 
 .IP \(bu
 \fB::tclutils::tuprovider::schemes\fR \-\- list the registered schemes.
 .PP
-A provider also offers \fBhead $path $len\fR \-\- return at most \fB$len\fR bytes from the start of a file (\fB$len <= 0\fR means the whole file). The base class implements it via \fBget\fR + truncate; the local provider overrides it to read only the prefix, so a UI can preview a large binary without loading it entirely.
+A provider also offers \fBhead $path $len\fR \-\- return at most \fB$len\fR bytes from the start of a file (\fB$len <= 0\fR means the whole file). **\fBhead\fR is not a cap.** The base class implements it via \fBget\fR + truncate; the local provider overrides it to read only the prefix. SFTP inherits the base: OpenSSH \fBsftp get\fR has no byte range (\fBget [\-afpR]\fR), so a preview still transfers the whole file.
+.SS "Caps contract"
+.PP
+One table. \fBtests/tuprovider\-caps.test\fR reads these rows (scheme and the space\-separated ops, sorted). Do not copy the list elsewhere.
+.TS
+l l.
+scheme	caps
+local	copy delete get list mkdir move put stat
+zip	get list stat
+dav	delete get list put stat
+ftp	delete get list mkdir move put stat
+sftp	delete get list mkdir move put stat
+.TE
 .SS "Writing a backend"
 .PP
 Subclass \fB::tclutils::tuprovider::Base\fR, override the operations you support, and register the class:

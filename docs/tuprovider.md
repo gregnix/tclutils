@@ -82,9 +82,23 @@ automatically, at any inheritance depth.
 - `::tclutils::tuprovider::schemes` -- list the registered schemes.
 
 A provider also offers `head $path $len` -- return at most `$len` bytes from the
-start of a file (`$len <= 0` means the whole file). The base class implements it
-via `get` + truncate; the local provider overrides it to read only the prefix,
-so a UI can preview a large binary without loading it entirely.
+start of a file (`$len <= 0` means the whole file). **`head` is not a cap.**
+The base class implements it via `get` + truncate; the local provider overrides
+it to read only the prefix. SFTP inherits the base: OpenSSH `sftp get` has no
+byte range (`get [-afpR]`), so a preview still transfers the whole file.
+
+## Caps contract
+
+One table. `tests/tuprovider-caps.test` reads these rows (scheme and the
+space-separated ops, sorted). Do not copy the list elsewhere.
+
+| scheme | caps |
+|--------|------|
+| local | copy delete get list mkdir move put stat |
+| zip | get list stat |
+| dav | delete get list put stat |
+| ftp | delete get list mkdir move put stat |
+| sftp | delete get list mkdir move put stat |
 
 ## Writing a backend
 

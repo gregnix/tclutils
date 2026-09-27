@@ -56,6 +56,15 @@ proc ::tclutils::tuflow::_unquote {s} {
     return $s
 }
 
+# After a legal id ([A-Za-z0-9_]+), "-3" is leftover junk, not an edge.
+# Swallowing it produced a graph without that node. Abort with BADID.
+proc ::tclutils::tuflow::_rejectHyphenId {id rest} {
+    set peek [string trimleft $rest]
+    if {![regexp {^(-[A-Za-z0-9_]+)} $peek -> tail]} { return }
+    return -code error -errorcode {TCLUTILS TUFLOW BADID} \
+        "invalid node id \"${id}${tail}\": node ids are \[A-Za-z0-9_\]+"
+}
+
 # Take a node spec from the front of s (upvar). Record id -> {shape label} in
 # nodes (upvar). Returns the id and advances s; "" if no node is at the front.
 proc ::tclutils::tuflow::_takeNode {sVar nodesVar} {
@@ -83,6 +92,7 @@ proc ::tclutils::tuflow::_takeNode {sVar nodesVar} {
     } else {
         return ""
     }
+    _rejectHyphenId $id $rest
     set s $rest
     if {$shape ne ""} {
         dict set nodes $id [dict create shape $shape label [_unquote $label]]

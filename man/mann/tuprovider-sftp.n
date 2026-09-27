@@ -34,6 +34,8 @@ list stat get put delete mkdir move
 .CE
 .PP
 \fBcopy\fR is \fBnot\fR reported: SFTP has no server\-side copy. Copying a file is done at the application level with get+put (a cross\-provider copy does exactly this). \fBmove\fR maps to sftp's \fBrename\fR.
+.PP
+\fBhead\fR is \fBnot\fR a cap. It inherits \fBBase\fR (\fBget\fR then truncate). Measured 2026\-09\-23: OpenSSH \fBsftp get\fR is \fBget [\-afpR] remote [local]\fR — no offset, no length. A prefix preview still downloads the whole file. Do not advertise a partial fetch the client cannot do.
 .SS Operations
 .IP \(bu
 \fBlist $path\fR \-\- runs \fBls \-l $path\fR over sftp and parses the Unix long listing. sftp prints the full path in the name column, so the leaf is taken with \fBfile tail\fR.
@@ -47,7 +49,7 @@ list stat get put delete mkdir move
 \fBmkdir\fR / \fBmove\fR \-\- forward to sftp's \fBmkdir\fR / \fBrename\fR.
 .SS "Notes and limits"
 .IP \(bu
-\fBWhole\-file transfers.\fR Plain sftp transfers whole files, so \fBhead\fR uses the base default (get + truncate) \-\- a large\-file preview reads the whole file.
+\fBWhole\-file transfers.\fR Plain sftp transfers whole files. \fBhead\fR uses the base default (get + truncate). OpenSSH has no range\-get in batch mode.
 .IP \(bu
 \fBls \-l\fR\fB format.\fR The common Unix long listing is assumed. The link\-count column may be \fB?\fR on some servers; only the perms (field 1), size (field 5) and name (field 9+) columns are used, so that is fine.
 .IP \(bu

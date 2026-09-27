@@ -5,6 +5,20 @@
 Security and robustness release. Recommended pairing: tclutils 0.63.0 +
 tkutils 0.44.0 + ctrlutils 0.2.
 
+### `tuflow`: hyphen in a node id is `BADID` (2026-09-24)
+
+Node ids stay `[A-Za-z0-9_]+`. A leftover `-3` after an id (e.g.
+`Nwifi-3["SSID"]`) used to be swallowed: the graph kept `Nwifi` and dropped
+the rest, with no error. `parse` now raises `{TCLUTILS TUFLOW BADID}` and
+names the id plus the allowed alphabet. Underscore ids (`Nwifi_3`) are
+unchanged. Package remains `tclutils::tuflow` 0.2.
+
+### Caps contract (2026-09-23)
+
+`docs/tuprovider.md` holds one table of `caps` per scheme (local / zip / dav /
+ftp / sftp). `tests/tuprovider-caps.test` reads that table. SFTP `head` stays
+the base default (full `get`, then truncate): OpenSSH `sftp get [-afpR]` has
+no byte range.
 
 ### The test runner says where the modules come from
 

@@ -3,8 +3,10 @@ package require tcltest
 namespace import ::tcltest::*
 
 set root [file normalize [file join [file dirname [info script]] ..]]
-catch {tcl::tm::path add [file join $root lib tm]}
+set tmDir [file join $root lib tm]
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+catch {tcl::tm::path remove $tmDir}
+tcl::tm::path add $tmDir
 package require tclutils::tuflow
 
 namespace eval M { namespace import ::tclutils::tuflow::* }
@@ -98,6 +100,19 @@ test tuflow-4.2 {comments and blank lines are ignored} -body {
 test tuflow-5.1 {empty source is an error} -body {
     M::parse {flowchart LR}
 } -returnCodes error -match glob -result {*no nodes*}
+
+test tuflow-5.2 {hyphen in node id is BADID, not a silent truncate} -body {
+    catch {M::parse {flowchart LR
+        Nwifi-3["SSID"]}} e o
+    list [lindex [dict get $o -errorcode] end] \
+        [string match {*Nwifi-3*} $e] \
+        [string match {*A-Za-z0-9_*} $e]
+} -result {BADID 1 1}
+
+test tuflow-5.3 {underscore in node id is legal} -body {
+    nodeOf [M::parse {flowchart LR
+        Nwifi_3["SSID"]}] Nwifi_3 label
+} -result SSID
 
 test tuflow-6.1 {the model renders via tudiagram (non-empty SVG)} -body {
     set m [M::parse {flowchart LR

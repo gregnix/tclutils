@@ -1,0 +1,108 @@
+# Caps contract: one table in docs/tuprovider.md, this test reads it.
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuprovider 0.1
+
+proc ::readCapsTable {path} {
+    set fh [open $path r]
+    fconfigure $fh -encoding utf-8
+    set src [read $fh]
+    close $fh
+    set tab {}
+    foreach line [split $src \n] {
+        if {![regexp {^\| (local|zip|dav|ftp|sftp) \| ([^|]+) \|} $line -> sch ops]} {
+            continue
+        }
+        dict set tab $sch [lsort [split [string trim $ops]]]
+    }
+    return $tab
+}
+
+set ::doc [file join $root docs tuprovider.md]
+set ::want [::readCapsTable $::doc]
+
+test tuprovider-caps-1.1 {docs/tuprovider.md names all five schemes} -body {
+    lsort [dict keys $::want]
+} -result {dav ftp local sftp zip}
+
+test tuprovider-caps-1.2 {local caps match the table} -body {
+    set p [::tclutils::tuprovider open local]
+    lsort [$p caps]
+} -result [dict get $::want local]
+
+if {![catch {package require tclutils::tuprovider::zip}] \
+ && ![catch {package require tclutils::tuzip}]} {
+    testConstraint haveZip 1
+    set ::zip [file join [makeDirectory tcapz] t.zip]
+    ::tclutils::tuzip::createMembers $::zip {
+        {name a.txt content x}
+    }
+} else {
+    testConstraint haveZip 0
+}
+
+test tuprovider-caps-1.3 {zip caps match the table} -constraints haveZip -body {
+    set p [::tclutils::tuprovider open zip $::zip]
+    lsort [$p caps]
+} -result [dict get $::want zip]
+
+if {![catch {package require tclutils::tuprovider::sftp}]} {
+    testConstraint haveSftp 1
+} else {
+    testConstraint haveSftp 0
+}
+
+test tuprovider-caps-1.4 {sftp caps match the table without a live server} -constraints haveSftp -body {
+    set p [::tclutils::tuprovider open sftp sftp://nobody@example.invalid/]
+    lsort [$p caps]
+} -result [dict get $::want sftp]
+
+if {![catch {package require tclutils::tuprovider::ftp}]} {
+    testConstraint haveFtpPkg 1
+} else {
+    testConstraint haveFtpPkg 0
+}
+
+# Ftp::constructor calls ftp::Open. A stub lets caps run without a server.
+test tuprovider-caps-1.5 {ftp caps match the table} -constraints haveFtpPkg -setup {
+    set ::ftpHadOpen [expr {[info commands ::ftp::Open] ne ""}]
+    if {$::ftpHadOpen} {
+        rename ::ftp::Open ::ftp::_OpenCaps
+        if {[info commands ::ftp::Close] ne ""} {
+            rename ::ftp::Close ::ftp::_CloseCaps
+        }
+    } else {
+        namespace eval ::ftp {}
+    }
+    proc ::ftp::Open {args} { return 1 }
+    proc ::ftp::Close {args} {}
+} -body {
+    set p [::tclutils::tuprovider open ftp ftp://example.invalid/]
+    lsort [$p caps]
+} -cleanup {
+    rename ::ftp::Open ""
+    catch {rename ::ftp::Close ""}
+    if {$::ftpHadOpen} {
+        rename ::ftp::_OpenCaps ::ftp::Open
+        if {[info commands ::ftp::_CloseCaps] ne ""} {
+            rename ::ftp::_CloseCaps ::ftp::Close
+        }
+    }
+} -result [dict get $::want ftp]
+
+if {![catch {package require tclutils::tuprovider::dav}]} {
+    testConstraint haveDav 1
+} else {
+    testConstraint haveDav 0
+}
+
+test tuprovider-caps-1.6 {dav caps match the table} -constraints haveDav -body {
+    set p [::tclutils::tuprovider open dav http://example.invalid/dav]
+    lsort [$p caps]
+} -result [dict get $::want dav]
+
+cleanupTests

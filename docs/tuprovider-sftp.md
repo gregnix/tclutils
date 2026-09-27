@@ -48,6 +48,11 @@ list stat get put delete mkdir move
 at the application level with get+put (a cross-provider copy does exactly this).
 `move` maps to sftp's `rename`.
 
+`head` is **not** a cap. It inherits `Base` (`get` then truncate). Measured
+2026-09-23: OpenSSH `sftp get` is `get [-afpR] remote [local]` — no offset,
+no length. A prefix preview still downloads the whole file. Do not advertise
+a partial fetch the client cannot do.
+
 ## Operations
 
 - `list $path` -- runs `ls -l $path` over sftp and parses the Unix long
@@ -62,8 +67,8 @@ at the application level with get+put (a cross-provider copy does exactly this).
 
 ## Notes and limits
 
-- **Whole-file transfers.** Plain sftp transfers whole files, so `head` uses the
-  base default (get + truncate) -- a large-file preview reads the whole file.
+- **Whole-file transfers.** Plain sftp transfers whole files. `head` uses the
+  base default (get + truncate). OpenSSH has no range-get in batch mode.
 - **`ls -l` format.** The common Unix long listing is assumed. The link-count
   column may be `?` on some servers; only the perms (field 1), size (field 5)
   and name (field 9+) columns are used, so that is fine.

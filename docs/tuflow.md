@@ -103,5 +103,7 @@ writePng $pie pie.png -scale 3       ;# same facade, dispatched to tupie
 ## Error codes
 
 `-errorcode {TCLUTILS TUFLOW <REASON>}` — `UNSUPPORTED` (a diagram type with no
-renderer). Errors from the dispatched family propagate with their own code
-(`{TCLUTILS TUDIAGRAM ...}`, `{TCLUTILS TUPIE ...}`).
+renderer), `EMPTY` (no nodes in a flowchart), `BADID` (a node id is not
+`[A-Za-z0-9_]+`: a hyphen after an id is leftover junk, not an edge — e.g.
+`Nwifi-3["SSID"]`). Errors from the dispatched family propagate with their own
+code (`{TCLUTILS TUDIAGRAM ...}`, `{TCLUTILS TUPIE ...}`).
