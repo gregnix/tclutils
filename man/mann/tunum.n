@@ -1,4 +1,4 @@
-.TH tunum n 0.3 tclutils
+.TH tunum n 0.4 tclutils
 .SH tclutils::tunum
 .PP
 Robust parsing and summation of human\-formatted numbers in pure Tcl.
@@ -9,7 +9,7 @@ Robust parsing and summation of human\-formatted numbers in pure Tcl.
 package require tclutils::tunum 0.3
 .CE
 .PP
-Version 0.2 adds the \fB\-locale\fR option to \fBparse\fR; version 0.3 adds \fBformat\fR. Both are fully backward compatible: the default \fBparse\fR locale \fBauto\fR behaves exactly like 0.1, so existing callers need no change.
+Version 0.2 adds the \fB\-locale\fR option to \fBparse\fR; version 0.3 adds \fBformat\fR; version 0.4 rounds \fBformat\fR half away from zero on every platform. Both are fully backward compatible: the default \fBparse\fR locale \fBauto\fR behaves exactly like 0.1, so existing callers need no change.
 .SS Commands
 .CS
 ::tclutils::tunum::parse    s ?-default {}? ?-locale auto|de-strict?
@@ -74,12 +74,12 @@ Returns 1 if the value parses as a number (auto locale), else 0.
 .CE
 .SS format
 .PP
-Formats a number as a grouped, locale\-specific string — the rough inverse of \fBparse \-locale de\-strict\fR. Locale \fBde\fR (the only locale, and the default): dot as thousands separator, comma as decimal mark, \fB\-decimals\fR fractional digits (default 2, rounded via Tcl's \fBformat\fR).
+Formats a number as a grouped, locale\-specific string — the rough inverse of \fBparse \-locale de\-strict\fR. Locale \fBde\fR (the only locale, and the default): dot as thousands separator, comma as decimal mark, \fB\-decimals\fR fractional digits (default 2). Rounding is half away from zero on the decimal digits (\fB2.675\fR \-> \fB2,68\fR, \fB1234.5 \-decimals 0\fR \-> \fB1.235\fR), the same on every platform; up to 0.63.0 it went through \fBformat\fR and the C library decided.
 .CS
 ::tclutils::tunum::format 1234.5              ;# -> 1.234,50
 ::tclutils::tunum::format -1234.5             ;# -> -1.234,50
 ::tclutils::tunum::format 1000000             ;# -> 1.000.000,00
-::tclutils::tunum::format 1234.5 -decimals 0  ;# -> 1.234
+::tclutils::tunum::format 1234.5 -decimals 0  ;# -> 1.235
 ::tclutils::tunum::format 1234.5 -decimals 3  ;# -> 1.234,500
 .CE
 .PP

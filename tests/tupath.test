@@ -6,35 +6,42 @@ tcl::tm::path add [file join $root lib tm]
 package require tclutils::tupath 0.1
 
 test tupath-clean-1 {dot and dotdot} -body {::tclutils::tupath::clean a/./b/../c} -result a/c
-test tupath-clean-2 {absolute} -body {::tclutils::tupath::clean /x/../y//z} -result /y/z
+# Absolute paths: "/" on Unix, a drive on Windows ("/a" is only
+# volume-relative there).
+set R [expr {$::tcl_platform(platform) eq "windows" ? "C:/" : "/"}]
+
+test tupath-clean-2 {absolute} -body {::tclutils::tupath::clean ${R}x/../y//z} -result ${R}y/z
 test tupath-clean-3 {leading dotdot kept} -body {::tclutils::tupath::clean ../../q} -result ../../q
 test tupath-clean-4 {empty} -body {::tclutils::tupath::clean {}} -result .
-test tupath-clean-5 {root} -body {::tclutils::tupath::clean /a/..} -result /
+test tupath-clean-5 {root} -body {::tclutils::tupath::clean ${R}a/..} -result $R
+test tupath-clean-6 {.. never climbs above the root} -body {
+    ::tclutils::tupath::clean ${R}a/../../b
+} -result ${R}b
 
-test tupath-abs-1 {absolute} -body {::tclutils::tupath::isAbsolute /a} -result 1
+test tupath-abs-1 {absolute} -body {::tclutils::tupath::isAbsolute ${R}a} -result 1
 test tupath-abs-2 {relative} -body {::tclutils::tupath::isAbsolute a/b} -result 0
 
 test tupath-common-1 {shared dir} -body {
-    ::tclutils::tupath::commonPath {/a/b/c /a/b/d /a/b/e/f}
-} -result /a/b
-test tupath-common-2 {only root} -body {::tclutils::tupath::commonPath {/a /b}} -result /
-test tupath-common-3 {single path} -body {::tclutils::tupath::commonPath {/a/b/c}} -result /a/b/c
+    ::tclutils::tupath::commonPath [list ${R}a/b/c ${R}a/b/d ${R}a/b/e/f]
+} -result ${R}a/b
+test tupath-common-2 {only root} -body {::tclutils::tupath::commonPath [list ${R}a ${R}b]} -result $R
+test tupath-common-3 {single path} -body {::tclutils::tupath::commonPath [list ${R}a/b/c]} -result ${R}a/b/c
 test tupath-common-4 {no args} -body {
     catch {::tclutils::tupath::commonPath {}} e
     set e
 } -result {commonPath needs at least one path}
 
-test tupath-rel-1 {descend} -body {::tclutils::tupath::relative /a/b /a/b/c/d} -result c/d
-test tupath-rel-2 {sideways} -body {::tclutils::tupath::relative /a/b/c /a/x} -result ../../x
-test tupath-rel-3 {same} -body {::tclutils::tupath::relative /a/b /a/b} -result .
+test tupath-rel-1 {descend} -body {::tclutils::tupath::relative ${R}a/b ${R}a/b/c/d} -result c/d
+test tupath-rel-2 {sideways} -body {::tclutils::tupath::relative ${R}a/b/c ${R}a/x} -result ../../x
+test tupath-rel-3 {same} -body {::tclutils::tupath::relative ${R}a/b ${R}a/b} -result .
 test tupath-rel-4 {type mismatch} -body {
-    catch {::tclutils::tupath::relative /a b} e
+    catch {::tclutils::tupath::relative ${R}a b} e
     set e
 } -result {base and target must both be absolute or both relative}
 
 test tupath-comp-1 {components/join roundtrip} -body {
-    ::tclutils::tupath::join {*}[::tclutils::tupath::components /a/b/c]
-} -result /a/b/c
+    ::tclutils::tupath::join {*}[::tclutils::tupath::components ${R}a/b/c]
+} -result ${R}a/b/c
 
 testConstraint symlink [expr {![catch {
     set d [makeDirectory tupathlinkC]

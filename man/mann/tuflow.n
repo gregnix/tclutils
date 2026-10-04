@@ -70,4 +70,4 @@ New non\-graph families are added in one place (a dispatch branch here plus a \f
 Family modules: \fBtclutils::tudiagram\fR (graphs), \fBtclutils::tustate\fR, \fBtclutils::turequirement\fR, \fBtclutils::tuer\fR, \fBtclutils::tuclass\fR (graph\-type parsers), \fBtclutils::tupie\fR (pie). Backends: \fBtclutils::tupngdraw\fR, \fBtclutils::tusvg\fR.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUFLOW <REASON>}\fR — \fBUNSUPPORTED\fR (a diagram type with no renderer), \fBEMPTY\fR (no nodes in a flowchart), \fBBADID\fR (a node id is not \fB[A-Za-z0-9_]+\fR: a hyphen after an id is leftover junk, not an edge — e.g. \fBNwifi-3["SSID"]\fR). Errors from the dispatched family propagate with their own code (\fB{TCLUTILS TUDIAGRAM ...}\fR, \fB{TCLUTILS TUPIE ...}\fR).
+\fB\-errorcode {TCLUTILS TUFLOW <REASON>}\fR — \fBUNSUPPORTED\fR (a diagram type with no renderer), \fBEMPTY\fR (no nodes in a flowchart), \fBBADID\fR (a node id is not \fB[A\-Za\-z0\-9_]+\fR: a hyphen after an id is leftover junk, not an edge — e.g. \fBNwifi\-3["SSID"]\fR). Errors from the dispatched family propagate with their own code (\fB{TCLUTILS TUDIAGRAM ...}\fR, \fB{TCLUTILS TUPIE ...}\fR).

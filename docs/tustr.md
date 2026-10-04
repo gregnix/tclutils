@@ -30,3 +30,25 @@ Documented for completeness (same module, also covered by the test suite):
 tustr::endsWith s suffix                       ;# true if S ends with SUFFIX
 tustr::removeSuffix s suffix                   ;# return S without a trailing SUFFIX (unchanged if absent)
 ```
+
+## Graphemes and printable characters (0.2)
+
+```tcl
+tustr::graphemes "e\u0301x"     ;# -> 2 items: e+accent, x
+llength [tustr::graphemes $s]   ;# visible length, unlike [string length]
+tustr::isPrintable $char        ;# 0 for C0/C1 controls and DEL, else 1
+```
+
+`graphemes` splits a string into user-perceived characters, a simplified
+form of UAX #29: a base keeps its combining marks, variation selectors,
+skin-tone modifiers and emoji tag characters; ZWJ sequences, flag pairs
+(two regional indicators) and CR LF stay together. Hangul syllable
+composition and Indic conjuncts are not covered. `[join [graphemes $s] ""]`
+gives back `$s`.
+
+Under Tcl 8.6 a character beyond U+FFFF (emoji, flags) comes from a channel
+as two surrogates; both commands join the pair first, so 8.6 and 9 give the
+same result.
+
+`isPrintable` takes exactly one character (a surrogate pair counts as one)
+and raises `{TCLUTILS TUSTR ARG}` otherwise. U+00A0 counts as printable.

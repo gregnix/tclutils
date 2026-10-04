@@ -1,0 +1,154 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tusettings 0.1
+set ns ::tclutils::tusettings
+
+# Every test works below a private directory: XDG_CONFIG_HOME etc. point there.
+set base [file join [temporaryDirectory] tusettings-[pid]]
+proc fresh {} {
+    global base
+    file delete -force $base
+    file mkdir $base
+    set ::env(XDG_CONFIG_HOME) [file join $base config]
+    set ::env(XDG_CACHE_HOME)  [file join $base cache]
+    set ::env(XDG_DATA_HOME)   [file join $base data]
+    set ::env(TMPDIR)          [file join $base tmp]
+    set ::tclutils::tusettings::platform unix
+}
+proc slurp {f} { set h [open $f r]; fconfigure $h -encoding utf-8; set s [read $h]; close $h; return $s }
+
+test tusettings-1.1 {dir: XDG locations, app appended, not created} -setup fresh -body {
+    list [expr {[${ns}::dir config demo] eq [file join $base config demo]}] \
+         [expr {[${ns}::dir cache demo] eq [file join $base cache demo]}] \
+         [expr {[${ns}::dir data demo] eq [file join $base data demo]}] \
+         [expr {[${ns}::dir temp demo] eq [file join $base tmp demo]}] \
+         [file exists [file join $base config demo]]
+} -result {1 1 1 1 0}
+
+test tusettings-1.2 {dir -create 1 creates it} -setup fresh -body {
+    file isdirectory [${ns}::dir cache demo -create 1]
+} -result 1
+
+test tusettings-1.3 {dir: Windows roots from APPDATA / LOCALAPPDATA / TEMP} -setup {
+    fresh
+    set ::tclutils::tusettings::platform windows
+    foreach v {APPDATA LOCALAPPDATA TEMP} { set old($v) [array get ::env $v] }
+    set ::env(APPDATA) R; set ::env(LOCALAPPDATA) L; set ::env(TEMP) T
+} -body {
+    list [${ns}::dir config demo] [${ns}::dir data demo] \
+         [${ns}::dir cache demo] [${ns}::dir temp demo]
+} -cleanup {
+    foreach v {APPDATA LOCALAPPDATA TEMP} {
+        unset -nocomplain ::env($v); array set ::env $old($v)
+    }
+} -result {R/demo R/demo L/demo T/demo}
+
+test tusettings-1.4 {dir: macOS Library folders} -setup {
+    fresh; set ::tclutils::tusettings::platform macos
+} -body {
+    list [string match "*/Library/Application Support/demo" [${ns}::dir config demo]] \
+         [string match "*/Library/Caches/demo" [${ns}::dir cache demo]]
+} -result {1 1}
+
+test tusettings-1.5 {bad kind and bad app name} -setup fresh -body {
+    catch {${ns}::dir logs demo} e1 o1
+    catch {${ns}::dir config ../x} e2 o2
+    catch {${ns}::dir config ""} e3 o3
+    list [dict get $o1 -errorcode] [dict get $o2 -errorcode] [dict get $o3 -errorcode]
+} -result {{TCLUTILS TUSETTINGS KIND} {TCLUTILS TUSETTINGS APP} {TCLUTILS TUSETTINGS APP}}
+
+test tusettings-2.1 {load without a file gives the defaults} -setup fresh -body {
+    ${ns}::load demo -defaults {window {width 800 height 600}}
+} -result {window {width 800 height 600}}
+
+test tusettings-2.2 {save then load: values over defaults, new keys kept} -setup fresh -body {
+    ${ns}::save demo {window {width 1024} printer {name QL-820NWB}}
+    ${ns}::load demo -defaults {window {width 800 height 600}}
+} -result {window {width 1024 height 600} printer {name QL-820NWB}}
+
+test tusettings-2.3 {file is INI, readable by hand; umlauts as UTF-8} -setup fresh -body {
+    set f [${ns}::save demo [dict create kunde [dict create name "M\u00fcller"]]]
+    list [expr {$f eq [${ns}::file demo]}] [string trim [slurp $f]]
+} -result [list 1 "\[kunde\]\nname=M\u00fcller"]
+
+test tusettings-2.4 {save leaves no temp file behind} -setup fresh -body {
+    ${ns}::save demo {a {b 1}}
+    glob -nocomplain -tails -directory [${ns}::dir config demo] *
+} -result settings.ini
+
+test tusettings-2.5 {-name keeps several files apart} -setup fresh -body {
+    ${ns}::save demo {a {b 1}} -name druck
+    list [file tail [${ns}::file demo druck]] [${ns}::load demo -name druck] [${ns}::load demo]
+} -result {druck.ini {a {b 1}} {}}
+
+test tusettings-2.6 {hand-edited file with a broken line: SYNTAX names the file} -setup fresh -body {
+    file mkdir [${ns}::dir config demo]
+    set h [open [${ns}::file demo] w]; puts $h "\[a\]\nkaputt"; close $h
+    catch {${ns}::load demo} e o
+    list [dict get $o -errorcode] [string match "*settings.ini*" $e]
+} -result {{TCLUTILS TUSETTINGS SYNTAX} 1}
+
+test tusettings-2.7 {values INI cannot hold are refused, file untouched} -setup fresh -body {
+    ${ns}::save demo {a {b ok}}
+    set r {}
+    foreach bad [list {a {b "x\ny"}} {a {"k=1" v}} {a {" k" v}} {a {b " pad"}} [list "x\]" {b 1}]] {
+        catch {${ns}::save demo $bad} e o
+        lappend r [lindex [dict get $o -errorcode] end]
+    }
+    lappend r [${ns}::load demo]
+} -result {VALUE VALUE VALUE VALUE VALUE {a {b ok}}}
+
+test tusettings-2.8 {unknown option is an error} -setup fresh -body {
+    catch {${ns}::load demo -default {}} e o
+    lrange [dict get $o -errorcode] 0 2
+} -result {TCLUTILS COMMON OPTION}
+
+test tusettings-3.1 {value with fallback} -body {
+    set s {window {width 1024}}
+    list [${ns}::value $s window width 800] [${ns}::value $s window height 600] \
+         [${ns}::value $s nope x]
+} -result {1024 600 {}}
+
+test tusettings-4.1 {recent: newest first, no duplicates, max} -setup fresh -body {
+    foreach f {a b c b d} { ${ns}::recentAdd demo [file join $base $f] -max 3 }
+    lmap p [${ns}::recentList demo] { file tail $p }
+} -result {d b c}
+
+test tusettings-4.2 {recent: -existing drops missing files} -setup fresh -body {
+    set keep [file join $base keep.txt]
+    close [open $keep w]
+    ${ns}::recentAdd demo [file join $base gone.txt]
+    ${ns}::recentAdd demo $keep
+    list [llength [${ns}::recentList demo]] \
+         [lmap p [${ns}::recentList demo -existing 1] { file tail $p }]
+} -result {2 keep.txt}
+
+test tusettings-4.3 {recent: remove, clear, separate lists} -setup fresh -body {
+    ${ns}::recentAdd demo [file join $base a]
+    ${ns}::recentAdd demo [file join $base b]
+    ${ns}::recentAdd demo [file join $base x] -list projects
+    ${ns}::recentRemove demo [file join $base a]
+    set r [list [lmap p [${ns}::recentList demo] { file tail $p }] \
+                [lmap p [${ns}::recentList demo -list projects] { file tail $p }]]
+    ${ns}::recentClear demo
+    lappend r [${ns}::recentList demo]
+} -result {b x {}}
+
+test tusettings-4.4 {recent: Windows compares case-insensitively} -setup fresh -body {
+    set ::tclutils::tusettings::platform windows
+    set ::env(APPDATA) [file join $base config]
+    ${ns}::recentAdd demo /Data/Kunden.csv
+    ${ns}::recentAdd demo /data/kunden.csv
+    llength [${ns}::recentList demo]
+} -cleanup { unset -nocomplain ::env(APPDATA) } -result 1
+
+test tusettings-4.5 {recent: -max must be positive} -setup fresh -body {
+    catch {${ns}::recentAdd demo x -max 0} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUSETTINGS VALUE}
+
+file delete -force $base
+set ::tclutils::tusettings::platform ""
+cleanupTests

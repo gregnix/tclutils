@@ -1,9 +1,43 @@
 # Changelog
 
+## 0.64.0
+
+Recommended pairing: tclutils 0.64.0 + tkutils 0.46.0 + ctrlutils 0.3.
+
+- `tustr` 0.2: `graphemes` (user-perceived characters, simplified UAX #29)
+  and `isPrintable` (Unicode, not only ASCII). Surrogate pairs from Tcl 8.6
+  count as one character.
+- `tudate` 0.2: `zones` lists the time zones `clock` accepts.
+- `tusettings` 0.1 (new): per-user settings as INI in the platform's config
+  directory, `dir config|cache|data|temp`, recent-files list.
+- `tutestrun` 0.1 (new): the shared `tests/all.tcl` (own trees first, banner,
+  per-file limit, summary). tclutils, tkutils and ctrlutils use it; the
+  tclutils runner now passes tcltest options and lists problem files.
+- `tunum` 0.4: `format` rounds half away from zero on every platform
+  (`1234.5 -decimals 0` is `1.235`); `format %.*f` rounded differently on
+  Windows.
+- `tupath::clean`: an absolute path keeps its root (`C:/` on Windows), `..`
+  stops there.
+- Tests run on Windows: no `/dev/null` or Unix roots in fixtures, `cli-1.10`
+  copies binary; `tuhttps`/`tufetch` tests that need a CA bundle are skipped
+  without one (constraint `caOK`). The TLS tests in `tufetch.test` are
+  renumbered 4.x (3.x was used twice).
+- `tutestrun`: output a test file writes in another encoding no longer stalls
+  the run under Tcl 9 (the file ran into the limit); such bytes are replaced.
+- `tupkgfinder` 0.2: `candidates` and `shadows` list every copy of a package
+  on the module paths and `auto_path`, including a second copy with the same
+  version, which the package database does not show.
+
 ## 0.63.0
 
 Security and robustness release. Recommended pairing: tclutils 0.63.0 +
-tkutils 0.44.0 + ctrlutils 0.2.
+tkutils 0.46.0 + ctrlutils 0.3.
+
+### Tests / runner (2026-10-03)
+
+- `tupostgrest.test` pg-1.1: umlaut via `\u00fc` in `[list …]` so Tcl 8.6 with
+  iso8859-1 / cp1252 script encoding does not double-encode the URL.
+- `tests/all.tcl`: per-file wall-clock limit (`TCLUTILS_TESTGRENZE`, default 120 s).
 
 ### `tuflow`: hyphen in a node id is `BADID` (2026-09-24)
 

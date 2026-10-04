@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tustr 0.1
+package require tclutils::tustr 0.2
 namespace import ::tclutils::tustr::*
 
 test tustr-empty-1 {isEmpty} -body { list [isEmpty ""] [isEmpty x] } -result {1 0}
@@ -36,5 +36,46 @@ test tustr-cap-1 {capitalize} -body { list [capitalize hello] [capitalize ""] } 
 test tustr-count-1 {count non-overlapping} -body {
     list [count "abababa" "ab"] [count aaaa aa] [count x ""]
 } -result {3 2 0}
+
+# graphemes -- non-BMP characters built from UTF-8 bytes, the way they come
+# from a file: under Tcl 8.6 as surrogate pairs, under 9 as one character.
+proc u8 {hex} { encoding convertfrom utf-8 [binary decode hex $hex] }
+
+test tustr-graph-1 {combining mark stays with its base} -body {
+    set g [graphemes "e\u0301x"]
+    list [llength $g] [string length [lindex $g 0]] [lindex $g 1]
+} -result {2 2 x}
+test tustr-graph-2 {flag = two regional indicators = one grapheme} -body {
+    set de [u8 f09f87a9f09f87aa]          ;# DE flag
+    set g [graphemes "a${de}b"]
+    list [llength $g] [lindex $g 0] [expr {[lindex $g 1] eq $de}] [lindex $g 2]
+} -result {3 a 1 b}
+test tustr-graph-3 {ZWJ sequence and skin tone stay together} -body {
+    set fam [u8 f09f91a8e2808df09f91a9]   ;# man ZWJ woman
+    set wave [u8 f09f918bf09f8fbd]        ;# waving hand + skin tone
+    llength [graphemes "$fam$wave"]
+} -result 2
+test tustr-graph-4 {CR LF is one grapheme, empty string is none} -body {
+    list [llength [graphemes "a\r\nb"]] [graphemes ""]
+} -result {3 {}}
+test tustr-graph-5 {three flags in a row pair up, not overlap} -body {
+    set f [u8 f09f87a9f09f87aa]
+    llength [graphemes "$f$f$f"]
+} -result 3
+test tustr-graph-6 {joined clusters give back the input} -body {
+    set s "x\u0301[u8 f09f87a9f09f87aa]\r\ny"
+    expr {[join [graphemes $s] ""] eq $s}
+} -result 1
+
+test tustr-print-1 {controls are not printable, NBSP and letters are} -body {
+    list [isPrintable a] [isPrintable \t] [isPrintable \x7f] \
+         [isPrintable \u0085] [isPrintable \u00a0] [isPrintable \u00e4]
+} -result {1 0 0 0 1 1}
+test tustr-print-2 {a character beyond U+FFFF counts as one} -body {
+    isPrintable [u8 f09f9880]
+} -result 1
+test tustr-print-3 {more than one character is an error} -body {
+    catch {isPrintable ab} e o; dict get $o -errorcode
+} -result {TCLUTILS TUSTR ARG}
 
 cleanupTests

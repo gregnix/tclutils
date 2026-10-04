@@ -88,10 +88,10 @@ test cli-1.9 {tucat command} -body {
 } -result "banana\napple\napple\ncherry"
 
 test cli-1.10 {tucmp command equal files} -body {
-    set fh [open $data r]
-    set copyData [read $fh]
-    close $fh
-    set copy [makeFile $copyData [file join $tmp copy.txt]]
+    # byte copy: makeFile writes LF, data.txt has the platform's line ends
+    # (CRLF on Windows), so a makeFile copy differed there
+    set copy [file join $tmp copy.txt]
+    file copy -force $data $copy
     runcli tucmp.tcl $data $copy
 } -result "equal"
 

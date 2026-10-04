@@ -57,7 +57,7 @@ package require tclutils::tucolumn 0.1
 package require tclutils::tupr 0.1
 package require tclutils::tutsort 0.1
 package require tclutils::tunumfmt 0.1
-package require tclutils::tunum 0.3
+package require tclutils::tunum 0.4
 package require tclutils::tunumany 0.1
 package require tclutils::tuterm 0.1
 package require tclutils::tucolor 0.1
@@ -75,7 +75,7 @@ package require tclutils::tusize 0.1
 package require tclutils::tubase32 0.1
 package require tclutils::tuuuid 0.1
 package require tclutils::tufmt 0.1
-package require tclutils::tudate 0.1
+package require tclutils::tudate 0.2
 package require tclutils::tuurl 0.1
 package require tclutils::tupostgrest 0.2
 package require tclutils::tuevent 0.1
@@ -100,9 +100,10 @@ package require tclutils::tulayout 0.1
 # Deployment / packaging
 package require tclutils::tudeploy 0.1
 # Introspection / diagnostics
-package require tclutils::tupkgfinder 0.1
+package require tclutils::tupkgfinder 0.2
 package require tclutils::tuappinfo 0.1
-package require tclutils::tustr 0.1
+package require tclutils::tusettings 0.1
+package require tclutils::tustr 0.2
 package require tclutils::tuvalidate 0.1
 package require tclutils::tulist 0.1
 package require tclutils::tudict 0.1
@@ -125,4 +126,4 @@ package require tclutils::tuprovider::zip 0.1
 package require tclutils::tuprovider::dav 0.1
 package require tclutils::tuprovider::ftp 0.2
 
-package provide tclutils 0.63.0
+package provide tclutils 0.64.0

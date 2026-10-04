@@ -22,3 +22,7 @@ Commands:
 - `diff a b ?-unit days?` — integer difference (seconds/minutes/hours/days/weeks).
 - `relative seconds ?-base secs?` — "today", "yesterday", "in N days", etc.
 - `today` — today's ISO date.
+- `zones` — sorted time zone names for `clock format -timezone` (e.g.
+  `Europe/Berlin`), from Tcl's tzdata, else the system zoneinfo; always
+  includes `UTC`. Names from the system directory are checked with `clock`
+  first (Tcl 8.6 without own tzdata rejects `Etc/GMT+1` etc.) (0.2).

@@ -83,9 +83,54 @@ proc ::tclutils::tunum::isNumber {s} {
 
 # Format a number as a grouped, locale-specific string. Locale "de": dot as
 # thousands separator, comma as decimal mark, $decimals fractional digits
-# (rounded via [::format]). Inverse-ish of parse -locale de-strict.
+# (rounded half away from zero, see _roundHalfUp). Inverse-ish of parse
+# -locale de-strict.
 # NB: this proc shadows the builtin [format] inside this namespace, so the
 # builtin is called fully qualified as [::format].
+# X rounded to DECIMALS places, half away from zero ("kaufmaennisch"), as a
+# plain decimal string. [format %.*f] leaves the halfway case to the C
+# library: glibc rounds 1234.5 to 1234 (half to even), the Windows runtime
+# to 1235 -- the same call gave two results. Here the digits of Tcl's
+# shortest representation are rounded, so 2.675 gives 2.68 although the
+# binary double lies just below. Exponent notation (very large or small
+# numbers) still goes through [format].
+proc ::tclutils::tunum::_roundHalfUp {x decimals} {
+    set d [expr {double($x)}]
+    if {[string match -nocase *e* $d] || [string match -nocase *n* $d]} {
+        return [::format "%.*f" $decimals $d]
+    }
+    set neg [expr {$d < 0 || [string index $d 0] eq "-"}]
+    set d [string trimleft $d -]
+    lassign [split $d .] ip fp
+    if {[string length $fp] <= $decimals} {
+        set fp [string range "$fp[string repeat 0 $decimals]" 0 [expr {$decimals - 1}]]
+    } else {
+        set up [expr {[string index $fp $decimals] >= 5}]
+        set fp [string range $fp 0 [expr {$decimals - 1}]]
+        if {$up} {
+            # add one unit in the last kept place, as an integer
+            set n [string trimleft "$ip$fp" 0]
+            if {$n eq ""} { set n 0 }
+            incr n
+            set width [expr {[string length $ip] + $decimals}]
+            set digits $n
+            if {[string length $digits] < $width} {
+                set digits "[string repeat 0 [expr {$width - [string length $digits]}]]$digits"
+            }
+            set cut [expr {[string length $digits] - $decimals}]
+            set ip [string range $digits 0 [expr {$cut - 1}]]
+            set fp [string range $digits $cut end]
+        }
+    }
+    set ip [string trimleft $ip 0]
+    if {$ip eq ""} { set ip 0 }
+    # no [expr] here: it would turn "1234.50" back into the number 1234.5
+    set r $ip
+    if {$decimals > 0} { append r . $fp }
+    if {$neg} { set r -$r }
+    return $r
+}
+
 proc ::tclutils::tunum::format {x args} {
     set locale de
     set decimals 2
@@ -100,7 +145,7 @@ proc ::tclutils::tunum::format {x args} {
     if {![string is integer -strict $decimals] || $decimals < 0} {
         _err DECIMALS "decimals must be a non-negative integer"
     }
-    set s [::format "%.*f" $decimals $x]
+    set s [_roundHalfUp $x $decimals]
     set neg ""
     if {[string match -* $s]} { set neg "-"; set s [string range $s 1 end] }
     lassign [split $s .] intpart frac
@@ -138,4 +183,4 @@ proc ::tclutils::tunum::sum {values args} {
     return $acc
 }
 
-package provide tclutils::tunum 0.3
+package provide tclutils::tunum 0.4

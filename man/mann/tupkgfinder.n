@@ -1,7 +1,7 @@
-.TH tupkgfinder n 0.1 tclutils
+.TH tupkgfinder n 0.2 tclutils
 .SH tclutils::tupkgfinder
 .PP
-Inspect how Tcl resolves packages: known versions, their \fBifneeded\fR scripts and source locations, which version is active versus shadowed, the relevant search paths (\fBauto_path\fR, \fBtcl::tm::path\fR), and an optional filesystem search by glob pattern. Useful for "about / diagnostics" views. Pure Tcl, no GUI.
+Inspect how Tcl resolves packages: known versions, their \fBifneeded\fR scripts and source locations, which version is active versus shadowed, the relevant search paths (\fBauto_path\fR, \fBtcl::tm::path\fR), and an optional filesystem search by glob pattern. \fBcandidates\fR and \fBshadows\fR (0.2) list every copy of a package on the search paths \-\- also a second copy with the same version, which the package database never shows because it keeps one \fBifneeded\fR per version. Useful for "about / diagnostics" views. Pure Tcl, no GUI.
 .SS API
 .CS
 ::tclutils::tupkgfinder::paths
@@ -12,6 +12,8 @@ Inspect how Tcl resolves packages: known versions, their \fBifneeded\fR scripts 
 ::tclutils::tupkgfinder::findFileSystem pattern ?roots?
 ::tclutils::tupkgfinder::findFileSystem pattern ?-roots {d ...}? ?-maxdepth N? \
         ?-followlinks 0|1? ?-maxfiles N? ?-excludeDirs {name ...}?
+::tclutils::tupkgfinder::candidates     ?-pattern glob? ?-tmpaths list? ?-autopath list?
+::tclutils::tupkgfinder::shadows        ?-pattern glob? ?-all 0|1? ?-tmpaths list? ?-autopath list?
 .CE
 .IP \(bu
 \fBpaths\fR — dict \fB{auto_path {pos path ...} tm_path {pos path ...}}\fR.
@@ -25,15 +27,24 @@ Inspect how Tcl resolves packages: known versions, their \fBifneeded\fR scripts 
 \fBreport\fR — a human\-readable multi\-line diagnostic for one package.
 .IP \(bu
 \fBfindFileSystem\fR — glob the filesystem for matching files. Without \fB\-roots\fR a platform default set is scanned (can be slow); bound it with \fB\-maxdepth\fR / \fB\-maxfiles\fR.
+.IP \(bu
+\fBcandidates\fR — list of dicts \fB{package version kind path}\fR for every copy: kind \fBtm\fR (path = the \fB.tm\fR file in a module path; \fBa/b/x\-1.0.tm\fR is \fBa::b::x\fR) or \fBpkgIndex\fR (path = a \fBpkgIndex.tcl\fR in an \fBauto_path\fR directory or one level below, as Tcl searches). Only literal \fBpackage ifneeded NAME VERSION\fR lines are seen. \fB\-tmpaths\fR / \fB\-autopath\fR replace the interpreter's paths.
+.IP \(bu
+\fBshadows\fR — one dict per package with more than one copy (every package with \fB\-all 1\fR): \fB{package active activePath duplicate candidates}\fR. Each candidate carries a \fBstatus\fR: \fBactive\fR (the copy \fBpackage require\fR takes), \fBsame version\fR (a second copy of the active version that is not used \-\- the case to look at), or \fBother version\fR. \fBduplicate\fR is 1 when a version has more than one copy. For a package whose copies are not all registered yet, an unsatisfiable \fBpackage require\fR runs Tcl's unknown handlers first; nothing is loaded.
 .CS
 puts [::tclutils::tupkgfinder::report tablelist]
 set w [::tclutils::tupkgfinder::which Img]
 puts "active: [dict get $w activePath]  shadowed: [dict get $w shadowed]"
 ::tclutils::tupkgfinder::findFileSystem *pdf4tcl* -roots [list $root] -maxdepth 4
+foreach d [::tclutils::tupkgfinder::shadows] {
+    if {[dict get $d duplicate]} { puts "twice: [dict get $d package]" }
+}
 .CE
 .SS Errors
 .PP
-Carries \fB{TCLUTILS TUPKGFINDER OPTION}\fR for an unknown option or a bad option/value count in \fBfindFileSystem\fR.
+Carries \fB{TCLUTILS TUPKGFINDER OPTION}\fR for an unknown option or a bad option/value count in \fBfindFileSystem\fR, \fBcandidates\fR and \fBshadows\fR.
+.PP
+Version note: 0.2 adds \fBcandidates\fR and \fBshadows\fR; the 0.1 commands are unchanged.
 .SS Demo
 .CS
 tclsh examples/demo-tupkgfinder.tcl

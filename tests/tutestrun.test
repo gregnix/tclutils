@@ -1,0 +1,117 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tutestrun 0.1
+set module [lindex [package ifneeded tclutils::tutestrun 0.1] end]
+
+# A fake suite: <tmp>/proj/tests/*.test, run by tutestrun in a child process.
+set proj [file join [temporaryDirectory] tutestrun-[pid] proj]
+proc suite {files} {
+    global proj
+    file delete -force [file dirname $proj]
+    file mkdir [file join $proj tests] [file join $proj lib tm]
+    dict for {name body} $files {
+        set h [open [file join $proj tests $name] w]
+        puts $h "package require tcltest\nnamespace import ::tcltest::*\n$body\ncleanupTests"
+        close $h
+    }
+}
+# run the suite, return {exitcode output}
+proc runSuite {args} {
+    global proj module
+    set drv [file join [file dirname $proj] drv.tcl]
+    set h [open $drv w]
+    puts $h [list source $module]
+    puts $h "exit \[[list ::tclutils::tutestrun::run [file join $proj tests] {} {*}$args]\]"
+    close $h
+    set rc [catch {exec [info nameofexecutable] $drv 2>@1} out opt]
+    set code 0
+    if {$rc} {
+        set ec [dict get $opt -errorcode]
+        if {[lindex $ec 0] eq "CHILDSTATUS"} { set code [lindex $ec 2] }
+    }
+    list $code $out
+}
+
+test tutestrun-1.1 {all green: exit 0} -body {
+    suite {a.test {test a-1 x {expr 1} 1} b.test {test b-1 y {expr 2} 2}}
+    lassign [runSuite] code out
+    list $code [string match "*All test files passed*" $out]
+} -result {0 1}
+
+test tutestrun-1.2 {a failed test makes it 1, although tcltest exits 0} -body {
+    suite {ok.test {test o-1 x {expr 1} 1} red.test {test r-1 x {expr 1} 2}}
+    lassign [runSuite] code out
+    list $code [string match "*red.test (1 failed)*" $out] \
+         [string match "*ok.test (*" $out]
+} -result {1 1 0}
+
+test tutestrun-1.3 {no summary and non-zero exit are listed} -body {
+    suite {quiet.test {exit 0} boom.test {test b-1 x {expr 1} 1; cleanupTests; exit 3}}
+    lassign [runSuite] code out
+    list $code [string match "*quiet.test (no summary)*" $out] \
+         [string match "*boom.test (exit code / error)*" $out]
+} -result {1 1 1}
+
+test tutestrun-1.4 {a hanging file is stopped after the limit} -body {
+    suite {hang.test {test h-1 x {vwait forever} {}}}
+    set t0 [clock seconds]
+    lassign [runSuite -limit 2] code out
+    list $code [string match "*hang.test (hang after 2s)*" $out] \
+         [expr {[clock seconds] - $t0 < 15}]
+} -result {1 1 1}
+
+test tutestrun-1.5 {-limitvar reads the limit from the environment} -body {
+    suite {hang.test {test h-1 x {vwait forever} {}}}
+    set ::env(TUTESTRUN_GRENZE) 1
+    lassign [runSuite -limitvar TUTESTRUN_GRENZE] code out
+    unset ::env(TUTESTRUN_GRENZE)
+    string match "*hang after 1s*" $out
+} -result 1
+
+test tutestrun-1.6 {-argv reaches the test files (tcltest -match)} -body {
+    suite {m.test {test keep-1 x {expr 1} 1; test drop-1 x {expr 1} 2}}
+    lassign [runSuite -argv {-match keep-*}] code out
+    list $code [regexp {Total\t2\tPassed\t1\tSkipped\t1\tFailed\t0} $out]
+} -result {0 1}
+
+test tutestrun-1.8 {bytes invalid in the system encoding do not stall the run} -body {
+    # Tcl 9 reads strictly; before 0.1 got -profile replace, the read handler
+    # failed on every event and the file ran into the limit.
+    suite {enc.test {
+        fconfigure stdout -translation binary
+        puts -nonewline stdout "\xff\xfe\x81\n" ; flush stdout
+        fconfigure stdout -translation auto
+        test e-1 x {expr 1} 1
+    }}
+    # \xff is invalid in UTF-8, \x81 in cp1252; make the child's system
+    # encoding UTF-8 where a locale decides it.
+    set savedLc [array get ::env LC_ALL]
+    set ::env(LC_ALL) C.UTF-8
+    set t0 [clock seconds]
+    lassign [runSuite -limit 20] code out
+    list $code [string match "*All test files passed*" $out] \
+         [expr {[clock seconds] - $t0 < 15}]
+} -cleanup {
+    unset -nocomplain ::env(LC_ALL)
+    array set ::env $savedLc
+} -result {0 1 1}
+
+test tutestrun-1.7 {unknown option} -body {
+    catch {::tclutils::tutestrun::run . {} -limt 3} e o
+    lrange [dict get $o -errorcode] 0 2
+} -result {TCLUTILS TUTESTRUN OPTION}
+
+test tutestrun-2.1 {own trees leave TCL*_TM_PATH, others stay} -body {
+    set sep [expr {$::tcl_platform(platform) eq "windows" ? ";" : ":"}]
+    set own [file normalize [file join $proj lib tm]]
+    set ::env(TCL_TEST_TM_PATH) [join [list /elsewhere $own] $sep]
+    ::tclutils::tutestrun::_stripEnv [list $own]
+    set r $::env(TCL_TEST_TM_PATH)
+    unset ::env(TCL_TEST_TM_PATH)
+    set r
+} -result /elsewhere
+
+file delete -force [file dirname $proj]
+cleanupTests

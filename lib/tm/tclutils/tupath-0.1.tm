@@ -24,26 +24,33 @@ proc ::tclutils::tupath::normalize {path} {
 
 # Purely lexical cleanup: collapse "." and ".." and redundant separators
 # WITHOUT touching the filesystem. Safe for paths that do not exist.
+# Lexical clean: drop "." and empty parts, resolve ".." against earlier parts.
+# The root stays as it is -- "/" on Unix, "C:/", "/" (volume-relative) or
+# "//server/share" on Windows -- and ".." never climbs above it. Up to 0.1
+# only "/" was recognised: on Windows "/x/../y" (volume-relative) came back
+# as "y", and "C:/.." lost the drive.
 proc ::tclutils::tupath::clean {path} {
     if {$path eq ""} { return "." }
-    set abs [isAbsolute $path]
+    set parts [file split $path]
+    set root ""
+    if {[llength $parts] && [file pathtype [lindex $parts 0]] ne "relative"} {
+        set root [lindex $parts 0]
+        set parts [lrange $parts 1 end]
+    }
     set out {}
-    foreach p [file split $path] {
-        if {$p eq "/" || $p eq ""} { continue }
-        if {$p eq "."} { continue }
+    foreach p $parts {
+        if {$p eq "" || $p eq "."} { continue }
         if {$p eq ".."} {
             if {[llength $out] > 0 && [lindex $out end] ne ".."} {
                 set out [lrange $out 0 end-1]
-            } elseif {!$abs} {
+            } elseif {$root eq ""} {
                 lappend out ".."
             }
             continue
         }
         lappend out $p
     }
-    if {$abs} {
-        return [file join / {*}$out]
-    }
+    if {$root ne ""} { return [file join $root {*}$out] }
     if {[llength $out] == 0} { return "." }
     return [file join {*}$out]
 }

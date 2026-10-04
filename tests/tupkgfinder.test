@@ -50,4 +50,93 @@ test findFileSystem-3 {odd option/value count -> OPTION} -body {
     dict get $o -errorcode
 } -result {TCLUTILS TUPKGFINDER OPTION}
 
+# ---- candidates / shadows (0.2): copies with the same version ----------------
+set SH [makeDirectory pkgfinder-shadow]
+proc shWrite {path text} {
+    file mkdir [file dirname $path]
+    set fh [open $path w] ; puts $fh $text ; close $fh
+}
+foreach r {tmA tmB} {
+    shWrite [file join $SH $r tupkgfx-1.0.tm] "package provide tupkgfx 1.0"
+}
+shWrite [file join $SH tmB tupkgfx-0.9.tm] "package provide tupkgfx 0.9"
+shWrite [file join $SH tmA tupkgns tupkgfy-0.1.tm] "package provide tupkgns::tupkgfy 0.1"
+foreach r {libA libB} {
+    shWrite [file join $SH $r tupkgfz1.0 pkgIndex.tcl] \
+        "if {1} {\n  package ifneeded tupkgfz 1.0 \[list source \[file join \$dir z.tcl\]\]\n} else {\n  package ifneeded tupkgfz 1.0 \[list source \[file join \$dir z.tcl\]\]\n}"
+    shWrite [file join $SH $r tupkgfz1.0 z.tcl] "package provide tupkgfz 1.0"
+}
+set modFile [lindex [package ifneeded tclutils::tupkgfinder [package provide tclutils::tupkgfinder]] end]
+
+test candidates-1 {every .tm copy, nested names with ::} -body {
+    set c [${ns}::candidates -pattern tupkg* -autopath {} \
+        -tmpaths [list [file join $SH tmA] [file join $SH tmB]]]
+    lsort [lmap d $c {list [dict get $d package] [dict get $d version] \
+        [file tail [file dirname [dict get $d path]]]}]
+} -result {{tupkgfx 0.9 tmB} {tupkgfx 1.0 tmA} {tupkgfx 1.0 tmB} {tupkgns::tupkgfy 0.1 tupkgns}}
+
+test candidates-2 {pkgIndex.tcl one level below an auto_path directory} -body {
+    set c [${ns}::candidates -pattern tupkgfz -tmpaths {} \
+        -autopath [list [file join $SH libA] [file join $SH libB]]]
+    lmap d $c {list [dict get $d kind] [dict get $d version] \
+        [lindex [file split [dict get $d path]] end-2]}
+} -result {{pkgIndex 1.0 libA} {pkgIndex 1.0 libA} {pkgIndex 1.0 libB} {pkgIndex 1.0 libB}}
+
+test candidates-3 {unknown option} -body {
+    catch {${ns}::candidates -bogus 1} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPKGFINDER OPTION}
+
+test shadows-1 {same version in two module paths: the first path wins} -setup {
+    set ci [interp create]
+    $ci eval [list source $modFile]
+    $ci eval [list tcl::tm::path add [file join $SH tmB]]
+    $ci eval [list tcl::tm::path add [file join $SH tmA]]
+} -body {
+    set r [$ci eval {::tclutils::tupkgfinder::shadows -pattern tupkgfx}]
+    set d [lindex $r 0]
+    list [llength $r] [dict get $d active] [dict get $d duplicate] \
+        [lmap c [dict get $d candidates] {list [dict get $c version] \
+            [file tail [file dirname [dict get $c path]]] [dict get $c status]}]
+} -cleanup {
+    interp delete $ci
+} -result {1 1.0 1 {{1.0 tmA active} {1.0 tmB {same version}} {0.9 tmB {other version}}}}
+
+test shadows-2 {same version in two auto_path directories} -setup {
+    set ci [interp create]
+    $ci eval [list source $modFile]
+    # in front of the existing entries: Tcl's own library must stay reachable
+    $ci eval [list set ::auto_path [concat [list [file join $SH libA] \
+        [file join $SH libB]] [$ci eval {set ::auto_path}]]]
+} -body {
+    set d [lindex [$ci eval {::tclutils::tupkgfinder::shadows -pattern tupkgfz}] 0]
+    lsort [lmap c [dict get $d candidates] {list \
+        [lindex [file split [dict get $c path]] end-2] [dict get $c status]}]
+} -cleanup {
+    interp delete $ci
+} -result {{libA active} {libB {same version}}}
+
+test shadows-3 {a single copy is listed only with -all 1} -setup {
+    set ci [interp create]
+    $ci eval [list source $modFile]
+    $ci eval [list tcl::tm::path add [file join $SH tmA]]
+} -body {
+    list [llength [$ci eval {::tclutils::tupkgfinder::shadows -pattern tupkgns::*}]] \
+         [llength [$ci eval {::tclutils::tupkgfinder::shadows -pattern tupkgns::* -all 1}]]
+} -cleanup {
+    interp delete $ci
+} -result {0 1}
+
+test shadows-4 {nothing is loaded} -setup {
+    set ci [interp create]
+    $ci eval [list source $modFile]
+    $ci eval [list tcl::tm::path add [file join $SH tmB]]
+    $ci eval [list tcl::tm::path add [file join $SH tmA]]
+} -body {
+    $ci eval {::tclutils::tupkgfinder::shadows -pattern tupkgfx}
+    $ci eval {catch {package present tupkgfx}}
+} -cleanup {
+    interp delete $ci
+} -result 1
+
 cleanupTests

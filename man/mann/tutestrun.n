@@ -1,0 +1,29 @@
+.TH tutestrun n 0.1 tclutils
+.SH tclutils::tutestrun
+.PP
+The shared \fBtests/all.tcl\fR of tclutils, tkutils and ctrlutils: run every \fB*.test\fR of a directory in its own process and report what went wrong. Pure Tcl, no Tk, Tcl 8.6+ / 9.x.
+.SS API
+.CS
+::tclutils::tutestrun::run dir libs ?-limit 120? ?-limitvar NAME? ?-argv list?
+;# -> 0 all fine, 1 a file has problems
+.CE
+.CS
+# tests/all.tcl
+set here [file dirname [file normalize [info script]]]
+# ... find tutestrun-*.tm in the tree under test and source it ...
+exit [::tclutils::tutestrun::run $here {tkutils tclutils} \
+        -limitvar TKUTILS_TESTGRENZE -argv $argv]
+.CE
+.PP
+Source the module file from the tree under test (own \fBlib/tm\fR, \fB$env(TCLUTILS_TM)\fR or the sibling tclutils checkout), not with \fBpackage require\fR: an installed older tclutils would otherwise provide the runner. The \fBall.tcl\fR files of the three libraries show the lookup.
+.SS "What run does"
+.IP [1]
+\fBOwn trees first.\fR \fBdir/../lib/tm\fR and the sibling checkouts of \fIlibs\fR (or \fB$env(<LIB>_TM)\fR) are removed from \fBTCL<ver>_TM_PATH\fR for the test processes and put in front in this interpreter. A plain \fBtcl::tm::path add\fR does nothing for a tree that is already listed behind an installed copy of the same version \-\- that copy would be tested.
+.IP [2]
+\fBBanner.\fR Where each of \fIlibs\fR resolves (found without loading anything), other versions beside it, and which module\-path variables are set.
+.IP [3]
+\fBEach file in its own process\fR with \fI\-argv\fR (tcltest options such as \fB\-match\fR), under a wall\-clock limit: \fB\-limit\fR seconds, or the value of the environment variable named by \fB\-limitvar\fR. A hung file is killed.
+.IP [4]
+\fBSummary.\fR A file with failed tests, without tcltest summary line, with a non\-zero exit or a hang is listed under "Files with problems". tcltest ends a file with exit code 0 even when tests failed, so the summary line is what counts.
+.PP
+Unknown options raise \fB{TCLUTILS TUTESTRUN OPTION <opt>}\fR.

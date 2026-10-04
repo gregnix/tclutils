@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tudate 0.1
+package require tclutils::tudate 0.2
 
 test tudate-1.1 {parse ISO -> iso} -body {
     ::tclutils::tudate::iso [::tclutils::tudate::parse "2024-03-15"]
@@ -59,5 +59,21 @@ test tudate-4.2 {relative N days} -body {
 test tudate-5.1 {today matches clock} -body {
     expr {[::tclutils::tudate::today] eq [clock format [clock seconds] -format %Y-%m-%d]}
 } -result 1
+
+test tudate-6.1 {zones: sorted, contains Europe/Berlin and UTC} -body {
+    set z [::tclutils::tudate::zones]
+    list [expr {"Europe/Berlin" in $z}] [expr {"UTC" in $z}] \
+         [expr {$z eq [lsort -unique $z]}] [expr {[llength $z] > 100}]
+} -result {1 1 1 1}
+test tudate-6.2 {zones: every name is accepted by clock} -body {
+    set bad {}
+    foreach z [::tclutils::tudate::zones] {
+        if {[catch {clock format 0 -timezone $z}]} { lappend bad $z }
+    }
+    set bad
+} -result {}
+test tudate-6.3 {zones: no posix/ or right/ duplicates} -body {
+    llength [lsearch -all -regexp [::tclutils::tudate::zones] {^(posix|right)/}]
+} -result 0
 
 cleanupTests

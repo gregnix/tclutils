@@ -13,7 +13,8 @@ own or as the numeric backend for table footers (`tkutils::tkutlfooter`).
 package require tclutils::tunum 0.3
 ```
 
-Version 0.2 adds the `-locale` option to `parse`; version 0.3 adds `format`.
+Version 0.2 adds the `-locale` option to `parse`; version 0.3 adds `format`;
+version 0.4 rounds `format` half away from zero on every platform.
 Both are fully backward compatible: the default `parse` locale `auto` behaves
 exactly like 0.1, so existing callers need no change.
 
@@ -105,13 +106,15 @@ Returns 1 if the value parses as a number (auto locale), else 0.
 Formats a number as a grouped, locale-specific string — the rough inverse of
 `parse -locale de-strict`. Locale `de` (the only locale, and the default): dot
 as thousands separator, comma as decimal mark, `-decimals` fractional digits
-(default 2, rounded via Tcl's `format`).
+(default 2). Rounding is half away from zero on the decimal digits
+(`2.675` -> `2,68`, `1234.5 -decimals 0` -> `1.235`), the same on every
+platform; up to 0.63.0 it went through `format` and the C library decided.
 
 ```tcl
 ::tclutils::tunum::format 1234.5              ;# -> 1.234,50
 ::tclutils::tunum::format -1234.5             ;# -> -1.234,50
 ::tclutils::tunum::format 1000000             ;# -> 1.000.000,00
-::tclutils::tunum::format 1234.5 -decimals 0  ;# -> 1.234
+::tclutils::tunum::format 1234.5 -decimals 0  ;# -> 1.235
 ::tclutils::tunum::format 1234.5 -decimals 3  ;# -> 1.234,500
 ```
 

@@ -1,4 +1,4 @@
-# tclutils 0.63.0
+# tclutils 0.64.0
 
 `tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
 text filters, data-format parsers/encoders, binary and checksum helpers, and a
@@ -15,7 +15,7 @@ umbrella package (loads the core modules plus the `tuflow` diagram facade)
 or a single module:
 
 ```tcl
-::tcl::tm::path add /path/to/tclutils-0.63.0/lib/tm
+::tcl::tm::path add /path/to/tclutils-0.64.0/lib/tm
 package require tclutils          ;# umbrella: core modules + tuflow facade
 package require tclutils::tucsv    ;# or just one module
 ```
@@ -50,7 +50,8 @@ the Unix-tool mapping is in [`docs/guide/coreutils-mapping.md`](docs/guide/coreu
 | Icons | `tuico` |
 | Deployment / packaging | `tudeploy` |
 | Diagrams (Mermaid-compatible) | `tuflow` `tudiagram` `tustate` `tuer` `tuclass` `turequirement` `tumindmap` `tuc4` `tublock` `tugit` `tuarchitecture` `tupie` `tuxychart` `tuquadrant` `tujourney` `tutimeline` `tusankey` `tugantt` `tusequence` `tukanban` `tupacket` `tutreemap` `turadar` |
-| Introspection / diagnostics | `tuappinfo` `tupkgfinder` |
+| Introspection / diagnostics | `tuappinfo` `tupkgfinder` `tutestrun` |
+| Settings / user directories | `tusettings` |
 | Core | `common` |
 
 Highlights: `tucsv` (RFC-4180 quoting, multiline, BOM strip, lenient `-strict 0`),

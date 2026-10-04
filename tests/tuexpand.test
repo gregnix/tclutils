@@ -33,6 +33,9 @@ test tuexpand-1.9 {4 leading spaces stay (cannot reach stop 8)} {
     ::tclutils::tuexpand::unexpand "    x"
 } "    x"
 test tuexpand-1.10 {invalid mode rejected} {
-    catch {::tclutils::tuexpand::file /dev/null -mode bogus} m o; dict get $o -errorcode
+    # a real file: /dev/null does not exist on Windows, and the error came
+    # from opening it instead of from the bad -mode
+    set f [makeFile "x\n" tuexpand-mode.txt]
+    catch {::tclutils::tuexpand::file $f -mode bogus} m o; dict get $o -errorcode
 } {TCLUTILS TUEXPAND MODE}
 cleanupTests

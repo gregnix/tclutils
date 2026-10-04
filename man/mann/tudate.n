@@ -1,4 +1,4 @@
-.TH tudate n 0.1 tclutils
+.TH tudate n 0.2 tclutils
 .SH tclutils::tudate
 .PP
 Flexible date helpers built on the Tcl \fBclock\fR command: parse common formats, render ISO, do calendar arithmetic, day differences and human relative phrases. Works in local time.
@@ -21,3 +21,5 @@ Commands:
 \fBrelative seconds ?\-base secs?\fR — "today", "yesterday", "in N days", etc.
 .IP \(bu
 \fBtoday\fR — today's ISO date.
+.IP \(bu
+\fBzones\fR — sorted time zone names for \fBclock format \-timezone\fR (e.g. \fBEurope/Berlin\fR), from Tcl's tzdata, else the system zoneinfo; always includes \fBUTC\fR. Names from the system directory are checked with \fBclock\fR first (Tcl 8.6 without own tzdata rejects \fBEtc/GMT+1\fR etc.) (0.2).

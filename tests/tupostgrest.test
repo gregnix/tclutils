@@ -31,7 +31,7 @@ proc client {} { return [${::ns}::new https://api.example.com -token TOK123] }
 test pg-1.1 {get builds url with filters/select/order/limit, utf-8 encoded} -body {
     set ::resp {200 application/json {[]}}
     ${::ns}::get [client] documents \
-        -filters {extension eq.pdf name like.*müller*} \
+        -filters [list extension eq.pdf name "like.*m\u00fcller*"] \
         -select id,filename -order modified_at.desc -limit 50
     dict get $::last url
 } -result {https://api.example.com/documents?extension=eq.pdf&name=like.%2Am%C3%BCller%2A&select=id%2Cfilename&order=modified_at.desc&limit=50}

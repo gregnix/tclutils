@@ -126,6 +126,9 @@ test tufetch-1.12 {unknown option names the known ones} -body {
 # ---------------------------------------------------------------------------
 testConstraint tls  [expr {![catch {package require tls}]}]
 testConstraint tls1 [expr {[testConstraint tls] && [package vcompare [package provide tls] 2.0] < 0}]
+# Default verification needs a CA bundle under tls 1.x (and 2.0 betas).
+testConstraint caOK [expr {[testConstraint tls] && (![testConstraint tls1]
+    || (![catch {package require tclutils::tuhttps}] && [::tclutils::tuhttps::caFile] ne ""))}]
 set crt [file join $here data tuhttps-localhost.crt]
 set key [file join $here data tuhttps-localhost.key]
 set lport 0
@@ -140,20 +143,20 @@ proc httpsReg {} {
     return <none>
 }
 
-test tufetch-3.1 {a self-signed certificate is rejected by default, with the way out} -constraints tls -body {
+test tufetch-4.1 {a self-signed certificate is rejected by default, with the way out} -constraints {tls caOK} -body {
     catch {::tclutils::tufetch::get $lurl -timeout 5000} m o
     list [dict get $o -errorcode] [string match {*-cafile*-insecure 1*} $m]
 } -result {{TCLUTILS TUFETCH CONNECT} 1}
 
-test tufetch-3.2 {the same certificate as -cafile is accepted} -constraints tls -body {
+test tufetch-4.2 {the same certificate as -cafile is accepted} -constraints tls -body {
     ::tclutils::tufetch::get $lurl -timeout 5000 -cafile $crt
 } -result ok
 
-test tufetch-3.3 {-insecure 1 accepts it} -constraints tls -body {
+test tufetch-4.3 {-insecure 1 accepts it} -constraints tls -body {
     ::tclutils::tufetch::get $lurl -timeout 5000 -insecure 1
 } -result ok
 
-test tufetch-3.4 {tufetch leaves the https registration as it found it} -constraints tls -setup {
+test tufetch-4.4 {tufetch leaves the https registration as it found it} -constraints tls -setup {
     catch {::http::unregister https}
 } -body {
     ::tclutils::tufetch::get $lurl -timeout 5000 -insecure 1
@@ -165,8 +168,8 @@ test tufetch-3.4 {tufetch leaves the https registration as it found it} -constra
     catch {::http::unregister https}
 } -result {<none> MarkerSocket}
 
-test tufetch-3.5 {after tufetch -insecure 1, the application's own geturl still verifies} \
-    -constraints tls -setup {
+test tufetch-4.5 {after tufetch -insecure 1, the application's own geturl still verifies} \
+    -constraints {tls caOK} -setup {
     package require tclutils::tuhttps
     ::http::register https 443 [::tclutils::tuhttps::socketCmd -host localhost]
 } -body {
@@ -178,7 +181,7 @@ test tufetch-3.5 {after tufetch -insecure 1, the application's own geturl still 
     catch {::http::unregister https}
 } -result 1
 
-test tufetch-3.6 {tls 1.x without CA bundle and without curl/wget: NOMETHOD names the way out} \
+test tufetch-4.6 {tls 1.x without CA bundle and without curl/wget: NOMETHOD names the way out} \
     -constraints tls1 -setup {
     set savedCa $::tclutils::tuhttps::caCandidates
     set ::tclutils::tuhttps::caCandidates {}

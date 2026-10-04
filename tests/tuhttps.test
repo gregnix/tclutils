@@ -10,6 +10,9 @@ package require http
 
 testConstraint tls  [expr {![catch {package require tls}]}]
 testConstraint tls1 [expr {[testConstraint tls] && [package vcompare [package provide tls] 2.0] < 0}]
+# Default verification needs a CA bundle under tls 1.x (and 2.0 betas,
+# which sort below 2.0); without one socketCmd raises NOCA (tuhttps-1.7).
+testConstraint caOK [expr {[testConstraint tls] && (![testConstraint tls1] || [::tclutils::tuhttps::caFile] ne "")}]
 
 # Self-signed certificate for localhost / 127.0.0.1, valid until 2126.
 # Only used by these tests; it signs nothing else.
@@ -44,7 +47,7 @@ proc httpsReg {} {
 }
 
 # --- socketCmd ----------------------------------------------------------------
-test tuhttps-1.1 {default verifies (-require 1)} -constraints tls -body {
+test tuhttps-1.1 {default verifies (-require 1)} -constraints {tls caOK} -body {
     set c [::tclutils::tuhttps::socketCmd]
     list [lindex $c 0] [dict get [lrange $c 1 end] -require]
 } -result {::tls::socket 1}
@@ -54,7 +57,7 @@ test tuhttps-1.2 {-insecure 1 is the only way to -require 0} -constraints tls -b
     list [dict get [lrange $c 1 end] -require] [dict get [lrange $c 1 end] -request]
 } -result {0 0}
 
-test tuhttps-1.3 {an IP literal gets no SNI, a host name does} -constraints tls -body {
+test tuhttps-1.3 {an IP literal gets no SNI, a host name does} -constraints {tls caOK} -body {
     list [dict get [lrange [::tclutils::tuhttps::socketCmd -host 192.168.1.2] 1 end] -autoservername] \
          [dict get [lrange [::tclutils::tuhttps::socketCmd -host example.org] 1 end] -autoservername]
 } -result {0 1}
@@ -129,7 +132,7 @@ test tuhttps-2.4 {with returns the script result} -body {
 } -result 42
 
 # --- against the local self-signed server -----------------------------------
-test tuhttps-3.1 {default rejects a self-signed certificate} -constraints tls -body {
+test tuhttps-3.1 {default rejects a self-signed certificate} -constraints {tls caOK} -body {
     string match error:* [fetch [::tclutils::tuhttps::socketCmd -host localhost]]
 } -result 1
 
@@ -141,7 +144,7 @@ test tuhttps-3.3 {-insecure 1 accepts it} -constraints tls -body {
     fetch [::tclutils::tuhttps::socketCmd -host localhost -insecure 1]
 } -result {ok 200}
 
-test tuhttps-3.4 {after an insecure request, a plain geturl verifies again} -constraints tls -setup {
+test tuhttps-3.4 {after an insecure request, a plain geturl verifies again} -constraints {tls caOK} -setup {
     ::http::register https 443 [::tclutils::tuhttps::socketCmd -host localhost]
 } -body {
     fetch [::tclutils::tuhttps::socketCmd -host localhost -insecure 1]

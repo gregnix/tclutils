@@ -24,6 +24,9 @@ test tucolumn-1.6 {fill single column when narrow} {
 } "alpha\nbeta"
 test tucolumn-1.7 {fill empty} { ::tclutils::tucolumn::fill {} } ""
 test tucolumn-1.8 {invalid mode rejected} {
-    catch {::tclutils::tucolumn::file /dev/null -mode bogus} m o; dict get $o -errorcode
+    # a real file: /dev/null does not exist on Windows, and the error came
+    # from opening it instead of from the bad -mode
+    set f [makeFile "x\n" tucolumn-mode.txt]
+    catch {::tclutils::tucolumn::file $f -mode bogus} m o; dict get $o -errorcode
 } {TCLUTILS TUCOLUMN MODE}
 cleanupTests

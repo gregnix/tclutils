@@ -1,0 +1,50 @@
+.TH tusettings n 0.1 tclutils
+.SH tclutils::tusettings
+.PP
+Per\-user settings in the platform's config directory, the standard directories (config, cache, data, temp) and a recent\-files list. Settings are stored as INI through \fBtuini\fR, so they can be read and edited by hand. Pure Tcl, no Tk, Tcl 8.6+ / 9.x.
+.SS API
+.CS
+::tclutils::tusettings::dir  kind app ?-create 0|1?        ;# kind: config cache data temp
+::tclutils::tusettings::file app ?name?                    ;# <config dir>/<name>.ini
+::tclutils::tusettings::load app ?-defaults dict? ?-name settings?
+::tclutils::tusettings::save app settings ?-name settings? ;# -> file path
+::tclutils::tusettings::value settings section key ?default?
+
+::tclutils::tusettings::recentAdd    app path ?-max 10? ?-list recent?
+::tclutils::tusettings::recentList   app ?-existing 0|1? ?-list recent?
+::tclutils::tusettings::recentRemove app path ?-list recent?
+::tclutils::tusettings::recentClear  app ?-list recent?
+.CE
+.CS
+set s [tusettings::load etikettendruck -defaults {
+    window  {width 800 height 600}
+    printer {name ""}
+}]
+dict set s printer name Brother_QL-820NWB
+tusettings::save etikettendruck $s
+tusettings::recentAdd etikettendruck $csvFile
+.CE
+.SS Directories
+.TS
+l l l l.
+kind	Linux / BSD	Windows	macOS
+config	\fB$XDG_CONFIG_HOME\fR or \fB~/.config\fR	\fB%APPDATA%\fR	\fB~/Library/Application Support\fR
+cache	\fB$XDG_CACHE_HOME\fR or \fB~/.cache\fR	\fB%LOCALAPPDATA%\fR	\fB~/Library/Caches\fR
+data	\fB$XDG_DATA_HOME\fR or \fB~/.local/share\fR	\fB%APPDATA%\fR	\fB~/Library/Application Support\fR
+temp	\fB$TMPDIR\fR or \fB/tmp\fR	\fB%TEMP%\fR or \fB%TMP%\fR	\fB$TMPDIR\fR or \fB/tmp\fR
+.TE
+.PP
+The app name is appended. \fBdir\fR does not create anything unless \fB\-create 1\fR; \fBsave\fR and \fBrecentAdd\fR create the config directory themselves.
+.SS Settings
+.PP
+A settings dict is section \-> (dict key \-> value); keys before any \fB[section]\fR live in section \fB""\fR. \fBload\fR merges the file over \fB\-defaults\fR, so new keys in a later app version get their default. A missing file gives the defaults.
+.PP
+\fBsave\fR writes to a temporary file next to the target and renames it, so a crash never leaves a half\-written file. Comments a user put into the file are not kept. INI cannot hold everything: a value with a line break or leading/trailing blanks, a key with \fB=\fR or a key starting with \fB;\fR, \fB#\fR or \fB[\fR raise \fB{TCLUTILS TUSETTINGS VALUE}\fR and the file stays as it was.
+.PP
+A file that does not parse (hand\-edited, broken line) raises \fB{TCLUTILS TUSETTINGS SYNTAX}\fR with the file name; the caller decides whether to fall back to the defaults.
+.SS "Recent files"
+.PP
+One plain text file per list (\fB<config dir>/<list>.txt\fR, one path per line, UTF\-8). \fBrecentAdd\fR normalizes the path, moves it to the top, drops an older entry for the same file (case\-insensitive on Windows) and keeps \fB\-max\fR entries. \fBrecentList \-existing 1\fR leaves out files that are gone.
+.SS Errors
+.PP
+\fB{TCLUTILS TUSETTINGS APP}\fR (app name empty or with path characters), \fB{TCLUTILS TUSETTINGS KIND}\fR, \fB{TCLUTILS TUSETTINGS SYNTAX}\fR, \fB{TCLUTILS TUSETTINGS VALUE}\fR; unknown options \fB{TCLUTILS COMMON OPTION <opt>}\fR.

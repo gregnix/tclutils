@@ -1,4 +1,4 @@
-.TH tustr n 0.1 tclutils
+.TH tustr n 0.2 tclutils
 .SH tclutils::tustr
 .PP
 String helpers the Tcl core does not provide directly. Pure Tcl, no dependencies. For what the core already does well, use that instead (\fBstring reverse\fR, \fBstring map\fR, \fBstring repeat\fR, ...).
@@ -24,3 +24,15 @@ Documented for completeness (same module, also covered by the test suite):
 tustr::endsWith s suffix                       ;# true if S ends with SUFFIX
 tustr::removeSuffix s suffix                   ;# return S without a trailing SUFFIX (unchanged if absent)
 .CE
+.SS "Graphemes and printable characters (0.2)"
+.CS
+tustr::graphemes "e\u0301x"     ;# -> 2 items: e+accent, x
+llength [tustr::graphemes $s]   ;# visible length, unlike [string length]
+tustr::isPrintable $char        ;# 0 for C0/C1 controls and DEL, else 1
+.CE
+.PP
+\fBgraphemes\fR splits a string into user\-perceived characters, a simplified form of UAX #29: a base keeps its combining marks, variation selectors, skin\-tone modifiers and emoji tag characters; ZWJ sequences, flag pairs (two regional indicators) and CR LF stay together. Hangul syllable composition and Indic conjuncts are not covered. \fB[join [graphemes $s] ""]\fR gives back \fB$s\fR.
+.PP
+Under Tcl 8.6 a character beyond U+FFFF (emoji, flags) comes from a channel as two surrogates; both commands join the pair first, so 8.6 and 9 give the same result.
+.PP
+\fBisPrintable\fR takes exactly one character (a surrogate pair counts as one) and raises \fB{TCLUTILS TUSTR ARG}\fR otherwise. U+00A0 counts as printable.

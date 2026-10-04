@@ -2,15 +2,16 @@
 # Description: flexible date helpers on top of the Tcl clock command.
 # Category: Date · time/calendar
 # Parse common formats, render ISO, do calendar arithmetic, day differences and
-# human-readable relative phrases. Works in local time. Tcl 8.6+ and 9.x.
+# human-readable relative phrases, list of time zones. Works in local time.
+# Tcl 8.6+ and 9.x.
 
 package require Tcl 8.6-
 package require tclutils::common 0.1
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tudate {
-    namespace export parse iso add diff relative today
-    variable version 0.1
+    namespace export parse iso add diff relative today zones
+    variable version 0.2
     # tried in order when no -format is given (day-first for the "." and "/" forms)
     variable FORMATS {
         {%Y-%m-%dT%H:%M:%S} {%Y-%m-%d %H:%M:%S} {%Y-%m-%d}
@@ -91,4 +92,35 @@ proc ::tclutils::tudate::today {} {
     return [clock format [clock seconds] -format %Y-%m-%d]
 }
 
-package provide tclutils::tudate 0.1
+# Time zone names that [clock format -timezone] accepts, sorted, e.g.
+# Europe/Berlin. Read from Tcl's own tzdata (also inside a zipfs image), else
+# from the system zoneinfo directory. "UTC" is always included. The first
+# source with entries wins, so the list does not mix two databases.
+#
+# Names from the system directory are checked with clock first: Tcl 8.6
+# without its own tzdata (Debian/Ubuntu) rejects Etc/GMT+1 and the like
+# ("time zone ... not found"). Costs about 0.3 s once; Tcl's tzdata needs
+# no check.
+proc ::tclutils::tudate::zones {} {
+    set dirs [list [file join [info library] tzdata]]
+    if {[info exists ::tcl_pkgPath]} {       ;# not set on every build
+        foreach p $::tcl_pkgPath { lappend dirs [file join $p tzdata] }
+    }
+    set system /usr/share/zoneinfo
+    lappend dirs $system
+    set zones {}
+    foreach base $dirs {
+        if {![file isdirectory $base]} continue
+        foreach z [glob -nocomplain -directory $base -tails -type f */* */*/*] {
+            # Area/City; skips posix/, right/ and files like zone.tab
+            if {![regexp {^[A-Z][A-Za-z_]+/[A-Za-z0-9_+/-]+$} $z]} continue
+            if {$base eq $system && [catch {clock format 0 -timezone $z}]} continue
+            lappend zones $z
+        }
+        if {[llength $zones]} break
+    }
+    lappend zones UTC
+    return [lsort -unique $zones]
+}
+
+package provide tclutils::tudate 0.2
