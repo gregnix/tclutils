@@ -6,13 +6,13 @@
 # own temp directory, and the editors each kept their own recent-files list.
 # This module does it once:
 #
-#   tusettings::dir config myapp            ;# ~/.config/myapp, %APPDATA%\myapp, ...
-#   set s [tusettings::load myapp -defaults {window {width 800}}]
+#   ::tclutils::tusettings::dir config myapp            ;# ~/.config/myapp, %APPDATA%\myapp, ...
+#   set s [::tclutils::tusettings::load myapp -defaults {window {width 800}}]
 #   dict set s window width 1024
-#   tusettings::save myapp $s               ;# temp file + rename, never half-written
-#   tusettings::value $s window width 800   ;# read with a fallback
-#   tusettings::recentAdd myapp $file       ;# most recent first, no duplicates
-#   tusettings::recentList myapp -existing 1
+#   ::tclutils::tusettings::save myapp $s               ;# temp file + rename, never half-written
+#   ::tclutils::tusettings::value $s window width 800   ;# read with a fallback
+#   ::tclutils::tusettings::recentAdd myapp $file       ;# most recent first, no duplicates
+#   ::tclutils::tusettings::recentList myapp -existing 1
 #
 # Settings are a dict section -> (dict key -> value), stored as INI through
 # tclutils::tuini: readable and editable by hand. Keys before any [section]

@@ -16,13 +16,13 @@ Per\-user settings in the platform's config directory, the standard directories 
 ::tclutils::tusettings::recentClear  app ?-list recent?
 .CE
 .CS
-set s [tusettings::load etikettendruck -defaults {
+set s [::tclutils::tusettings::load etikettendruck -defaults {
     window  {width 800 height 600}
     printer {name ""}
 }]
 dict set s printer name Brother_QL-820NWB
-tusettings::save etikettendruck $s
-tusettings::recentAdd etikettendruck $csvFile
+::tclutils::tusettings::save etikettendruck $s
+::tclutils::tusettings::recentAdd etikettendruck $csvFile
 .CE
 .SS Directories
 .TS

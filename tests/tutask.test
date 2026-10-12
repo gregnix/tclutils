@@ -1,0 +1,683 @@
+# tutask.test -- tclutils::tutask
+#
+# What is checked is the contract, not the implementation: cancel runs
+# finally and stops the operation; a timeout cancels too; a late result is
+# dropped; error codes survive every border; nothing is left behind.
+
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tutask 0.1
+
+namespace eval ::tt {
+    namespace import ::tclutils::tutask::*
+}
+
+testConstraint thread [expr {![catch {package require Thread}]}]
+testConstraint nothread [expr {![testConstraint thread]}]
+testConstraint unix [expr {$::tcl_platform(platform) eq "unix"
+                           && [auto_execok sh] ne ""}]
+testConstraint windows [expr {$::tcl_platform(platform) eq "windows"
+                              && [auto_execok ping] ne ""
+                              && [auto_execok taskkill] ne ""}]
+testConstraint tcl86 [expr {[package vcompare [info tclversion] 9.0] < 0}]
+
+# Run the event loop for ms milliseconds.
+proc pause {ms} {
+    set ::_p 0
+    after $ms {set ::_p 1}
+    vwait ::_p
+}
+
+# Capture background errors.
+proc bgCapture {} {
+    set ::bg {}
+    interp bgerror {} [list apply {{m o} {
+        lappend ::bg [list $m [dict get $o -errorcode]]
+    }}]
+}
+
+# A hand-made operation: reports when ::op(go) is written, and records
+# whether its cancel command ran.
+proc handOp {cb} {
+    set ::op(cancelled) 0
+    trace add variable ::op(go) write [list apply {{cb args} {
+        trace remove variable ::op(go) write [lrange [info level 0] 0 1]
+        {*}$cb {*}$::op(go)
+    }} $cb]
+    return {set ::op(cancelled) 1}
+}
+
+# ---------------------------------------------------------------------------
+# 1. Running and awaiting
+# ---------------------------------------------------------------------------
+
+test tutask-1.1 {run returns the task's value} -body {
+    ::tt::run apply {{} { return 42 }}
+} -result 42
+
+test tutask-1.2 {a task runs at once up to its first await} -body {
+    set ::trail {}
+    set t [::tt::spawn apply {{} {
+        lappend ::trail started
+        ::tclutils::tutask::sleep 10
+        lappend ::trail resumed
+    }}]
+    set before $::trail
+    set st [$t state]
+    $t wait
+    $t destroy
+    list $before $st $::trail
+} -result {started running {started resumed}}
+
+test tutask-1.3 {await a timer returns its value} -body {
+    ::tt::run apply {{} {
+        ::tclutils::tutask::await [::tclutils::tutask::timer 10 hello]
+    }}
+} -result hello
+
+test tutask-1.4 {await outside a coroutine} -body {
+    catch {::tt::await [::tt::timer 1]} m o
+    list $m [dict get $o -errorcode]
+} -result {{await outside a task or coroutine} {TCLUTILS TUTASK NOTASK}}
+
+test tutask-1.5 {two tasks interleave on the event loop} -body {
+    set ::trail {}
+    set a [::tt::spawn apply {{} { ::tclutils::tutask::sleep 40; lappend ::trail a }}]
+    set b [::tt::spawn apply {{} { ::tclutils::tutask::sleep 10; lappend ::trail b }}]
+    $a wait; $b wait
+    $a destroy; $b destroy
+    set ::trail
+} -result {b a}
+
+test tutask-1.6 {an operation may report synchronously from its starter} -body {
+    ::tt::run apply {{} {
+        ::tclutils::tutask::await [list apply {{cb} { {*}$cb ok sofort; return "" }}]
+    }}
+} -result sofort
+
+test tutask-1.7 {an error in the task keeps its errorcode} -body {
+    set t [::tt::spawn apply {{} { error boom {} {APP BOOM} }}]
+    set rc [catch {$t wait} m o]
+    set r [list $rc $m [dict get $o -errorcode] [$t state]]
+    $t destroy
+    set r
+} -result {1 boom {APP BOOM} error}
+
+test tutask-1.8 {an operation's error is raised by await with its code} -body {
+    ::tt::run apply {{} {
+        try {
+            ::tclutils::tutask::await [list apply {{cb} {
+                after 5 [list {*}$cb error kaputt {-errorcode {OP KAPUTT}}]
+                return ""
+            }}]
+        } trap {OP KAPUTT} {m} {
+            return "gefangen: $m"
+        }
+    }}
+} -result {gefangen: kaputt}
+
+test tutask-1.9 {current names the task, outside it is empty} -body {
+    set t [::tt::spawn apply {{} { return [::tclutils::tutask::current] }}]
+    set r [list [expr {[$t wait] eq $t}] [::tt::current]]
+    $t destroy
+    set r
+} -result {1 {}}
+
+test tutask-1.10 {result of a running task is NOTDONE} -body {
+    set t [::tt::spawn apply {{} { ::tclutils::tutask::sleep 20 }}]
+    catch {$t result} m o
+    $t wait
+    $t destroy
+    dict get $o -errorcode
+} -result {TCLUTILS TUTASK NOTDONE}
+
+test tutask-1.11 {spawn checks its arguments} -body {
+    list [catch {::tt::spawn} m] [catch {::tt::spawn -detach maybe list} m2]
+} -result {1 1}
+
+test tutask-1.12 {only an operation's first report counts} -body {
+    # A second report must neither replace the first nor wake the task
+    # later in a different await.
+    ::tt::run apply {{} {
+        set a [::tclutils::tutask::await [list apply {{cb} {
+            {*}$cb ok eins
+            {*}$cb ok zwei
+            after 5 [list {*}$cb ok drei]
+            return ""
+        }}]]
+        set b [::tclutils::tutask::await [::tclutils::tutask::timer 30 vier]]
+        list $a $b
+    }}
+} -result {eins vier}
+
+# ---------------------------------------------------------------------------
+# 2. Cancel
+# ---------------------------------------------------------------------------
+
+test tutask-2.1 {cancel runs finally and the operation's cancel command} -body {
+    unset -nocomplain ::op
+    set ::fin 0
+    set t [::tt::spawn apply {{} {
+        try { ::tclutils::tutask::await handOp } finally { set ::fin 1 }
+    }}]
+    set c [$t cancel]
+    # no event loop between cancel and the checks: it is synchronous
+    set r [list $c [$t state] $::fin $::op(cancelled)]
+    $t destroy
+    set r
+} -result {1 cancelled 1 1}
+
+test tutask-2.2 {result of a cancelled task raises CANCELLED} -body {
+    set t [::tt::spawn apply {{} { ::tclutils::tutask::sleep 5000 }}]
+    $t cancel
+    catch {$t result} m o
+    $t destroy
+    dict get $o -errorcode
+} -result {TCLUTILS TUTASK CANCELLED}
+
+test tutask-2.3 {a late result after cancel is dropped} -setup {
+    bgCapture
+} -body {
+    unset -nocomplain ::op
+    set t [::tt::spawn apply {{} { ::tclutils::tutask::await handOp }}]
+    $t cancel
+    set ::op(go) {ok zu-spaet}
+    pause 20
+    set r [list [$t state] $::bg [dict get [::tt::stats] awaits]]
+    $t destroy
+    set r
+} -result {cancelled {} 0}
+
+test tutask-2.4 {destroying a running task cancels it} -body {
+    set ::fin 0
+    set t [::tt::spawn apply {{} {
+        try { ::tclutils::tutask::sleep 5000 } finally { set ::fin 1 }
+    }}]
+    $t destroy
+    list $::fin [info object isa object $t]
+} -result {1 0}
+
+test tutask-2.5 {cancel of a finished task returns 0} -body {
+    set t [::tt::spawn apply {{} { return x }}]
+    set r [$t cancel]
+    $t destroy
+    set r
+} -result 0
+
+test tutask-2.6 {a task can cancel itself; the next await raises} -body {
+    set ::fin 0
+    set t [::tt::spawn apply {{} {
+        try {
+            [::tclutils::tutask::current] cancel
+            ::tclutils::tutask::sleep 10
+            set ::after 1
+        } finally { set ::fin 1 }
+    }}]
+    pause 20
+    set r [list [$t state] $::fin [info exists ::after]]
+    $t destroy
+    set r
+} -result {cancelled 1 0}
+
+test tutask-2.7 {catching CANCELLED does not let the task go on} -body {
+    set ::trail {}
+    set t [::tt::spawn apply {{} {
+        catch {::tclutils::tutask::sleep 5000} m
+        lappend ::trail $m
+        catch {::tclutils::tutask::sleep 10} m2
+        lappend ::trail $m2
+        return weiter
+    }}]
+    $t cancel
+    set r [list [$t state] $::trail]
+    $t destroy
+    set r
+} -result {cancelled {{task cancelled} {task cancelled}}}
+
+test tutask-2.8 {cancel inside a running pipe kills the process} -constraints unix -body {
+    set t0 [clock milliseconds]
+    set t [::tt::spawn apply {{} { ::tclutils::tutask::await [::tclutils::tutask::pipe {sleep 5}] }}]
+    pause 50
+    $t cancel
+    set r [list [$t state] [dict get [::tt::stats] pipes] \
+        [expr {[clock milliseconds] - $t0 < 2000}]]
+    $t destroy
+    set r
+} -result {cancelled 0 1}
+
+test tutask-2.8w {cancel inside a running pipe kills the process (taskkill)} -constraints windows -body {
+    set t0 [clock milliseconds]
+    set t [::tt::spawn apply {{} { ::tclutils::tutask::await [::tclutils::tutask::pipe {ping -n 30 127.0.0.1}] }}]
+    pause 300
+    $t cancel
+    set r [list [$t state] [dict get [::tt::stats] pipes] \
+        [expr {[clock milliseconds] - $t0 < 5000}]]
+    $t destroy
+    set r
+} -result {cancelled 0 1}
+
+test tutask-2.9 {a task cannot destroy itself, but can cancel itself} -body {
+    set t [::tt::spawn apply {{} {
+        catch {[::tclutils::tutask::current] destroy} m o
+        set ::inside [dict get $o -errorcode]
+        return weiter
+    }}]
+    set r [list $::inside [$t state] [$t result]]
+    $t destroy
+    set r
+} -result {{TCLUTILS TUTASK INSIDE} ok weiter}
+
+# ---------------------------------------------------------------------------
+# 3. Timeout
+# ---------------------------------------------------------------------------
+
+test tutask-3.1 {await -timeout raises TIMEOUT and cancels the operation} -body {
+    unset -nocomplain ::op
+    set r [::tt::run apply {{} {
+        try {
+            ::tclutils::tutask::await handOp -timeout 20
+        } trap {TCLUTILS TUTASK TIMEOUT} {m} {
+            return [list $m $::op(cancelled)]
+        }
+    }}]
+} -result {{timeout after 20 ms} 1}
+
+test tutask-3.2 {no timer is left after a result within the timeout} -body {
+    set before [llength [after info]]
+    ::tt::run apply {{} { ::tclutils::tutask::await [::tclutils::tutask::timer 5 x] -timeout 5000 }}
+    pause 10
+    list [expr {[llength [after info]] - $before}] [dict get [::tt::stats] awaits]
+} -result {0 0}
+
+test tutask-3.3 {wait -timeout outside a task cancels the task} -body {
+    set ::fin 0
+    set t [::tt::spawn apply {{} {
+        try { ::tclutils::tutask::sleep 5000 } finally { set ::fin 1 }
+    }}]
+    catch {$t wait -timeout 20} m o
+    set r [list [dict get $o -errorcode] [$t state] $::fin]
+    $t destroy
+    set r
+} -result {{TCLUTILS TUTASK TIMEOUT} cancelled 1}
+
+test tutask-3.4 {a bad timeout value is rejected} -body {
+    ::tt::run apply {{} {
+        catch {::tclutils::tutask::await [::tclutils::tutask::timer 1] -timeout -5} m o
+        dict get $o -errorcode
+    }}
+} -result {TCLUTILS TUTASK OPTION}
+
+# ---------------------------------------------------------------------------
+# 4. Pipe
+# ---------------------------------------------------------------------------
+
+test tutask-4.1 {pipe collects the output} -constraints unix -body {
+    ::tt::run apply {{} { ::tclutils::tutask::await [::tclutils::tutask::pipe {sh -c {echo a; echo b}}] }}
+} -result "a\nb\n"
+
+test tutask-4.2 {pipe: stderr goes into the output} -constraints unix -body {
+    ::tt::run apply {{} { ::tclutils::tutask::await [::tclutils::tutask::pipe {sh -c {echo out; echo err >&2}}] }}
+} -result "out\nerr\n"
+
+test tutask-4.3 {pipe: a non-zero exit is CHILDSTATUS} -constraints unix -body {
+    ::tt::run apply {{} {
+        try {
+            ::tclutils::tutask::await [::tclutils::tutask::pipe {sh -c {echo x; exit 3}}]
+        } trap CHILDSTATUS {m o} {
+            return [lindex [dict get $o -errorcode] end]
+        }
+    }}
+} -result 3
+
+test tutask-4.4 {pipe: a timeout kills the child} -constraints unix -body {
+    set t0 [clock milliseconds]
+    set r [::tt::run apply {{} {
+        catch {::tclutils::tutask::await [::tclutils::tutask::pipe {sleep 5}] -timeout 50} m o
+        dict get $o -errorcode
+    }}]
+    list $r [expr {[clock milliseconds] - $t0 < 2000}] [dict get [::tt::stats] pipes]
+} -result {{TCLUTILS TUTASK TIMEOUT} 1 0}
+
+test tutask-4.4w {pipe: a timeout kills the child (taskkill)} -constraints windows -body {
+    set t0 [clock milliseconds]
+    set r [::tt::run apply {{} {
+        catch {::tclutils::tutask::await [::tclutils::tutask::pipe {ping -n 30 127.0.0.1}] -timeout 300} m o
+        dict get $o -errorcode
+    }}]
+    list $r [expr {[clock milliseconds] - $t0 < 5000}] [dict get [::tt::stats] pipes]
+} -result {{TCLUTILS TUTASK TIMEOUT} 1 0}
+
+test tutask-4.5 {pipe: -profile needs Tcl 9} -constraints tcl86 -body {
+    catch {::tt::pipe {echo} -profile replace} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTASK OPTION}
+
+test tutask-4.6 {pipe: an empty command is rejected} -body {
+    catch {::tt::pipe {}} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTASK OPTION}
+
+# ---------------------------------------------------------------------------
+# 5. onwrite
+# ---------------------------------------------------------------------------
+
+test tutask-5.1 {onwrite reports the written value} -body {
+    unset -nocomplain ::knopf
+    after 10 {set ::knopf gedrueckt}
+    ::tt::run apply {{} { ::tclutils::tutask::await [::tclutils::tutask::onwrite knopf] }}
+} -result gedrueckt
+
+test tutask-5.2 {cancelling an onwrite await removes the trace} -body {
+    unset -nocomplain ::knopf
+    set t [::tt::spawn apply {{} { ::tclutils::tutask::await [::tclutils::tutask::onwrite ::knopf] }}]
+    $t cancel
+    $t destroy
+    trace info variable ::knopf
+} -result {}
+
+# ---------------------------------------------------------------------------
+# 6. Errors nobody collected, detached tasks
+# ---------------------------------------------------------------------------
+
+test tutask-6.1 {an uncollected error goes to bgerror on destroy} -setup {
+    bgCapture
+} -body {
+    set t [::tt::spawn apply {{} { error weg {} {APP WEG} }}]
+    $t destroy
+    pause 10
+    list [llength $::bg] [string match "*never collected: weg" [lindex $::bg 0 0]] \
+        [lindex $::bg 0 1]
+} -result {1 1 {APP WEG}}
+
+test tutask-6.2 {a collected error does not} -setup {
+    bgCapture
+} -body {
+    set t [::tt::spawn apply {{} { error weg }}]
+    catch {$t result}
+    $t destroy
+    pause 10
+    set ::bg
+} -result {}
+
+test tutask-6.3 {a detached task destroys itself} -setup {
+    bgCapture
+} -body {
+    set t [::tt::spawn -detach 1 apply {{} { ::tclutils::tutask::sleep 5; return ok }}]
+    pause 30
+    list [info object isa object $t] $::bg
+} -result {0 {}}
+
+test tutask-6.4 {a failing detached task reports through bgerror} -setup {
+    bgCapture
+} -body {
+    set t [::tt::spawn -detach 1 apply {{} { ::tclutils::tutask::sleep 5; error los {} {APP LOS} }}]
+    pause 30
+    list [info object isa object $t] [lindex $::bg 0 1]
+} -result {0 {APP LOS}}
+
+test tutask-6.5 {ondone gets the task} -body {
+    set ::seen ""
+    set t [::tt::spawn apply {{} { ::tclutils::tutask::sleep 5; return 7 }}]
+    $t ondone [list apply {{t} { set ::seen [$t result] }}]
+    pause 30
+    $t destroy
+    set ::seen
+} -result 7
+
+# ---------------------------------------------------------------------------
+# 7. Group
+# ---------------------------------------------------------------------------
+
+test tutask-7.1 {group all: results in spawn order} -body {
+    set g [::tt::group]
+    $g spawn apply {{} { ::tclutils::tutask::sleep 30; return a }}
+    $g spawn apply {{} { ::tclutils::tutask::sleep 5;  return b }}
+    $g spawn apply {{} { return c }}
+    set r [$g wait]
+    $g destroy
+    set r
+} -result {a b c}
+
+test tutask-7.2 {group all: the first error cancels the others} -body {
+    set ::fin 0
+    set g [::tt::group]
+    set slow [$g spawn apply {{} {
+        try { ::tclutils::tutask::sleep 5000 } finally { set ::fin 1 }
+    }}]
+    $g spawn apply {{} { ::tclutils::tutask::sleep 10; error nein {} {APP NEIN} }}
+    catch {$g wait} m o
+    set r [list $m [dict get $o -errorcode] [$slow state] $::fin]
+    $g destroy
+    set r
+} -result {nein {APP NEIN} cancelled 1}
+
+test tutask-7.3 {group first: the fastest wins, the rest is cancelled} -body {
+    set g [::tt::group]
+    set a [$g spawn apply {{} { ::tclutils::tutask::sleep 5000; return langsam }}]
+    set b [$g spawn apply {{} { ::tclutils::tutask::sleep 10; return schnell }}]
+    set r [list [$g wait -mode first] [expr {[$g winner] eq $b}] [$a state]]
+    $g destroy
+    set r
+} -result {schnell 1 cancelled}
+
+test tutask-7.4 {empty groups} -body {
+    set g [::tt::group]
+    set all [$g wait]
+    catch {$g wait -mode first} m o
+    $g destroy
+    list $all [dict get $o -errorcode]
+} -result {{} {TCLUTILS TUTASK EMPTY}}
+
+test tutask-7.5 {a group can be awaited inside a task} -body {
+    ::tt::run apply {{} {
+        set g [::tclutils::tutask::group]
+        $g spawn apply {{} { ::tclutils::tutask::sleep 10; return 1 }}
+        $g spawn apply {{} { ::tclutils::tutask::sleep 5;  return 2 }}
+        try { return [$g wait] } finally { $g destroy }
+    }}
+} -result {1 2}
+
+test tutask-7.6 {cancelling a task that awaits a group cancels the group} -body {
+    set ::fin 0
+    set ::g [::tt::group]
+    set outer [::tt::spawn apply {{} {
+        $::g spawn apply {{} {
+            try { ::tclutils::tutask::sleep 5000 } finally { set ::fin 1 }
+        }}
+        $::g wait
+    }}]
+    pause 10
+    $outer cancel
+    set r [list [$outer state] [[lindex [$::g tasks] 0] state] $::fin]
+    $outer destroy
+    $::g destroy
+    set r
+} -result {cancelled cancelled 1}
+
+test tutask-7.7 {destroying a group destroys its tasks} -body {
+    set before [dict get [::tt::stats] tasks]
+    set g [::tt::group]
+    $g spawn apply {{} { ::tclutils::tutask::sleep 5000 }}
+    $g spawn apply {{} { return x }}
+    $g destroy
+    expr {[dict get [::tt::stats] tasks] - $before}
+} -result 0
+
+test tutask-7.8 {group wait checks -mode} -body {
+    set g [::tt::group]
+    set rc [catch {$g wait -mode some} m]
+    $g destroy
+    set rc
+} -result 1
+
+# ---------------------------------------------------------------------------
+# 8. Pool (Thread package)
+# ---------------------------------------------------------------------------
+
+test tutask-8.1 {pool: a job's value} -constraints thread -body {
+    set p [::tt::pool -size 2]
+    set r [::tt::run apply {{p} { ::tclutils::tutask::await [$p op {expr {6*7}}] }} $p]
+    $p destroy
+    set r
+} -result 42
+
+test tutask-8.2 {pool: errors keep the worker's code and info} -constraints thread -body {
+    set p [::tt::pool]
+    set r [::tt::run apply {{p} {
+        try {
+            ::tclutils::tutask::await [$p op {proc tief {} {error drueben {} {W FEHLER}}; tief}]
+        } trap {W FEHLER} {m o} {
+            return [list $m [string match "*tief*" [dict get $o -errorinfo]]]
+        }
+    }} $p]
+    $p destroy
+    set r
+} -result {drueben 1}
+
+test tutask-8.3 {pool: jobs run in parallel} -constraints thread -body {
+    set p [::tt::pool -size 3]
+    set t0 [clock milliseconds]
+    set r [::tt::run apply {{p} {
+        set g [::tclutils::tutask::group]
+        foreach i {1 2 3} {
+            $g spawn apply {{p i} {
+                ::tclutils::tutask::await [$p op "after 300; return $i"]
+            }} $p $i
+        }
+        try { return [$g wait] } finally { $g destroy }
+    }} $p]
+    set ms [expr {[clock milliseconds] - $t0}]
+    $p destroy
+    list $r [expr {$ms < 800}]
+} -result {{1 2 3} 1}
+
+test tutask-8.4 {pool: more jobs than workers queue up} -constraints thread -body {
+    set p [::tt::pool -size 1]
+    set r [::tt::run apply {{p} {
+        set g [::tclutils::tutask::group]
+        foreach i {a b c} {
+            $g spawn apply {{p i} { ::tclutils::tutask::await [$p op "set x $i"] }} $p $i
+        }
+        try { return [$g wait] } finally { $g destroy }
+    }} $p]
+    set w [dict get [$p stats] workers]
+    $p destroy
+    list $r $w
+} -result {{a b c} 1}
+
+test tutask-8.5 {pool: a timeout cancels a running job, the worker lives on} -constraints thread -body {
+    set p [::tt::pool -size 1]
+    set r1 [::tt::run apply {{p} {
+        catch {::tclutils::tutask::await [$p op {while 1 {}}] -timeout 100} m o
+        dict get $o -errorcode
+    }} $p]
+    set r2 [::tt::run -timeout 5000 apply {{p} { ::tclutils::tutask::await [$p op {expr 1+1}] }} $p]
+    $p destroy
+    list $r1 $r2
+} -result {{TCLUTILS TUTASK TIMEOUT} 2}
+
+test tutask-8.6 {pool: -init runs in each worker} -constraints thread -body {
+    set p [::tt::pool -size 1 -init {proc gruss {n} {return "hallo $n"}}]
+    set r [::tt::run apply {{p} { ::tclutils::tutask::await [$p op {gruss welt}] }} $p]
+    $p destroy
+    set r
+} -result {hallo welt}
+
+test tutask-8.7 {pool: destroy releases waiting tasks with CANCELLED} -constraints thread -body {
+    set p [::tt::pool -size 1]
+    set t [::tt::spawn apply {{p} { ::tclutils::tutask::await [$p op {after 2000}] }} $p]
+    pause 50
+    $p destroy
+    pause 10
+    set r [list [$t state]]
+    catch {$t result} m o
+    lappend r [dict get $o -errorcode]
+    $t destroy
+    set r
+} -result {cancelled {TCLUTILS TUTASK CANCELLED}}
+
+test tutask-8.8 {pool without the Thread package} -constraints nothread -body {
+    catch {::tt::pool} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTASK NOTHREAD}
+
+# ---------------------------------------------------------------------------
+# 9. Sandbox
+# ---------------------------------------------------------------------------
+
+test tutask-9.1 {sandbox is safe by default} -body {
+    set s [::tt::sandbox]
+    set r [catch {$s eval {open /etc/passwd}} m]
+    $s destroy
+    list $r $m
+} -result {1 {invalid command name "open"}}
+
+test tutask-9.2 {sandbox: command limit, and the next eval works again} -body {
+    set s [::tt::sandbox -commands 200]
+    catch {$s eval {while 1 {incr x}}} m o
+    set r [list [dict get $o -errorcode] [$s eval {expr {1+1}}]]
+    $s destroy
+    set r
+} -result {{TCLUTILS TUTASK LIMIT COMMANDS} 2}
+
+test tutask-9.3 {sandbox: time limit} -body {
+    set s [::tt::sandbox -time 50]
+    set t0 [clock milliseconds]
+    catch {$s eval {while 1 {incr x}}} m o
+    set r [list [dict get $o -errorcode] [expr {[clock milliseconds] - $t0 < 1000}]]
+    $s destroy
+    set r
+} -result {{TCLUTILS TUTASK LIMIT TIME} 1}
+
+test tutask-9.4 {sandbox: aliases bridge to the caller} -body {
+    set ::logged {}
+    set s [::tt::sandbox -aliases {log {lappend ::logged}}]
+    $s eval {log eins; log zwei}
+    $s destroy
+    set ::logged
+} -result {eins zwei}
+
+test tutask-9.5 {sandbox op inside a task; the child's errorcode survives} -body {
+    set s [::tt::sandbox]
+    set r [::tt::run apply {{s} {
+        set a [::tclutils::tutask::await [$s op {string toupper ok}]]
+        try {
+            ::tclutils::tutask::await [$s op {error weg {} {KIND WEG}}]
+        } trap {KIND WEG} {m} {
+            return [list $a $m]
+        }
+    }} $s]
+    $s destroy
+    set r
+} -result {OK weg}
+
+test tutask-9.6 {sandbox op cancelled before it started does not run} -body {
+    set ::lief 0
+    set s [::tt::sandbox -aliases {mark {set ::lief}}]
+    set t [::tt::spawn apply {{s} { ::tclutils::tutask::await [$s op {mark 1}] }} $s]
+    $t cancel
+    pause 10
+    $t destroy
+    $s destroy
+    set ::lief
+} -result 0
+
+test tutask-9.7 {destroying a sandbox deletes its interpreter} -body {
+    set s [::tt::sandbox]
+    set ip [$s interp]
+    $s destroy
+    interp exists $ip
+} -result 0
+
+# ---------------------------------------------------------------------------
+# 10. Nothing left behind
+# ---------------------------------------------------------------------------
+
+test tutask-10.1 {no tasks, awaits, pipes, pools or sandboxes remain} -body {
+    pause 20
+    ::tt::stats
+} -result {tasks 0 running 0 awaits 0 pipes 0 pools 0 sandboxes 0}
+
+cleanupTests

@@ -100,6 +100,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tupath` | basis complete | Path helpers: normalize, lexical clean, relative, commonPath, readlink. |
 | `tusize` | basis complete | Recursive byte sizes and human-readable formatting (du-like). |
 | `tuopen` | basis complete | Open URL/file with the OS default app (xdg-open/open/cmd start). |
+| `tuexe` | helper | Locate external executables: candidate-name list, bundled `-dirs` plus PATH (`auto_execok`), platform extensions; `find`/`all`/`exists`. |
 
 ## Fuzzy search
 
@@ -137,7 +138,6 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tuurl` | basis complete | RFC 3986 percent-encoding/decoding and query strings (UTF-8). |
 | `tuuuid` | basis complete | UUID v4 and v7 generate/validate/version; `/dev/urandom` with `rand()` fallback. |
 | `tudav` | basis complete | Minimal WebDAV/CardDAV/CalDAV client (PROPFIND/REPORT/GET/PUT/DELETE, calendarQuery/addressbookMultiget); core `http`, https via `tls`. Collection provisioning (mkCalendar/mkAddressbook) added; verified vs Radicale 3.7. 0.2: certificate verified through `tuhttps`, `-cafile`/`-insecure`. |
-| `tuexe` | helper | Locate external executables: candidate-name list, bundled `-dirs` plus PATH (`auto_execok`), platform extensions; `find`/`all`/`exists`. |
 | `tufetch` | helper | Tiny HTTP(S) `get`/`download` (to memory or file), GET/POST with headers and body; native `http`+`tls` else curl/wget via `auto_execok`. 0.4: verifies certificates on all transports, `-cafile`/`-insecure`. Optional, not dependency-free. |
 | `tupostgrest` | helper | Minimal PostgREST client: URL/query/JSON body, bearer token, JSON response to dicts, PostgREST errors as Tcl errors. 0.2: `-cafile`; `-insecure` per client. Optional, not dependency-free. |
 | `tuhttps` | helper | One HTTPS policy for `tufetch`/`tudav`/`tupostgrest`: verifying `::tls::socket` prefix (`-insecure` the only way off), CA bundle search for tls 1.x, `https` registered only for the duration of a script. Needs `tls` at the point of use. |
@@ -169,6 +169,12 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tuevent` | basis complete | Publish/subscribe event bus; named bus tokens. |
 | `turegistry` | basis complete | Keyed value registry / service locator with required-get. |
 | `tulog` | basis complete | Small leveled logger (callable object) + assert; dependency-free. |
+
+## Tasks / async
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tutask` | basis complete | Coroutine tasks: await with timeout, cancel with `finally`, groups (all/first), `timer`/`pipe`/`onwrite` operations; thread pool (Thread package, optional) and sandbox (safe interp with limits). |
 
 ## Strings / validation
 
@@ -218,7 +224,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | Module | Scope status | Notes |
 |---|---|---|
 | `tudeploy` | helper | Runtime discovery and loading of Tcl module packages from app-relative deployment roots (`vendor`, `libs/common`, `libs`, `lib/tm`), plus locating bundled resource directories for external binaries; `require` / `resourceDirs` / `sourceModule`. Pairs with `tuexe`. |
-| `build-app` (app) | app | Turns a tclutils/tkutils app into a standalone Tcl 9 zipkit (single executable) via the `tuzipfs` image primitives: a dependency prober bundles only what actually loads, `-tm`/`-extlib`/`-include`/`-launch` control the assembly, and the target `-basekit` chooses the platform (Linux/Windows). `-writemanifest`/`-manifest` make builds reproducible without a display. Also shipped self-contained as `apps/bin/build-app-zipkit-linux`. See `docs/guide/build-app-guide.md`. |
+| `build-app` (app) | app | Turns a tclutils/tkutils app into a standalone Tcl 9 zipkit (single executable) via the `tuzipfs` image primitives: a dependency prober bundles only what actually loads, `-tm`/`-extlib`/`-include`/`-launch` control the assembly, and the target `-basekit` chooses the platform (Linux/Windows). `-writemanifest`/`-manifest` make builds reproducible without a display. Also shipped self-contained as `apps/bin/build-app-zipkit-linux`. See `apps/build-app/doc/build-app-guide.md`. |
 
 ## Introspection / diagnostics
 
@@ -226,6 +232,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 |---|---|---|
 | `tupkgfinder` | helper | Inspect package resolution: known versions, `ifneeded` scripts and source paths, active vs. shadowed version, search paths; optional filesystem search by pattern. |
 | `tuappinfo` | helper | Collect a plain-text application/system report (Tcl/Tk, environment, search paths, loaded packages, tracked modules); optional anonymisation. GUI-free; the caller renders. |
+| `tutestrun` | helper | The shared `tests/all.tcl` of tclutils, tkutils and ctrlutils: runs every `*.test` of a directory in its own process with a time limit and reports the files with problems; `run`. |
 
 ## Diagrams
 
@@ -261,6 +268,12 @@ self-contained 2D renderer. Both paths draw through the shared `tusvg` /
 | `tupacket` | 2D renderer | Mermaid `packet-beta` -> SVG/PNG; 32-bit rows, range/single-bit fields, gap cells. |
 | `tutreemap` | 2D renderer | Mermaid `treemap-beta` -> SVG/PNG; squarified area-proportional nested rectangles, value-sum branches. |
 | `turadar` | 2D renderer | Mermaid `radar-beta` -> SVG/PNG; polar spider chart, multi-axis/multi-curve, circle/polygon graticule. |
+
+## Settings / user directories
+
+| Module | Scope status | Notes |
+|---|---|---|
+| `tusettings` | helper | Per-user settings as INI (through `tuini`) in the platform's config directory, the standard directories (config, cache, data, temp) and a recent-files list. No Tk. |
 
 ## Core
 

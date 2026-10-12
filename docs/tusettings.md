@@ -21,13 +21,13 @@ Tcl, no Tk, Tcl 8.6+ / 9.x.
 ```
 
 ```tcl
-set s [tusettings::load etikettendruck -defaults {
+set s [::tclutils::tusettings::load etikettendruck -defaults {
     window  {width 800 height 600}
     printer {name ""}
 }]
 dict set s printer name Brother_QL-820NWB
-tusettings::save etikettendruck $s
-tusettings::recentAdd etikettendruck $csvFile
+::tclutils::tusettings::save etikettendruck $s
+::tclutils::tusettings::recentAdd etikettendruck $csvFile
 ```
 
 ## Directories

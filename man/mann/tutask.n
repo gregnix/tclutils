@@ -1,0 +1,112 @@
+.TH tutask n 0.1 tclutils
+.SH tclutils::tutask
+.PP
+Tasks on coroutines: \fBawait\fR with timeout, \fBcancel\fR that runs \fBfinally\fR, task groups, a thread pool and a sandbox. Pure Tcl; the pool needs the Thread package and loads it on first use.
+.SS Commands
+.PP
+\fBspawn\fR, \fBrun\fR, \fBcurrent\fR, \fBawait\fR, \fBsleep\fR, \fBtimer\fR, \fBonwrite\fR, \fBpipe\fR, \fBgroup\fR, \fBpool\fR, \fBsandbox\fR, \fBtasks\fR, \fBstats\fR \-\- all in \fB::tclutils::tutask\fR, exported for \fBnamespace import\fR.
+.SS "The contract"
+.PP
+A task is a coroutine owned by an object. Inside a task, \fBawait\fR suspends until an \fIoperation\fR reports back; meanwhile the event loop keeps running. Every operation is a command prefix (a \fIstarter\fR):
+.CS
+starter cb          ;# returns a cancel command (a prefix, may be "")
+# later, exactly once:
+{*}$cb ok value
+{*}$cb error message ?options?
+.CE
+.PP
+Built\-in starters: \fBtimer\fR, \fBpipe\fR, \fBonwrite\fR, \fB$task _Op\fR (via \fBwait\fR), \fB$group\fR (via \fBwait\fR), \fB$pool op\fR, \fB$sandbox op\fR. Your own operations follow the same two lines.
+.SS Tasks
+.CS
+namespace import ::tclutils::tutask::*
+
+set t [spawn apply {{url} {
+    set page [await [pipe [list curl -s $url]] -timeout 5000]
+    return [string length $page]
+}} https://example.org]
+
+$t wait          ;# the value, or the task's error
+$t destroy
+.CE
+.IP \(bu
+\fBspawn ?\-detach 0|1? cmd ?arg ...?\fR → task object. The task runs at once up to its first \fBawait\fR. A detached task destroys itself when done.
+.IP \(bu
+\fBrun ?\-timeout ms? cmd ?arg ...?\fR → spawn, wait, destroy; the value. For scripts and tests.
+.IP \(bu
+\fBcurrent\fR → the running task, or \fB""\fR.
+.IP \(bu
+\fB$t state\fR → \fBrunning\fR, \fBok\fR, \fBerror\fR or \fBcancelled\fR.
+.IP \(bu
+\fB$t result\fR → the value; raises the task's error (with its \fB\-errorcode\fR and \fB\-errorinfo\fR), \fBCANCELLED\fR, or \fBNOTDONE\fR while running.
+.IP \(bu
+\fB$t wait ?\-timeout ms?\fR → inside a task: awaits; outside: blocks in \fBvwait\fR. A timeout cancels the task.
+.IP \(bu
+\fB$t cancel\fR → 1 if the task was running. The task is resumed with a cancel request, so its \fBfinally\fR clauses have run when \fBcancel\fR returns, and the operation it was awaiting is cancelled too. Called from inside the task, the request takes effect at the next \fBawait\fR. A task that catches \fBCANCELLED\fR and awaits again is cancelled again.
+.IP \(bu
+\fB$t ondone cmd\fR → \fBcmd\fR is called with the task appended when it is done.
+.IP \(bu
+\fB$t destroy\fR → cancels a running task first. Not allowed from inside the task itself (\fBINSIDE\fR); use \fBcancel\fR there.
+.PP
+An error nobody collected (\fBresult\fR, \fBwait\fR, \fBondone\fR, a group) is reported through \fBbgerror\fR when the task object is destroyed.
+.SS "Waiting inside a task"
+.CS
+await starter ?-timeout ms?
+sleep ms
+.CE
+.IP \(bu
+\fBawait\fR returns the operation's value or raises its error with the operation's own \fB\-errorcode\fR. On timeout it calls the operation's cancel command and raises \fB{TCLUTILS TUTASK TIMEOUT}\fR.
+.IP \(bu
+Only the first report of an operation counts. A late result after a timeout or cancel is dropped.
+.IP \(bu
+\fBawait\fR works in any coroutine; \fBcancel\fR needs a task.
+.SS Operations
+.IP \(bu
+\fBtimer ms ?value?\fR → done after \fBms\fR with \fBvalue\fR.
+.IP \(bu
+\fBonwrite varName\fR → done when the variable is written; the value is its new content. For GUI waits: a button sets the variable.
+.IP \(bu
+\fBpipe cmdlist ?\-encoding enc? ?\-profile p?\fR → runs the pipeline without blocking; the value is its output, stdout and stderr together. A non\-zero exit raises Tcl's \fB{CHILDSTATUS pid code}\fR. Cancel kills the processes (\fBkill\fR on Unix, \fBtaskkill /T /F\fR on Windows). \fB\-profile\fR is Tcl 9 only.
+.SS Groups
+.CS
+set g [group]
+$g spawn apply {{} { sleep 30; return a }}
+$g spawn apply {{} { return b }}
+$g wait                    ;# -> a b   (spawn order)
+$g wait -mode first        ;# value of the first to finish; [$g winner]
+$g destroy                 ;# destroys its tasks
+.CE
+.IP \(bu
+\fB\-mode all\fR (default): all results in spawn order. The first error cancels the other tasks and is raised.
+.IP \(bu
+\fB\-mode first\fR: the first task to finish wins; the others are cancelled.
+.IP \(bu
+Cancelling a task that awaits a group cancels the group's tasks.
+.IP \(bu
+An empty group: \fBall\fR returns \fB{}\fR, \fBfirst\fR raises \fBEMPTY\fR.
+.SS "Pool (Thread package)"
+.CS
+set p [pool -size 4 -init {package require mylib}]
+set v [await [$p op {mylib::rechne 42}] -timeout 10000]
+$p stats                    ;# workers idle queued jobs
+$p destroy
+.CE
+.PP
+Each job runs in a worker thread (own interpreter, no shared variables). Errors keep the worker's \fB\-errorcode\fR and \fB\-errorinfo\fR. Cancelling a running job calls \fBthread::cancel\fR; the worker lives on. Destroying the pool releases the workers; tasks still waiting get \fBCANCELLED\fR. Without the Thread package \fBpool\fR raises \fBNOTHREAD\fR.
+.SS Sandbox
+.CS
+set s [sandbox -commands 100000 -time 2000 -aliases {log {my::log}}]
+$s eval $script                 ;# synchronous
+await [$s op $script]           ;# from a task, next event-loop turn
+$s destroy
+.CE
+.PP
+A safe interpreter (\fB\-safe 0\fR for a normal one) with a command limit and a time limit per evaluation. Exceeding one raises \fB{TCLUTILS TUTASK LIMIT COMMANDS}\fR or \fB{TCLUTILS TUTASK LIMIT TIME}\fR; the next evaluation starts with fresh limits. Other errors keep the child's \fB\-errorcode\fR. The script runs in the calling thread: \fBop\fR can be cancelled until it starts, then the limits bound it. For real parallelism use a pool.
+.SS Leaks
+.PP
+\fBtasks\fR lists the live task objects; \fBstats\fR returns a dict \fBtasks running awaits pipes pools sandboxes\fR. After a test run all of them should be 0.
+.SS "In a Tk application"
+.PP
+Use tasks from event handlers: \fBspawn\fR and return. Do not call \fB$t wait\fR outside a task in a handler \-\- it runs a nested \fBvwait\fR, the same trap as \fBvwait\fR in a callback. Inside a task, \fBwait\fR and \fBawait\fR are fine.
+.SS Errors
+.PP
+\fB{TCLUTILS TUTASK <REASON>}\fR: \fBCANCELLED\fR, \fBTIMEOUT\fR, \fBNOTASK\fR (await outside a coroutine), \fBNOTDONE\fR, \fBOPTION\fR, \fBNOTHREAD\fR, \fBEMPTY\fR, \fBINIT\fR (pool \fB\-init\fR failed), \fBINSIDE\fR, \fBPROTOCOL\fR, and \fBLIMIT COMMANDS\fR / \fBLIMIT TIME\fR.

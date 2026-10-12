@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.65.0 - 2026-10-06
+
+Recommended pairing: tclutils 0.65.0 + tkutils 0.46.0 + ctrlutils 0.3.
+
+- `tutask` 0.1 (new): tasks on coroutines. `await` with timeout,
+  `cancel` that runs the task's `finally` and cancels the awaited
+  operation, groups (`all` fail-fast, `first`), a thread pool (Thread
+  package, loaded on first use) and a sandbox (safe interp with command
+  and time limits). Operations: `timer`, `pipe` (kills on cancel),
+  `onwrite`. Errors keep their code across tasks, threads and interps;
+  uncollected errors go to `bgerror`. Loaded by the umbrella.
+- `tutask` tests 2.8w/4.4w: `pipe` cancel and timeout on Windows
+  (`taskkill /T /F`, child `ping`), verified with Tcl 8.6.17.
+
 ## 0.64.0
 
 Recommended pairing: tclutils 0.64.0 + tkutils 0.46.0 + ctrlutils 0.3.
@@ -9,7 +23,9 @@ Recommended pairing: tclutils 0.64.0 + tkutils 0.46.0 + ctrlutils 0.3.
   count as one character.
 - `tudate` 0.2: `zones` lists the time zones `clock` accepts.
 - `tusettings` 0.1 (new): per-user settings as INI in the platform's config
-  directory, `dir config|cache|data|temp`, recent-files list.
+  directory, `dir config|cache|data|temp`, recent-files list. Doc, man page
+  and module header use the fully qualified `::tclutils::tusettings::...` in
+  examples (the short form only resolves inside `namespace eval ::tclutils`).
 - `tutestrun` 0.1 (new): the shared `tests/all.tcl` (own trees first, banner,
   per-file limit, summary). tclutils, tkutils and ctrlutils use it; the
   tclutils runner now passes tcltest options and lists problem files.

@@ -79,6 +79,7 @@ package require tclutils::tudate 0.2
 package require tclutils::tuurl 0.1
 package require tclutils::tupostgrest 0.2
 package require tclutils::tuevent 0.1
+package require tclutils::tutask 0.1
 package require tclutils::turegistry 0.1
 package require tclutils::tudav 0.2
 package require tclutils::tuholiday 0.1
@@ -126,4 +127,4 @@ package require tclutils::tuprovider::zip 0.1
 package require tclutils::tuprovider::dav 0.1
 package require tclutils::tuprovider::ftp 0.2
 
-package provide tclutils 0.64.0
+package provide tclutils 0.65.0

@@ -12,10 +12,11 @@ live in `bin/`.
   [`coreutils-mapping.md`](coreutils-mapping.md) (Unix-tool mapping),
   [`cli.md`](cli.md) (CLI front-ends),
   [`roadmap.md`](roadmap.md), [`todo-output.md`](todo-output.md),
-  [`tudeploy-0.1-spec.md`](tudeploy-0.1-spec.md),
-  [`build-app-guide.md`](build-app-guide.md) (standalone-app builder) and
-  [`build-app-app-conventions.md`](build-app-app-conventions.md) (rules an app
-  must follow to be packageable).
+  [`tudeploy-0.1-spec.md`](tudeploy-0.1-spec.md);
+  and for the standalone-app builder
+  [`build-app-guide.md`](../../apps/build-app/doc/build-app-guide.md) and
+  [`build-app-app-conventions.md`](../../apps/build-app/doc/build-app-app-conventions.md)
+  (rules an app must follow to be packageable).
 - **Provider-framework HOWTOs** (task recipes for the storage-provider layer):
   [`howto-provider-backend.md`](howto-provider-backend.md) (write a backend),
   [`howto-browse-zip.md`](howto-browse-zip.md) (browse an archive as a tree),

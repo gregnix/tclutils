@@ -4,18 +4,25 @@ For the per-module scope status see [`module-status.md`](module-status.md);
 the wishlist/backlog detail lives with the reviews. This file is the
 high-level history and forward view.
 
-_As of 2026-09-19: 140 modules. Umbrella `tclutils` 0.63.0; recommended
-pairing tclutils 0.63.0 + tkutils 0.44.0 + ctrlutils 0.2. Man pages are
+_As of 2026-10-06: 143 modules. Umbrella `tclutils` 0.65.0; recommended
+pairing tclutils 0.65.0 + tkutils 0.46.0 + ctrlutils 0.3. Man pages are
 generated from the Markdown docs by a script, so the hygiene gate reports
 missing man pages until that has run._
 
 _Done since 2026-07-19 and not yet reflected in the backlog below: the storage
 providers (`tuprovider` + zip/dav/ftp/sftp), `tupostgrest`, `tutdbc`,
-`tudhash`, `tuxxhash`, `tunotesdb`, and in 0.63.0 the HTTPS
-verification through `tuhttps`._
+`tudhash`, `tuxxhash`, `tunotesdb`, in 0.63.0 the HTTPS
+verification through `tuhttps`, and in 0.64.0 `tusettings`, `tutestrun`
+and `tupkgfinder` 0.2._
 
 ## Recently shipped
 
+- **`tutask` (0.65.0).** Tasks on coroutines: `await` with timeout, `cancel`
+  that runs the task's `finally` and cancels the awaited operation, groups
+  (`all` fail-fast, `first`), operations `timer`/`pipe`/`onwrite`, a thread
+  pool (Thread package, loaded on first use) and a sandbox (safe interp with
+  command and time limits). 62 tests on 8.6 and 9, checked against injected
+  faults; `examples/demo-task.tcl` with a Tk part.
 - **`tujoin` anti-join.** Added `-anti left|right|both` (unmatched-only rows,
   mutually exclusive with `-outer`). Version → 0.1.1, tests `tujoin-3.1`…`3.6`.
 - **`tugrep` matching options.** Added `-word` (whole-word, like grep `-w`),
@@ -42,6 +49,9 @@ verification through `tuhttps`._
 
 Extensions to existing modules:
 
+- `tutask`: optional process-group kill on Unix (`setsid`, as in the
+  concurrency book); a `-quiet` switch for uncollected errors if bgerror
+  reporting turns out too noisy.
 - `tutail`: `-f` (follow) for log workflows.
 - `tugrep`: multiline matching (`-w`/`-x`/`-m` already ship).
 

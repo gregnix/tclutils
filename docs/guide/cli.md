@@ -1,6 +1,6 @@
 # CLI wrappers
 
-tclutils ships 30 thin CLI wrapper scripts in `bin/`. They call the
+tclutils ships 34 thin CLI wrapper scripts in `bin/`. They call the
 package APIs directly, so the library stays usable from normal Tcl code
 while also offering convenient command-line entry points. Each wrapper
 sources `bin/_bootstrap.tcl` to find the library on the module path.
@@ -21,17 +21,21 @@ sources `bin/_bootstrap.tcl` to find the library on the module path.
 - `tuhead.tcl`
 - `tujson.tcl`
 - `tumd.tcl`
+- `tumonthpng.tcl`
 - `tunl.tcl`
 - `tunumfmt.tcl`
 - `tuodf.tcl`
 - `tupatch.tcl`
 - `tupdf.tcl`
+- `tupngdraw.tcl`
+- `tupngpad.tcl`
 - `tupr.tcl`
 - `turev.tcl`
 - `tuseq.tcl`
 - `tushuf.tcl`
 - `tusort.tcl`
 - `tutac.tcl`
+- `tutablepng.tcl`
 - `tutail.tcl`
 - `tutsort.tcl`
 - `tuuniq.tcl`

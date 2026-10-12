@@ -4,8 +4,8 @@
 Tcl. It is intentionally not a full clone of GNU coreutils. The modules are
 small library packages with tests, examples, and documentation.
 
-The grouping below matches the top-level [`README.md`](../README.md) and
-[`module-status.md`](module-status.md): the same 16 categories, with `tuical`
+The grouping below matches the top-level [`README.md`](../../README.md) and
+[`module-status.md`](module-status.md): the same 25 categories, with `tuical`
 and `tucal` cross-listed exactly as the README lists them.
 
 ## Layer overview
@@ -29,34 +29,39 @@ common  (Core: shared layer)
 |   |-- tucrc   |-- tuhash    |-- tuxxhash  |-- tudhash  |-- tustrings
 |   |-- tuiconv |-- tucode
 |   |-- tubase32|-- tuimage   |-- tupng   |-- tupngdraw  |-- tutablepng
-|   |-- tumonthpng |-- tucodepng |-- tupngpad `-- tusvg
+|   |-- tumonthpng |-- tucodepng |-- tupngpad |-- tusvg `-- tulayout
+|
+|-- terminal / color
+|   |-- tucolor `-- tuterm
 |
 |-- diagrams (Mermaid-compatible)
 |   |-- tuflow  |-- tudiagram |-- tustate |-- tuer    |-- tuclass
 |   |-- turequirement |-- tumindmap |-- tuc4 |-- tublock |-- tugit
+|   |-- tuarchitecture
 |   |-- tupie   |-- tuxychart |-- tuquadrant |-- tujourney |-- tutimeline
-|   |-- tusankey |-- tugantt `-- tusequence
+|   |-- tusankey |-- tugantt |-- tusequence |-- tukanban |-- tupacket
+|   |-- tutreemap `-- turadar
 |
 |-- data / serialization
-|   |-- tucsv   |-- tujson  |-- tuxml   |-- tunumfmt |-- tusqlite
-|   |-- tummdb  `-- tutdbc (own package require)
+|   |-- tucsv   |-- tujson  |-- tuxml   |-- tusqlite |-- tummdb
+|   `-- tutdbc (own package require)
 |
 |-- stream / filesystem
 |   |-- tufile  |-- tufind  |-- tustat  |-- tutee   |-- tupath
-|   |-- tusize  `-- tuopen
+|   |-- tusize  |-- tuopen  `-- tuexe
 |
 |-- fuzzy search
 |   |-- tufuzzy `-- tuagrep
 |
 |-- records / PIM
-|   |-- tunotes |-- tuical  |-- tuini   |-- tuvcard |-- tuldif
-|   `-- tubookmark
+|   |-- tunotes |-- tunotesdb |-- tuical |-- tuini |-- tuvcard
+|   |-- tuldif  `-- tubookmark
 |
 |-- document helpers
 |   |-- tumd    |-- tupdf   |-- tuodf   `-- tucal
 |
 |-- date / web / IDs
-|   |-- tudate  |-- tuurl   |-- tuuuid  |-- tudav   |-- tufetch |-- tuexe
+|   |-- tudate  |-- tuurl   |-- tuuuid  |-- tudav   |-- tufetch
 |   |-- tusparql |-- tupostgrest `-- tuhttps (HTTPS policy of the three clients)
 |
 |-- storage providers
@@ -69,6 +74,9 @@ common  (Core: shared layer)
 |-- events / registry
 |   |-- tuevent |-- turegistry `-- tulog
 |
+|-- tasks / async
+|   `-- tutask
+|
 |-- strings / validation
 |   |-- tustr   |-- tuvalidate `-- tupagespec
 |
@@ -78,11 +86,23 @@ common  (Core: shared layer)
 |-- math / tables
 |   |-- tumath  `-- tutable
 |
+|-- number parsing / formatting
+|   |-- tunum   |-- tunumany `-- tunumfmt
+|
 |-- archive
 |   |-- tuzip   `-- tuzipfs
 |
-`-- icons
-    `-- tuico
+|-- icons
+|   `-- tuico
+|
+|-- deployment / packaging
+|   `-- tudeploy
+|
+|-- introspection / diagnostics
+|   |-- tuappinfo |-- tupkgfinder `-- tutestrun
+|
+`-- settings / user directories
+    `-- tusettings
 ```
 
 (`tuical` and `tucal` appear under two categories, mirroring the README's
@@ -118,9 +138,17 @@ text, glyph fills) and the export adapters built on it — `tutablepng` (tabular
 data → table image), `tumonthpng` (month/quarter/year calendar → PNG, mirroring
 the monthcanvas look), `tucodepng` (ASCII/Latin-1 code-page chart → PNG), plus
 `tupngpad` (normalise transparent PNG cut-outs to a uniform, padded size).
+`tulayout` holds the page-layout helpers (millimetre coordinates, block-dict
+placement) shared by the PNG/SVG renderers and PDF layout.
 Alongside the raster path, `tusvg` is the **vector** generator: a pure-Tcl SVG
 builder (shapes/paths/text/gradients/groups) with a library of ~110 named
 toolbar icons, used by `tkutils::tkuicon`.
+
+## Terminal and color
+
+`tucolor` is a named-color database (names, hex and rgb to RGB, hex and HSV
+conversion, nearest named color); `tuterm` styles terminal output with ANSI
+SGR attributes and 16/256/24-bit colors and honours `NO_COLOR`.
 
 ## Diagrams
 
@@ -128,23 +156,25 @@ A Mermaid-compatible diagram subsystem sits on top of the raster/vector layer.
 `tuflow` is the facade: it reads a fenced-code diagram source, detects the kind
 and dispatches. Graph-shaped types become a `tudiagram` model via a dedicated
 parser (`tustate`, `tuer`, `tuclass`, `turequirement`, `tumindmap`, `tuc4`,
-`tublock`, `tugit`, plus tuflow's own flowchart parser); `tudiagram` then lays
+`tublock`, `tugit`, `tuarchitecture`, plus tuflow's own flowchart parser); `tudiagram` then lays
 the graph out (layered layout, shapes, crow's-foot end-marks) and draws it.
 Non-graph types own a self-contained 2D renderer (`tupie`, `tuxychart`,
-`tuquadrant`, `tujourney`, `tutimeline`, `tusankey`, `tugantt`, `tusequence`). Both paths render through the shared
+`tuquadrant`, `tujourney`, `tutimeline`, `tusankey`, `tugantt`, `tusequence`,
+`tukanban`, `tupacket`, `tutreemap`, `turadar`). Both paths render through the shared
 `tusvg` / `tupngdraw` canvas protocol, so SVG and PNG output stay congruent.
 `docir::diagram` wires this subsystem into the docir sinks.
 
 ## Data and serialization
 
 Format readers/writers/encoders: `tucsv`, `tujson` (parser + encoder), `tuxml`,
-`tunumfmt`, `tummdb` (a pure-Tcl MaxMind `.mmdb` geolocation reader), plus `tusqlite` — NULL-safe `insert`/`rows`/`value` helpers over a
+`tummdb` (a pure-Tcl MaxMind `.mmdb` geolocation reader), plus `tusqlite` — NULL-safe `insert`/`rows`/`value` helpers over a
 caller-supplied `sqlite3` handle (it does not load `sqlite3` itself).
 
 ## Stream and filesystem
 
 `tufile` (type detection), `tufind`, `tustat`, `tutee`, `tupath`, `tusize`, and
-`tuopen` (open with the OS default app).
+`tuopen` (open with the OS default app), and `tuexe` (locate external
+executables in bundled directories and on PATH).
 
 ## Fuzzy search
 
@@ -155,7 +185,7 @@ approximate grep on top of it while following the shape of `tugrep`.
 
 The PIM interchange formats are readers/writers like the data layer, but for
 contact/calendar/config data: `tunotes` (a value-based hierarchical note store),
-`tuical` (iCalendar), `tuini`, `tuvcard`, `tuldif`, and `tubookmark`. The
+`tunotesdb` (the same store on SQLite with FTS5 search), `tuical` (iCalendar), `tuini`, `tuvcard`, `tuldif`, and `tubookmark`. The
 document helpers `tumd`, `tupdf`, `tuodf`, and `tucal` are intentionally small
 inspectors/generators, not full engines.
 
@@ -164,7 +194,6 @@ inspectors/generators, not full engines.
 `tudate` (clock-based date math), `tuurl` (RFC 3986), `tuuuid` (v4/v7), and the
 web clients. The web clients are the only **not dependency-free** modules:
 
-- `tuexe`: locate external executables across bundled dirs and PATH (candidate names, platform extensions); `find`/`all`/`exists`.
 - `tufetch`: tiny HTTP(S) client (`get`/`download`, GET/POST); native
   `http`+`tls`, otherwise curl/wget via `auto_execok`.
 - `tudav`: minimal WebDAV/CardDAV/CalDAV client on `http`(+`tls`).
@@ -205,18 +234,39 @@ controllers (a ZIP is read-only), rather than failing when used.
 `tuholiday` (Easter computus + nationwide German holidays), and `tucal`
 (cross-listed with Document helpers; cal-like text calendars).
 
-## Events, strings, lists, math, archive
+## Tasks and async
+
+`tutask` runs tasks on coroutines: `await` with timeout, `cancel` that runs the
+task's `finally` and cancels the awaited operation, groups (`all`, `first`),
+the operations `timer`, `pipe` and `onwrite`, a thread pool (Thread package,
+loaded on first use) and a sandbox (safe interpreter with command and time
+limits).
+
+## Events, strings, lists, math, numbers, archive
 
 The remaining small layers: app glue (`tuevent` pub/sub, `turegistry` service
 locator, `tulog` leveled logger); string helpers (`tustr`, `tuvalidate`, `tupagespec`);
 structure helpers (`tulist`, `tudict`); numeric/table helpers (`tumath`,
-`tutable`); and ZIP handling (`tuzip` byte-controlled create/read for ODF/OOXML
+`tutable`); number parsing and formatting (`tunum` for locale and currency
+amounts, `tunumfmt` for SI/IEC, `tunumany` routing between the two); and ZIP handling (`tuzip` byte-controlled create/read for ODF/OOXML
 containers, `tuzipfs` the Tcl 9 ZipFS wrapper that reports unavailable on 8.6).
 Since 0.2 `tuzipfs` also carries the zipkit image primitives (`rcopy`,
 `copyStdlib`, `mkimg`, `buildImage`) that back the `build-app` application — a
-standalone-application builder for Tcl 9; see `docs/guide/build-app-guide.md`.
+standalone-application builder for Tcl 9; see
+[`apps/build-app/doc/build-app-guide.md`](../../apps/build-app/doc/build-app-guide.md).
 
 `tuico` writes and reads Windows `.ico` containers with PNG payloads, so icons
 keep their alpha channel; it needs no Tk. It complements tklib's `ico`, which
 extracts icons from ICO/EXE/DLL but cannot write a true 32bpp alpha icon from a
 Tk image.
+
+## Deployment, introspection, settings
+
+`tudeploy` finds and loads module packages from app-relative deployment roots
+and locates bundled resource directories; it pairs with `tuexe`. `tuappinfo`
+collects a plain-text application/system report, `tupkgfinder` shows how a
+package resolves (versions, `ifneeded` scripts, shadowed versions), and
+`tutestrun` is the shared `tests/all.tcl` runner of tclutils, tkutils and
+ctrlutils. `tusettings` keeps per-user settings as INI (through `tuini`) in
+the platform's config directory, together with the standard directories and a
+recent-files list.
