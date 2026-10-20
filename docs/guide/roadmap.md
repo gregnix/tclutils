@@ -4,8 +4,8 @@ For the per-module scope status see [`module-status.md`](module-status.md);
 the wishlist/backlog detail lives with the reviews. This file is the
 high-level history and forward view.
 
-_As of 2026-10-06: 143 modules. Umbrella `tclutils` 0.65.0; recommended
-pairing tclutils 0.65.0 + tkutils 0.46.0 + ctrlutils 0.3. Man pages are
+_As of 2026-10-20: 143 modules. Umbrella `tclutils` 0.66.0; recommended
+pairing tclutils 0.66.0 + tkutils 0.47.0 + ctrlutils 0.4. Man pages are
 generated from the Markdown docs by a script, so the hygiene gate reports
 missing man pages until that has run._
 
@@ -21,7 +21,7 @@ and `tupkgfinder` 0.2._
   that runs the task's `finally` and cancels the awaited operation, groups
   (`all` fail-fast, `first`), operations `timer`/`pipe`/`onwrite`, a thread
   pool (Thread package, loaded on first use) and a sandbox (safe interp with
-  command and time limits). 62 tests on 8.6 and 9, checked against injected
+  command and time limits). 68 tests on 8.6 and 9, checked against injected
   faults; `examples/demo-task.tcl` with a Tk part.
 - **`tujoin` anti-join.** Added `-anti left|right|both` (unmatched-only rows,
   mutually exclusive with `-outer`). Version → 0.1.1, tests `tujoin-3.1`…`3.6`.

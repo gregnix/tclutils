@@ -1,4 +1,4 @@
-# tclutils 0.65.0
+# tclutils 0.66.0
 
 `tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
 text filters, data-format parsers/encoders, binary and checksum helpers, and a
@@ -15,7 +15,7 @@ umbrella package (loads the core modules plus the `tuflow` diagram facade)
 or a single module:
 
 ```tcl
-::tcl::tm::path add /path/to/tclutils-0.65.0/lib/tm
+::tcl::tm::path add /path/to/tclutils-0.66.0/lib/tm
 package require tclutils          ;# umbrella: core modules + tuflow facade
 package require tclutils::tucsv    ;# or just one module
 ```
@@ -66,7 +66,9 @@ The optional net/data helpers `tudav`, `tufetch`, `tusparql`, `tupostgrest`,
 `tuhttps`, `tusqlite`, `tutdbc` and the network providers are the exception to
 "no external dependencies": they need the `tls` package (or a `curl`/`wget`
 binary) for HTTPS, an `sqlite3` build, a TDBC driver, a reachable server, or —
-for `tuprovider::sftp` — the OpenSSH `sftp` client, respectively. HTTPS
+for `tuprovider::sftp` — the OpenSSH `sftp` client, respectively. `tutask`
+needs the `Thread` package for its pool (loaded on first `pool`), nothing
+else. HTTPS
 certificates are verified by default since 0.63.0 (see `docs/tuhttps.md`);
 under Tcl 8.6 with tls 1.x a CA bundle file is needed (`SSL_CERT_FILE` or
 `-cafile`). These dependencies are needed — only at the

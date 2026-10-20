@@ -8,7 +8,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tutask 0.1
+package require tclutils::tutask 0.2
 
 namespace eval ::tt {
     namespace import ::tclutils::tutask::*
@@ -430,6 +430,23 @@ test tutask-6.5 {ondone gets the task} -body {
 # 7. Group
 # ---------------------------------------------------------------------------
 
+test tutask-1.20 {-timeout is checked outside a task as well} -body {
+    set r {}
+    foreach cmd {
+        {::tt::run -timeout abc apply {{} { return 1 }}}
+        {::tt::run -timeout -5 apply {{} { return 1 }}}
+    } {
+        catch $cmd m o
+        lappend r [dict get $o -errorcode]
+    }
+    set t [::tt::spawn apply {{} { return 1 }}]
+    catch {$t wait -timeout x} m o
+    lappend r [dict get $o -errorcode]
+    $t wait
+    $t destroy
+    lappend r [dict get [::tclutils::tutask::stats] tasks]
+} -result {{TCLUTILS TUTASK OPTION} {TCLUTILS TUTASK OPTION} {TCLUTILS TUTASK OPTION} 0}
+
 test tutask-7.1 {group all: results in spawn order} -body {
     set g [::tt::group]
     $g spawn apply {{} { ::tclutils::tutask::sleep 30; return a }}
@@ -461,6 +478,22 @@ test tutask-7.3 {group first: the fastest wins, the rest is cancelled} -body {
     $g destroy
     set r
 } -result {schnell 1 cancelled}
+
+test tutask-7.3a {group destroyed right after wait: no bgerror} -setup {
+    set ::bgErrs {}
+    set oldBg [interp bgerror {}]
+    interp bgerror {} {apply {{m o} { lappend ::bgErrs $m }}}
+} -body {
+    set g [::tt::group]
+    $g spawn apply {{} { ::tclutils::tutask::sleep 5; return schnell }}
+    $g spawn apply {{} { ::tclutils::tutask::sleep 300; return langsam }}
+    set r [$g wait -mode first]
+    $g destroy
+    pause 50
+    list $r $::bgErrs
+} -cleanup {
+    interp bgerror {} $oldBg
+} -result {schnell {}}
 
 test tutask-7.4 {empty groups} -body {
     set g [::tt::group]
@@ -602,6 +635,28 @@ test tutask-8.8 {pool without the Thread package} -constraints nothread -body {
     catch {::tt::pool} m o
     dict get $o -errorcode
 } -result {TCLUTILS TUTASK NOTHREAD}
+
+test tutask-8.9 {pool: a failed constructor leaves no bgerror behind} -constraints thread -setup {
+    set ::bgErrs {}
+    set oldBg [interp bgerror {}]
+    interp bgerror {} {apply {{m o} { lappend ::bgErrs $m }}}
+} -body {
+    set c [catch {::tt::pool -size 0} m]
+    pause 20
+    list $c $::bgErrs
+} -cleanup {
+    interp bgerror {} $oldBg
+} -result {1 {}}
+
+test tutask-8.10 {pool: -init failure reaches the waiter, nothing stays queued} -constraints thread -body {
+    set p [::tt::pool -size 1 -init {error kaputt}]
+    catch {::tt::run -timeout 2000 apply {{p} {
+        ::tclutils::tutask::await [$p op {expr 1}]
+    }} $p} m o
+    set r [list [dict get $o -errorcode] [dict get [$p stats] queued] [dict get [$p stats] jobs]]
+    $p destroy
+    set r
+} -result {{TCLUTILS TUTASK INIT} 0 0}
 
 # ---------------------------------------------------------------------------
 # 9. Sandbox

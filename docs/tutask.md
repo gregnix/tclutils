@@ -85,7 +85,10 @@ sleep ms
 - `pipe cmdlist ?-encoding enc? ?-profile p?` → runs the pipeline without
   blocking; the value is its output, stdout and stderr together. A non-zero
   exit raises Tcl's `{CHILDSTATUS pid code}`. Cancel kills the processes
-  (`kill` on Unix, `taskkill /T /F` on Windows). `-profile` is Tcl 9 only.
+  (`kill` on Unix, `taskkill /T /F` on Windows). On Unix only the processes
+  of the pipeline itself: what they start in the background (`sh -c "x &"`)
+  keeps running (measured 2026-10-20; `setsid` is planned, see the
+  roadmap). `-profile` is Tcl 9 only.
 
 ## Groups
 
@@ -103,6 +106,9 @@ $g destroy                 ;# destroys its tasks
 - `-mode first`: the first task to finish wins; the others are cancelled.
 - Cancelling a task that awaits a group cancels the group's tasks.
 - An empty group: `all` returns `{}`, `first` raises `EMPTY`.
+- `$g tasks` lists the group's task objects.
+- `$g destroy` right after `wait` is safe: callbacks of tasks cancelled by
+  `-mode first` or by an error that arrive later are dropped.
 
 ## Pool (Thread package)
 
@@ -113,11 +119,13 @@ $p stats                    ;# workers idle queued jobs
 $p destroy
 ```
 
-Each job runs in a worker thread (own interpreter, no shared variables).
+`-size` defaults to 2. Each job runs in a worker thread (own interpreter,
+no shared variables).
 Errors keep the worker's `-errorcode` and `-errorinfo`. Cancelling a
 running job calls `thread::cancel`; the worker lives on. Destroying the
 pool releases the workers; tasks still waiting get `CANCELLED`. Without
-the Thread package `pool` raises `NOTHREAD`.
+the Thread package `pool` raises `NOTHREAD`. If `-init` fails in a new
+worker, the job's waiter gets `INIT`; nothing stays queued.
 
 ## Sandbox
 
@@ -134,6 +142,12 @@ time limit per evaluation. Exceeding one raises
 next evaluation starts with fresh limits. Other errors keep the child's
 `-errorcode`. The script runs in the calling thread: `op` can be cancelled
 until it starts, then the limits bound it. For real parallelism use a pool.
+`$s interp` returns the child interpreter (to add aliases or variables).
+
+The command limit counts commands. A loop whose body is empty, like
+`while 1 {}`, executes none and is not stopped by `-commands`; only
+`-time` ends it (measured with Tcl 8.6.14 and 9.0.4). Always set `-time` for
+untrusted scripts.
 
 ## Leaks
 

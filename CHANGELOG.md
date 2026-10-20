@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.66.0 - 2026-10-20
+
+Fixes found while checking the tool book against the code. Recommended
+pairing: tclutils 0.66.0 + tkutils 0.47.0 + ctrlutils 0.4.
+
+Module version: `tutask` 0.2 (file `tutask-0.2.tm`; delete `tutask-0.1.tm`
+when copying over an older tree).
+
+- `tutask`: requires `tclutils::common 0.2` (was 0.1). `group` and `pool`
+  use `ensureOneOf`/`ensurePositiveInteger` from 0.2; with an older common on
+  the path they failed later.
+- `tutask` pool: a failed constructor (no Thread, `-size 0`) no longer adds a
+  bgerror `can't read "jobs"`; the state is set before the checks.
+- `tutask` pool: if `-init` fails in a new worker, the waiting job is taken
+  out of the queue and its waiter gets `INIT`. Before, it stayed queued
+  (`stats`: `queued 1 jobs 1`).
+- `tutask` group: destroying a group right after `wait` no longer leaves a
+  bgerror `invalid command name ...::my` from late callbacks of cancelled
+  tasks.
+- Tests: `tutask-7.3a`, `-8.9`, `-8.10` (67 tests).
+- Docs: `docs/tutask.md` names `-size` default 2, `$g tasks`, `$s interp`,
+  that `pipe` cancel on Unix does not reach background grandchildren, and
+  that `-commands` does not stop an empty loop (use `-time`). README names
+  Thread for the `tutask` pool. `tupath` comment, roadmap test count.
+
+- `tutask`: `-timeout` is checked the same way everywhere. `run -timeout`,
+  `$t wait -timeout` and `$g wait -timeout` outside a task took "abc" or -5
+  silently; now `{TCLUTILS TUTASK OPTION}` as in `await`. `run` checks before
+  spawning, so a bad value leaves no task. Test `tutask-1.20` (68 tests).
+
 ## 0.65.0 - 2026-10-06
 
 Recommended pairing: tclutils 0.65.0 + tkutils 0.46.0 + ctrlutils 0.3.

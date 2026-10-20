@@ -34,19 +34,21 @@
 # is Tcl core. Sandbox code runs in the calling thread, bounded by command
 # and time limits.
 #
-# Namespace: ::tclutils::tutask   Package: tclutils::tutask 0.1
+# Namespace: ::tclutils::tutask   Package: tclutils::tutask 0.2
 # Errors:    {TCLUTILS TUTASK <REASON>}, REASON one of CANCELLED TIMEOUT
 #            NOTASK NOTDONE OPTION NOTHREAD EMPTY PROTOCOL INIT INSIDE,
 #            {TCLUTILS TUTASK LIMIT COMMANDS|TIME}
 
 package require Tcl 8.6-
-package require tclutils::common 0.1
+# 0.2: ensureOneOf and ensurePositiveInteger came with common 0.2. With
+# "0.1" an older common on the path loaded, and group/pool failed later.
+package require tclutils::common 0.2
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tutask {
     namespace export spawn await sleep timer pipe onwrite current run \
         group pool sandbox stats tasks
-    variable version 0.1
+    variable version 0.2
     variable seq 0
     # await bookkeeping, keyed by an integer per await:
     #   pend(key)    coroutine that waits
@@ -90,9 +92,7 @@ proc ::tclutils::tutask::await {starter args} {
     variable taskOf
     set opts [::tclutils::common::parseOptions {-timeout 0} {*}$args]
     set ms [dict get $opts -timeout]
-    if {![string is integer -strict $ms] || $ms < 0} {
-        _err OPTION "-timeout must be a non-negative integer (ms)"
-    }
+    _checkTimeout $ms
     set co [info coroutine]
     if {$co eq ""} {
         _err NOTASK "await outside a task or coroutine"
@@ -529,8 +529,23 @@ proc ::tclutils::tutask::_destroyIf {obj} {
     if {[info object isa object $obj]} { $obj destroy }
 }
 
+# Call cmd (an object's "my" or any command) only while it still exists.
+proc ::tclutils::tutask::_callIf {cmd args} {
+    if {[llength [info commands $cmd]]} { uplevel #0 [list $cmd {*}$args] }
+}
+
 # Wait for an operation outside any coroutine, in vwait.
+# -timeout is checked the same way everywhere. Until 2026-10-20 only await
+# did; run, $t wait and $g wait outside a task took "abc" or -5 silently
+# (a negative or non-numeric value meant: no timeout).
+proc ::tclutils::tutask::_checkTimeout {ms} {
+    if {![string is integer -strict $ms] || $ms < 0} {
+        _err OPTION "-timeout must be a non-negative integer (ms)"
+    }
+}
+
 proc ::tclutils::tutask::_block {starter ms} {
+    _checkTimeout $ms
     variable seq
     variable block
     set key b[incr seq]
@@ -601,6 +616,7 @@ proc ::tclutils::tutask::run {args} {
         set ms [lindex $args 1]
         set args [lrange $args 2 end]
     }
+    _checkTimeout $ms          ;# before spawn: a bad value leaves no task
     set t [spawn {*}$args]
     try {
         return [$t wait -timeout $ms]
@@ -679,7 +695,11 @@ oo::class create ::tclutils::tutask::Group {
             return ""
         }
         foreach t $tasks {
-            $t ondone [list [namespace which my] _Child $g $mode $cb]
+            # Through _callIf: the group may be destroyed right after wait
+            # returns, before the ondone callbacks of the cancelled tasks
+            # run (bgerror "invalid command name ...::my", found 2026-10-20).
+            $t ondone [list ::tclutils::tutask::_callIf [namespace which my] \
+                _Child $g $mode $cb]
         }
         return [list [namespace which my] _OpCancel $g]
     }
@@ -748,17 +768,20 @@ oo::class create ::tclutils::tutask::Pool {
     variable size init workers idle queue jobs jseq
 
     constructor {args} {
+        # State first: if a check below fails, the destructor still runs and
+        # reads these. Set after the checks, a failed constructor added a
+        # bgerror "can't read \"jobs\"" to the real error.
+        set workers {}
+        set idle {}
+        set queue {}
+        set jobs [dict create]
+        set jseq 0
         if {[catch {package require Thread}]} {
             ::tclutils::tutask::_err NOTHREAD "the Thread package is not available"
         }
         set o [::tclutils::common::parseOptions {-size 2 -init ""} {*}$args]
         set size [::tclutils::common::ensurePositiveInteger [dict get $o -size] -size]
         set init [dict get $o -init]
-        set workers {}
-        set idle {}
-        set queue {}
-        set jobs [dict create]
-        set jseq 0
         set ::tclutils::tutask::pools([self]) 1
     }
 
@@ -798,7 +821,17 @@ oo::class create ::tclutils::tutask::Pool {
                 set w [lindex $idle 0]
                 set idle [lrange $idle 1 end]
             } elseif {[llength $workers] < $size} {
-                set w [my _Worker]
+                if {[catch {my _Worker} w o]} {
+                    # No worker (e.g. -init failed): the job would stay
+                    # queued for ever. Take it out and report the error to
+                    # its waiter, later, as every operation does.
+                    set id [lindex $queue 0]
+                    set queue [lrange $queue 1 end]
+                    set cb [dict get $jobs $id cb]
+                    dict unset jobs $id
+                    after 0 [list {*}$cb error $w $o]
+                    continue
+                }
             } else {
                 return
             }
@@ -964,4 +997,4 @@ proc ::tclutils::tutask::sandbox {args} {
     return [::tclutils::tutask::Sandbox new {*}$args]
 }
 
-package provide tclutils::tutask 0.1
+package provide tclutils::tutask 0.2

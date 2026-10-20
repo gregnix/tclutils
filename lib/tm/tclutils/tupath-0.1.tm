@@ -26,8 +26,8 @@ proc ::tclutils::tupath::normalize {path} {
 # WITHOUT touching the filesystem. Safe for paths that do not exist.
 # Lexical clean: drop "." and empty parts, resolve ".." against earlier parts.
 # The root stays as it is -- "/" on Unix, "C:/", "/" (volume-relative) or
-# "//server/share" on Windows -- and ".." never climbs above it. Up to 0.1
-# only "/" was recognised: on Windows "/x/../y" (volume-relative) came back
+# "//server/share" on Windows -- and ".." never climbs above it. Before
+# tclutils 0.64.0 (module version unchanged) only "/" was recognised: on Windows "/x/../y" (volume-relative) came back
 # as "y", and "C:/.." lost the drive.
 proc ::tclutils::tupath::clean {path} {
     if {$path eq ""} { return "." }

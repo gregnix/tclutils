@@ -1,4 +1,4 @@
-.TH tutask n 0.1 tclutils
+.TH tutask n 0.2 tclutils
 .SH tclutils::tutask
 .PP
 Tasks on coroutines: \fBawait\fR with timeout, \fBcancel\fR that runs \fBfinally\fR, task groups, a thread pool and a sandbox. Pure Tcl; the pool needs the Thread package and loads it on first use.
