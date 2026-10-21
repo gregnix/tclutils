@@ -1,0 +1,117 @@
+.TH tupdftext n 0.1 tclutils
+.SH tclutils::tupdftext
+.PP
+Text of a PDF, page by page, in pure Tcl. Meant for full\-text search: words, spaces and line breaks come out; columns and tables only as far as the order in the PDF gives them. No poppler, no C extension; the streams are unpacked with Tcl's built\-in \fBzlib\fR.
+.SS Package
+.CS
+package require tclutils::tupdftext 0.1
+.CE
+.SS API
+.CS
+::tclutils::tupdftext::pages   file ?-notext error|empty?
+::tclutils::tupdftext::text    file ?-separator s? ?-notext error|empty?
+::tclutils::tupdftext::summary file
+.CE
+.PP
+\fBpages\fR returns a list with the text of every page, in page order. Lines are separated by \fB\en\fR, runs of blanks folded, ligatures (\fBﬁ\fR, \fBﬂ\fR, …) written out, soft hyphens removed.
+.PP
+\fBtext\fR joins the pages with \fB\-separator\fR (default form feed \fB\ef\fR, as \fBpdftotext\fR does).
+.PP
+\fBsummary\fR returns a dict:
+.TS
+l l.
+Key	Meaning
+\fBpages\fR	number of pages
+\fBencrypted\fR	1 if the file has an \fB/Encrypt\fR entry
+\fBversion\fR	header version, e.g. \fB1.7\fR
+\fBtextPages\fR	pages with at least one character
+\fBunmapped\fR	glyphs that came out as U+FFFD (two\-byte font without \fB/ToUnicode\fR)
+\fBfonts\fR	list of dicts \fBname subtype toUnicode\fR for the fonts used
+.TE
+.PP
+With \fB\-notext empty\fR a PDF without any text gives empty strings instead of the error \fBNOTEXT\fR.
+.SS Errors
+.PP
+All errors carry \fB\-errorcode {TCLUTILS TUPDFTEXT <kind>}\fR:
+.TS
+l l.
+Kind	When
+\fBFILE\fR	the file cannot be read
+\fBFORMAT\fR	no \fB%PDF\-\fR header, no objects, or no pages
+\fBENCRYPTED\fR	the file is encrypted (no decryption)
+\fBNOTEXT\fR	no page has any text: a scan without OCR, or images only
+\fBOPTION\fR	unknown option or missing value
+.TE
+.SS "What it reads"
+.IP \(bu
+\fBObjects\fR by scanning for \fBN G obj\fR at the start of a line. The cross\-reference table is not needed; a damaged one does no harm. A later definition of the same number wins, as with an incremental update. Objects in object streams (\fB/ObjStm\fR) fill in the numbers not defined directly.
+.IP \(bu
+\fBFilters\fR \fBFlateDecode\fR (also with PNG predictor), \fBASCIIHexDecode\fR, \fBASCII85Decode\fR, \fBLZWDecode\fR, and chains of them.
+.IP \(bu
+\fBPages\fR through the page tree from \fB/Root\fR, with inherited \fB/Resources\fR. Without a usable tree: all \fB/Type /Page\fR objects in file order.
+.IP \(bu
+\fBText operators\fR \fBTj TJ ' "\fR with \fBTf Tc Tw Tz TL Ts Td TD Tm T*\fR and \fBq Q cm\fR; Form XObjects (\fBDo\fR) with their own resources and matrix, up to depth 8, a form that draws itself is drawn once. Inline images are skipped.
+.IP \(bu
+\fBFonts\fR Type0 (two\-byte codes, \fBIdentity\-H\fR/\fB\-V\fR or an embedded CMap), Type1, TrueType, Type3. Unicode from \fB/ToUnicode\fR (\fBbfchar\fR, \fBbfrange\fR with offset or array), otherwise from \fB/Encoding\fR: \fBWinAnsiEncoding\fR, \fBMacRomanEncoding\fR, \fBStandardEncoding\fR, \fBPDFDocEncoding\fR, and \fB/Differences\fR with glyph names (WinAnsi names, \fBuniXXXX\fR, \fBuXXXX\fR, ligatures).
+.IP \(bu
+\fBSpaces and line breaks\fR from the positions in device space, with the glyph widths from \fB/Widths\fR, \fB/W\fR and \fB/DW\fR: a jump down by half a line is a new line, a gap of more than 0.15 em on the same line a space.
+.SS "What it does not do"
+.IP \(bu
+decrypt (\fBENCRYPTED\fR), not even with an empty user password
+.IP \(bu
+read text from images (a scan needs OCR first)
+.IP \(bu
+map a two\-byte font without \fB/ToUnicode\fR (U+FFFD, counted in \fBunmapped\fR)
+.IP \(bu
+keep columns apart: text comes in the order of the content stream
+.IP \(bu
+join words hyphenated at the end of a line (\fBpdftotext\fR does)
+.SS Measured
+.PP
+2026\-10\-21, Tcl 8.6.14 and 9.0.4, Linux. Words (letters and digits, lower case) compared with \fBpdftotext\fR (poppler 24.02): share of the pdftotext words that \fBtupdftext\fR also gives, and the other way round.
+.TS
+l l l l l l.
+PDF	Producer	Pages	Time 8.6	pdftotext words found	own words in pdftotext
+Tcl/Tk unter Windows	pdf4tcl 0.9.4.72, CID fonts	86	3.1 s	99.94 %	99.89 %
+Tcl/Tk unter macOS	pdf4tcl 0.9.4.72	108	3.6 s	99.91 %	99.82 %
+Debian unter Linux	pdf4tcl 0.9.4.72	32	0.9 s	99.94 %	99.87 %
+DocIR handbook	pdf4tcl 0.9.4.72	9	0.3 s	100 %	100 %
+same, \fBqpdf \-\-object\-streams=generate\fR	qpdf	9	0.3 s	100 %	100 %
+same, \fBqpdf \-\-qdf\fR	qpdf	9	0.3 s	100 %	100 %
+HTML book through LibreOffice	LibreOffice 24.2	150	3.6 s	99.79 %	99.57 %
+DOCX through LibreOffice	LibreOffice 24.2	7	0.4 s	99.95 %	99.90 %
+EuroTcl 2025 slides	PowerPoint (Microsoft 365)	27	1.2 s	100 %	100 %
+Latin Modern info	xdvipdfmx, Type1	26	2.7 s	98.57 %	98.80 %
+TeX Gyre Heros info	mbt PDF assembleur	33	3.6 s	99.49 %	99.56 %
+math test (Word)	Ghostscript 9.02	1	0.04 s	91.18 %	91.18 %
+math test (LuaLaTeX)	LuaTeX 0.70	1	0.04 s	90.62 %	96.67 %
+.TE
+.PP
+The remaining differences: words hyphenated at a line end (pdftotext joins them), ligatures (written out here, a separate word for pdftotext), and the two\-dimensional layout of formulas. An encrypted file (\fBqpdf \-\-encrypt … 256\fR) gives \fBENCRYPTED\fR. Tcl 9.0.4 gives the same text as 8.6.14; characters outside the BMP come as one character on 9 and as a surrogate pair on 8.6.
+.SS "Command line"
+.CS
+tclsh bin/tupdf.tcl text doc.pdf            # all pages, form feed between
+tclsh bin/tupdf.tcl text doc.pdf -page 3
+.CE
+.SS Example
+.CS
+package require tclutils::tupdftext
+
+# search a folder of PDFs, report the pages
+proc pdfgrep {dir word} {
+    foreach f [glob -nocomplain -directory $dir *.pdf] {
+        if {[catch {::tclutils::tupdftext::pages $f} pages opts]} {
+            puts "$f: [lindex [dict get $opts -errorcode] end]"
+            continue
+        }
+        set n 0
+        foreach p $pages {
+            incr n
+            if {[string match -nocase *$word* $p]} { puts "$f: page $n" }
+        }
+    }
+}
+.CE
+.SS "See also"
+.PP
+\fBtclutils::tupdf\fR inspects the structure (version, objects, trailer, metadata, ZUGFeRD). \fBtupdftext\fR reads the text.

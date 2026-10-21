@@ -6,11 +6,12 @@ tupdf \- command-line wrapper for tclutils::tupdf.
 .SH SYNOPSIS
 .nf
 tclsh bin/tupdf.tcl summary file.pdf
+tclsh bin/tupdf.tcl text file.pdf ?-page N?
 tclsh bin/tupdf.tcl object file.pdf N
 tclsh bin/tupdf.tcl metadata file.pdf
 .fi
 .SH DESCRIPTION
 .PP
-Prints basic PDF structure information without external tools.
+Prints basic PDF structure information without external tools. \fBtext\fR prints the text of all pages (form feed between them) or of page N, through tclutils::tupdftext.
 .SH SEE ALSO
-tupdf(n)
+tupdf(n), tupdftext(n)

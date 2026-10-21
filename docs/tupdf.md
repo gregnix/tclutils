@@ -7,7 +7,8 @@ object ids, page markers, trailer text, metadata, and raw objects. Since **0.2**
 it also inflates compressed object streams (`/ObjStm`) with the built-in `zlib`
 and reads the trailer from a cross-reference stream (`/Type /XRef`), so objects,
 pages and metadata hidden inside them are resolved too. It is still a
-lightweight inspector, not a full PDF parser.
+lightweight inspector, not a full PDF parser. The text of the pages comes
+from `tclutils::tupdftext` (see `tupdftext.md`).
 
 ## Package
 

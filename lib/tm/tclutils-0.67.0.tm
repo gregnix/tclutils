@@ -42,6 +42,7 @@ package require tclutils::tucrc 0.1
 package require tclutils::tutr 0.1
 package require tclutils::tuodf 0.1
 package require tclutils::tupdf 0.2
+package require tclutils::tupdftext 0.1
 package require tclutils::tumd 0.1
 package require tclutils::tufile 0.1
 package require tclutils::tuawk 0.1
@@ -127,4 +128,4 @@ package require tclutils::tuprovider::zip 0.1
 package require tclutils::tuprovider::dav 0.1
 package require tclutils::tuprovider::ftp 0.2
 
-package provide tclutils 0.66.0
+package provide tclutils 0.67.0

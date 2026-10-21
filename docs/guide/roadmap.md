@@ -4,8 +4,8 @@ For the per-module scope status see [`module-status.md`](module-status.md);
 the wishlist/backlog detail lives with the reviews. This file is the
 high-level history and forward view.
 
-_As of 2026-10-20: 143 modules. Umbrella `tclutils` 0.66.0; recommended
-pairing tclutils 0.66.0 + tkutils 0.47.0 + ctrlutils 0.4. Man pages are
+_As of 2026-10-21: 144 modules. Umbrella `tclutils` 0.67.0; recommended
+pairing tclutils 0.67.0 + tkutils 0.47.0 + ctrlutils 0.4. Man pages are
 generated from the Markdown docs by a script, so the hygiene gate reports
 missing man pages until that has run._
 

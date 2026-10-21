@@ -146,6 +146,38 @@ test cli-1.16 {tupdf summary command includes pages} -body {
     runcli tupdf.tcl summary $pdf
 } -match glob -result "*pages: 1*"
 
+# a PDF with text on two pages (tupdf text, tupdftext)
+proc cliTextPdf {path} {
+    set objs [list "<< /Type /Catalog /Pages 2 0 R >>" \
+        "<< /Type /Pages /Kids \[3 0 R 4 0 R\] /Count 2 >>" \
+        "<< /Type /Page /Parent 2 0 R /Contents 5 0 R /Resources << /Font << /F1 7 0 R >> >> >>" \
+        "<< /Type /Page /Parent 2 0 R /Contents 6 0 R /Resources << /Font << /F1 7 0 R >> >> >>"]
+    foreach t {{Seite eins} {Seite zwei}} {
+        set c "BT /F1 12 Tf 72 700 Td ($t) Tj ET"
+        lappend objs "<< /Length [string length $c] >>\nstream\n$c\nendstream"
+    }
+    lappend objs "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+    set out "%PDF-1.4\n"
+    set i 0
+    foreach o $objs { append out "[incr i] 0 obj\n$o\nendobj\n" }
+    append out "trailer\n<< /Root 1 0 R >>\n%%EOF\n"
+    set fh [open $path wb]; puts -nonewline $fh $out; close $fh
+    return $path
+}
+set textPdf [cliTextPdf [file join $tmp text.pdf]]
+
+test cli-1.16a {tupdf text: all pages, form feed between} -body {
+    runcli tupdf.tcl text $textPdf
+} -result "Seite eins\fSeite zwei"
+
+test cli-1.16b {tupdf text -page N} -body {
+    runcli tupdf.tcl text $textPdf -page 2
+} -result "Seite zwei"
+
+test cli-1.16c {tupdf text on a PDF without text: error, exit 1} -body {
+    lindex [runcliStatus tupdf.tcl text $pdf] 0
+} -result 1
+
 set md [makeFile "---\ntitle: Demo\n---\n# Title\n\nBody" [file join $tmp doc.md]]
 
 test cli-1.17 {tumd headings command} -body {

@@ -83,4 +83,5 @@ Document helpers:
 |---|---|
 | ODF text | tuodf |
 | PDF inspect | tupdf |
+| PDF text (`pdftotext`) | tupdftext, `tupdf.tcl text` |
 | Markdown utilities | tumd |

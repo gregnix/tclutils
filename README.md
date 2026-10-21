@@ -1,4 +1,4 @@
-# tclutils 0.66.0
+# tclutils 0.67.0
 
 `tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
 text filters, data-format parsers/encoders, binary and checksum helpers, and a
@@ -15,7 +15,7 @@ umbrella package (loads the core modules plus the `tuflow` diagram facade)
 or a single module:
 
 ```tcl
-::tcl::tm::path add /path/to/tclutils-0.66.0/lib/tm
+::tcl::tm::path add /path/to/tclutils-0.67.0/lib/tm
 package require tclutils          ;# umbrella: core modules + tuflow facade
 package require tclutils::tucsv    ;# or just one module
 ```
@@ -37,7 +37,7 @@ the Unix-tool mapping is in [`docs/guide/coreutils-mapping.md`](docs/guide/coreu
 | Stream / filesystem | `tufile` `tufind` `tustat` `tutee` `tupath` `tusize` `tuopen` `tuexe` |
 | Fuzzy search | `tufuzzy` `tuagrep` |
 | Records / PIM | `tunotes` `tunotesdb` `tuical` `tuini` `tuvcard` `tuldif` `tubookmark` |
-| Document helpers | `tumd` `tupdf` `tuodf` `tucal` |
+| Document helpers | `tumd` `tupdf` `tupdftext` `tuodf` `tucal` |
 | Date / web / IDs | `tudate` `tuurl` `tuuuid` `tudav` `tufetch` `tusparql` `tupostgrest` `tuhttps` |
 | Storage providers | `tuprovider` (one API over local files) with `tuprovider::zip` `tuprovider::dav` `tuprovider::ftp`; `tuprovider::sftp` needs its own `package require` |
 | Calendar / recurrence | `tuical` `turrule` `tuholiday` `tucal` |

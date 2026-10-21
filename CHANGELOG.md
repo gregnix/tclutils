@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.67.0 - 2026-10-21
+
+New module `tupdftext` 0.1: the text of a PDF, page by page, in pure Tcl.
+Recommended pairing: tclutils 0.67.0 + tkutils 0.47.0 + ctrlutils 0.4
+(tkutils and ctrlutils need nothing from this release).
+
+- `tupdftext::pages file ?-notext error|empty?`, `text file ?-separator s?`,
+  `summary file`. Reads objects by scanning (a damaged cross-reference table
+  does no harm), object streams, filters Flate (with PNG predictor),
+  ASCIIHex, ASCII85, LZW, the page tree with inherited resources, Form
+  XObjects, fonts Type0/Type1/TrueType/Type3 with `/ToUnicode` or
+  `/Encoding` and `/Differences`. Spaces and line breaks come from the glyph
+  positions. Errors `{TCLUTILS TUPDFTEXT FILE|FORMAT|ENCRYPTED|NOTEXT|OPTION}`.
+- Measured against pdftotext on 13 PDFs (pdf4tcl, LibreOffice, PowerPoint,
+  TeX, qpdf object streams): 99.5-100 % of the words on all but two math
+  test pages (91 %); table in `docs/tupdftext.md`. Tcl 8.6.14 and 9.0.4 give
+  the same text.
+- `bin/tupdf.tcl text file.pdf ?-page N?` prints the text (form feed between
+  pages, as pdftotext). Tests `cli-1.16a`-`c`.
+- In the umbrella. Tests `tupdftext.test` (33, one needs pdf4tcl).
+- The public command is `summary`, not `info`: a proc `info` in the module's
+  namespace would hide Tcl's `info` from every proc of the module.
+
 ## 0.66.0 - 2026-10-20
 
 Fixes found while checking the tool book against the code. Recommended

@@ -1,0 +1,310 @@
+# tupdftext.test -- text of PDF pages in pure Tcl
+#
+# The PDFs are built here: a small writer puts numbered objects together with
+# a cross-reference table. Each case isolates one part (encodings, fonts,
+# filters, object streams, forms, positions). The comparison with pdftotext
+# on real files (pdf4tcl, LibreOffice, PowerPoint, TeX) is in docs/tupdftext.md.
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tupdftext 0.1
+
+set tmp [makeDirectory tupdftext]
+
+# ---- a minimal PDF writer --------------------------------------------------
+# objs: list of object bodies (object 1, 2, ...). trailerExtra goes into the
+# trailer dictionary. Object 1 must be the catalog unless noRoot is set.
+proc mkpdf {name objs {trailerExtra ""} {noRoot 0}} {
+    set out "%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
+    set offs {}
+    set i 0
+    foreach body $objs {
+        incr i
+        lappend offs [string length $out]
+        append out "$i 0 obj\n$body\nendobj\n"
+    }
+    set xref [string length $out]
+    append out "xref\n0 [expr {$i + 1}]\n0000000000 65535 f \n"
+    foreach o $offs { append out [format "%010d 00000 n \n" $o] }
+    set root [expr {$noRoot ? "" : "/Root 1 0 R"}]
+    append out "trailer\n<< /Size [expr {$i + 1}] $root $trailerExtra >>\nstartxref\n$xref\n%%EOF\n"
+    set path [file join $::tmp $name]
+    set fh [open $path wb]
+    puts -nonewline $fh $out
+    close $fh
+    return $path
+}
+proc stream {dictExtra data} {
+    return "<< /Length [string length $data] $dictExtra >>\nstream\n$data\nendstream"
+}
+# catalog, pages, one page with font F1 = Helvetica (WinAnsi) and content obj 4
+proc onePage {content {fontObj "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"} {extraRes ""}} {
+    return [list \
+        "<< /Type /Catalog /Pages 2 0 R >>" \
+        "<< /Type /Pages /Kids \[3 0 R\] /Count 1 >>" \
+        "<< /Type /Page /Parent 2 0 R /MediaBox \[0 0 612 792\] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> $extraRes >> >>" \
+        [stream "" $content] \
+        $fontObj]
+}
+
+# ---- API and errors --------------------------------------------------------
+
+test tupdftext-1.1 {unknown option names the known ones} -body {
+    catch {::tclutils::tupdftext::pages x.pdf -notxt empty} m o
+    list [dict get $o -errorcode] $m
+} -result [list {TCLUTILS TUPDFTEXT OPTION} "unknown option \"-notxt\"\nKnown: -notext"]
+
+test tupdftext-1.2 {-notext takes error or empty} -body {
+    catch {::tclutils::tupdftext::pages x.pdf -notext maybe} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPDFTEXT OPTION}
+
+test tupdftext-1.3 {missing file: FILE} -body {
+    catch {::tclutils::tupdftext::pages [file join $tmp gibtsnicht.pdf]} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPDFTEXT FILE}
+
+test tupdftext-1.4 {not a PDF: FORMAT} -body {
+    set p [makeFile "hello" [file join $tmp nopdf.pdf]]
+    catch {::tclutils::tupdftext::pages $p} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPDFTEXT FORMAT}
+
+test tupdftext-1.5 {/Encrypt in the trailer: ENCRYPTED} -body {
+    set p [mkpdf enc.pdf [onePage "BT /F1 12 Tf 72 700 Td (x) Tj ET"] "/Encrypt << /Filter /Standard >>"]
+    catch {::tclutils::tupdftext::pages $p} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPDFTEXT ENCRYPTED}
+
+test tupdftext-1.6 {no text on any page: NOTEXT, or empty strings with -notext empty} -body {
+    set p [mkpdf notext.pdf [onePage "0 0 m 100 100 l S"]]
+    catch {::tclutils::tupdftext::pages $p} m o
+    list [dict get $o -errorcode] [::tclutils::tupdftext::pages $p -notext empty]
+} -result {{TCLUTILS TUPDFTEXT NOTEXT} {{}}}
+
+# ---- simple fonts ----------------------------------------------------------
+
+test tupdftext-2.1 {WinAnsi string with umlauts} -body {
+    set p [mkpdf win.pdf [onePage "BT /F1 12 Tf 72 700 Td (Gr\\374\\337e aus K\\366ln) Tj ET"]]
+    ::tclutils::tupdftext::pages $p
+} -result [list "Grüße aus Köln"]
+
+test tupdftext-2.2 {/Differences with glyph names, uniXXXX and a ligature} -body {
+    set font "<< /Type /Font /Subtype /Type1 /BaseFont /X /Encoding << /Type /Encoding /BaseEncoding /StandardEncoding /Differences \[128 /adieresis /germandbls /uni20AC /fi\] >> >>"
+    set p [mkpdf diff.pdf [onePage "BT /F1 12 Tf 72 700 Td (\\200\\201 \\202 \\203nde) Tj ET" $font]]
+    ::tclutils::tupdftext::pages $p
+} -result [list "äß € finde"]
+
+test tupdftext-2.3 {literal string escapes, nesting, line continuation} -body {
+    # PDF source: (a\(b\) \\ (c) d\<newline>e)
+    set c "BT /F1 12 Tf 72 700 Td (a\\(b\\) \\\\ (c) d\\\ne) Tj ET"
+    ::tclutils::tupdftext::pages [mkpdf esc.pdf [onePage $c]]
+} -result [list {a(b) \ (c) de}]
+
+test tupdftext-2.4 {font resource name with #20} -body {
+    set objs [onePage "BT /F#201 12 Tf 72 700 Td (ok) Tj ET"]
+    lset objs 2 [string map {"/F1 5 0 R" "/F#201 5 0 R"} [lindex $objs 2]]
+    ::tclutils::tupdftext::pages [mkpdf hashname.pdf $objs]
+} -result ok
+
+# ---- positions: spaces and lines --------------------------------------------
+
+test tupdftext-3.1 {TJ: a large gap is a space, a kern is none} -body {
+    set p [mkpdf tj.pdf [onePage "BT /F1 12 Tf 72 700 Td \[(Hel) 20 (lo) -400 (Wor) 10 (ld)\] TJ ET"]]
+    ::tclutils::tupdftext::pages $p
+} -result {{Hello World}}
+
+test tupdftext-3.2 {a new line from Td and T*} -body {
+    set p [mkpdf lines.pdf [onePage "BT /F1 12 Tf 14 TL 72 700 Td (eins) Tj 0 -14 Td (zwei) Tj T* (drei) Tj ET"]]
+    ::tclutils::tupdftext::pages $p
+} -result [list "eins\nzwei\ndrei"]
+
+test tupdftext-3.3 {same line, far to the right (Tm): a space, no line break} -body {
+    set p [mkpdf right.pdf [onePage "BT /F1 12 Tf 1 0 0 1 72 700 Tm (Kapitel) Tj 1 0 0 1 500 700 Tm (17) Tj ET"]]
+    ::tclutils::tupdftext::pages $p
+} -result {{Kapitel 17}}
+
+test tupdftext-3.4 {' and " move to the next line} -body {
+    set p [mkpdf quote.pdf [onePage "BT /F1 12 Tf 14 TL 72 700 Td (a) Tj (b) ' 1 0 (c) \" ET"]]
+    ::tclutils::tupdftext::pages $p
+} -result [list "a\nb\nc"]
+
+test tupdftext-3.5 {cm moves text: lines from the device position} -body {
+    set p [mkpdf cm.pdf [onePage "q 1 0 0 1 0 700 cm BT /F1 12 Tf 72 0 Td (oben) Tj ET Q q 1 0 0 1 0 600 cm BT /F1 12 Tf 72 0 Td (unten) Tj ET Q"]]
+    ::tclutils::tupdftext::pages $p
+} -result [list "oben\nunten"]
+
+# ---- composite fonts ---------------------------------------------------------
+
+proc cidFont {toUnicode} {
+    return [list \
+        "<< /Type /Font /Subtype /Type0 /BaseFont /ABC+X /Encoding /Identity-H /DescendantFonts \[6 0 R\] $toUnicode >>" \
+        "<< /Type /Font /Subtype /CIDFontType2 /BaseFont /ABC+X /DW 500 /W \[1 \[600 600\] 10 20 400\] >>"]
+}
+
+test tupdftext-4.1 {Type0 Identity-H with ToUnicode bfchar and bfrange} -body {
+    set cmap "/CIDInit /ProcSet findresource begin 12 dict begin begincmap
+1 begincodespacerange <0000> <FFFF> endcodespacerange
+2 beginbfchar <0001> <0044> <0002> <00FC> endbfchar
+2 beginbfrange <000A> <000C> <0061> <0014> <0015> \[<0072> <20AC>\] endbfrange
+endcmap CMapName currentdict /CMap defineresource pop end end"
+    lassign [cidFont "/ToUnicode 7 0 R"] f0 f1
+    set objs [onePage "BT /F1 12 Tf 72 700 Td <0001000200150014000A000B000C> Tj ET" $f0]
+    lappend objs $f1 [stream "" $cmap]
+    ::tclutils::tupdftext::pages [mkpdf cid.pdf $objs]
+} -result [list "Dü€rabc"]
+
+test tupdftext-4.2 {Type0 without ToUnicode: U+FFFD per glyph, counted by summary} -body {
+    lassign [cidFont ""] f0 f1
+    set objs [onePage "BT /F1 12 Tf 72 700 Td <00010002> Tj ET" $f0]
+    lappend objs $f1
+    set p [mkpdf cidnomap.pdf $objs]
+    set s [::tclutils::tupdftext::summary $p]
+    list [::tclutils::tupdftext::pages $p] [dict get $s unmapped] \
+         [dict get [lindex [dict get $s fonts] 0] toUnicode]
+} -result [list "��" 2 0]
+
+# ---- filters and object streams -------------------------------------------
+
+test tupdftext-5.1 {FlateDecode content} -body {
+    set z [zlib compress "BT /F1 12 Tf 72 700 Td (gepackt) Tj ET"]
+    set objs [onePage ""]
+    lset objs 3 [stream "/Filter /FlateDecode" $z]
+    ::tclutils::tupdftext::pages [mkpdf flate.pdf $objs]
+} -result gepackt
+
+test tupdftext-5.2 {filter chain ASCIIHexDecode + FlateDecode} -body {
+    binary scan [zlib compress "BT /F1 12 Tf 72 700 Td (Kette) Tj ET"] H* hex
+    set objs [onePage ""]
+    lset objs 3 [stream "/Filter \[/ASCIIHexDecode /FlateDecode\]" "$hex>"]
+    ::tclutils::tupdftext::pages [mkpdf chain.pdf $objs]
+} -result Kette
+
+test tupdftext-5.3 {ASCII85Decode} -body {
+    # "BT /F1 12 Tf 72 700 Td (a85) Tj ET" encoded with Ascii85
+    set a85 {<~6<#'\7PQ#?1*BP.+?)%u2_Zp.<+I+"@5p+n+B3(u78s~>}
+    set objs [onePage ""]
+    lset objs 3 [stream "/Filter /ASCII85Decode" $a85]
+    ::tclutils::tupdftext::pages [mkpdf a85.pdf $objs]
+} -result a85
+
+test tupdftext-5.4 {LZWDecode: example from the PDF reference} -body {
+    ::tclutils::tupdftext::_lzw [binary format H* 800B6050220C0C8501] {}
+} -result -----A---B
+
+test tupdftext-5.5 {PNG predictor (Up), as in cross-reference streams} -body {
+    # two rows of 3 bytes: row 1 raw (filter 0), row 2 "Up" (filter 2)
+    set data [binary format cu* {0 1 2 3 2 1 1 1}]
+    binary scan [::tclutils::tupdftext::_predictor doc $data \
+        {d {Predictor {n 12} Columns {n 3}}}] cu* out
+    set out
+} -result {1 2 3 2 3 4}
+
+test tupdftext-5.6 {font object inside an object stream (/ObjStm)} -body {
+    set fontBody "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+    set hdr "5 0 "
+    set first [string length $hdr]
+    set objs [onePage "BT /F1 12 Tf 72 700 Td (aus dem Objektstrom) Tj ET"]
+    # object 5 is not written directly: object 6 is the object stream
+    lset objs 4 [stream "/Type /ObjStm /N 1 /First $first /Filter /FlateDecode" \
+        [zlib compress "$hdr$fontBody"]]
+    lset objs 2 [string map {"/F1 5 0 R" "/F1 5 0 R"} [lindex $objs 2]]
+    # renumber: the stream becomes object 6, object 5 is only in it
+    set objs [linsert $objs 4 "null"]
+    set p [mkpdf objstm.pdf $objs]
+    # drop the direct "5 0 obj null" so that 5 exists only in the stream
+    set fh [open $p rb]; set d [read $fh]; close $fh
+    set d [string map {"5 0 obj\nnull\nendobj\n" "%removed%\nnull\n%%%%%%%%\n"} $d]
+    set fh [open $p wb]; puts -nonewline $fh $d; close $fh
+    ::tclutils::tupdftext::pages $p
+} -result {{aus dem Objektstrom}}
+
+# ---- structure ---------------------------------------------------------------
+
+test tupdftext-6.1 {page tree: order of Kids, inherited Resources, several pages} -body {
+    set font "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+    set objs [list \
+        "<< /Type /Catalog /Pages 2 0 R >>" \
+        "<< /Type /Pages /Kids \[4 0 R 3 0 R\] /Count 2 /Resources << /Font << /F1 7 0 R >> >> >>" \
+        "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>" \
+        "<< /Type /Page /Parent 2 0 R /Contents \[6 0 R 8 0 R\] >>" \
+        [stream "" "BT /F1 10 Tf 72 700 Td (zweite) Tj ET"] \
+        [stream "" "BT /F1 10 Tf 72 700 Td (erste) Tj"] \
+        $font \
+        [stream "" " ( Seite) Tj ET"]]
+    ::tclutils::tupdftext::pages [mkpdf tree.pdf $objs]
+} -result {{erste Seite} zweite}
+
+test tupdftext-6.2 {no /Root: all /Type /Page objects in file order} -body {
+    set p [mkpdf noroot.pdf [onePage "BT /F1 12 Tf 72 700 Td (ohne Wurzel) Tj ET"] "" 1]
+    ::tclutils::tupdftext::pages $p
+} -result {{ohne Wurzel}}
+
+test tupdftext-6.3 {incremental update: the later object wins} -body {
+    set p [mkpdf incr.pdf [onePage "BT /F1 12 Tf 72 700 Td (alt) Tj ET"]]
+    set neu [stream "" "BT /F1 12 Tf 72 700 Td (neu) Tj ET"]
+    set fh [open $p ab]; puts -nonewline $fh "4 0 obj\n$neu\nendobj\n"; close $fh
+    ::tclutils::tupdftext::pages $p
+} -result neu
+
+test tupdftext-6.4 {Form XObject with its own resources and matrix} -body {
+    set objs [onePage "BT /F1 12 Tf 72 700 Td (Seite) Tj ET q 1 0 0 1 0 -100 cm /X1 Do Q" \
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>" "/XObject << /X1 6 0 R >>"]
+    lappend objs [stream "/Type /XObject /Subtype /Form /BBox \[0 0 600 800\] /Resources << /Font << /F2 5 0 R >> >>" \
+        "BT /F2 12 Tf 72 700 Td (im Formular) Tj ET"]
+    ::tclutils::tupdftext::pages [mkpdf form.pdf $objs]
+} -result [list "Seite\nim Formular"]
+
+test tupdftext-6.5 {a form that draws itself does not loop} -body {
+    set objs [onePage "/X1 Do BT /F1 12 Tf 72 600 Td (danach) Tj ET" \
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>" "/XObject << /X1 6 0 R >>"]
+    lappend objs [stream "/Type /XObject /Subtype /Form /Resources << /Font << /F1 5 0 R >> /XObject << /X1 6 0 R >> >>" \
+        "BT /F1 12 Tf 72 700 Td (Form) Tj ET /X1 Do"]
+    ::tclutils::tupdftext::pages [mkpdf loop.pdf $objs]
+} -result [list "Form\ndanach"]
+
+test tupdftext-6.6 {inline image data is skipped} -body {
+    set p [mkpdf inline.pdf [onePage "BI /W 2 /H 1 /CS /G /BPC 8 ID \x00\xffTj(EI) EI BT /F1 12 Tf 72 700 Td (nach dem Bild) Tj ET"]]
+    ::tclutils::tupdftext::pages $p
+} -result {{nach dem Bild}}
+
+# ---- text and summary ---------------------------------------------------------
+
+test tupdftext-7.1 {text joins the pages with -separator} -body {
+    set p [file join $tmp tree.pdf]
+    list [::tclutils::tupdftext::text $p -separator |] \
+         [string first \f [::tclutils::tupdftext::text $p]]
+} -result {{erste Seite|zweite} 11}
+
+test tupdftext-7.2 {summary} -body {
+    set s [::tclutils::tupdftext::summary [file join $tmp tree.pdf]]
+    list [dict get $s pages] [dict get $s encrypted] [dict get $s version] \
+         [dict get $s textPages] [dict get $s unmapped] [llength [dict get $s fonts]]
+} -result {2 0 1.4 2 0 1}
+
+test tupdftext-7.3 {a lone surrogate in ToUnicode becomes U+FFFD} -body {
+    ::tclutils::tupdftext::_utf16 [binary format H* D8000041]
+} -result �A
+
+# ---- with pdf4tcl, if present --------------------------------------------
+
+testConstraint pdf4tcl [expr {![catch {package require pdf4tcl}]}]
+
+test tupdftext-8.1 {a PDF written by pdf4tcl (compressed, standard font)} -constraints pdf4tcl -body {
+    set p [file join $tmp p4.pdf]
+    set pdf [pdf4tcl::new %AUTO% -paper a4 -compress 1]
+    $pdf startPage
+    $pdf setFont 12 Helvetica
+    $pdf text "Erste Zeile mit Umlauten: äöüß" -x 50 -y 50
+    $pdf text "Zweite Zeile" -x 50 -y 70
+    $pdf startPage
+    $pdf setFont 12 Helvetica
+    $pdf text "Seite zwei" -x 50 -y 50
+    $pdf write -file $p
+    $pdf destroy
+    ::tclutils::tupdftext::pages $p
+} -result [list "Erste Zeile mit Umlauten: äöüß\nZweite Zeile" "Seite zwei"]
+
+cleanupTests

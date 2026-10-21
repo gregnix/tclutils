@@ -3,7 +3,7 @@
 .PP
 Read\-only PDF structure inspector in pure Tcl.
 .PP
-\fBtupdf\fR scans PDF files for common structural information: header version, object ids, page markers, trailer text, metadata, and raw objects. Since \fB0.2\fR it also inflates compressed object streams (\fB/ObjStm\fR) with the built\-in \fBzlib\fR and reads the trailer from a cross\-reference stream (\fB/Type /XRef\fR), so objects, pages and metadata hidden inside them are resolved too. It is still a lightweight inspector, not a full PDF parser.
+\fBtupdf\fR scans PDF files for common structural information: header version, object ids, page markers, trailer text, metadata, and raw objects. Since \fB0.2\fR it also inflates compressed object streams (\fB/ObjStm\fR) with the built\-in \fBzlib\fR and reads the trailer from a cross\-reference stream (\fB/Type /XRef\fR), so objects, pages and metadata hidden inside them are resolved too. It is still a lightweight inspector, not a full PDF parser. The text of the pages comes from \fBtclutils::tupdftext\fR (see \fBtupdftext.md\fR).
 .SS Package
 .CS
 package require tclutils::tupdf 0.2
