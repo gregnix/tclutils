@@ -1,5 +1,14 @@
 # Changelog
 
+## unreleased - 2026-10-24
+
+- `tests/tupdftext.test`: the expected results with umlauts, the euro
+  sign and U+FFFD are written as `\uXXXX`. Run directly with a system
+  encoding other than UTF-8 (`tclsh tupdftext.test` under `LANG=C`) the
+  file was read in that encoding and five tests failed (bookkit review
+  2026-10-24). Through `all.tcl` (`source -encoding utf-8`) nothing
+  changes.
+
 ## 0.67.0 - 2026-10-21
 
 New module `tupdftext` 0.1: the text of a PDF, page by page, in pure Tcl.

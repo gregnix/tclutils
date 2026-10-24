@@ -65,7 +65,7 @@ Only the first report of an operation counts. A late result after a timeout or c
 .IP \(bu
 \fBonwrite varName\fR → done when the variable is written; the value is its new content. For GUI waits: a button sets the variable.
 .IP \(bu
-\fBpipe cmdlist ?\-encoding enc? ?\-profile p?\fR → runs the pipeline without blocking; the value is its output, stdout and stderr together. A non\-zero exit raises Tcl's \fB{CHILDSTATUS pid code}\fR. Cancel kills the processes (\fBkill\fR on Unix, \fBtaskkill /T /F\fR on Windows). \fB\-profile\fR is Tcl 9 only.
+\fBpipe cmdlist ?\-encoding enc? ?\-profile p?\fR → runs the pipeline without blocking; the value is its output, stdout and stderr together. A non\-zero exit raises Tcl's \fB{CHILDSTATUS pid code}\fR. Cancel kills the processes (\fBkill\fR on Unix, \fBtaskkill /T /F\fR on Windows). On Unix only the processes of the pipeline itself: what they start in the background (\fBsh \-c "x &"\fR) keeps running (measured 2026\-10\-20; \fBsetsid\fR is planned, see the roadmap). \fB\-profile\fR is Tcl 9 only.
 .SS Groups
 .CS
 set g [group]
@@ -83,6 +83,10 @@ $g destroy                 ;# destroys its tasks
 Cancelling a task that awaits a group cancels the group's tasks.
 .IP \(bu
 An empty group: \fBall\fR returns \fB{}\fR, \fBfirst\fR raises \fBEMPTY\fR.
+.IP \(bu
+\fB$g tasks\fR lists the group's task objects.
+.IP \(bu
+\fB$g destroy\fR right after \fBwait\fR is safe: callbacks of tasks cancelled by \fB\-mode first\fR or by an error that arrive later are dropped.
 .SS "Pool (Thread package)"
 .CS
 set p [pool -size 4 -init {package require mylib}]
@@ -91,7 +95,7 @@ $p stats                    ;# workers idle queued jobs
 $p destroy
 .CE
 .PP
-Each job runs in a worker thread (own interpreter, no shared variables). Errors keep the worker's \fB\-errorcode\fR and \fB\-errorinfo\fR. Cancelling a running job calls \fBthread::cancel\fR; the worker lives on. Destroying the pool releases the workers; tasks still waiting get \fBCANCELLED\fR. Without the Thread package \fBpool\fR raises \fBNOTHREAD\fR.
+\fB\-size\fR defaults to 2. Each job runs in a worker thread (own interpreter, no shared variables). Errors keep the worker's \fB\-errorcode\fR and \fB\-errorinfo\fR. Cancelling a running job calls \fBthread::cancel\fR; the worker lives on. Destroying the pool releases the workers; tasks still waiting get \fBCANCELLED\fR. Without the Thread package \fBpool\fR raises \fBNOTHREAD\fR. If \fB\-init\fR fails in a new worker, the job's waiter gets \fBINIT\fR; nothing stays queued.
 .SS Sandbox
 .CS
 set s [sandbox -commands 100000 -time 2000 -aliases {log {my::log}}]
@@ -100,7 +104,9 @@ await [$s op $script]           ;# from a task, next event-loop turn
 $s destroy
 .CE
 .PP
-A safe interpreter (\fB\-safe 0\fR for a normal one) with a command limit and a time limit per evaluation. Exceeding one raises \fB{TCLUTILS TUTASK LIMIT COMMANDS}\fR or \fB{TCLUTILS TUTASK LIMIT TIME}\fR; the next evaluation starts with fresh limits. Other errors keep the child's \fB\-errorcode\fR. The script runs in the calling thread: \fBop\fR can be cancelled until it starts, then the limits bound it. For real parallelism use a pool.
+A safe interpreter (\fB\-safe 0\fR for a normal one) with a command limit and a time limit per evaluation. Exceeding one raises \fB{TCLUTILS TUTASK LIMIT COMMANDS}\fR or \fB{TCLUTILS TUTASK LIMIT TIME}\fR; the next evaluation starts with fresh limits. Other errors keep the child's \fB\-errorcode\fR. The script runs in the calling thread: \fBop\fR can be cancelled until it starts, then the limits bound it. For real parallelism use a pool. \fB$s interp\fR returns the child interpreter (to add aliases or variables).
+.PP
+The command limit counts commands. A loop whose body is empty, like \fBwhile 1 {}\fR, executes none and is not stopped by \fB\-commands\fR; only \fB\-time\fR ends it (measured with Tcl 8.6.14 and 9.0.4). Always set \fB\-time\fR for untrusted scripts.
 .SS Leaks
 .PP
 \fBtasks\fR lists the live task objects; \fBstats\fR returns a dict \fBtasks running awaits pipes pools sandboxes\fR. After a test run all of them should be 0.

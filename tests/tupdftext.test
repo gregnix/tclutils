@@ -89,13 +89,13 @@ test tupdftext-1.6 {no text on any page: NOTEXT, or empty strings with -notext e
 test tupdftext-2.1 {WinAnsi string with umlauts} -body {
     set p [mkpdf win.pdf [onePage "BT /F1 12 Tf 72 700 Td (Gr\\374\\337e aus K\\366ln) Tj ET"]]
     ::tclutils::tupdftext::pages $p
-} -result [list "Grüße aus Köln"]
+} -result [list "Gr\u00fc\u00dfe aus K\u00f6ln"]
 
 test tupdftext-2.2 {/Differences with glyph names, uniXXXX and a ligature} -body {
     set font "<< /Type /Font /Subtype /Type1 /BaseFont /X /Encoding << /Type /Encoding /BaseEncoding /StandardEncoding /Differences \[128 /adieresis /germandbls /uni20AC /fi\] >> >>"
     set p [mkpdf diff.pdf [onePage "BT /F1 12 Tf 72 700 Td (\\200\\201 \\202 \\203nde) Tj ET" $font]]
     ::tclutils::tupdftext::pages $p
-} -result [list "äß € finde"]
+} -result [list "\u00e4\u00df \u20ac finde"]
 
 test tupdftext-2.3 {literal string escapes, nesting, line continuation} -body {
     # PDF source: (a\(b\) \\ (c) d\<newline>e)
@@ -154,7 +154,7 @@ endcmap CMapName currentdict /CMap defineresource pop end end"
     set objs [onePage "BT /F1 12 Tf 72 700 Td <0001000200150014000A000B000C> Tj ET" $f0]
     lappend objs $f1 [stream "" $cmap]
     ::tclutils::tupdftext::pages [mkpdf cid.pdf $objs]
-} -result [list "Dü€rabc"]
+} -result [list "D\u00fc\u20acrabc"]
 
 test tupdftext-4.2 {Type0 without ToUnicode: U+FFFD per glyph, counted by summary} -body {
     lassign [cidFont ""] f0 f1
@@ -164,7 +164,7 @@ test tupdftext-4.2 {Type0 without ToUnicode: U+FFFD per glyph, counted by summar
     set s [::tclutils::tupdftext::summary $p]
     list [::tclutils::tupdftext::pages $p] [dict get $s unmapped] \
          [dict get [lindex [dict get $s fonts] 0] toUnicode]
-} -result [list "��" 2 0]
+} -result [list "\ufffd\ufffd" 2 0]
 
 # ---- filters and object streams -------------------------------------------
 
@@ -286,7 +286,7 @@ test tupdftext-7.2 {summary} -body {
 
 test tupdftext-7.3 {a lone surrogate in ToUnicode becomes U+FFFD} -body {
     ::tclutils::tupdftext::_utf16 [binary format H* D8000041]
-} -result �A
+} -result \ufffdA
 
 # ---- with pdf4tcl, if present --------------------------------------------
 
@@ -297,7 +297,7 @@ test tupdftext-8.1 {a PDF written by pdf4tcl (compressed, standard font)} -const
     set pdf [pdf4tcl::new %AUTO% -paper a4 -compress 1]
     $pdf startPage
     $pdf setFont 12 Helvetica
-    $pdf text "Erste Zeile mit Umlauten: äöüß" -x 50 -y 50
+    $pdf text "Erste Zeile mit Umlauten: \u00e4\u00f6\u00fc\u00df" -x 50 -y 50
     $pdf text "Zweite Zeile" -x 50 -y 70
     $pdf startPage
     $pdf setFont 12 Helvetica
@@ -305,6 +305,6 @@ test tupdftext-8.1 {a PDF written by pdf4tcl (compressed, standard font)} -const
     $pdf write -file $p
     $pdf destroy
     ::tclutils::tupdftext::pages $p
-} -result [list "Erste Zeile mit Umlauten: äöüß\nZweite Zeile" "Seite zwei"]
+} -result [list "Erste Zeile mit Umlauten: \u00e4\u00f6\u00fc\u00df\nZweite Zeile" "Seite zwei"]
 
 cleanupTests
