@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuod 0.1
+package require tclutils::tuod 0.2
 
 proc writeBinaryTestFile {path bytes} {
     set fh [open $path wb]
@@ -38,6 +38,25 @@ writeBinaryTestFile $odFile "ABCD"
 test tuod-1.5 {file dump} -body {
     ::tclutils::tuod::file $odFile -format decimal -width 4
 } -result {00000000  065 066 067 068}
+
+test tuod-2.1 {bad -format reported for empty data} -body {
+    catch {::tclutils::tuod::data "" -format bogus} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUOD FORMAT bogus}
+
+test tuod-2.2 {bad -address reported for empty data} -body {
+    catch {::tclutils::tuod::data "" -address bogus} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUOD ADDRESS bogus}
+
+test tuod-2.3 {characters above 255 are rejected} -body {
+    set out {}
+    foreach cmd {bytes data} {
+        catch {::tclutils::tuod::$cmd "a\u20ac"} msg opts
+        lappend out [dict get $opts -errorcode]
+    }
+    set out
+} -result {{TCLUTILS TUOD BYTES} {TCLUTILS TUOD BYTES}}
 
 catch {file delete -force $odFile}
 cleanupTests

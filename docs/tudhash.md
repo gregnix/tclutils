@@ -7,8 +7,12 @@ their hashes is small. This finds near-duplicate scans/photos (rescaled,
 recompressed, slightly adjusted) that an exact byte hash (`sha256`, `xxhash`)
 would never match.
 
-Pure Tcl, 8.6+ / 9.x. The bit convention matches the common dHash (e.g. python
-`imagehash.dhash`), verified against it.
+Pure Tcl, 8.6+ / 9.x. The bit order matches the common dHash (e.g. python
+`imagehash.dhash`): 9x8 reduction, each pixel compared with its right
+neighbour, row by row, most significant bit first. The reduction differs:
+`tudhash` uses a plain box average, `imagehash` resizes with PIL's Lanczos
+filter. For the same picture the two hashes can therefore differ by a few
+bits; they are identical only when both reductions give the same 9x8 grid.
 
 ## Commands
 
@@ -88,13 +92,13 @@ Error code `{TCLUTILS TUDHASH <REASON>}`:
 
 | REASON | When |
 |--------|------|
-| `DIM` | width/height not positive integers |
+| `DIM` | width/height not positive (decimal) integers; checked first, also by `fromRGB` |
 | `DATA` | grayList/rgbList has the wrong number of values |
 | `HASH` | a hash passed to `distance`/`similar` is not 16 hex chars |
 
 ## Testing
 
-`tests/tudhash.test` checks the bit convention against a real 9×8 reduction from
+`tests/tudhash.test` checks the bit order against a real 9×8 reduction from
 `imagehash`, the all-ones/all-zeros gradients, the distance/similar helpers, the
 RGB→gray path and the down-scaler. Set `TCLUTILS_TM` and run with `tclsh`
 (passes on 8.6 and 9.0).

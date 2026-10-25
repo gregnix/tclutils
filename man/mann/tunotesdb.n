@@ -1,10 +1,10 @@
-.TH tunotesdb n 0.1 tclutils
+.TH tunotesdb n 0.2 tclutils
 .SH "tclutils::tunotesdb — SQLite\-backed note store"
 .PP
 The persistent counterpart to \fBtunotes\fR. Same note layout, so both engines are interchangeable and \fBtkutils::tkunotes\fR works with either.
 .CS
 package require sqlite3
-package require tclutils::tunotesdb 0.1
+package require tclutils::tunotesdb 0.2
 
 sqlite3 db notes.db
 tclutils::tunotesdb::init db
@@ -101,7 +101,7 @@ Command	Purpose
 \fBfromStore db store ?\-clear 1?\fR	import a \fBtunotes\fR store; returns how many notes
 .TE
 .PP
-\fBtoStore\fR hands the data to code that expects the in\-memory engine — including \fBtclutils::tunotes::toJson\fR for a JSON export. \fBfromStore\fR runs in one transaction: a failure half\-way leaves the database as it was.
+\fBtoStore\fR hands the data to code that expects the in\-memory engine — including \fBtclutils::tunotes::toJson\fR for a JSON export. \fBfromStore\fR runs in one transaction: a failure half\-way leaves the database as it was. A note whose id already exists is updated in place, so its children stay. The order of the store does not matter (a child may come before its parent); every \fBparent_id\fR must name a note in the store or in the database, otherwise \fBNOTFOUND\fR.
 .SS Errors
 .PP
 \fBerrorCode\fR is always \fB{TCLUTILS TUNOTESDB <REASON>}\fR:
@@ -110,7 +110,7 @@ l l.
 Reason	When
 \fBNODB\fR	the handle is not a usable sqlite3 command
 \fBNOFTS5\fR	SQLite without FTS5
-\fBNOTFOUND\fR	no note with that id, or no such parent
+\fBNOTFOUND\fR	no note with that id, or no such parent (also a \fBparent_id\fR in \fBfromStore\fR)
 \fBCYCLE\fR	a move would put a note under itself or a descendant
 \fBBADQUERY\fR	FTS5 could not parse the search query
 \fBBADOPTION\fR	unknown option, or an unusable \fB\-limit\fR

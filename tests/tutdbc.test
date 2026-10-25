@@ -13,7 +13,7 @@ set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 catch {tcl::tm::path add [file join $root lib tm]}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
-package require tclutils::tutdbc 0.1
+package require tclutils::tutdbc 0.2
 
 testConstraint tdbc [expr {![catch {package require tdbc::sqlite3}]}]
 
@@ -112,5 +112,31 @@ test tutdbc-transaction-returns {transaction returns the script's value} \
         ::tclutils::tutdbc::value $c {SELECT name FROM t WHERE id=7}
     }
 } -result Z
+
+
+# --- unreleased: column values are returned as text, not normalised ---------
+# A stub connection (no driver needed): one row with zip "01234" and a
+# NULL (missing) column.
+proc stubConn {args} {
+    switch -- [lindex $args 0] {
+        prepare { return stubStmt }
+    }
+}
+proc stubStmt {args} {
+    switch -- [lindex $args 0] {
+        execute { return stubRs }
+        close   { return }
+    }
+}
+proc stubRs {args} {
+    switch -- [lindex $args 0] {
+        columns { return {zip score nick} }
+        allrows { return [list [dict create zip 01234 score 5.10]] }
+        close   { return }
+    }
+}
+test tutdbc-numtext {rows keeps column values like 01234 / 5.10 as text} -body {
+    ::tclutils::tutdbc::rows stubConn {SELECT zip, score, nick FROM t}
+} -result {{zip 01234 score 5.10 nick {}}}
 
 cleanupTests

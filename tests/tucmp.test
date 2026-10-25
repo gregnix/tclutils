@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tucmp 0.1
+package require tclutils::tucmp 0.2
 
 proc writeBin {path data} {
     set fh [open $path wb]
@@ -47,6 +47,27 @@ test tucmp-1.5 {file first difference} -body {
     writeBin $b "AXC"
     ::tclutils::tucmp::firstDifference $a $b
 } -result 1
+
+test tucmp-2.1 {characters above 255 are rejected, also when equal} -body {
+    set out {}
+    foreach {a b} [list "\u20ac" "\u20ac" "a\u20ac" "ab" "ab" "a\u20ac"] {
+        catch {::tclutils::tucmp::data $a $b} msg opts
+        lappend out [dict get $opts -errorcode]
+    }
+    set out
+} -result {{TCLUTILS TUCMP BYTES} {TCLUTILS TUCMP BYTES} {TCLUTILS TUCMP BYTES}}
+
+test tucmp-2.2 {UTF-8 bytes compare byte-wise} -body {
+    set r [::tclutils::tucmp::data [encoding convertto utf-8 "a\u20ac"] \
+        [encoding convertto utf-8 "a\u00e4"]]
+    list [dict get $r offset] [dict get $r byte1] [dict get $r byte2] \
+        [dict get $r size1] [dict get $r size2]
+} -result {1 226 195 4 3}
+
+test tucmp-2.3 {byte 255 unsigned} -body {
+    set r [::tclutils::tucmp::data "\xff" "\xfe\x01"]
+    list [dict get $r byte1] [dict get $r byte2]
+} -result {255 254}
 
 file delete -force $tmp
 cleanupTests

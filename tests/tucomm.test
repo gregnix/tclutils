@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tucomm 0.1
+package require tclutils::tucomm 0.2
 
 set tmp [makeDirectory tucomm]
 set a [makeFile "apple\nbanana\npear\n" [file join $tmp a.txt]]
@@ -33,5 +33,17 @@ test tucomm-1.5 {format columns} -body {
     set r [dict create onlyA {a} onlyB {b} both {c}]
     ::tclutils::tucomm::formatColumns $r -separator |
 } -result "a\n|b\n||c"
+
+test tucomm-1.6 {-sort uses the merge order: digits} -body {
+    ::tclutils::tucomm::compareLines {a9 a10} {a10} -sort 1
+} -result {onlyA a9 onlyB {} both a10}
+
+test tucomm-1.7 {-sort uses the merge order: mixed case} -body {
+    ::tclutils::tucomm::compareLines {a B} {B} -sort 1
+} -result {onlyA a onlyB {} both B}
+
+test tucomm-1.8 {-sort with -nocase} -body {
+    ::tclutils::tucomm::compareLines {b A c} {C a} -sort 1 -nocase 1
+} -result {onlyA b onlyB {} both {A c}}
 
 cleanupTests

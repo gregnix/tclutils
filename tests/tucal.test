@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tucal 0.1
+package require tclutils::tucal 0.2
 
 if {![catch {clock format 0 -format %B -locale de_DE -timezone :UTC}]} {
     testConstraint haveDeLocale 1
@@ -76,5 +76,46 @@ test tucal-1.12 {weeknumber header aligns with day columns} -body {
     set lines [split [::tclutils::tucal::render 2026 6 -weeknumbers 1] \n]
     expr {[string length [lindex $lines 1]] == [string length [lindex $lines 3]]}
 } -result 1
+
+test tucal-2.1 {year runs row by row: January February March first} -body {
+    set lines [split [::tclutils::tucal::year 2026] \n]
+    regexp -all -inline {[A-Z][a-z]+} [lindex $lines 2]
+} -result {January February March}
+
+test tucal-2.2 {month title is centred over the 27-column grid} -body {
+    set lines [split [::tclutils::tucal::render 2026 5] \n]
+    list [lindex $lines 0] [string length [lindex $lines 1]]
+} -result {{         May 2026} 27}
+
+test tucal-2.3 {with week numbers the title is centred over the days} -body {
+    lindex [split [::tclutils::tucal::render 2026 5 -iso 1] \n] 0
+} -result {             May 2026}
+
+test tucal-2.4 {three: blocks 27 wide, two blanks apart} -body {
+    set lines [split [::tclutils::tucal::three 5 2026] \n]
+    list [string first "May 2026" [lindex $lines 0]] \
+        [string first "Su" [lindex $lines 1] 27] \
+        [string first "Su" [lindex $lines 1] 56]
+} -result {38 30 59}
+
+test tucal-2.5 {no line ends in a blank} -body {
+    set bad 0
+    foreach out [list [::tclutils::tucal::render 2026 5] \
+            [::tclutils::tucal::render 2026 5 -iso 1] \
+            [::tclutils::tucal::three 5 2026] \
+            [::tclutils::tucal::three 5 2026 -weeknumbers 1] \
+            [::tclutils::tucal::year 2026] \
+            [::tclutils::tucal::year 2026 -iso 1]] {
+        foreach line [split $out \n] {
+            if {[string match "* " $line]} { incr bad }
+        }
+    }
+    set bad
+} -result 0
+
+test tucal-2.6 {year: 64 columns, year centred} -body {
+    set lines [split [::tclutils::tucal::year 2026] \n]
+    list [lindex $lines 0] [string length [lindex $lines 3]]
+} -result {{                              2026} 64}
 
 cleanupTests

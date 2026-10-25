@@ -1,14 +1,14 @@
-.TH tudiagram n 0.4 tclutils
+.TH tudiagram n 0.5 tclutils
 .SH tclutils::tudiagram
 .PP
 A pure\-Tcl \fBnode\-edge graph renderer\fR for the \fBtuflow\fR diagram family. It builds a small diagram model (a dict), runs a layered layout, and draws the result to SVG or PNG with the pure\-Tcl backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
 .PP
-\fBtudiagram\fR is the renderer behind every \fIgraph\-shaped\fR Mermaid type that \fBtclutils::tuflow\fR supports (flowchart/graph, stateDiagram, erDiagram, classDiagram, requirementDiagram, mindmap, C4, …). Each of those parsers emits a \fBtudiagram\fR model; the \fBtuflow\fR facade then calls \fBtudiagram::toSvg\fR / \fBtudiagram::toPng\fR. Non\-graph types (pie, xychart) own their own renderer and do \fBnot\fR go through \fBtudiagram\fR.
+\fBtudiagram\fR is the renderer behind every \fIgraph\-shaped\fR Mermaid type that \fBtclutils::tuflow\fR supports (flowchart/graph, stateDiagram, erDiagram, classDiagram, requirementDiagram, mindmap, C4, …). Each of those parsers emits a \fBtudiagram\fR model; the \fBtuflow\fR facade then calls \fBtudiagram::toSvg\fR / \fBtudiagram::toPng\fR. Non\-graph types (sequence, gantt, pie, xychart, quadrant, journey, timeline, sankey, radar, treemap, packet, kanban; list in \fBtuflow.md\fR) own their own renderer and do \fBnot\fR go through \fBtudiagram\fR.
 .PP
 The render layer talks only to the congruent canvas protocol shared by \fBtusvg\fR and \fBtupngdraw\fR: the same \fBrender\fR proc emits SVG or PNG, the constructor is the only difference. Box sizing uses the shared monospace text metric, so the layout geometry is backend\-independent and the SVG and PNG output stay congruent.
 .SS Package
 .CS
-package require tclutils::tudiagram 0.3
+package require tclutils::tudiagram 0.5
 .CE
 .PP
 Depends only on \fBtclutils::common\fR. Building and laying out a model needs no canvas; rendering needs a \fBtusvg\fR or \fBtupngdraw\fR object. The optional \fB\-fontfile\fR path additionally needs the third\-party \fBGlyphs\fR package at render time (lazy, unbundled).
@@ -24,7 +24,7 @@ The builders are \fBfunctional\fR: each returns the updated diagram dict, so the
 }
 .CE
 .PP
-After \fBlayout\fR each node additionally carries \fBx y width height\fR (top\-left origin, pixels), each edge carries a polyline \fBpoints\fR plus \fBback\fR (1 if the edge was reversed to break a cycle), and \fBmeta\fR carries \fBlaid 1\fR and the overall \fBwidth\fR / \fBheight\fR.
+After \fBlayout\fR each node additionally carries \fBx y width height\fR (top\-left origin, pixels), each edge carries a polyline \fBpoints\fR plus \fBback\fR (1 if the edge was reversed to break a cycle), and \fBmeta\fR carries \fBlaid 1\fR, the overall \fBwidth\fR / \fBheight\fR and \fBtitleH\fR. With a non\-empty \fBtitle\fR, \fBtitleH\fR is the height of the title band (8 × theme \fBfont\fR + 10 pixels): every node and edge point moves down by it, the height grows by it, and the width grows to fit the title. The title is drawn centred in that band. Without a title \fBtitleH\fR is 0.
 .SS Commands
 .SS "Model builders"
 .CS
@@ -37,7 +37,7 @@ After \fBlayout\fR each node additionally carries \fBx y width height\fR (top\-l
 ::tclutils::tudiagram::addGroup d id ?-label L? ?-members {id ...}?  ;# -> diagram dict
 .CE
 .PP
-\fBcreate\fR starts an empty diagram. \fB\-direction\fR is the rank flow (default \fBLR\fR). \fB\-theme\fR is a theme name (see \fIThemes\fR) or an inline theme dict. \fBsetMeta\fR overrides any \fBmeta\fR key after creation (e.g. \fB\-direction TB\fR, \fB\-nodeGap 40\fR); it re\-validates \fBdirection\fR.
+\fBcreate\fR starts an empty diagram. \fB\-direction\fR is the rank flow (default \fBLR\fR). \fB\-theme\fR is a theme name (see \fIThemes\fR) or an inline theme dict; anything else raises \fB{TCLUTILS TUDIAGRAM THEME}\fR. \fB\-title\fR is drawn above the graph (see \fIModel\fR). \fBsetMeta\fR overrides any \fBmeta\fR key after creation (e.g. \fB\-direction TB\fR, \fB\-nodeGap 40\fR); it re\-validates \fBdirection\fR and \fBtheme\fR.
 .PP
 \fBaddNode\fR adds a node; \fBid\fR must be unique. \fB\-label\fR defaults to the id. \fB\-shape\fR is one of \fBbox\fR (default), \fBrounded\fR, \fBdot\fR, \fBcircle\fR, \fBstadium\fR, \fBdiamond\fR, \fBhexagon\fR, \fBcylinder\fR. \fB\-style\fR is an optional per\-node colour override — a dict with any of the keys \fBfill\fR, \fBstroke\fR, \fBtext\fR (6\-digit hex), e.g. \fB\-style {fill #e3f2fd stroke #1565c0}\fR; absent keys fall back to the theme, and a malformed or empty value is ignored (theme is used), so it is backward compatible.
 .PP
@@ -63,7 +63,7 @@ Computes a layered layout for a DAG and returns a new dict with the geometry fie
 ::tclutils::tudiagram::theme name        ;# -> theme dict
 .CE
 .PP
-Resolves a theme name to its dict. Known names are \fBdefault\fR, \fBpipeline\fR and \fBmono\fR. An unknown name returns \fBdefault\fR; an inline dict that carries a \fBfill\fR key is merged over \fBdefault\fR and returned as\-is. A theme dict has the keys \fBfill stroke text edge font pad\fR.
+Resolves a theme name to its dict. Known names are \fBdefault\fR, \fBpipeline\fR and \fBmono\fR. An inline dict that carries a \fBfill\fR key is merged over \fBdefault\fR and returned. Any other value (an unknown name, a dict without \fBfill\fR) raises \fB{TCLUTILS TUDIAGRAM THEME}\fR; the message lists the known names. A theme dict has the keys \fBfill stroke text edge font pad\fR.
 .SS "Rendering and output"
 .CS
 ::tclutils::tudiagram::render   d canvas                  ;# draw onto a canvas object
@@ -120,7 +120,7 @@ set model [::tclutils::tuflow::parse $mermaidText]   ;# -> tudiagram model
 .IP \(bu
 \fBShapes\fR are drawn with the primitive canvas operations only (rect/line/polygon/text); the supersample proxy exposes no native circle/ellipse, so round shapes are polygon approximations. This keeps every shape identical on the SVG and raster backends.
 .IP \(bu
-\fBFonts:\fR labels use the \fBtupngdraw\fR 6x8 bitmap font by default, which covers ASCII and the German umlauts (real codepoints \fB\eu00xx\fR). With \fB\-fontfile\fR on the raster backend a real outline font is used via \fBfillcontours\fR (lazy \fBGlyphs\fR, unbundled); a set\-but\-missing path is a hard error, a missing \fBGlyphs\fR package degrades silently to the bitmap font.
+\fBFonts:\fR labels use the \fBtupngdraw\fR 6x8 bitmap font by default, which covers ASCII and the German umlauts (real codepoints \fB\eu00xx\fR). With \fB\-fontfile\fR on the raster backend a real outline font is used via \fBfillcontours\fR. Glyphs (A. Buratti) is not part of tclutils. Put the directory that contains \fBpkgIndex.tcl\fR on \fBauto_path\fR; the package loads Bezier and BContour from its own \fBlib/\fR. A set\-but\-missing font file is \fB{TCLUTILS TUDIAGRAM FONT}\fR. A missing Glyphs package keeps the 6x8 bitmap and raises no error. SVG ignores \fB\-fontfile\fR. The layout metric stays 6x8 either way.
 .IP \(bu
 \fBCompanion modules:\fR \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (backends), \fBtclutils::tuflow\fR (facade / dispatch), \fBtclutils::tupie\fR and \fBtclutils::tuxychart\fR (the non\-graph renderers in the same family).
 .SS "Error codes"
@@ -134,5 +134,7 @@ set model [::tclutils::tuflow::parse $mermaidText]   ;# -> tudiagram model
 \fBARG\fR — bad argument (unknown \fB\-shape\fR, non\-integer \fB\-scale\fR, unknown render backend).
 .IP \(bu
 \fBFONT\fR — a \fB\-fontfile\fR path that does not exist (raster backend).
+.IP \(bu
+\fBTHEME\fR — \fBtheme\fR, \fBcreate \-theme\fR or \fBsetMeta \-theme\fR with an unknown theme name or a dict without \fBfill\fR.
 .IP \(bu
 \fBNONODE\fR / \fBEMPTY\fR — reported by \fBvalidate\fR (as list entries, not thrown): an edge endpoint with no matching node, or a model with no nodes.

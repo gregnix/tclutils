@@ -25,3 +25,9 @@ equal  offset  byte1  byte2  size1  size2
 ```
 
 `offset` ist 0-basiert. Bei identischen Daten ist `offset` gleich `-1`.
+`size1` und `size2` sind Byteanzahlen.
+
+`data` erwartet Bytes (jedes Zeichen 0..255). Ein Zeichen über 255 wirft
+`{TCLUTILS TUCMP BYTES}`, auch bei gleichen Strings; Text vorher mit
+`encoding convertto` in Bytes wandeln. Eine fehlende Datei wirft
+`{POSIX ENOENT ...}`.

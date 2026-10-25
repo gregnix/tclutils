@@ -101,4 +101,11 @@ test tugit-4.2 {a commit style carries fill and stroke} -body {
     dict keys [dict get [nodeById [M::parse "gitGraph\n  commit"] c1] style]
 } -result {fill stroke}
 
+
+# --- unreleased: a commit id that looks like a number is the label ----------
+test tugit-5.1 {commit id 0123 is the label, unchanged} -body {
+    set m [M::parse "gitGraph\n  commit id: \"0123\""]
+    dict get [nodeById $m 0123] label
+} -result {0123}
+
 cleanupTests

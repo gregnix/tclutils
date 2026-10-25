@@ -92,4 +92,28 @@ test tujourney-4.3 {integer -scale multiplies the raster dimensions} -body {
     list $w1 $h1 $w3 $h3
 } -result {200 200 600 600}
 
+# --- fixes 0.2: fractional scores, bad scores raise VALUE ---------------------------
+
+test tujourney-5.1 {a fractional score is kept} -body {
+    lindex [dict get [::tclutils::tujourney::parse "journey\nKaffee: 2.5: Ich\n"] tasks] 0
+} -result {Kaffee 2.5 Ich {}}
+test tujourney-5.2 {a score that is no number raises VALUE with the line} -body {
+    catch {::tclutils::tujourney::parse "journey\nA: 3\nB: gut: Ich\n"} m o
+    list [dict get $o -errorcode] [string match {line 3:*} $m]
+} -result {{TCLUTILS TUJOURNEY VALUE} 1}
+test tujourney-5.3 {a negative score raises VALUE} -body {
+    catch {::tclutils::tujourney::parse "journey\nA: -1\n"} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUJOURNEY VALUE}
+test tujourney-5.4 {accTitle and accDescr lines are ignored} -body {
+    llength [dict get [::tclutils::tujourney::parse "journey\naccTitle: Tag\naccDescr: lang\nA: 3\n"] tasks]
+} -result 1
+test tujourney-5.5 {leading zeros: 08 is 8 under 8.6 and 9.0} -body {
+    lindex [dict get [::tclutils::tujourney::parse "journey\nA: 08\n"] tasks] 0 1
+} -result 8
+test tujourney-5.6 {a fractional score above 5 renders} -body {
+    binary scan [::tclutils::tujourney::toPng [::tclutils::tujourney::parse "journey\nA: 5.5\nB: 1\n"]] H8 s
+    set s
+} -result 89504e47
+
 cleanupTests

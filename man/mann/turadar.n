@@ -1,10 +1,10 @@
-.TH turadar n 0.1 tclutils
+.TH turadar n 0.2 tclutils
 .SH tclutils::turadar
 .PP
 Parses a Mermaid \fBradar\-beta\fR block and renders it as a \fBradar / spider chart\fR natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtukanban\fR / \fBtupacket\fR / \fBtutreemap\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here. A radar chart is a polar plot, not a node\-edge graph, so it does \fBnot\fR go through \fBtudiagram\fR.
 .SS Package
 .CS
-package require tclutils::turadar 0.1
+package require tclutils::turadar 0.2
 .CE
 .SS Commands
 .CS
@@ -36,6 +36,8 @@ A \fBcurve\fR's values are positional (axis order) or key\-value (\fBaxisId: val
 .IP \(bu
 \fBmin\fR/\fBmax\fR set the scale; \fBmax\fR defaults to the largest data value, \fBmin\fR to 0.
 .IP \(bu
+A curve without \fB["Label"]\fR is named by its id. The legend is on by default only when at least one curve has an explicit \fB["Label"]\fR; \fBshowLegend true\fR or \fBfalse\fR overrides that.
+.IP \(bu
 Blank lines and \fB%%\fR comments are ignored. Unknown config lines are ignored.
 .SS Layout
 .PP
@@ -51,7 +53,7 @@ Theme / config / \fBcScale\fR styling is ignored.
 Needs at least 3 axes (a polygon needs >= 3 points) \-\- fewer is an \fBAXES\fR error.
 .SS Options
 .PP
-\fB\-width\fR / \fB\-height\fR (default 600 each), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in 6x8 bitmap font with German umlauts via real codepoints), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+\fB\-width\fR / \fB\-height\fR (default 600 each), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in 6x8 bitmap font with German umlauts via real codepoints), \fB\-scale\fR (positive integer; on PNG the canvas is \fB\-width\fR×\fB\-scale\fR by \fB\-height\fR×\fB\-scale\fR; on SVG the canvas keeps \fB\-width\fR × \fB\-height\fR and text, lines and spacing grow by the factor).
 .SS Usage
 .CS
 package require tclutils::turadar

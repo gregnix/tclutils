@@ -7,7 +7,7 @@ stripper, and optional Windows VT-mode initialisation. Pure Tcl, GUI-free.
 ## Package
 
 ```tcl
-package require tclutils::tuterm 0.1
+package require tclutils::tuterm 0.2
 ```
 
 ## Commands
@@ -16,9 +16,9 @@ package require tclutils::tuterm 0.1
 ::tclutils::tuterm::style ?spec ...?       ;# -> SGR sequence ("" when disabled)
 ::tclutils::tuterm::wrap  text ?spec ...?   ;# -> styled text + reset
 ::tclutils::tuterm::off   attr              ;# -> the "off" SGR for one attribute
-::tclutils::tuterm::names ?what?            ;# -> available names
+::tclutils::tuterm::names ?what?            ;# -> available names (see below)
 ::tclutils::tuterm::strip text              ;# -> text with SGR removed
-::tclutils::tuterm::enable ?bool?           ;# -> get/set global enable flag
+::tclutils::tuterm::enable ?bool?           ;# -> get/set global enable flag (0/1)
 ::tclutils::tuterm::auto                    ;# -> set enable from NO_COLOR
 ::tclutils::tuterm::enableVT                ;# -> Windows VT mode (no-op elsewhere)
 ::tclutils::tuterm::disableVT
@@ -70,13 +70,24 @@ On Windows, enable VT processing once at startup so escapes render:
 string length [::tclutils::tuterm::strip $styled]
 ```
 
+## names
+
+`names` (or `names all`) lists the categories (`reset`, the attributes,
+`fgcolor`, `bgcolor`); `names fg` / `names bg` list the color names;
+`names <attribute>` returns `on off`. `names reset` and an unknown name
+return an empty list.
+
 ## Notes
 
 - When disabled, `style` returns `""` and `wrap` returns the plain text, so the
   same code paths work with or without color.
+- `enable` takes a Tcl boolean (`0`/`1`, `yes`/`no`, `true`/`false`,
+  `on`/`off`); anything else raises `{TCLUTILS COMMON BOOLEAN bool}` and
+  leaves the flag unchanged.
 - `enableVT` uses `twapi` if present; it returns 1 on success or on non-Windows
   platforms, 0 only if the Windows call failed.
 
 ## Error codes
 
-`-errorcode {TCLUTILS TUTERM <REASON>}` (`STYLE`, `VALUE`, `CATEGORY`).
+`-errorcode {TCLUTILS TUTERM <REASON>}` (`STYLE`, `VALUE`, `CATEGORY`);
+`enable` with a non-boolean raises `{TCLUTILS COMMON BOOLEAN bool}`.

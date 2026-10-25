@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tulog 0.1
+package require tclutils::tulog 0.2
 
 # capture output by logging to a temp file channel
 proc capture {level script} {
@@ -75,5 +75,14 @@ test tulog-3.2 {assert fails with errorcode and sees caller scope} -body {
     catch {::tclutils::tulog::assert {$x > 0} "x must be positive"} e o
     list [dict get $o -errorcode] $e
 } -result {{TCLUTILS TULOG ASSERT} {x must be positive}}
+
+test tulog-4.1 {bad -timestamp leaves no state and uses no logger number} -body {
+    set before [array size ::tclutils::tulog::state]
+    set seq $::tclutils::tulog::seq
+    catch {::tclutils::tulog::new -timestamp vielleicht} m o
+    list [dict get $o -errorcode] \
+        [expr {[array size ::tclutils::tulog::state] == $before}] \
+        [expr {$::tclutils::tulog::seq == $seq}]
+} -result {{TCLUTILS COMMON BOOLEAN -timestamp} 1 1}
 
 cleanupTests

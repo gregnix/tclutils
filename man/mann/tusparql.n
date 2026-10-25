@@ -1,4 +1,4 @@
-.TH tusparql n 0.1 tclutils
+.TH tusparql n 0.2 tclutils
 .SH tclutils::tusparql
 .PP
 A thin SPARQL client. It composes existing modules rather than reimplementing anything: transport via \fBtclutils::tufetch\fR (GET, or POST \fBapplication/sparql\-query\fR for long queries), query\-string building via \fBtclutils::tuurl\fR, and parsing of the SPARQL 1.1 Results JSON via \fBtclutils::tujson\fR. The only SPARQL\-specific work is flattening the result bindings into plain \fB{var value ...}\fR dicts.
@@ -29,7 +29,13 @@ Options:
 .IP \(bu
 \fB\-timeout ms\fR (default 30000).
 .IP \(bu
-\fB\-headers {k v ...}\fR — extra request headers (\fBAccept\fR is set automatically).
+\fB\-accept type\fR (default \fBapplication/sparql\-results+json\fR) — the \fBAccept\fR header. The answer is always parsed as SPARQL Results JSON.
+.IP \(bu
+\fB\-headers {k v ...}\fR — extra request headers. An \fBAccept\fR among them (any case) replaces \fB\-accept\fR; the header is sent once.
+.PP
+With \fB\-method get\fR the query goes into the URL as \fBquery=...&format=json\fR. An endpoint that already carries a query string (\fB.../sparql?key=1\fR) gets the parameters appended with \fB&\fR.
+.PP
+When the response has no \fBhead.vars\fR, the row dicts use the variables of all bindings (first\-seen order), not only those of the first row.
 .PP
 Localized labels come from the \fBwikibase:label\fR service (\fBbd:serviceParam wikibase:language "..."\fR). When matching by Wikipedia article, remember Wikidata stores sitelink IRIs in Unicode while a captured URL is usually percent\-encoded — decode (UTF\-8 aware) before building a \fBVALUES\fR block.
 .PP

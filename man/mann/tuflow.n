@@ -1,12 +1,12 @@
-.TH tuflow n 0.2 tclutils
+.TH tuflow n 0.3 tclutils
 .SH tclutils::tuflow
 .PP
 The front end of the \fBtuflow\fR diagram family: it parses a Mermaid / flowchart source block and renders it to SVG or PNG. It is the single entry point a consumer (e.g. a documentation renderer) calls; it detects the diagram kind and dispatches to the right family module, so the caller never has to know whether a block is a graph, a class diagram or a pie chart.
 .PP
-Everything is pure Tcl: graphs go through \fBtclutils::tudiagram\fR (a node\-edge layout over the \fBtclutils::tupngdraw\fR / \fBtclutils::tusvg\fR backends), pie charts through \fBtclutils::tupie\fR. No Tk, no browser, no external rasteriser.
+Everything is pure Tcl: graphs go through \fBtclutils::tudiagram\fR (a node\-edge layout over the \fBtclutils::tupngdraw\fR / \fBtclutils::tusvg\fR backends). Pie charts, xy charts, sequences, gantt charts and the other non\-graph families each have their own module. No Tk, no browser, no external rasteriser.
 .SS Package
 .CS
-package require tclutils::tuflow 0.2
+package require tclutils::tuflow 0.3
 .CE
 .SS Commands
 .CS
@@ -17,31 +17,84 @@ package require tclutils::tuflow 0.2
 ::tclutils::tuflow::writePng  text file ?-opt val ...?   ;# -> file (PNG)
 .CE
 .PP
-\fBparse\fR is \fBgraph\-only\fR: it returns a \fBtudiagram\fR model for the graph\-like Mermaid types and raises \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR for everything else. \fBtoSvg\fR / \fBtoPng\fR are the \fBrender facade\fR: they render \fIany\fR supported family, detecting non\-graph blocks (currently \fBpie\fR) before \fBparse\fR is reached and dispatching them to their own renderer.
+\fBparse\fR is \fBgraph\-only\fR: it returns a \fBtudiagram\fR model for the graph\-like Mermaid types and raises \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR for every non\-graph type, including ones that \fBtoSvg\fR / \fBtoPng\fR draw. \fBtoSvg\fR / \fBtoPng\fR are the \fBrender facade\fR: they detect a non\-graph block before \fBparse\fR is reached and dispatch it to that family's renderer.
 .PP
-Render options are forwarded to the family that handles the block; an option a family does not understand is ignored. Common ones:
+\fBwriteSvg\fR and \fBwritePng\fR pass their options through to \fBtoSvg\fR and \fBtoPng\fR. A key the facade does not forward for that diagram is dropped.
+.SS Graphs
+.PP
+\fBtoPng\fR / \fBwritePng\fR accept:
 .CS
--fontfile F    real TTF/OTF for labels on the raster backend (graph + pie)
--scale  N      raster scale, positive integer (toPng)
--width  N      pie width   (pie only)
--height N      pie height  (pie only)
--legend 0|1    pie legend  (pie only)
+-scale N       positive integer, default 1
+               PNG supersample; the layout stays on the 6x8 metric
+-fontfile F    TTF or OTF for the labels
 .CE
 .PP
-For the graph path \fB\-fontfile\fR is applied to the \fBtudiagram\fR model via \fBsetMeta \-fontfile\fR before rasterising; the SVG backend uses its fixed \fBmonospace\fR viewer font.
+\fBtoSvg\fR / \fBwriteSvg\fR take no options. \fB\-scale\fR and \fB\-fontfile\fR are dropped. The SVG text uses the viewer's \fBmonospace\fR.
+.PP
+\fB\-fontfile\fR is stored on the model with \fBtudiagram::setMeta\fR and read when the PNG is drawn. The file must exist; a missing path is \fB{TCLUTILS TUDIAGRAM FONT}\fR. The outline font comes from the unbundled \fBGlyphs\fR package. If that package is missing, the labels stay the 6x8 bitmap and no error is raised. \fB\-width\fR, \fB\-height\fR and \fB\-legend\fR are dropped on a graph.
+.SS "Other families"
+.PP
+\fBtoSvg\fR and \fBtoPng\fR both forward:
+.CS
+-width N       canvas width in pixels
+-height N      canvas height in pixels
+-scale N       positive integer, default 1
+-fontfile F    TTF or OTF, PNG only
+-legend 0|1    pie only, default 1
+.CE
+.PP
+\fB\-scale\fR must be a positive integer. On PNG the canvas is \fB\-width\fR times \fB\-scale\fR by \fB\-height\fR times \fB\-scale\fR, and the family uses the same number as its drawing scale. On SVG the canvas stays at \fB\-width\fR by \fB\-height\fR. \fB\-fontfile\fR is ignored on SVG. On PNG a missing file is a \fBFONT\fR error from that family (\fB{TCLUTILS TUPIE FONT}\fR and the same shape for the others). A missing \fBGlyphs\fR package keeps the bitmap font.
+.PP
+Defaults when the option is left out:
+.CS
+pie               -width 480  -height 320  -legend 1
+xychart-beta      -width 520  -height 340
+quadrantChart     -width 420  -height 420
+journey           -width 600  -height 360
+timeline          -width 640  -height 380
+sankey            -width 700  -height 400
+gantt             -width 800  -height 0     0 = 400, or more for many tasks
+sequenceDiagram   -width 0    -height 0     0 = size from the layout
+radar             -width 600  -height 600
+treemap           -width 640  -height 400
+packet            -width 640  -height 0     0 = height from the row count
+kanban            -width 0    -height 0     0 = size from columns and cards
+.CE
+.PP
+\fBsankey\-beta\fR, \fBradar\-beta\fR, \fBtreemap\-beta\fR and \fBpacket\-beta\fR use the same defaults as the name without \fB\-beta\fR. \fB\-legend 0\fR draws the pie without the legend column.
+.SS "Flowchart syntax (parse)"
+.IP \(bu
+Header \fBgraph\fR or \fBflowchart\fR with an optional direction \fBLR\fR, \fBRL\fR, \fBTB\fR, \fBTD\fR (= \fBTB\fR) or \fBBT\fR; keyword and direction are case\-insensitive (\fBFLOWCHART td\fR, \fBGraph LR\fR). Without a direction the graph is \fBLR\fR.
+.IP \(bu
+Nodes \fBA\fR, \fBA[box]\fR, \fBA(rounded)\fR, \fBA([stadium])\fR, \fBA((circle))\fR, \fBA{diamond}\fR, \fBA{{hexagon}}\fR, \fBA[(cylinder)]\fR, \fBA[[subroutine]]\fR (box).
+.IP \(bu
+Edges \fB\-\->\fR, \fB\-\-\-\fR, \fB\-.\->\fR, \fB\-.\-\fR, \fB==>\fR, \fB===\fR, \fB\-\-o\fR, \fB\-\-x\fR, with a label as \fB\-\->|text|\fR, \fB\-\- text \-\->\fR, \fB\-. text .\->\fR or \fB== text ==>\fR; chains \fBA \-\-> B \-\-> C\fR.
+.IP \(bu
+\fB&\fR joins nodes on either side of an edge: \fBA & B \-\-> C & D\fR gives one edge for every pair (\fBA\->C\fR, \fBA\->D\fR, \fBB\->C\fR, \fBB\->D\fR).
+.IP \(bu
+\fBsubgraph id [label]\fR ... \fBend\fR becomes a \fBtudiagram\fR group (nesting allowed); an edge to or from the subgraph id is dropped.
+.IP \(bu
+\fBstyle\fR, \fBclassDef\fR, \fBclass\fR, \fBclick\fR, \fBlinkStyle\fR are skipped; \fB%%\fR starts a comment; \fB;\fR separates statements.
 .SS "Supported diagram types"
 .PP
-Graph\-like (rendered as node\-edge diagrams via \fBtudiagram\fR):
+Graph\-like types go through \fBparse\fR and then \fBtudiagram\fR. They take the graph options above:
 .CS
-graph / flowchart    stateDiagram    requirementDiagram    erDiagram    classDiagram
+graph / flowchart       stateDiagram / stateDiagram-v2
+requirementDiagram      erDiagram
+classDiagram / classDiagram-v2
+mindmap                 block-beta          gitGraph
+architecture / architecture-beta
+C4Context  C4Container  C4Component  C4Dynamic  C4Deployment
 .CE
 .PP
-Non\-graph (own renderer):
+Non\-graph types are drawn by \fBtoSvg\fR / \fBtoPng\fR only. \fBparse\fR raises \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR for them:
 .CS
-pie                  -> tclutils::tupie
+pie                  xychart-beta         quadrantChart
+journey              timeline             sankey / sankey-beta
+gantt                sequenceDiagram      radar / radar-beta
+treemap / treemap-beta
+packet / packet-beta kanban
 .CE
-.PP
-Other Mermaid types (\fBsequenceDiagram\fR, \fBgantt\fR, \fBjourney\fR, \fBgitGraph\fR, ...) are not supported and raise \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR; a consumer typically falls back to showing the source as a code block.
 .SS Usage
 .CS
 package require tclutils::tuflow
@@ -59,15 +112,17 @@ set pie {pie title Result
     "pass" : 87
     "fail" : 3
 }
-writePng $pie pie.png -scale 3       ;# same facade, dispatched to tupie
+writePng $pie pie.png -width 640 -height 400 -scale 2 -legend 1
 .CE
+.PP
+\fBexamples/demo\-tuflow.tcl\fR renders a flowchart, a state diagram and a requirement diagram to SVG and PNG. \fBexamples/demo\-tudiagram.tcl\fR builds the model by hand. Both add \fBlib/tm\fR themselves.
 .SS Notes
 .IP \(bu
 \fBtoSvg\fR/\fBtoPng\fR on a graph are equivalent to \fBtudiagram::toSvg\fR/\fBtoPng\fR of \fBparse\fR's result; the facade just hides the dispatch. Keeping \fBparse\fR graph\-only means existing callers that want the raw model are unaffected.
 .IP \(bu
 New non\-graph families are added in one place (a dispatch branch here plus a \fBtu<type>\fR module exposing \fBparse\fR/\fBtoSvg\fR/\fBtoPng\fR); consumers calling the facade need no change.
 .IP \(bu
-Family modules: \fBtclutils::tudiagram\fR (graphs), \fBtclutils::tustate\fR, \fBtclutils::turequirement\fR, \fBtclutils::tuer\fR, \fBtclutils::tuclass\fR (graph\-type parsers), \fBtclutils::tupie\fR (pie). Backends: \fBtclutils::tupngdraw\fR, \fBtclutils::tusvg\fR.
+Family modules for graphs: \fBtclutils::tudiagram\fR, \fBtclutils::tustate\fR, \fBtclutils::turequirement\fR, \fBtclutils::tuer\fR, \fBtclutils::tuclass\fR, \fBtclutils::tumindmap\fR, \fBtclutils::tuc4\fR, \fBtclutils::tublock\fR, \fBtclutils::tugit\fR, \fBtclutils::tuarchitecture\fR. Non\-graph renderers: \fBtclutils::tupie\fR, \fBtclutils::tuxychart\fR, \fBtclutils::tuquadrant\fR, \fBtclutils::tujourney\fR, \fBtclutils::tutimeline\fR, \fBtclutils::tusankey\fR, \fBtclutils::tugantt\fR, \fBtclutils::tusequence\fR, \fBtclutils::turadar\fR, \fBtclutils::tutreemap\fR, \fBtclutils::tupacket\fR, \fBtclutils::tukanban\fR. Backends: \fBtclutils::tupngdraw\fR, \fBtclutils::tusvg\fR.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUFLOW <REASON>}\fR — \fBUNSUPPORTED\fR (a diagram type with no renderer), \fBEMPTY\fR (no nodes in a flowchart), \fBBADID\fR (a node id is not \fB[A\-Za\-z0\-9_]+\fR: a hyphen after an id is leftover junk, not an edge — e.g. \fBNwifi\-3["SSID"]\fR). Errors from the dispatched family propagate with their own code (\fB{TCLUTILS TUDIAGRAM ...}\fR, \fB{TCLUTILS TUPIE ...}\fR).
+\fB\-errorcode {TCLUTILS TUFLOW <REASON>}\fR — \fBUNSUPPORTED\fR (a diagram type with no renderer), \fBEMPTY\fR (no nodes in a flowchart), \fBBADID\fR (a node id is not \fB[A\-Za\-z0\-9_]+\fR: a hyphen after an id is leftover junk, not an edge — e.g. \fBNwifi\-3["SSID"]\fR). Errors from the dispatched family propagate with their own code (\fB{TCLUTILS TUDIAGRAM ...}\fR, \fB{TCLUTILS TUPIE ...}\fR, and the same shape for the other families). A \fB\-scale\fR that is not a positive integer is that family's \fBARG\fR error. A \fB\-fontfile\fR that names a missing file is its \fBFONT\fR error.

@@ -33,10 +33,14 @@ interp alias {} tudeploy {} ::tclutils::tudeploy
   (and its parent, unless `-parents 0`), following `-roots` (default
   `vendor`, `libs/common`, `libs`, `lib/tm`). `-env` directory values are
   prepended. A root holds package subdirs, i.e. `<root>/<pkg>/<mod>-<ver>.tm`.
-- `addModulePaths` — add the `roots` to `tcl::tm::path`; returns the added list.
+- `addModulePaths` — add the `roots` to `tcl::tm::path`; returns the roots that
+  are on the module path afterwards (newly added or already registered). A
+  root that `tcl::tm::path add` refuses (it lies inside, or contains, a
+  registered root) is skipped without an error and is not in the result.
 - `require` — `addModulePaths` (unless `-tmadd 0`), then `package require` each
   package in `pkgs`. Returns 1 iff all succeed, else 0; with `-fail 1` it throws
-  `{TCLUTILS TUDEPLOY REQUIRE}` instead.
+  `{TCLUTILS TUDEPLOY REQUIRE}` instead. The options for `roots` are checked
+  also with `-tmadd 0`. `-tmadd` and `-fail` must be booleans.
 - `resourceDirs` — ordered list of EXISTING candidate directories for a bundled
   resource `name`: per base dir (+ parent) `vendor/<name>/<tag>`,
   `vendor/<name>`, `vendor/<tag>`, `vendor`, `bin`, and the base dir itself.
@@ -47,6 +51,8 @@ interp alias {} tudeploy {} ::tclutils::tudeploy
   given `-roots`/`-base`/`-env`) for `<tail>-<ver>.tm` (tail = last `::`
   component), sources the highest version, and verifies the package became
   present. Returns 1/0, or throws `{TCLUTILS TUDEPLOY REQUIRE}` with `-fail 1`.
+  Options are checked first; a package that is already present then
+  returns 1 without searching. `-fail` must be a boolean.
   Use this for packages whose vendored `.tm` sits at a path that does not match
   its package name — e.g. a bare package `qpdf` shipped as
   `vendor/qpdf/lib/qpdf-0.2.tm` with sibling shared libraries: a dedicated tm
@@ -95,8 +101,9 @@ package require tclutils::tudeploy
 ## Errors
 
 Carries `{TCLUTILS TUDEPLOY <REASON>}`: `OPTION` (unknown option / missing
-value), `USAGE` (missing required argument), `REQUIRE` (with `-fail 1`, a
-package could not be loaded).
+value), `VALUE` (`-tmadd` or `-fail` not a boolean), `USAGE` (missing
+required argument), `REQUIRE` (with `-fail 1`, a package could not be
+loaded).
 
 ## Demo
 

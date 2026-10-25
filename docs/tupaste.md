@@ -6,7 +6,7 @@
 ## Load
 
 ```tcl
-package require tclutils::tupaste
+package require tclutils::tupaste 0.2
 ```
 
 ## Examples
@@ -19,7 +19,12 @@ package require tclutils::tupaste
 ::tclutils::tupaste::files [list names.txt cities.txt] -delimiter ";"
 ```
 
-If one input is shorter than the others, empty fields are used.
+`-delimiter` (default: tab) goes between the columns; it may be several
+characters or empty. If one input is shorter than the others, empty fields are
+used. The result has no trailing newline.
+
+An unknown option or an option without value raises
+`TCLUTILS COMMON OPTION -name`.
 
 ## Additional exported commands
 

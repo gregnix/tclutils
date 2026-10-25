@@ -18,11 +18,14 @@ padded with empty cells; the column count is the widest row.
 
 Options (defaults): `-header 1` (style the first row), `-align l` (a single
 `l|c|r` or a per-column list), `-scale 1` (font scale), `-padding 6` (cell
-padding px), `-spacing 1` (px between glyphs), `-background white`,
+padding px, integer >= 0), `-spacing 1` (px between glyphs, integer >= 0), `-background white`,
 `-gridcolor {180 180 185}`, `-textcolor {25 25 25}`, `-headerbg {230 230 238}`,
 `-headertext {0 0 0}`, `-zebra {}` (alt-row colour, empty = off), `-border 1`
 (grid lines). Colours take any tupngdraw form (name, `#rrggbb`, `RRGGBB`,
 `{r g b}`, `{r g b a}`).
+
+Cell text is drawn exactly as given: a cell that looks like a number (`4.80`,
+`1e3`, `0x1F`, `010`) is not normalised.
 
 ```tcl
 set rows {
@@ -43,6 +46,16 @@ cat data.tsv | tclsh bin/tutablepng.tcl out.png
 
 Reads delimited rows (default delimiter: tab) from a file or stdin and writes a
 PNG table.
+
+## Errors
+
+| Error code | Cause |
+|---|---|
+| `{TCLUTILS TUTABLEPNG EMPTY}` | no rows, or rows without cells |
+| `{TCLUTILS TUTABLEPNG ALIGN}` | `-align` entry not `l`, `c`, `r` |
+| `{TCLUTILS TUTABLEPNG PADDING}` | `-padding` not an integer >= 0 |
+| `{TCLUTILS TUTABLEPNG SPACING}` | `-spacing` not an integer >= 0 |
+| `{TCLUTILS COMMON ...}` | `-header`/`-border` not boolean, `-scale` not >= 1 |
 
 ## Notes
 

@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tupaste 0.1
+package require tclutils::tupaste 0.2
 
 set tmp1 [file join [temporaryDirectory] tupaste-a-[pid].txt]
 set tmp2 [file join [temporaryDirectory] tupaste-b-[pid].txt]
@@ -28,4 +28,14 @@ test tupaste-1.4 {unknown option errors} {
 } 1
 
 file delete -force $tmp1 $tmp2
+test tupaste-2.1 {unknown option has an errorcode} {
+    catch {::tclutils::tupaste::lines {{a}} -x 1} msg o
+    dict get $o -errorcode
+} {TCLUTILS COMMON OPTION -x}
+
+test tupaste-2.2 {missing option value has an errorcode} {
+    catch {::tclutils::tupaste::texts {a b} -delimiter} msg o
+    list $msg [dict get $o -errorcode]
+} {{missing value for option "-delimiter"} {TCLUTILS COMMON OPTION -delimiter}}
+
 cleanupTests

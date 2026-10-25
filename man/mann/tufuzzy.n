@@ -1,4 +1,4 @@
-.TH tufuzzy n 0.1 tclutils
+.TH tufuzzy n 0.2 tclutils
 .SH tclutils::tufuzzy
 .PP
 Fuzzy matching primitives in pure Tcl.
@@ -12,9 +12,16 @@ Fuzzy matching primitives in pure Tcl.
 .CE
 .PP
 \fBdistance\fR computes Levenshtein edit distance. \fBsearchDistance\fR computes the minimum edit distance from a pattern to any substring of a text. \fBsubsequence\fR implements fzf\-style ordered subsequence matching.
+.PP
+\fB\-nocase\fR (default 0) must be a boolean. Errors:
+.CS
+unknown option / missing value     TCLUTILS TUFUZZY OPTION
+extra positional arguments         TCLUTILS TUFUZZY ARGS
+-nocase not a boolean              TCLUTILS COMMON BOOLEAN -nocase
+.CE
 .SS Examples
 .CS
-package require tclutils::tufuzzy
+package require tclutils::tufuzzy 0.2
 ::tclutils::tufuzzy::distance kitten sitting
 ::tclutils::tufuzzy::bestMatch colour {color flavour}
 .CE

@@ -2,11 +2,11 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuopen 0.1
+package require tclutils::tuopen 0.2
 
 test tuopen-1.1 {windows command} -body {
     ::tclutils::tuopen::command http://x.com -platform windows
-} -result {cmd.exe /c start {} http://x.com}
+} -result {rundll32 url.dll,FileProtocolHandler http://x.com}
 test tuopen-1.2 {macOS command} -body {
     ::tclutils::tuopen::command /tmp/a.pdf -platform unix -os Darwin
 } -result {open /tmp/a.pdf}
@@ -105,5 +105,18 @@ test tuopen-5.6 {configDir empty app errors} -body {
     catch {::tclutils::tuopen::configDir ""} e o
     dict get $o -errorcode
 } -result {TCLUTILS TUOPEN APP}
+
+test tuopen-6.1 {windows URL goes to rundll32, & stays in the argument} -body {
+    ::tclutils::tuopen::command {https://x.com/?a=1&b=2} -platform windows
+} -result {rundll32 url.dll,FileProtocolHandler https://x.com/?a=1&b=2}
+test tuopen-6.2 {windows path (drive letter) still uses cmd start} -body {
+    ::tclutils::tuopen::command {C:/doc/a.pdf} -platform windows
+} -result {cmd.exe /c start {} C:/doc/a.pdf}
+test tuopen-6.3 {windows mailto is a URL} -body {
+    lindex [::tclutils::tuopen::command mailto:a@b.de -platform windows] 0
+} -result rundll32
+test tuopen-6.4 {all public commands are exported} -body {
+    lsort [namespace eval ::tclutils::tuopen {namespace export}]
+} -result {command configDir configFile edit editCommand launch openDir}
 
 cleanupTests

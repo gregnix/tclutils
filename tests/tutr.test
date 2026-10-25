@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tutr 0.1
+package require tclutils::tutr 0.2
 
 set tmp [makeDirectory tutr]
 set f [makeFile "aabbcc" [file join $tmp input.txt]]
@@ -28,5 +28,40 @@ test tutr-1.5 {file translate} -body {
     ::tclutils::tutr::file $f ab xy
 } -result "xxyycc
 "
+
+test tutr-2.1 {translate with empty set2 is an error} -body {
+    catch {::tclutils::tutr::translate abc abc ""} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTR SET2}
+test tutr-2.2 {file without -delete and empty set2 is an error} -body {
+    catch {::tclutils::tutr::file $f ab ""} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTR SET2}
+test tutr-2.3 {descending range is an error} -body {
+    catch {::tclutils::tutr::translate abc c-a xyz} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTR RANGE}
+test tutr-2.4 {descending range in delete and squeeze} -body {
+    list [catch {::tclutils::tutr::delete abc c-a}] \
+        [catch {::tclutils::tutr::squeeze abc c-a}]
+} -result {1 1}
+test tutr-2.5 {duplicate in set1: last mapping wins} -body {
+    ::tclutils::tutr::translate abcabc aa xy
+} -result ybcybc
+test tutr-2.6 {file: empty set2 with -squeeze 1 squeezes set1} -body {
+    ::tclutils::tutr::file $f ab "" -squeeze 1
+} -result "abcc
+"
+test tutr-2.7 {file: translate then squeeze set2} -body {
+    ::tclutils::tutr::file $f ab xx -squeeze 1
+} -result "xcc
+"
+test tutr-2.8 {file: -delete 1 with empty set2} -body {
+    ::tclutils::tutr::file $f a ""  -delete 1
+} -result "bbcc
+"
+test tutr-2.9 {empty set1 and empty set2 leave text alone} -body {
+    ::tclutils::tutr::translate abc "" ""
+} -result abc
 
 cleanupTests

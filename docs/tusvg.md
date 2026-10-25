@@ -2,7 +2,7 @@
 
 A pure-Tcl **SVG generator** -- no Tk, no external packages. Build a document as
 a dict, add shapes/paths/text/gradients/groups, and render to a string or file.
-Ships a library of ~110 named toolbar icons. It complements the `tupng`
+Ships a library of 149 named toolbar icons (including aliases). It complements the `tupng`
 encoders: `tusvg` is the vector counterpart.
 
 ## Document
@@ -25,6 +25,11 @@ abstract canvas protocol shared with `tclutils::tupngdraw`
 generic draw routine can target SVG or PNG by only swapping the constructor.
 This is the entry point the diagram renderers (`tudiagram`, `tupie`,
 `tuxychart`) build on; for hand-written SVG use the document API above.
+
+`$c icon name x y size ?-color c? ?-strokeWidth w?` places a library icon on
+the canvas: the icon document is rendered with `toString` (without the XML
+declaration) and embedded as a nested `<svg x y width height
+viewBox="0 0 24 24">` element.
 
 ## Elements (append to the document variable)
 
@@ -54,12 +59,14 @@ tusvg::addGroup   svg $g
 ## Icon library
 
 ```tcl
-tusvg::icons                                ;# list of ~110 names
+tusvg::icons                                ;# list of 149 names
 set ic [tusvg::icon name size ?-color c? ?-strokeWidth w?]   ;# an SVG document
 tusvg::saveIcon name size file.svg ?-color c?
 ```
 
-Unknown icon names render a question-mark fallback glyph (no error). Icons are
+`icons` lists every name `icon` knows, aliases included (`trash`/`delete`,
+`rotate-left`/`rotate_left`, ...). Unknown icon names render a question-mark
+fallback glyph (no error). Icons are
 path/shape only (so they also render under tksvg/svgnano, which has no `<text>`).
 
 ## Notes

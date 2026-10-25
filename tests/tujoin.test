@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tujoin 0.1
+package require tclutils::tujoin 0.1.2
 
 set left "1;Ada\n2;Linus\n3;Grace\n"
 set right "1;Berlin\n2;Helsinki\n4;Paris\n"
@@ -52,7 +52,7 @@ test tujoin-2.3 {full outer join} {
 
 test tujoin-2.4 {invalid outer mode} {
     catch {::tclutils::tujoin::texts $left $right -delimiter ";" -outer bad} msg
-    string match {*-outer must be one of*} $msg
+    string match {unknown -outer: bad*Known: none left right full} $msg
 } 1
 
 # Anti-join (-anti) for 0.1.1
@@ -81,8 +81,39 @@ test tujoin-3.5 {-anti and -outer cannot be combined} {
 
 test tujoin-3.6 {invalid -anti value errors} {
     catch {::tclutils::tujoin::texts $left $right -delimiter ";" -anti sideways} msg
-    string match {*-anti must be one of*} $msg
+    string match {unknown -anti: sideways*Known: none left right both} $msg
 } 1
+
+test tujoin-4.1 {unknown option has an errorcode} {
+    catch {::tclutils::tujoin::texts $left $right -bogus 1} msg o
+    dict get $o -errorcode
+} {TCLUTILS COMMON OPTION -bogus}
+
+test tujoin-4.2 {missing option value has an errorcode} {
+    catch {::tclutils::tujoin::texts $left $right -outer} msg o
+    dict get $o -errorcode
+} {TCLUTILS COMMON OPTION -outer}
+
+test tujoin-4.3 {invalid field has an errorcode} {
+    catch {::tclutils::tujoin::texts $left $right -rightfield x} msg o
+    list $msg [dict get $o -errorcode]
+} {{-rightfield must be a positive integer} {TCLUTILS COMMON INTEGER -rightfield}}
+
+test tujoin-4.4 {invalid -header has an errorcode} {
+    catch {::tclutils::tujoin::texts $left $right -header ja} msg o
+    list $msg [dict get $o -errorcode]
+} {{-header requires a boolean value} {TCLUTILS COMMON BOOLEAN -header}}
+
+test tujoin-4.5 {invalid -outer/-anti values have an errorcode} {
+    catch {::tclutils::tujoin::texts $left $right -outer bad} m1 o1
+    catch {::tclutils::tujoin::texts $left $right -anti bad} m2 o2
+    list [dict get $o1 -errorcode] [dict get $o2 -errorcode]
+} {{TCLUTILS COMMON VALUE -outer} {TCLUTILS COMMON VALUE -anti}}
+
+test tujoin-4.6 {-outer with -anti has an errorcode} {
+    catch {::tclutils::tujoin::texts $left $right -outer left -anti left} m o
+    dict get $o -errorcode
+} {TCLUTILS TUJOIN COMBINE}
 
 file delete -force $tmp1 $tmp2
 cleanupTests

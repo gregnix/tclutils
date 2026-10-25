@@ -15,7 +15,25 @@ tuldif::attributes entry           ;# -> attribute names (first-seen order)
 tuldif::toDict     entry           ;# -> dict attr -> list of values
 ```
 Continuation lines (a leading space) are unfolded automatically.
-Error code: `{TCLUTILS TULDIF SYNTAX}`.
+
+Values are text. RFC 2849 values are UTF-8, so a base64 value (`attr:: ...`)
+is decoded from UTF-8 after the base64 step, and `toLdif` encodes a value to
+UTF-8 before base64 (`Hällo` -> `SMOkbGxv`). Base64 bytes that are not valid
+UTF-8 (a binary attribute such as `jpegPhoto`) come back unchanged, one
+character per byte; written back through `toLdif` such a value is encoded as
+UTF-8 again and is therefore not byte-exact.
+
+`toLdif` writes a value as base64 when it is not a SAFE-STRING: it starts with
+a space, `:` or `<`, ends with a space, or contains a character outside 32..126
+(control characters, non-ASCII).
+
+Only content records are read. A change record (`changetype: add|modify|...`)
+raises `{TCLUTILS TULDIF CHANGETYPE}`.
+
+| Error code | When |
+|---|---|
+| `{TCLUTILS TULDIF SYNTAX}` | a line without `:` |
+| `{TCLUTILS TULDIF CHANGETYPE}` | a change record |
 
 ## Additional exported commands
 

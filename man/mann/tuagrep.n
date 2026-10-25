@@ -1,4 +1,4 @@
-.TH tuagrep n 0.1 tclutils
+.TH tuagrep n 0.2 tclutils
 .SH tclutils::tuagrep
 .PP
 Approximate grep built on \fBtclutils::tufuzzy\fR.
@@ -11,18 +11,31 @@ Approximate grep built on \fBtclutils::tufuzzy\fR.
 .CE
 .SS Options
 .CS
--maxdist N
--nocase 0|1
--invert 0|1
--linenumbers 0|1
--count 0|1
--fileswithmatches 0|1
--filenames 0|1
+-maxdist N            non-negative integer (default 1); 0 = exact substring
+-nocase 0|1           (default 0)
+-invert 0|1           lines without a match (default 0)
+-linenumbers 0|1      each match as {number line} (default 0)
+-count 0|1            only the number of matches (default 0)
+-fileswithmatches 0|1 file/files only: just the paths with a match (default 0)
+-filenames 0|1        file only: each match as {path match} (default 0);
+                      files always adds the path
 .CE
 .PP
 A line matches when \fBtufuzzy::searchDistance pattern line <= \-maxdist\fR.
+.PP
+\fBsearch\fR splits the text into lines like \fBfile\fR reads them: a final \fB\en\fR ends the last line and does not start an empty one; an empty text has no lines. A text has no file name, so \fBsearch\fR and \fBmatch\fR accept \fB\-filenames\fR and \fB\-fileswithmatches\fR but ignore them.
+.PP
+Errors:
+.CS
+unknown option / missing value     TCLUTILS TUAGREP OPTION
+extra positional arguments         TCLUTILS TUAGREP ARGS
+-maxdist not an integer >= 0       TCLUTILS TUAGREP MAXDIST
+boolean option not a boolean       TCLUTILS COMMON BOOLEAN -name
+.CE
+.PP
+A file that cannot be opened raises the error of \fBopen\fR (\fBPOSIX ENOENT ...\fR).
 .SS Example
 .CS
-package require tclutils::tuagrep
+package require tclutils::tuagrep 0.2
 ::tclutils::tuagrep::search "gamma line\nbeta line" gama -maxdist 1
 .CE

@@ -1,10 +1,10 @@
-.TH tupacket n 0.1 tclutils
+.TH tupacket n 0.2 tclutils
 .SH tclutils::tupacket
 .PP
 Parses a Mermaid \fBpacket\-beta\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtukanban\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here. A packet layout is a bit\-field table, not a node\-edge graph, so it does \fBnot\fR go through \fBtudiagram\fR.
 .SS Package
 .CS
-package require tclutils::tupacket 0.1
+package require tclutils::tupacket 0.2
 .CE
 .SS Commands
 .CS

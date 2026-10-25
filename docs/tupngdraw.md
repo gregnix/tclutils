@@ -36,14 +36,15 @@ $p setantialias 0|1               ;# antialiased strokes (default 1)
 $p clear ?COLOR?                  ;# repaint whole surface (default: background)
 
 $p setpixel x y ?-color COLOR?
-$p line   x1 y1 x2 y2 ?-color COLOR? ?-width N?
-$p rect   x1 y1 x2 y2 ?-fill 0|1? ?-outline 0|1? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR?
-$p circle cx cy r     ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR?
-$p polygon {x0 y0 x1 y1 ...} ?-fill 0|1? ?-outline 0|1? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR?
-$p ellipse cx cy rx ry ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR?
-$p arc cx cy r a0 a1 ?-style arc|pie|chord? ?-fill 0|1? ?-join round|bevel|mitre? ?-color C? ?-width N? ?-fillcolor C?
+$p line   x1 y1 x2 y2 ?-color COLOR? ?-width N? ?-caps round|butt|square? ?-aa 0|1?
+$p rect   x1 y1 x2 y2 ?-fill 0|1? ?-outline 0|1? ?-rx R? ?-ry R? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR? ?-aa 0|1?
+$p circle cx cy r     ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR? ?-aa 0|1?
+$p polygon {x0 y0 x1 y1 ...} ?-fill 0|1? ?-outline 0|1? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR? ?-aa 0|1?
+$p ellipse cx cy rx ry ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR? ?-aa 0|1?
+$p arc cx cy r a0 a1 ?-style arc|pie|chord? ?-fill 0|1? ?-join round|bevel|mitre? ?-color C? ?-width N? ?-fillcolor C? ?-aa 0|1?
 $p text x y string ?-color COLOR? ?-scale N? ?-spacing S?
 $p textwidth string ?-scale N? ?-spacing S?      ;# -> pixel width
+$p paste x y rgba w h ?-scale N?                 ;# composite RGBA bytes
 
 $p data  ?-compression 0..9? ?-filter best|none|sub|up|average|paeth?   ;# -> PNG bytes
 $p write file ?-compression ...? ?-filter ...?                          ;# -> file
@@ -53,6 +54,14 @@ $p destroy
 For the shapes, `-fill 1` fills the interior with the fill colour and (unless
 `-outline 0`) draws the outline with the stroke colour and current line width.
 `-color` overrides the stroke for that call; `-fillcolor` overrides the fill.
+
+- `-rx R` / `-ry R` (rect, default 0): corner radius for rounded rectangles;
+  `-ry 0` takes the value of `-rx`; radii are clamped to half the box size.
+- `-caps round|butt|square` (line, default `round`): line end style; `butt`
+  ends flush at the end points, `square` extends by half the line width.
+  Other values raise `{TCLUTILS TUPNGDRAW CAPS}`.
+- `-aa 0|1` (line, rect, circle, ellipse, polygon, arc, fillcontours; default:
+  the surface setting from `setantialias`): antialiasing for this call only.
 
 Drawing composites **source-over** (straight alpha), so a semi-transparent
 fill blends with whatever is underneath; an opaque colour replaces it.
@@ -92,8 +101,9 @@ is the bare curve. `text` uses an embedded 6x8 bitmap font (printable ASCII);
 
 ## Scope and limits
 
-Version 0.11 covers `setpixel`, `line`, `rect`, `circle`, `ellipse`, `polygon`
-(even-odd scanline fill), `arc`/pie/chord and `text` (6x8 bitmap font), with
+Version 0.13 covers `setpixel`, `line`, `rect` (optionally rounded),
+`circle`, `ellipse`, `polygon` (even-odd scanline fill), `arc`/pie/chord,
+`fillcontours`, `paste` and `text` (6x8 bitmap font), with
 stroke/fill colour, line width, source-over alpha compositing and antialiased,
 alpha-correct strokes. It is a 2D rasteriser: drawing is per-pixel
 pure Tcl, well suited to labels, calendars, simple charts and preview
@@ -126,4 +136,4 @@ The embedded 6x8 font covers ASCII 32-126 plus the German letters a/o/u and A/O/
 
 ## Compositing
 
-`paste px py rgba sw sh ?-scale s?` alpha-composites a packed-RGBA block (e.g. from `tupng decode`) onto the image, nearest-neighbour scaled. Useful for layering existing PNGs and for image compositing (used by tkutils::tkcanvaspng).
+`paste px py rgba sw sh ?-scale s?` alpha-composites a packed-RGBA block (e.g. from `tupng decode`) onto the image, nearest-neighbour scaled. It uses the same source-over formula as every other drawing call (result alpha = a_s + a_d (1 - a_s), colours weighted accordingly): on a transparent surface a pasted `{255 0 0 128}` stays `255 0 0 128`, exactly what `setpixel` gives; on an opaque surface the result is an opaque blend. Pixels with alpha 0 leave the surface untouched, alpha 255 replaces it. Useful for layering existing PNGs and for image compositing (used by tkutils::tkcanvaspng).

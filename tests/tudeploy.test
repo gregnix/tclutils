@@ -94,4 +94,40 @@ test sourceModule-3 {missing module with -fail throws REQUIRE} -body {
     dict get $o -errorcode
 } -result {TCLUTILS TUDEPLOY REQUIRE}
 
+mk app2 vendor qpdf lib
+mk app2 lib tm
+set ::APP2 [file join $::ROOT app2]
+
+test addModulePaths-1 {refused root is not in the result} -setup {
+    set saved [tcl::tm::path list]
+} -body {
+    set a [tudeploy addModulePaths -base [list $::APP2] -parents 0 \
+        -roots {vendor {vendor qpdf lib}}]
+    list $a [expr {[file join $::APP2 vendor qpdf lib] in [tcl::tm::path list]}]
+} -cleanup {
+    foreach p [tcl::tm::path list] {
+        if {$p ni $saved} { tcl::tm::path remove $p }
+    }
+} -result [list [list [file join $::APP2 vendor]] 0]
+
+test require-4 {-tmadd 0 still checks the passed-on options} -body {
+    catch {tudeploy require {foo::bar} -tmadd 0 -bogus 1} e o
+    list $e [dict get $o -errorcode]
+} -result {{unknown option "-bogus"} {TCLUTILS TUDEPLOY OPTION}}
+
+test require-5 {non-boolean -tmadd -> VALUE} -body {
+    catch {tudeploy require {foo::bar} -tmadd ja} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDEPLOY VALUE}
+
+test sourceModule-4 {options are checked even when the package is present} -body {
+    catch {tudeploy sourceModule zz -bogus 1} e o
+    list $e [dict get $o -errorcode]
+} -result {{unknown option "-bogus"} {TCLUTILS TUDEPLOY OPTION}}
+
+test sourceModule-5 {option without value when present -> OPTION} -body {
+    catch {tudeploy sourceModule zz -dirs} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDEPLOY OPTION}
+
 cleanupTests

@@ -1,4 +1,4 @@
-.TH tuhexdump n 0.1 tclutils
+.TH tuhexdump n 0.2 tclutils
 .SH tclutils::tuhexdump
 .PP
 \fBtclutils::tuhexdump\fR creates a classic hex/ascii dump from data or files.
@@ -13,11 +13,21 @@ package require tclutils::tuhexdump
 .CE
 .SS Options
 .IP \(bu
-\fB\-width n\fR, default \fB16\fR
+\fB\-width n\fR, default \fB16\fR, a positive integer
 .IP \(bu
-\fB\-offset n\fR, default \fB0\fR
+\fB\-offset n\fR, default \fB0\fR, zero or greater
 .IP \(bu
-\fB\-length n\fR, default \fB\-1\fR for all remaining bytes
+\fB\-length n\fR, default \fB\-1\fR; a negative value means all remaining bytes
+.PP
+The data must be bytes (every character 0..255); convert text with \fBencoding convertto\fR first.
+.SS Errors
+.CS
+{TCLUTILS COMMON OPTION -name}     unknown option, option without value
+{TCLUTILS COMMON INTEGER -width}   -width not a positive integer
+{TCLUTILS TUHEXDUMP OFFSET}        -offset negative or not an integer
+{TCLUTILS TUHEXDUMP LENGTH}        -length not an integer
+{TCLUTILS TUHEXDUMP BYTES}         data contains a character above 255
+.CE
 .SS Example
 .CS
 puts [::tclutils::tuhexdump::file test.pdf -length 256]

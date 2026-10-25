@@ -1,10 +1,10 @@
-.TH tupatch n 0.1 tclutils
+.TH tupatch n 0.2 tclutils
 .SH tclutils::tupatch
 .PP
 Apply unified diffs in pure Tcl. This module is the counterpart to \fBtclutils::tudiff\fR.
 .SS Package
 .CS
-package require tclutils::tupatch 0.1
+package require tclutils::tupatch 0.2
 .CE
 .SS API
 .CS
@@ -17,6 +17,8 @@ package require tclutils::tupatch 0.1
 \fB\-reverse 0|1\fR: apply the patch backwards. Default: \fB0\fR.
 .IP \(bu
 \fB\-strict 0|1\fR: verify context and delete lines against the source. Default: \fB1\fR.
+.PP
+Both take any Tcl boolean (\fB0\fR/\fB1\fR, \fByes\fR/\fBno\fR, \fBtrue\fR/\fBfalse\fR, \fBon\fR/\fBoff\fR); anything else raises \fB{TCLUTILS COMMON BOOLEAN \-reverse}\fR or \fB\-strict\fR.
 .SS Example
 .CS
 package require tclutils::tudiff
@@ -35,6 +37,8 @@ set result [::tclutils::tupatch::text $old $patch]
 \fB{TCLUTILS TUPATCH RANGE}\fR: hunk position is outside the source or overlaps an earlier hunk.
 .IP \(bu
 \fB{TCLUTILS COMMON OPTION ...}\fR: invalid option from \fBcommon::parseOptions\fR.
+.IP \(bu
+\fB{TCLUTILS COMMON BOOLEAN \-reverse}\fR, \fB{TCLUTILS COMMON BOOLEAN \-strict}\fR: the option value is not a boolean.
 .SS Notes
 .PP
 \fBtupatch\fR uses the same line model as \fBtudiff\fR: lines are split and re\-joined with \fB\en\fR. The special unified\-diff marker \fB\e\e No newline at end of file\fR is accepted as metadata but final\-newline details are not modeled separately.

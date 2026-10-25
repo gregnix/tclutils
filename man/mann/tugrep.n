@@ -1,4 +1,4 @@
-.TH tugrep n 0.1.2 tclutils
+.TH tugrep n 0.1.3 tclutils
 .SH tclutils::tugrep
 .PP
 Portable grep\-like routines in pure Tcl.

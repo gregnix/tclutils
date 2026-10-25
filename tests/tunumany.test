@@ -17,4 +17,10 @@ test tunumany-3.1 {prefer locale falls back to si} -body {::tclutils::tunumany::
 test tunumany-3.2 {bad prefer errors} -body {
     catch {::tclutils::tunumany::parse "1" -prefer bogus} e; set e
 } -match glob -result {*prefer must be*}
+test tunumany-4.1 {option without value -> OPTION} -body {
+    catch {::tclutils::tunumany::parse 1.5 -default} m o
+    list $m [dict get $o -errorcode]
+} -result {{option "-default" requires a value} {TCLUTILS TUNUMANY OPTION}}
+test tunumany-4.2 {KiB is IEC} -body {::tclutils::tunumany::parse 2KiB} -result 2048
+
 cleanupTests

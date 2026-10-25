@@ -5,7 +5,7 @@ bytes; the module never rasterises anything, so it needs **no Tk** and runs
 headless.
 
 ```tcl
-package require tclutils::tuico 0.1
+package require tclutils::tuico 0.2
 ```
 
 ## Why this exists next to tklib's `ico`
@@ -52,7 +52,9 @@ tclutils::tuico write app.ico $entries
 ### `info icoFile`
 
 Returns a list of dicts, one per entry, with the keys `width`, `height`, `bpp`,
-`format` (`png` or `bmp`), `offset` and `length`.
+`format` (`png` or `bmp`), `offset` and `length`. All directory fields are read
+unsigned, as the format defines them: an entry count above 32767 is taken at
+face value (a file that does not hold that many entries raises `TRUNCATED`).
 
 ```tcl
 foreach entry [tclutils::tuico info app.ico] {

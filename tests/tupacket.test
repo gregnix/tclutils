@@ -143,4 +143,12 @@ test tupacket-4.6 {a title is honoured in render (taller canvas)} -body {
     expr {$ht > $h0}
 } -result 1
 
+
+# --- unreleased: a field label that looks like a number is drawn as written -
+test tupacket-5.1 {label 1e3 is not drawn as 1000.0} -body {
+    set a [M::toSvg [M::parse "packet-beta\n0-15: \"1e3\""]]
+    set b [M::toSvg [M::parse "packet-beta\n0-15: \"1000.0\""]]
+    expr {$a ne $b}
+} -result 1
+
 cleanupTests

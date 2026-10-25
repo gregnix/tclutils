@@ -113,4 +113,25 @@ test tupie-6.1 {more slices than palette colours still renders} -body {
     pngSig [M::toPng [M::parse $src]]
 } -result 89504e470d0a1a0a
 
+# --- fixes 0.2: exponent form, negative values -----------------------------------
+
+test tupie-6.1 {1e3 is a number} -body {
+    dict get [::tclutils::tupie::parse "pie\n\"a\" : 1e3\n\"b\" : 2.5E-1\n"] slices
+} -result {{a 1e3} {b 2.5E-1}}
+test tupie-6.2 {a negative value raises VALUE with the line number} -body {
+    catch {::tclutils::tupie::parse "pie\n\"a\" : 3\n\"b\" : -2\n"} m o
+    list [dict get $o -errorcode] [string match {line 3:*} $m]
+} -result {{TCLUTILS TUPIE VALUE} 1}
+test tupie-6.3 {leading zeros are decimal under 8.6 and 9.0} -body {
+    dict get [::tclutils::tupie::parse "pie\n\"a\" : 010\n"] slices
+} -result {{a 10}}
+test tupie-6.4 {a non-number after the colon is still not a slice} -body {
+    catch {::tclutils::tupie::parse "pie\n\"a\" : viel\n"} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPIE EMPTY}
+test tupie-6.5 {an exponent value renders} -body {
+    binary scan [::tclutils::tupie::toPng [::tclutils::tupie::parse "pie\na : 1e3\nb : 5e2\n"]] H8 s
+    set s
+} -result 89504e47
+
 cleanupTests

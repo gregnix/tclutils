@@ -144,4 +144,80 @@ test tumonthpng-6.8 {-select works for renderYear too} -body {
 } -result png
 
 
+# --- 0.5: header follows -firstweekday, checks, sheet titles
+proc ::__labels {args} {
+    set ::__lb {}
+    proc ::__rec {img x y w h text color} { lappend ::__lb $text }
+    {*}$args -textcmd ::__rec
+    rename ::__rec {}
+    return $::__lb
+}
+
+test tumonthpng-7.1 {-firstweekday 7 rotates the header to Sunday first} -body {
+    set l [::__labels ::tclutils::tumonthpng::render 2026 5 -scale 1 \
+        -today 2026-05-06 -showweeks 0 -firstweekday 7]
+    # title, then the seven header cells, then the first grid day
+    lrange $l 0 8
+} -result {{Mai 2026} So Mo Di Mi Do Fr Sa 26}
+
+test tumonthpng-7.2 {-firstweekday 1 keeps the Monday header} -body {
+    lrange [::__labels ::tclutils::tumonthpng::render 2026 5 -scale 1 \
+        -today 2026-05-06 -showweeks 0] 1 7
+} -result {Mo Di Mi Do Fr Sa So}
+
+test tumonthpng-7.3 {-firstweekday out of range -> FIRSTWEEKDAY} -body {
+    lmap v {0 8 x 1.5} {
+        catch {::tclutils::tumonthpng::render 2026 5 -firstweekday $v} e o
+        dict get $o -errorcode
+    }
+} -result [lrepeat 4 {TCLUTILS TUMONTHPNG FIRSTWEEKDAY}]
+
+test tumonthpng-7.4 {-firstweekday is checked by quarter and year too} -body {
+    set r {}
+    catch {::tclutils::tumonthpng::renderQuarter 2026 5 -firstweekday 9} e o
+    lappend r [dict get $o -errorcode]
+    catch {::tclutils::tumonthpng::renderYear 2026 -firstweekday 0} e o
+    lappend r [dict get $o -errorcode]
+} -result {{TCLUTILS TUMONTHPNG FIRSTWEEKDAY} {TCLUTILS TUMONTHPNG FIRSTWEEKDAY}}
+
+test tumonthpng-7.5 {non-numeric year -> YEAR (all three renderers)} -body {
+    set r {}
+    catch {::tclutils::tumonthpng::render abc 5} e o
+    lappend r [dict get $o -errorcode]
+    catch {::tclutils::tumonthpng::renderQuarter 0 5} e o
+    lappend r [dict get $o -errorcode]
+    catch {::tclutils::tumonthpng::renderYear 20260} e o
+    lappend r [dict get $o -errorcode]
+} -result [lrepeat 3 {TCLUTILS TUMONTHPNG YEAR}]
+
+test tumonthpng-7.6 {renderQuarter -title adds a heading band} -body {
+    set png [::tclutils::tumonthpng::renderQuarter 2026 11 -scale 1 \
+        -title "Q4 2026"]
+    list [::tclutils::tuimage::dimensions $png] \
+        [lindex [::__labels ::tclutils::tumonthpng::renderQuarter 2026 11 \
+            -scale 1 -title "Q4 2026"] 0]
+} -result {{626 172} {Q4 2026}}
+
+test tumonthpng-7.7 {renderYear -title adds a heading band} -body {
+    set png [::tclutils::tumonthpng::renderYear 2026 -scale 1 -cols 4 \
+        -title Jahr]
+    list [::tclutils::tuimage::dimensions $png] \
+        [lindex [::__labels ::tclutils::tumonthpng::renderYear 2026 \
+            -scale 1 -title Jahr] 0]
+} -result {{838 500} Jahr}
+
+test tumonthpng-7.8 {without -title quarter/year keep their size} -body {
+    list [::tclutils::tuimage::dimensions \
+            [::tclutils::tumonthpng::renderQuarter 2026 11 -scale 1]] \
+        [::tclutils::tuimage::dimensions \
+            [::tclutils::tumonthpng::renderYear 2026 -scale 1 -cols 4]]
+} -result {{626 154} {838 482}}
+
+# --- unreleased: a -title that looks like a number is drawn as written ------
+test tumonthpng-8.1 {-title 0x1F is not normalised to 31} -body {
+    lindex [::__labels ::tclutils::tumonthpng::render 2026 11 -scale 1 -title 0x1F] 0
+} -result {0x1F}
+
+rename ::__labels {}
+
 cleanupTests

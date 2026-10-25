@@ -10,7 +10,7 @@ bit-field table, not a node-edge graph, so it does **not** go through
 ## Package
 
 ```tcl
-package require tclutils::tupacket 0.1
+package require tclutils::tupacket 0.2
 ```
 
 ## Commands

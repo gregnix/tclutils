@@ -8,7 +8,7 @@ which dispatch here.
 ## Package
 
 ```tcl
-package require tclutils::tugantt 0.1
+package require tclutils::tugantt 0.2
 ```
 
 ## Commands
@@ -36,10 +36,19 @@ gantt
   They set the bar colour; a `milestone` is drawn as a diamond.
 - **Start**: an explicit date, `after <id> [<id> ...]` (the latest end of the
   referenced tasks), or omitted — the task then starts at the end of the
-  preceding task.
+  preceding task. The first task needs a start: if it has no date and no
+  `after` that names an earlier task, drawing raises `{TCLUTILS TUGANTT DATE}`
+  (Mermaid, too, needs a start date; there is no fallback to 1970 or today).
+- **Dates** must exist: the parsed date is formatted back with the same format
+  and compared with the input (leading zeros do not matter, `2026-3-2` is
+  fine). `2026-13-45` or `2026-02-30` raise `DATE` on Tcl 8.6 and 9.0 alike.
 - **End**: an explicit date, or a duration `5d` / `2w` / `8h` / `30m`.
 - `dateFormat` / `axisFormat` accept the usual tokens `YYYY MM DD HH mm ss`
   (mapped to `clock` format); `X` means a Unix timestamp.
+- **Axis**: about six ticks, snapped to whole units of the axis format (seconds
+  if it shows seconds, minutes if it shows minutes, hours if it shows hours,
+  otherwise days); a tick whose label repeats the previous one is dropped, so a
+  short span shows each date once.
 - Comments start with `%%`.
 
 ## v1 scope
@@ -47,13 +56,18 @@ gantt
 Covered: title, dateFormat/axisFormat, sections, tags, ids, explicit dates,
 `after` dependencies, durations, and milestones. **Not** in v1: `excludes` /
 weekend exclusion, `until`, `vert` markers, compact display mode, and custom
-`tickInterval`. The chart height is fixed (`-height`); tasks fill from the top.
+`tickInterval`. Without `-height` the chart grows with the number of tasks
+(at least 400 pixels); with `-height` the height is fixed and tasks fill from
+the top.
 
 ## Options
 
-`-width` / `-height` (default 800 x 400), `-fontfile` (a TTF for real-font
-labels via `Glyphs`; PNG only -- otherwise the built-in bitmap font), `-scale`
-(positive integer; enlarges the PNG canvas, SVG ignores it).
+`-width` (default 800) / `-height` (default 0 = automatic: 400, or more when
+the title, the task rows and the axis labels need it -- each task row takes 26
+pixels), `-fontfile` (a TTF for real-font labels via `Glyphs`; PNG only --
+otherwise the built-in bitmap font), `-scale` (positive integer; on PNG the
+canvas grows by the factor; on SVG the canvas keeps its size and text, lines
+and spacing grow by the factor).
 
 ## Usage
 
@@ -85,5 +99,6 @@ set src {gantt
 ## Error codes
 
 `-errorcode {TCLUTILS TUGANTT <REASON>}` -- `EMPTY` (no tasks), `ARG` (bad
-`-scale`), `DATE` (a date that does not match `dateFormat`), `FONT` (font file
-not found).
+`-scale`), `DATE` (a date that does not match `dateFormat` or does not exist,
+or a first task without a start date -- raised when drawing, not by `parse`),
+`FONT` (font file not found).

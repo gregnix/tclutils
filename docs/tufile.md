@@ -7,7 +7,7 @@ file header.
 ## Package
 
 ```tcl
-package require tclutils::tufile 0.1
+package require tclutils::tufile 0.2
 ```
 
 ## API

@@ -3,7 +3,7 @@ package require tcltest
 namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 tcl::tm::path add [file join [file dirname $here] lib tm]
-package require tclutils::tuldif 0.1
+package require tclutils::tuldif 0.2
 
 set ldif "dn: cn=Alice,dc=ex\ncn: Alice\nsn: Smith\nmail: alice@ex.com\nmail: a@ex.com\n\ndn: cn=Bob,dc=ex\ncn: Bob\n"
 
@@ -61,5 +61,40 @@ test tuldif-2.1 {addAttr / setAttr / removeAttr} -body {
     set e [::tclutils::tuldif::removeAttr $e 2]
     list $v1 $v2 [::tclutils::tuldif::attributes $e]
 } -result {a@x.com b@x.com {dn cn}}
+
+test tuldif-3.1 {base64 output is the UTF-8 bytes} -body {
+    set entry [list {dn x} [list cn "H\u00e4llo"]]
+    ::tclutils::tuldif::toLdif [list $entry]
+} -result "dn: x\ncn:: SMOkbGxv\n"
+
+test tuldif-3.2 {base64 input is decoded as UTF-8} -body {
+    set e [lindex [::tclutils::tuldif::parse "dn: x\ncn:: SMOkbGxv\n"] 0]
+    expr {[::tclutils::tuldif::get $e cn] eq "H\u00e4llo"}
+} -result 1
+
+test tuldif-3.3 {characters above 255 round-trip} -body {
+    set entry [list {dn x} [list cn "5 \u20ac"]]
+    set out [::tclutils::tuldif::toLdif [list $entry]]
+    set e [lindex [::tclutils::tuldif::parse $out] 0]
+    list $out [expr {[lindex [::tclutils::tuldif::get $e cn] 0] eq "5 \u20ac"}]
+} -result [list "dn: x\ncn:: NSDigqw=\n" 1]
+
+test tuldif-3.4 {a trailing space forces base64 and survives} -body {
+    set entry [list {dn x} [list cn "a "]]
+    set out [::tclutils::tuldif::toLdif [list $entry]]
+    set e [lindex [::tclutils::tuldif::parse $out] 0]
+    list $out [::tclutils::tuldif::get $e cn]
+} -result [list "dn: x\ncn:: YSA=\n" {{a }}]
+
+test tuldif-3.5 {bytes that are not UTF-8 stay bytes} -body {
+    set e [lindex [::tclutils::tuldif::parse "dn: x\nphoto:: /9g=\n"] 0]
+    binary encode hex [::tclutils::tuldif::get $e photo]
+} -result ffd8
+
+test tuldif-3.6 {a change record is refused with its own code} -body {
+    set text "dn: cn=A\nchangetype: modify\nreplace: mail\nmail: x\n-\n"
+    catch {::tclutils::tuldif::parse $text} m o
+    list [dict get $o -errorcode] $m
+} -result {{TCLUTILS TULDIF CHANGETYPE} {LDIF change records are not supported (changetype: modify)}}
 
 cleanupTests

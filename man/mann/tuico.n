@@ -1,9 +1,9 @@
-.TH tuico n 0.1 tclutils
+.TH tuico n 0.2 tclutils
 .SH "tclutils::tuico — Windows icon containers"
 .PP
 Reads and writes the \fB.ico\fR container format. Payloads go in and out as raw bytes; the module never rasterises anything, so it needs \fBno Tk\fR and runs headless.
 .CS
-package require tclutils::tuico 0.1
+package require tclutils::tuico 0.2
 .CE
 .SS "Why this exists next to tklib's \fBico\fR"
 .PP
@@ -33,7 +33,7 @@ tclutils::tuico write app.ico $entries
 .CE
 .SS "\fBinfo icoFile\fR"
 .PP
-Returns a list of dicts, one per entry, with the keys \fBwidth\fR, \fBheight\fR, \fBbpp\fR, \fBformat\fR (\fBpng\fR or \fBbmp\fR), \fBoffset\fR and \fBlength\fR.
+Returns a list of dicts, one per entry, with the keys \fBwidth\fR, \fBheight\fR, \fBbpp\fR, \fBformat\fR (\fBpng\fR or \fBbmp\fR), \fBoffset\fR and \fBlength\fR. All directory fields are read unsigned, as the format defines them: an entry count above 32767 is taken at face value (a file that does not hold that many entries raises \fBTRUNCATED\fR).
 .CS
 foreach entry [tclutils::tuico info app.ico] {
     puts "[dict get $entry width]px [dict get $entry format]"

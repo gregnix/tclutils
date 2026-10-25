@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tupatch 0.1
+package require tclutils::tupatch 0.2
 package require tclutils::tudiff 0.1
 
 set old "alpha\nbeta\ngamma\ndelta\n"
@@ -83,5 +83,20 @@ test tupatch-4.1 {fromFile reads source and applies patch} -body {
     set patch [::tclutils::tudiff::unifiedText $old $new]
     ::tclutils::tupatch::fromFile $srcFile $patch
 } -result "alpha\nBETA\ngamma\ndelta\nepsilon"
+
+test tupatch-5.1 {-reverse and -strict must be booleans} -body {
+    set out {}
+    foreach o {-reverse -strict} {
+        catch {::tclutils::tupatch::text "a\n" "" $o maybe} e opts
+        lappend out [dict get $opts -errorcode]
+    }
+    set out
+} -result {{TCLUTILS COMMON BOOLEAN -reverse} {TCLUTILS COMMON BOOLEAN -strict}}
+
+test tupatch-5.2 {boolean words are accepted} -body {
+    set p "@@ -1,1 +1,2 @@\n a\n+b"
+    list [::tclutils::tupatch::text "a\n" $p -strict yes] \
+        [::tclutils::tupatch::text "a\nb\n" $p -reverse true -strict off]
+} -result [list "a\nb" a]
 
 cleanupTests

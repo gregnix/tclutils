@@ -88,4 +88,28 @@ test dh-9 {bad hash rejected in distance} -body {
     dict get $opts -errorcode
 } -result {TCLUTILS TUDHASH HASH}
 
+test dh-10 {fromRGB: non-numeric width -> DIM (checked before length)} -body {
+    lmap wh {{a 1} {1 b} {0 1} {-2 1} {1.5 1}} {
+        lassign $wh w h
+        catch {fromRGB $w $h {1 2 3}} e opts
+        dict get $opts -errorcode
+    }
+} -result [lrepeat 5 {TCLUTILS TUDHASH DIM}]
+
+test dh-11 {fromGray: dims with leading zero are decimal} -body {
+    set g {}
+    for {set i 0} {$i < 10} {incr i} { lappend g [expr {$i * 20}] }
+    expr {[fromGray 010 1 $g] eq [fromGray 10 1 $g]}
+} -result 1
+
+test dh-12 {fromRGB equals fromGray of the luminance} -body {
+    set rgb {}; set gray {}
+    for {set i 0} {$i < 72} {incr i} {
+        set v [expr {($i * 37) % 256}]
+        lappend rgb $v $v $v
+        lappend gray [expr {(77*$v + 150*$v + 29*$v) >> 8}]
+    }
+    expr {[fromRGB 9 8 $rgb] eq [fromGray 9 8 $gray]}
+} -result 1
+
 cleanupTests

@@ -1,4 +1,4 @@
-.TH tuzipfs n 0.2 tclutils
+.TH tuzipfs n 0.3 tclutils
 .SH tclutils::tuzipfs
 .PP
 \fBtclutils::tuzipfs\fR is a small Tcl 9 \fBzipfs\fR convenience wrapper. The package loads under Tcl 8.6 as well, but commands that need \fBzipfs\fR throw a clear \fBTCLUTILS TUZIPFS UNAVAILABLE\fR error.
@@ -28,7 +28,7 @@ package require tclutils::tuzipfs
 ::tclutils::tuzipfs::buildImage -out FILE -vfs DIR ?-basekit FILE? ?-stdlib none|cli|gui? ?-stdlibfrom running|DIR?
 .CE
 .IP \(bu
-\fBrcopy\fR — recursive byte\-exact copy. Works from a mounted \fBzipfs\fR source, where a plain \fBfile copy\fR is unreliable.
+\fBrcopy\fR — recursive byte\-exact copy. Works from a mounted \fBzipfs\fR source, where a plain \fBfile copy\fR is unreliable. Entries whose name starts with a dot (\fB.htaccess\fR, \fB.config/\fR) are copied too, so \fBcopyStdlib\fR and VFS copies are complete.
 .IP \(bu
 \fBcopyStdlib\fR — copy \fBtcl_library\fR (and, with \fB\-tk 1\fR, \fBtk_library\fR) into \fBdestDir\fR. \fB\-from running\fR uses the current interpreter's \fB[info library]\fR / \fB$::tk_library\fR; \fB\-from DIR\fR reads them from \fBDIR/tcl_library\fR (and \fBDIR/tk_library\fR) — point this at a foreign basekit's mountpoint for cross\-platform builds.
 .IP \(bu

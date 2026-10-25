@@ -65,7 +65,7 @@ Only the first report of an operation counts. A late result after a timeout or c
 .IP \(bu
 \fBonwrite varName\fR → done when the variable is written; the value is its new content. For GUI waits: a button sets the variable.
 .IP \(bu
-\fBpipe cmdlist ?\-encoding enc? ?\-profile p?\fR → runs the pipeline without blocking; the value is its output, stdout and stderr together. A non\-zero exit raises Tcl's \fB{CHILDSTATUS pid code}\fR. Cancel kills the processes (\fBkill\fR on Unix, \fBtaskkill /T /F\fR on Windows). On Unix only the processes of the pipeline itself: what they start in the background (\fBsh \-c "x &"\fR) keeps running (measured 2026\-10\-20; \fBsetsid\fR is planned, see the roadmap). \fB\-profile\fR is Tcl 9 only.
+\fBpipe cmdlist ?\-encoding enc? ?\-profile p?\fR → runs the pipeline without blocking; the value is its output, stdout and stderr together. A non\-zero exit raises Tcl's \fB{CHILDSTATUS pid code}\fR. Cancel kills the processes (\fBkill\fR on Unix, \fBtaskkill /T /F\fR on Windows). On Unix only the processes of the pipeline itself: what they start in the background (\fBsh \-c "x &"\fR) keeps running (measured 2026\-10\-20; \fBsetsid\fR is planned, see the roadmap). \fB\-profile\fR is Tcl 9 only. Windows console programs write in the console code page (\fBcp850\fR on German Windows), not in the system encoding (\fBcp1252\fR); under Tcl 9 a byte that the channel encoding lacks (\fBü\fR = 0x81 in cp850) fails the read with \fB{POSIX EILSEQ}\fR. Pass \fB\-encoding cp850\fR (or \fB\-profile replace\fR) for such programs.
 .SS Groups
 .CS
 set g [group]

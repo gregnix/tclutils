@@ -1,10 +1,10 @@
-.TH tupaste n 0.1 tclutils
+.TH tupaste n 0.2 tclutils
 .SH tclutils::tupaste
 .PP
 \fBtclutils::tupaste\fR combines line streams side by side, similar to Unix \fBpaste\fR.
 .SS Load
 .CS
-package require tclutils::tupaste
+package require tclutils::tupaste 0.2
 .CE
 .SS Examples
 .CS
@@ -15,7 +15,9 @@ package require tclutils::tupaste
 ::tclutils::tupaste::files [list names.txt cities.txt] -delimiter ";"
 .CE
 .PP
-If one input is shorter than the others, empty fields are used.
+\fB\-delimiter\fR (default: tab) goes between the columns; it may be several characters or empty. If one input is shorter than the others, empty fields are used. The result has no trailing newline.
+.PP
+An unknown option or an option without value raises \fBTCLUTILS COMMON OPTION \-name\fR.
 .SS "Additional exported commands"
 .PP
 Documented for completeness (same module, also covered by the test suite):

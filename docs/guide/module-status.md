@@ -17,7 +17,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tunl` | filter | `nl`-like line numbering (all/nonempty/none styles, start, increment, width, separator). Preserves trailing newline. |
 | `tuseq` | generator | `seq`-like numeric sequences (last / first last / first incr last), float steps, `-format`, `-equalwidth`. |
 | `tuhead` / `tutail` | subset | Line-based; no byte mode or follow mode. |
-| `tuwc` | basis complete | Lines, words, chars, bytes. |
+| `tuwc` | basis complete | Lines, words, chars, bytes (`file`: bytes = file size). |
 | `tusort` | subset | Built on Tcl `lsort`; no external large-file sort. |
 | `tutsort` | algorithm | `tsort`-like topological sort of token pairs; stable first-seen order; detects cycles and odd input. |
 | `tuuniq` | basis complete | Adjacent unique and counts. |
@@ -31,7 +31,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tushuf` | filter | `shuf`-like line shuffling with a seedable, platform-independent PRNG and `-count`. |
 | `tucolumn` | filter | `column`-like columnation: table mode (align delimited columns) and fill mode (column-major). |
 | `tupr` | filter | `pr`-like page formatting with a date/title/page header and optional line numbering. |
-| `tutr` | subset | Translate/delete/squeeze helpers; no POSIX character classes yet. |
+| `tutr` | subset | Translate/delete/squeeze helpers; ranges must ascend; `file … "" -squeeze 1` squeezes only; no POSIX character classes yet. |
 | `tused` | subset | Replace/delete/process mini-sed; no hold space, branching, or complete sed script syntax. |
 | `tugrep` | subset | Line-oriented regexp/fixed grep with context (-A/-B/-C), whole-word/whole-line/max-count; no multiline, PCRE, or recursive traversal by itself. |
 | `tuawk` | processor | awk-style record/field processing; Tcl expr patterns and Tcl actions, BEGIN/END, emit. Not an awk-language interpreter. |
@@ -62,13 +62,13 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tucode` | reference | Character-code tables for bytes 0..255 (ASCII, Latin-1/ANSI, sign groups, lookup). Byte-oriented, not a full Unicode chart. |
 | `tubase32` | basis complete | RFC 4648 base32 and base32hex encode/decode (pure Tcl; core has only base64). |
 | `tuimage` | basis complete | Detect format/MIME/dimensions from image bytes + data: URIs; pure-Tcl. |
-| `tupng` | basis complete | Pure-Tcl PNG encoder (indexed/RGB/RGBA/gray) via core zlib; encode-side companion to `tuimage`. |
+| `tupng` | basis complete | Pure-Tcl PNG encoder (indexed/RGB/RGBA/gray) and decoder (CRC checked, `tRNS` honoured) via core zlib; companion to `tuimage`. |
 | `tupngdraw` | toolkit | Immediate-mode 2D drawing onto an RGBA buffer (lines/arrows/shapes, AA fills/strokes, bitmap font, `fillcontours`, `paste`); emits PNG via `tupng`. |
 | `tutablepng` | renderer | Renders data rows to a styled PNG table; built on `tupngdraw`. |
 | `tumonthpng` | renderer | Month/quarter/year calendar to PNG (monthcanvas look); themes, day states, `-textcmd`. |
 | `tucodepng` | renderer | Character-code/codepage table to PNG grid; data from `tucode`. |
 | `tupngpad` | tool | Normalises (transparent) PNGs to a uniform size with margin on a background (trim/pad/flatten). Pure Tcl, for sprite/icon sizes. |
-| `tusvg` | generator | Pure-Tcl SVG generator: shapes/paths/text/gradients/groups to string or file, plus a library of ~110 named toolbar icons (`icon`/`icons`/`saveIcon`). No dependencies; vector counterpart to `tupng`. |
+| `tusvg` | generator | Pure-Tcl SVG generator: shapes/paths/text/gradients/groups to string or file, plus a library of 149 named toolbar icons (`icon`/`icons`/`saveIcon`). No dependencies; vector counterpart to `tupng`. |
 | `tulayout` | helper | Page layout helpers: millimetre coordinates and block-dict placement; shared by the PNG/SVG renderers and PDF layout. |
 
 ## Terminal / color
@@ -175,13 +175,13 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 
 | Module | Scope status | Notes |
 |---|---|---|
-| `tutask` | basis complete | Coroutine tasks: await with timeout, cancel with `finally`, groups (all/first), `timer`/`pipe`/`onwrite` operations; thread pool (Thread package, optional) and sandbox (safe interp with limits). |
+| `tutask` | basis complete | Coroutine tasks: await with timeout, cancel with `finally`, groups (all/first), `timer`/`pipe`/`onwrite` operations; thread pool (Thread package, optional) and sandbox (safe interp with limits). 0.2 requires `common` 0.2 and checks `-timeout` on `run`, `wait` and `await`. |
 
 ## Strings / validation
 
 | Module | Scope status | Notes |
 |---|---|---|
-| `tustr` | helper | String helpers: case conversion (camel/snake), slugify, pad/center/truncate, prefix/suffix, splitTrim, count. |
+| `tustr` | helper | String helpers: case conversion (camel/snake), slugify, pad/center/truncate, prefix/suffix, splitTrim, count. Since 0.2 also `graphemes` and `isPrintable`. |
 | `tuvalidate` | helper | Format/type validation predicates: email/url/ipv4/port/alpha/alnum/length/pattern/inList. |
 | `tupagespec` | helper | Parse page-range specs (`1-3,5,7-`, `all`, open ends, `end`/`last`) to a page list; `compact` is the inverse; `-base 0|1`. |
 
@@ -232,7 +232,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | Module | Scope status | Notes |
 |---|---|---|
 | `tupkgfinder` | helper | Inspect package resolution: known versions, `ifneeded` scripts and source paths, active vs. shadowed version, search paths; optional filesystem search by pattern. |
-| `tuappinfo` | helper | Collect a plain-text application/system report (Tcl/Tk, environment, search paths, loaded packages, tracked modules); optional anonymisation. GUI-free; the caller renders. |
+| `tuappinfo` | helper | Collect a plain-text application/system report (Tcl/Tk, environment, search paths, loaded packages, tracked modules); optional anonymisation of all paths. GUI-free; the caller renders. |
 | `tutestrun` | helper | The shared `tests/all.tcl` of tclutils, tkutils and ctrlutils: runs every `*.test` of a directory in its own process with a time limit and reports the files with problems; `run`. |
 
 ## Diagrams
@@ -246,8 +246,8 @@ self-contained 2D renderer. Both paths draw through the shared `tusvg` /
 
 | Module | Scope status | Notes |
 |---|---|---|
-| `tuflow` | facade | Detects the diagram language and dispatches to a parser or a 2D renderer; `parse`/`toSvg`/`toPng`. Mermaid-compatible fenced-code entry point, plus its own flowchart parser. |
-| `tudiagram` | renderer | Node-edge graph renderer: layered layout, 8 node shapes, edge styles incl. `thick`, crow's-foot end-marks, themes, group/cluster frames (subgraph, since 0.4); draws to SVG or PNG via the shared canvas. |
+| `tuflow` | facade | Detects the diagram language and dispatches to a parser or a 2D renderer; `parse`/`toSvg`/`toPng`/`writeSvg`/`writePng`. `parse` is graph-only. Render options: graphs take `-scale` and `-fontfile` on PNG; other families also take `-width`/`-height`, and `pie` takes `-legend`. `-fontfile` needs the unbundled Glyphs package. |
+| `tudiagram` | renderer | Node-edge graph renderer: layered layout, 8 node shapes, edge styles incl. `thick`, crow's-foot end-marks, themes (unknown name: `THEME` error), group/cluster frames (subgraph, since 0.4), drawn titles (0.5); draws to SVG or PNG via the shared canvas. |
 | `tustate` | parser | Mermaid `stateDiagram(-v2)` -> tudiagram model. |
 | `tuer` | parser | Mermaid `erDiagram` -> tudiagram model, with crow's-foot cardinality end-marks. |
 | `tuclass` | parser | Mermaid `classDiagram` -> tudiagram model (compartments, relationship kinds). |
@@ -262,7 +262,7 @@ self-contained 2D renderer. Both paths draw through the shared `tusvg` /
 | `tuquadrant` | 2D renderer | Mermaid `quadrantChart` -> SVG/PNG. |
 | `tujourney` | 2D renderer | Mermaid `journey` (user journey) -> SVG/PNG. |
 | `tutimeline` | 2D renderer | Mermaid `timeline` -> SVG/PNG. |
-| `tusankey` | 2D renderer | Mermaid `sankey-beta` flow diagram -> SVG/PNG; longest-path columns, value-proportional bands. |
+| `tusankey` | 2D renderer | Mermaid `sankey` / `sankey-beta` flow diagram -> SVG/PNG; longest-path columns, value-proportional bands. |
 | `tugantt` | 2D renderer | Mermaid `gantt` chart -> SVG/PNG; sections, tags, `after` deps, durations, milestones over a time axis. |
 | `tusequence` | 2D renderer | Mermaid `sequenceDiagram` -> SVG/PNG; lifelines, all arrow types, activations, notes, autonumber, nestable loop/alt/opt/par frames. |
 | `tukanban` | 2D renderer | Mermaid `kanban` board -> SVG/PNG; indent-based columns/cards, `@{...}` card metadata. |

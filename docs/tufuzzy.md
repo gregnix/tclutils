@@ -16,10 +16,18 @@ Fuzzy matching primitives in pure Tcl.
 minimum edit distance from a pattern to any substring of a text. `subsequence`
 implements fzf-style ordered subsequence matching.
 
+`-nocase` (default 0) must be a boolean. Errors:
+
+```text
+unknown option / missing value     TCLUTILS TUFUZZY OPTION
+extra positional arguments         TCLUTILS TUFUZZY ARGS
+-nocase not a boolean              TCLUTILS COMMON BOOLEAN -nocase
+```
+
 ## Examples
 
 ```tcl
-package require tclutils::tufuzzy
+package require tclutils::tufuzzy 0.2
 ::tclutils::tufuzzy::distance kitten sitting
 ::tclutils::tufuzzy::bestMatch colour {color flavour}
 ```

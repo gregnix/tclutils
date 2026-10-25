@@ -1,4 +1,4 @@
-.TH tucmp n 0.1 tclutils
+.TH tucmp n 0.2 tclutils
 .SH tclutils::tucmp
 .PP
 \fBtucmp\fR vergleicht zwei Datenströme oder Dateien byteweise.
@@ -21,4 +21,6 @@ dict get $r equal
 equal  offset  byte1  byte2  size1  size2
 .CE
 .PP
-\fBoffset\fR ist 0\-basiert. Bei identischen Daten ist \fBoffset\fR gleich \fB\-1\fR.
+\fBoffset\fR ist 0\-basiert. Bei identischen Daten ist \fBoffset\fR gleich \fB\-1\fR. \fBsize1\fR und \fBsize2\fR sind Byteanzahlen.
+.PP
+\fBdata\fR erwartet Bytes (jedes Zeichen 0..255). Ein Zeichen über 255 wirft \fB{TCLUTILS TUCMP BYTES}\fR, auch bei gleichen Strings; Text vorher mit \fBencoding convertto\fR in Bytes wandeln. Eine fehlende Datei wirft \fB{POSIX ENOENT ...}\fR.

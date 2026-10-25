@@ -165,4 +165,26 @@ test tutreemap-4.6 {negative leaf values are dropped, not crashing} -body {
     pngsig [M::toPng $m]
 } -result {89504e47}
 
+# --- fixes 0.2: values <= 0 really drop out --------------------------------------
+
+test tutreemap-5.1 {a negative leaf is not in the model and not in the sum} -body {
+    set m [M::parse "treemap-beta\n\"N\": -5\n\"A\": 10\n\"B\": 5"]
+    list [dict get $m value] [lmap k [dict get $m children] {dict get $k name}]
+} -result {15.0 {A B}}
+test tutreemap-5.2 {a zero leaf is dropped too} -body {
+    set m [M::parse "treemap-beta\n\"Z\": 0\n\"A\": 3"]
+    lmap k [dict get $m children] {dict get $k name}
+} -result A
+test tutreemap-5.3 {a branch with only non-positive leaves is dropped} -body {
+    set m [M::parse "treemap-beta\n\"S\"\n    \"x\": -1\n\"A\": 2"]
+    list [dict get $m value] [lmap k [dict get $m children] {dict get $k name}]
+} -result {2.0 A}
+test tutreemap-5.4 {negative sibling no longer shrinks the others' areas} -body {
+    set m [M::parse "treemap-beta\n\"N\": -5\n\"A\": 10\n\"B\": 5"]
+    set vals [lmap k [dict get $m children] {list [dict get $k name] [dict get $k value]}]
+    set rs [::tclutils::tutreemap::_squarify $vals 0 0 150 100]
+    foreach r $rs { set A([lindex $r 0]) [expr {round([lindex $r 3]*[lindex $r 4])}] }
+    list $A(A) $A(B)
+} -result {10000 5000}
+
 cleanupTests

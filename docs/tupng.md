@@ -45,3 +45,9 @@ packed bytes (row-major R G B A) -- the inverse of `encodeRGBARaw`, so
 encode/decode round-trips byte-exactly. Errors carry
 `{TCLUTILS TUPNG DECODE <reason>}` (SIGNATURE, IHDR, BITDEPTH, INTERLACE,
 COLORTYPE, IDAT, FILTER). 16-bit and interlaced PNGs are not supported.
+
+Every chunk's CRC-32 is verified; a damaged chunk, or one cut off before its
+CRC, raises `{TCLUTILS TUPNG CRC}`. A `tRNS` colour key is honoured for
+greyscale (type 0) and truecolour (type 2): pixels equal to the key get alpha
+0, all others 255. For a palette (type 3) `tRNS` holds per-entry alpha.
+Ancillary chunks other than `tRNS` are skipped (after the CRC check).

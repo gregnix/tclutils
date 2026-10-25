@@ -4,19 +4,24 @@ For the per-module scope status see [`module-status.md`](module-status.md);
 the wishlist/backlog detail lives with the reviews. This file is the
 high-level history and forward view.
 
-_As of 2026-10-21: 144 modules. Umbrella `tclutils` 0.67.0; recommended
-pairing tclutils 0.67.0 + tkutils 0.47.0 + ctrlutils 0.4. Man pages are
-generated from the Markdown docs by a script, so the hygiene gate reports
-missing man pages until that has run._
+_As of 2026-10-24: 144 module files under `lib/tm/tclutils/` (140 flat
+modules and four provider classes), plus the umbrella `tclutils` 0.68.0.
+Recommended pairing: tclutils 0.68.0 + tkutils 0.47.0 + ctrlutils 0.4.
+Each module has `docs/<module>.md` and a man page under `man/mann/`._
 
-_Done since 2026-07-19 and not yet reflected in the backlog below: the storage
+_Done since 2026-07-19 and not repeated in the backlog: the storage
 providers (`tuprovider` + zip/dav/ftp/sftp), `tupostgrest`, `tutdbc`,
-`tudhash`, `tuxxhash`, `tunotesdb`, in 0.63.0 the HTTPS
-verification through `tuhttps`, and in 0.64.0 `tusettings`, `tutestrun`
-and `tupkgfinder` 0.2._
+`tudhash`, `tuxxhash`, `tunotesdb`, the diagram family behind `tuflow`,
+in 0.63.0 the HTTPS verification through `tuhttps`, in 0.64.0
+`tusettings`, `tutestrun` and `tupkgfinder` 0.2, in 0.66.0 `tutask` 0.2,
+and in 0.67.0 `tupdftext`._
 
 ## Recently shipped
 
+- **`tupdftext` (0.67.0).** Page text from a PDF in pure Tcl, for full-text
+  search. Structure stays in `tupdf`. No decryption, no OCR, no column layout.
+- **`tutask` 0.2 (0.66.0).** Requires `common` 0.2. Pool and group errors from
+  0.1 are fixed, and `-timeout` is checked on `run`, `wait` and `await`.
 - **`tutask` (0.65.0).** Tasks on coroutines: `await` with timeout, `cancel`
   that runs the task's `finally` and cancels the awaited operation, groups
   (`all` fail-fast, `first`), operations `timer`/`pipe`/`onwrite`, a thread

@@ -5,7 +5,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuzipfs 0.1
+package require tclutils::tuzipfs 0.3
 package require tclutils::tuzip 0.1
 
 testConstraint haveZipfs [::tclutils::tuzipfs::available]
@@ -64,4 +64,20 @@ proc rmTree {path} {
 }
 rmTree $tmp
 catch {rmTree $tuzipfsTmpRoot}
+test tuzipfs-3.1 {rcopy copies dot files and dot directories} -setup {
+    set src [file join $tmp dotsrc]
+    file mkdir [file join $src .hid sub] [file join $src vis]
+    foreach f {.a vis/.b .hid/sub/c vis/d} {
+        set ch [open [file join $src $f] w]; puts -nonewline $ch x; close $ch
+    }
+    set dst [file join $tmp dotdst]
+} -body {
+    ::tclutils::tuzipfs::rcopy $src $dst
+    set r {}
+    foreach f {.a vis/.b .hid/sub/c vis/d} {
+        lappend r [file exists [file join $dst $f]]
+    }
+    set r
+} -result {1 1 1 1}
+
 cleanupTests

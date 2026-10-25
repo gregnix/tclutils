@@ -133,4 +133,25 @@ test turadar-3.6 {values above max are clamped to the rim (no crash)} -body {
     pngsig [M::toPng [M::parse "radar-beta\naxis A,B,C\ncurve c{200,50,10}\nmax 100"]]
 } -result {89504e47}
 
+# --- fixes 0.2: legend only for explicitly named curves -----------------------
+
+test turadar-5.1 {unlabelled curves: no legend by default} -body {
+    dict get [M::parse "radar-beta\naxis a, b, c\ncurve x{1, 2, 3}\ncurve y{3, 2, 1}"] showLegend
+} -result 0
+test turadar-5.2 {unlabelled curves keep their id as name} -body {
+    lindex [curve [M::parse "radar-beta\naxis a, b, c\ncurve x{1, 2, 3}"] 0] 0
+} -result x
+test turadar-5.3 {one explicit label switches the legend on} -body {
+    dict get [M::parse "radar-beta\naxis a, b, c\ncurve x{1, 2, 3}\ncurve y\[\"Why\"\]{3, 2, 1}"] showLegend
+} -result 1
+test turadar-5.4 {showLegend true forces the legend without labels} -body {
+    dict get [M::parse "radar-beta\naxis a, b, c\ncurve x{1, 2, 3}\nshowLegend true"] showLegend
+} -result 1
+
+
+# --- unreleased: a curve id that looks like a number is kept as text --------
+test turadar-6.1 {a bare curve id like 010 is the label, unchanged} -body {
+    lindex [curve [M::parse "radar-beta\naxis A, B, C\ncurve 010{1,2,3}"] 0] 0
+} -result {010}
+
 cleanupTests

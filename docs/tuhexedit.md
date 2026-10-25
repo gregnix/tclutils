@@ -8,7 +8,7 @@ Small binary read/write/search/patch helpers in pure Tcl.
 ## Package
 
 ```tcl
-package require tclutils::tuhexedit 0.1
+package require tclutils::tuhexedit 0.2
 ```
 
 ## Read bytes
@@ -58,10 +58,25 @@ The dump command delegates to `tclutils::tuhexdump`.
 
 `patch` and `writeBytes` are in-place, length-preserving operations. They do
 not insert or delete bytes and therefore do not shift the remaining file
-content.
+content. A write that would pass the end of the file is rejected with
+`{TCLUTILS TUHEXEDIT RANGE}`; the file and its backup stay untouched.
 
 `findHex`, `findString`, and `patch` currently read the complete file into
 memory. `readBytes` is the partial-read API for large files.
+
+## Errors
+
+```text
+{TCLUTILS TUHEXEDIT OFFSET}    offset negative, not an integer, or 0x without hex digits
+{TCLUTILS TUHEXEDIT LENGTH}    length negative or not an integer
+{TCLUTILS TUHEXEDIT RANGE}     writeBytes/patch would write past the end of the file
+{TCLUTILS TUHEXEDIT BYTES}     writeBytes data with a character above 255
+{TCLUTILS TUHEXEDIT ENCODING}  findString text the encoding cannot represent
+{TCLUTILS TUHEXEDIT NEEDLE}    empty search pattern
+{TCL LOOKUP ENCODING name}     unknown encoding (from Tcl)
+```
+
+Offsets are a decimal integer or hex with `0x` (`0x100`).
 
 ## Additional exported commands
 

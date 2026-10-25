@@ -81,4 +81,27 @@ test tuclass-3.2 {empty diagram raises TUCLASS EMPTY} -body {
     list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
 } -result {TUCLASS EMPTY}
 
+# --- fixes 0.2: one-line blocks, cardinalities ---------------------------------
+
+test tuclass-4.1 {class X { } on one line closes the block} -body {
+    set m [M::parse "classDiagram\n  class X { }\n  A <|-- B"]
+    list [dict get [nodeById $m X] label] [epairs $m]
+} -result {X {{B A}}}
+test tuclass-4.2 {one-line block with ;-separated members} -body {
+    set m [M::parse "classDiagram\n  class Y { +int a; +m() }\n  Y : +b"]
+    split [dict get [nodeById $m Y] label] \n
+} -result {Y ---------- {+int a} +b ---------- +m()}
+test tuclass-4.3 {members in front of a closing brace count} -body {
+    set m [M::parse "classDiagram\n  class Z {\n    +a\n    +b }\n  Z --> W"]
+    list [split [dict get [nodeById $m Z] label] \n] [epairs $m]
+} -result {{Z ---------- +a +b} {{Z W}}}
+test tuclass-4.4 {cardinalities are dropped, the edge stays} -body {
+    set m [M::parse "classDiagram\n  Kunde \"1\" --> \"*\" Auftrag : gibt"]
+    list [epairs $m] [dict get [edge0 $m] label]
+} -result {{{Kunde Auftrag}} gibt}
+test tuclass-4.5 {cardinality touching the operator, reltype label kept} -body {
+    set m [M::parse "classDiagram\n  A \"1\"*--\"0..n\" B"]
+    list [epairs $m] [dict get [edge0 $m] label]
+} -result {{{A B}} composition}
+
 cleanupTests

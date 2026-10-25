@@ -1,4 +1,4 @@
-.TH tupngdraw n 0.12 tclutils
+.TH tupngdraw n 0.13 tclutils
 .SH tclutils::tupngdraw
 .PP
 A tiny pure\-Tcl 2D drawing layer that renders to a PNG via \fBtclutils::tupng\fR. No Tk and no external packages (TclOO is part of Tcl core). A surface is a TclOO object whose command is the handle, in the spirit of \fBpdf4tcl\fR \-\- but a PNG is a single surface, so there are no pages.
@@ -26,14 +26,15 @@ $p setantialias 0|1               ;# antialiased strokes (default 1)
 $p clear ?COLOR?                  ;# repaint whole surface (default: background)
 
 $p setpixel x y ?-color COLOR?
-$p line   x1 y1 x2 y2 ?-color COLOR? ?-width N?
-$p rect   x1 y1 x2 y2 ?-fill 0|1? ?-outline 0|1? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR?
-$p circle cx cy r     ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR?
-$p polygon {x0 y0 x1 y1 ...} ?-fill 0|1? ?-outline 0|1? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR?
-$p ellipse cx cy rx ry ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR?
-$p arc cx cy r a0 a1 ?-style arc|pie|chord? ?-fill 0|1? ?-join round|bevel|mitre? ?-color C? ?-width N? ?-fillcolor C?
+$p line   x1 y1 x2 y2 ?-color COLOR? ?-width N? ?-caps round|butt|square? ?-aa 0|1?
+$p rect   x1 y1 x2 y2 ?-fill 0|1? ?-outline 0|1? ?-rx R? ?-ry R? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR? ?-aa 0|1?
+$p circle cx cy r     ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR? ?-aa 0|1?
+$p polygon {x0 y0 x1 y1 ...} ?-fill 0|1? ?-outline 0|1? ?-join round|bevel|mitre? ?-color COLOR? ?-fillcolor COLOR? ?-aa 0|1?
+$p ellipse cx cy rx ry ?-fill 0|1? ?-outline 0|1? ?-color COLOR? ?-fillcolor COLOR? ?-aa 0|1?
+$p arc cx cy r a0 a1 ?-style arc|pie|chord? ?-fill 0|1? ?-join round|bevel|mitre? ?-color C? ?-width N? ?-fillcolor C? ?-aa 0|1?
 $p text x y string ?-color COLOR? ?-scale N? ?-spacing S?
 $p textwidth string ?-scale N? ?-spacing S?      ;# -> pixel width
+$p paste x y rgba w h ?-scale N?                 ;# composite RGBA bytes
 
 $p data  ?-compression 0..9? ?-filter best|none|sub|up|average|paeth?   ;# -> PNG bytes
 $p write file ?-compression ...? ?-filter ...?                          ;# -> file
@@ -41,6 +42,12 @@ $p destroy
 .CE
 .PP
 For the shapes, \fB\-fill 1\fR fills the interior with the fill colour and (unless \fB\-outline 0\fR) draws the outline with the stroke colour and current line width. \fB\-color\fR overrides the stroke for that call; \fB\-fillcolor\fR overrides the fill.
+.IP \(bu
+\fB\-rx R\fR / \fB\-ry R\fR (rect, default 0): corner radius for rounded rectangles; \fB\-ry 0\fR takes the value of \fB\-rx\fR; radii are clamped to half the box size.
+.IP \(bu
+\fB\-caps round|butt|square\fR (line, default \fBround\fR): line end style; \fBbutt\fR ends flush at the end points, \fBsquare\fR extends by half the line width. Other values raise \fB{TCLUTILS TUPNGDRAW CAPS}\fR.
+.IP \(bu
+\fB\-aa 0|1\fR (line, rect, circle, ellipse, polygon, arc, fillcontours; default: the surface setting from \fBsetantialias\fR): antialiasing for this call only.
 .PP
 Drawing composites \fBsource\-over\fR (straight alpha), so a semi\-transparent fill blends with whatever is underneath; an opaque colour replaces it.
 .PP
@@ -63,7 +70,7 @@ Renders a self\-contained demo image (overlapping translucent discs, a filled tr
 \fBarc\fR angles are in degrees, 0 = +x (east); the sweep runs from \fBa0\fR to \fBa1\fR and, because y increases downward, appears clockwise on screen. \fB\-style pie\fR fills/closes through the centre, \fBchord\fR through the end\-to\-end chord, \fBarc\fR is the bare curve. \fBtext\fR uses an embedded 6x8 bitmap font (printable ASCII); \fB\-scale N\fR enlarges each font pixel to an NxN block.
 .SS "Scope and limits"
 .PP
-Version 0.11 covers \fBsetpixel\fR, \fBline\fR, \fBrect\fR, \fBcircle\fR, \fBellipse\fR, \fBpolygon\fR (even\-odd scanline fill), \fBarc\fR/pie/chord and \fBtext\fR (6x8 bitmap font), with stroke/fill colour, line width, source\-over alpha compositing and antialiased, alpha\-correct strokes. It is a 2D rasteriser: drawing is per\-pixel pure Tcl, well suited to labels, calendars, simple charts and preview thumbnails, not to large photographic images.
+Version 0.13 covers \fBsetpixel\fR, \fBline\fR, \fBrect\fR (optionally rounded), \fBcircle\fR, \fBellipse\fR, \fBpolygon\fR (even\-odd scanline fill), \fBarc\fR/pie/chord, \fBfillcontours\fR, \fBpaste\fR and \fBtext\fR (6x8 bitmap font), with stroke/fill colour, line width, source\-over alpha compositing and antialiased, alpha\-correct strokes. It is a 2D rasteriser: drawing is per\-pixel pure Tcl, well suited to labels, calendars, simple charts and preview thumbnails, not to large photographic images.
 .PP
 The 6x8 font is an original, hand\-authored bitmap set (95 ASCII glyphs plus the German umlauts and eszett), embedded as glyph data and MIT\-licensed like the rest of the code. Antialiasing and alpha\-correct thick strokes are implemented (see above).
 .SS Notes
@@ -77,4 +84,4 @@ The internal buffer is a flat list of bytes (R G B A per pixel) mutated in place
 The embedded 6x8 font covers ASCII 32\-126 plus the German letters a/o/u and A/O/U with diaeresis and the eszett. Unknown code points render blank.
 .SS Compositing
 .PP
-\fBpaste px py rgba sw sh ?\-scale s?\fR alpha\-composites a packed\-RGBA block (e.g. from \fBtupng decode\fR) onto the image, nearest\-neighbour scaled. Useful for layering existing PNGs and for image compositing (used by tkutils::tkcanvaspng).
+\fBpaste px py rgba sw sh ?\-scale s?\fR alpha\-composites a packed\-RGBA block (e.g. from \fBtupng decode\fR) onto the image, nearest\-neighbour scaled. It uses the same source\-over formula as every other drawing call (result alpha = a_s + a_d (1 \- a_s), colours weighted accordingly): on a transparent surface a pasted \fB{255 0 0 128}\fR stays \fB255 0 0 128\fR, exactly what \fBsetpixel\fR gives; on an opaque surface the result is an opaque blend. Pixels with alpha 0 leave the surface untouched, alpha 255 replaces it. Useful for layering existing PNGs and for image compositing (used by tkutils::tkcanvaspng).

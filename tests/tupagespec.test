@@ -85,4 +85,31 @@ test tupagespec-3.6 {negative total} -body {
     dict get $o -errorcode
 } -result {TCLUTILS TUPAGESPEC VALUE}
 
+test tupagespec-4.1 {leading zero is decimal (8.6 read it as octal)} -body {
+    ::tclutils::tupagespec::parse 08 10
+} -result 8
+
+test tupagespec-4.2 {zero-padded range is decimal} -body {
+    ::tclutils::tupagespec::parse 07-09 10
+} -result {7 8 9}
+
+test tupagespec-4.3 {reversed zero-padded range} -body {
+    ::tclutils::tupagespec::parse 09-007 10
+} -result {7 8 9}
+
+test tupagespec-4.4 {zero-padded total is decimal} -body {
+    ::tclutils::tupagespec::parse 9-end 010
+} -result {9 10}
+
+test tupagespec-4.5 {00 is page 0 -> RANGE} -body {
+    catch {::tclutils::tupagespec::parse 00 5} m o
+    list $m [dict get $o -errorcode]
+} -result {{page 0 out of range (1..5)} {TCLUTILS TUPAGESPEC RANGE}}
+
+
+# --- unreleased: single pages keep their text in compact --------------------
+test tupagespec-5.1 {compact keeps a single page as given (no expr normalisation)} -body {
+    list [::tclutils::tupagespec::compact {3 010}] [::tclutils::tupagespec::compact {0x1F}]
+} -result {3,010 0x1F}
+
 cleanupTests

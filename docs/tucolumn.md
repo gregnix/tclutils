@@ -13,6 +13,16 @@ Table mode aligns delimited columns (input separator defaults to whitespace runs
 output separator defaults to two spaces). Fill mode arranges items column-major into
 columns fitting `-width` (default 80).
 
+## Errors
+
+| Case | `-errorcode` |
+|---|---|
+| `file`: unknown `-mode` | `{TCLUTILS TUCOLUMN MODE}` |
+| `file`: `-mode` without value | `{TCLUTILS TUCOLUMN OPTION}` |
+| unknown option | `{TCLUTILS COMMON OPTION -name}` |
+| `-width`/`-gap` not a positive integer | `{TCLUTILS COMMON INTEGER -name}` |
+| `-right` not a boolean | `{TCLUTILS COMMON BOOLEAN -right}` |
+
 ## CLI
 ```bash
 tclsh bin/tucolumn.tcl table file.txt

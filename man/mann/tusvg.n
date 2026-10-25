@@ -1,7 +1,7 @@
-.TH tusvg n 0.2 tclutils
+.TH tusvg n 0.3 tclutils
 .SH tclutils::tusvg
 .PP
-A pure\-Tcl \fBSVG generator\fR \-\- no Tk, no external packages. Build a document as a dict, add shapes/paths/text/gradients/groups, and render to a string or file. Ships a library of ~110 named toolbar icons. It complements the \fBtupng\fR encoders: \fBtusvg\fR is the vector counterpart.
+A pure\-Tcl \fBSVG generator\fR \-\- no Tk, no external packages. Build a document as a dict, add shapes/paths/text/gradients/groups, and render to a string or file. Ships a library of 149 named toolbar icons (including aliases). It complements the \fBtupng\fR encoders: \fBtusvg\fR is the vector counterpart.
 .SS Document
 .CS
 set svg [tusvg::create width height ?-viewBox "x y w h"? ?-id name?]
@@ -14,6 +14,8 @@ set c [tusvg::new ?-width W? ?-height H? ?-background C?]   ;# -> a canvas objec
 .CE
 .PP
 \fBnew\fR returns a drawing\-canvas \fBobject\fR (not a document dict). It exposes the abstract canvas protocol shared with \fBtclutils::tupngdraw\fR (\fBwidth height line rect polygon text textwidth data destroy\fR ...), so a single generic draw routine can target SVG or PNG by only swapping the constructor. This is the entry point the diagram renderers (\fBtudiagram\fR, \fBtupie\fR, \fBtuxychart\fR) build on; for hand\-written SVG use the document API above.
+.PP
+\fB$c icon name x y size ?\-color c? ?\-strokeWidth w?\fR places a library icon on the canvas: the icon document is rendered with \fBtoString\fR (without the XML declaration) and embedded as a nested \fB<svg x y width height viewBox="0 0 24 24">\fR element.
 .SS "Elements (append to the document variable)"
 .CS
 tusvg::rect     svg x y w h     ?-fill c? ?-stroke c? ?-strokeWidth n? ?-rx n? ?-ry n? ?-opacity o? ?-id i?
@@ -37,12 +39,12 @@ tusvg::addGroup   svg $g
 .CE
 .SS "Icon library"
 .CS
-tusvg::icons                                ;# list of ~110 names
+tusvg::icons                                ;# list of 149 names
 set ic [tusvg::icon name size ?-color c? ?-strokeWidth w?]   ;# an SVG document
 tusvg::saveIcon name size file.svg ?-color c?
 .CE
 .PP
-Unknown icon names render a question\-mark fallback glyph (no error). Icons are path/shape only (so they also render under tksvg/svgnano, which has no \fB<text>\fR).
+\fBicons\fR lists every name \fBicon\fR knows, aliases included (\fBtrash\fR/\fBdelete\fR, \fBrotate\-left\fR/\fBrotate_left\fR, ...). Unknown icon names render a question\-mark fallback glyph (no error). Icons are path/shape only (so they also render under tksvg/svgnano, which has no \fB<text>\fR).
 .SS Notes
 .IP \(bu
 No dependencies beyond the Tcl core; works on 8.6 and 9.x.

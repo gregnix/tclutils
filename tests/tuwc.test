@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuwc 0.1
+package require tclutils::tuwc 0.2
 
 test tuwc-1.1 {text stats} -body {
     dict remove [::tclutils::tuwc::text "one two\nthree\n"] bytes
@@ -19,4 +19,19 @@ test tuwc-1.3 {file stats has file key} -body {
     dict exists [::tclutils::tuwc::file $wcFile] file
 } -result 1
 
+set wcCrlf [file join [temporaryDirectory] tuwc-crlf.txt]
+set fh [open $wcCrlf wb]; puts -nonewline $fh "ab\r\ncd\r\n"; close $fh
+
+test tuwc-2.1 {file: bytes is the file size} -body {
+    set d [::tclutils::tuwc::file $wcCrlf]
+    list [dict get $d bytes] [dict get $d chars] [dict get $d lines]
+} -result {8 6 2}
+test tuwc-2.2 {text: bytes is the UTF-8 length} -body {
+    dict get [::tclutils::tuwc::text "Gr\u00fc\u00dfe"] bytes
+} -result 7
+test tuwc-2.3 {lines counts a last line without newline} -body {
+    dict get [::tclutils::tuwc::text "a\nb"] lines
+} -result 2
+
+file delete -force $wcCrlf
 cleanupTests

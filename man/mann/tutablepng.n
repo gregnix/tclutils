@@ -1,4 +1,4 @@
-.TH tutablepng n 0.1 tclutils
+.TH tutablepng n 0.2 tclutils
 .SH tclutils::tutablepng
 .PP
 Render tabular data to a PNG table image using the pure\-Tcl drawing layer \fBtclutils::tupngdraw\fR (no Tk, no external packages). An export adapter: data in, a styled table image out.
@@ -12,7 +12,9 @@ package require tclutils::tutablepng
 .PP
 \fBrows\fR is a list of rows; each row is a list of cell strings. Short rows are padded with empty cells; the column count is the widest row.
 .PP
-Options (defaults): \fB\-header 1\fR (style the first row), \fB\-align l\fR (a single \fBl|c|r\fR or a per\-column list), \fB\-scale 1\fR (font scale), \fB\-padding 6\fR (cell padding px), \fB\-spacing 1\fR (px between glyphs), \fB\-background white\fR, \fB\-gridcolor {180 180 185}\fR, \fB\-textcolor {25 25 25}\fR, \fB\-headerbg {230 230 238}\fR, \fB\-headertext {0 0 0}\fR, \fB\-zebra {}\fR (alt\-row colour, empty = off), \fB\-border 1\fR (grid lines). Colours take any tupngdraw form (name, \fB#rrggbb\fR, \fBRRGGBB\fR, \fB{r g b}\fR, \fB{r g b a}\fR).
+Options (defaults): \fB\-header 1\fR (style the first row), \fB\-align l\fR (a single \fBl|c|r\fR or a per\-column list), \fB\-scale 1\fR (font scale), \fB\-padding 6\fR (cell padding px, integer >= 0), \fB\-spacing 1\fR (px between glyphs, integer >= 0), \fB\-background white\fR, \fB\-gridcolor {180 180 185}\fR, \fB\-textcolor {25 25 25}\fR, \fB\-headerbg {230 230 238}\fR, \fB\-headertext {0 0 0}\fR, \fB\-zebra {}\fR (alt\-row colour, empty = off), \fB\-border 1\fR (grid lines). Colours take any tupngdraw form (name, \fB#rrggbb\fR, \fBRRGGBB\fR, \fB{r g b}\fR, \fB{r g b a}\fR).
+.PP
+Cell text is drawn exactly as given: a cell that looks like a number (\fB4.80\fR, \fB1e3\fR, \fB0x1F\fR, \fB010\fR) is not normalised.
 .CS
 set rows {
     {Name      Qty Price}
@@ -29,6 +31,16 @@ cat data.tsv | tclsh bin/tutablepng.tcl out.png
 .CE
 .PP
 Reads delimited rows (default delimiter: tab) from a file or stdin and writes a PNG table.
+.SS Errors
+.TS
+l l.
+Error code	Cause
+\fB{TCLUTILS TUTABLEPNG EMPTY}\fR	no rows, or rows without cells
+\fB{TCLUTILS TUTABLEPNG ALIGN}\fR	\fB\-align\fR entry not \fBl\fR, \fBc\fR, \fBr\fR
+\fB{TCLUTILS TUTABLEPNG PADDING}\fR	\fB\-padding\fR not an integer >= 0
+\fB{TCLUTILS TUTABLEPNG SPACING}\fR	\fB\-spacing\fR not an integer >= 0
+\fB{TCLUTILS COMMON ...}\fR	\fB\-header\fR/\fB\-border\fR not boolean, \fB\-scale\fR not >= 1
+.TE
 .SS Notes
 .PP
 Column widths are derived from the fixed 6x8 font, so they are exact for the embedded glyphs. Grid lines are drawn crisp (no antialiasing); cell text is the bitmap font. For large tables prefer a modest \fB\-scale\fR.

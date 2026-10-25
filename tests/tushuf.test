@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tushuf 0.1
+package require tclutils::tushuf 0.2
 
 set input {a b c d e f g h i j}
 
@@ -27,4 +27,15 @@ test tushuf-1.6 {text variant returns same count of lines} {
 test tushuf-1.7 {non-integer seed rejected} {
     catch {::tclutils::tushuf::lines $input -seed xx} m o; dict get $o -errorcode
 } {TCLUTILS TUSHUF SEED}
+test tushuf-2.1 {64-bit seed accepted (also Tcl 8.6)} {
+    ::tclutils::tushuf::lines {a b c d e f g} -seed 5000000000
+} {c d g b e f a}
+test tushuf-2.2 {negative 64-bit seed accepted} {
+    ::tclutils::tushuf::lines {a b c d e} -seed -5000000000
+} {c b a e d}
+test tushuf-2.3 {same order as the low 31 bits of the seed} {
+    expr {[::tclutils::tushuf::lines {a b c d e f g} -seed 5000000000] eq
+          [::tclutils::tushuf::lines {a b c d e f g} -seed 705032704]}
+} 1
+
 cleanupTests

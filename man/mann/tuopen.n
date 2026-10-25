@@ -1,14 +1,20 @@
-.TH tuopen n 0.1 tclutils
+.TH tuopen n 0.2 tclutils
 .SH tclutils::tuopen
 .PP
-Open a URL or file path with the operating system's default application (\fBxdg\-open\fR on Linux/BSD, \fBopen\fR on macOS, \fBcmd /c start\fR on Windows).
+Open a URL or file path with the operating system's default application (\fBxdg\-open\fR on Linux/BSD, \fBopen\fR on macOS, \fBrundll32\fR / \fBcmd /c start\fR on Windows).
 .SS API
 .CS
 ::tclutils::tuopen::launch https://tcl.tk/     ;# opens in the default browser
 ::tclutils::tuopen::launch /path/to/report.pdf  ;# opens in the default viewer
 ::tclutils::tuopen::command http://x -platform windows
-#  -> cmd.exe /c start {} http://x
+#  -> rundll32 url.dll,FileProtocolHandler http://x
+::tclutils::tuopen::command C:/doc/a.pdf -platform windows
+#  -> cmd.exe /c start {} C:/doc/a.pdf
 .CE
+.PP
+On Windows a URL \-\- a target that starts with a scheme of two or more characters and \fB:\fR (\fBhttps:\fR, \fBmailto:\fR, \fBfile:\fR) \-\- is opened with \fBrundll32 url.dll,FileProtocolHandler <url>\fR. That bypasses \fBcmd.exe\fR, which would treat \fB&\fR in a query string as a command separator and cut the URL. Anything else (files, folders, \fBC:/...\fR) goes to \fBcmd.exe /c start "" <path>\fR.
+.PP
+All seven commands (\fBlaunch\fR, \fBcommand\fR, \fBedit\fR, \fBeditCommand\fR, \fBopenDir\fR, \fBconfigDir\fR, \fBconfigFile\fR) are exported for \fBnamespace import\fR.
 .PP
 Commands:
 .IP \(bu

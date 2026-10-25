@@ -1,4 +1,4 @@
-.TH tulayout n 0.1 tclutils
+.TH tulayout n 0.2 tclutils
 .SH tclutils::tulayout
 .PP
 Page layout helpers for document block designers and renderers. Pure Tcl, no dependencies. Coordinates are in millimetres with origin at the top\-left of the page.
@@ -11,7 +11,7 @@ tulayout::snap mm ?-grid 5?
 tulayout::isAutoY block                         ;# y==0 or lockedY
 tulayout::normalizeBlock block ?-defaults dict?
 tulayout::validateBlocks blocks                   ;# id -> block dict
-tulayout::ensureBlocks blocks definitions         ;# fill missing ids
+tulayout::ensureBlocks blocks definitions         ;# merge with definitions
 tulayout::blockOrder blocks ?definitions?
 tulayout::blockRect block ?-height mm?
 tulayout::mergeBlocks base preset ?-keys {x y w show}?
@@ -31,6 +31,18 @@ Key	Meaning
 \fBlockedY\fR	\fB1\fR = auto vertical placement (\fBy\fR stays \fB0\fR)
 .TE
 .PP
+\fBnormalizeBlock\fR keeps only \fBlabel x y w h show lockedY\fR, takes missing keys from \fB\-defaults\fR (default \fBx 0 y 0 w 40 h 8 show 1\fR), turns \fBx y w h\fR into doubles and \fBshow\fR into \fB0\fR/\fB1\fR. A non\-numeric \fBx\fR/\fBy\fR/\fBw\fR/\fBh\fR or a non\-boolean \fBshow\fR raises \fB{TCLUTILS TULAYOUT VALUE}\fR (\fBbad <key> '<value>'\fR).
+.PP
+\fBvalidateBlocks\fR normalises every block and checks it: \fBblocks\fR must be a non\-empty dict (\fBBLOCKS\fR), ids must not be empty (\fBBLOCKID\fR), values must be numbers (\fBVALUE\fR, \fBblock '<id>': bad <key> '<value>'\fR) and \fBx\fR, \fBy\fR, \fBw\fR, \fBh\fR must not be negative (\fBVALUE\fR).
+.PP
+\fBensureBlocks\fR merges a (possibly empty) \fBblocks\fR dict with \fBdefinitions\fR (id \-> block dict). For a block in \fBblocks\fR a missing key comes from its definition, then from the standard values above; a value in the block wins. An id that only appears in \fBdefinitions\fR is created from the definition alone. The result is checked like \fBvalidateBlocks\fR. With an empty \fBblocks\fR every block comes from the definitions:
+.CS
+tulayout::ensureBlocks {kopf {x 20}} {kopf {w 170 h 15}}
+;# -> kopf {x 20.0 y 0.0 w 170.0 h 15.0 show 1}
+tulayout::ensureBlocks {} {kopf {w 170 h 15}}
+;# -> kopf {w 170.0 h 15.0}
+.CE
+.PP
 \fBmergeBlocks\fR copies only the keys listed in \fB\-keys\fR (default \fB{x y w show}\fR) from \fBpreset\fR into \fBbase\fR for matching block ids. This is the usual “apply layout preset to a live document” operation.
 .PP
 \fBmergeLayout\fR expects full layout dicts with a \fBblocks\fR sub\-dict:
@@ -39,7 +51,24 @@ set doc [tulayout::mergeLayout $doc $preset]
 .CE
 .SS Papers
 .PP
-Supported names: \fBa4\fR, \fBa5\fR, \fBletter\fR. Unknown paper raises \fB{TCLUTILS TULAYOUT PAPER}\fR.
+Supported names: \fBa4\fR (210 × 297), \fBa5\fR (148 × 210), \fBletter\fR (216 × 279), case\-insensitive. A free size in mm is given as a two\-element list \fB{width height}\fR or as \fBWxH\fR / \fBWXH\fR (e.g. \fB54x56\fR, \fB80.5X200\fR); both parts must be positive numbers. Only \fBlandscape\fR swaps width and height. Unknown names, malformed sizes such as \fB1.2.3x5\fR and non\-positive sizes raise \fB{TCLUTILS TULAYOUT PAPER}\fR.
+.SS Options
+.PP
+All commands with options (\fBsnap\fR, \fBnormalizeBlock\fR, \fBblockRect\fR, \fBmergeBlocks\fR, \fBmergeLayout\fR, \fBfitScale\fR) reject an unknown option or an option without a value with \fB{TCLUTILS TULAYOUT OPTION}\fR.
+.SS "Error codes"
+.TS
+l l.
+Code	Raised by
+\fB{TCLUTILS TULAYOUT PAPER}\fR	\fBpageSize\fR: unknown paper, malformed or non\-positive size
+\fB{TCLUTILS TULAYOUT SCALE}\fR	\fBmmToPx\fR, \fBpxToMm\fR: scale not a positive number
+\fB{TCLUTILS TULAYOUT GRID}\fR	\fBsnap\fR: grid not a positive number
+\fB{TCLUTILS TULAYOUT OPTION}\fR	unknown option, option without a value
+\fB{TCLUTILS TULAYOUT BLOCKS}\fR	\fBvalidateBlocks\fR: \fBblocks\fR empty or not a dict; \fBensureBlocks\fR: \fBblocks\fR, \fBdefinitions\fR or a block not a dict
+\fB{TCLUTILS TULAYOUT BLOCKID}\fR	empty block id
+\fB{TCLUTILS TULAYOUT VALUE}\fR	non\-numeric \fBx y w h\fR, non\-boolean \fBshow\fR, negative \fBx y w h\fR
+\fB{TCLUTILS TULAYOUT LAYOUT}\fR	\fBmergeLayout\fR: target or preset without a \fBblocks\fR key
+\fB{TCLUTILS TULAYOUT VIEWPORT}\fR	\fBfitScale\fR: viewport minus twice the margin not positive
+.TE
 .SS Example
 .CS
 package require tclutils::tulayout

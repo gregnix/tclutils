@@ -108,4 +108,19 @@ test tuer-5.5 {the dashed/solid style is independent of the marks} -body {
     dict get [edge0 [M::parse "erDiagram\n  A |o..o| B : r"]] style
 } -result dashed
 
+# --- fixes 0.3: quoted relationship labels ------------------------------------
+
+test tuer-6.1 {a quoted label loses its quotes} -body {
+    set m [M::parse "erDiagram\n  KUNDE ||--o\{ AUFTRAG : \"gibt auf\""]
+    dict get [edge0 $m] label
+} -result {gibt auf}
+test tuer-6.2 {an unquoted label is unchanged} -body {
+    set m [M::parse "erDiagram\n  KUNDE ||--o\{ AUFTRAG : gibt"]
+    dict get [edge0 $m] label
+} -result gibt
+test tuer-6.3 {a lone quote is not stripped} -body {
+    set m [M::parse "erDiagram\n  KUNDE ||--o\{ AUFTRAG : 5\""]
+    dict get [edge0 $m] label
+} -result {5"}
+
 cleanupTests

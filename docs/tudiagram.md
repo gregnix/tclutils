@@ -9,8 +9,9 @@ result to SVG or PNG with the pure-Tcl backends (`tclutils::tusvg` /
 `tclutils::tuflow` supports (flowchart/graph, stateDiagram, erDiagram,
 classDiagram, requirementDiagram, mindmap, C4, …). Each of those parsers emits a
 `tudiagram` model; the `tuflow` facade then calls `tudiagram::toSvg` /
-`tudiagram::toPng`. Non-graph types (pie, xychart) own their own renderer and do
-**not** go through `tudiagram`.
+`tudiagram::toPng`. Non-graph types (sequence, gantt, pie, xychart, quadrant, journey, timeline,
+sankey, radar, treemap, packet, kanban; list in `tuflow.md`) own their own
+renderer and do **not** go through `tudiagram`.
 
 The render layer talks only to the congruent canvas protocol shared by `tusvg`
 and `tupngdraw`: the same `render` proc emits SVG or PNG, the constructor is the
@@ -20,7 +21,7 @@ geometry is backend-independent and the SVG and PNG output stay congruent.
 ## Package
 
 ```tcl
-package require tclutils::tudiagram 0.3
+package require tclutils::tudiagram 0.5
 ```
 
 Depends only on `tclutils::common`. Building and laying out a model needs no
@@ -44,8 +45,11 @@ idiom is `set d [tudiagram::addNode $d id -label X]`.
 
 After `layout` each node additionally carries `x y width height` (top-left
 origin, pixels), each edge carries a polyline `points` plus `back` (1 if the
-edge was reversed to break a cycle), and `meta` carries `laid 1` and the overall
-`width` / `height`.
+edge was reversed to break a cycle), and `meta` carries `laid 1`, the overall
+`width` / `height` and `titleH`. With a non-empty `title`, `titleH` is the height
+of the title band (8 × theme `font` + 10 pixels): every node and edge point moves
+down by it, the height grows by it, and the width grows to fit the title. The
+title is drawn centred in that band. Without a title `titleH` is 0.
 
 ## Commands
 
@@ -62,9 +66,10 @@ edge was reversed to break a cycle), and `meta` carries `laid 1` and the overall
 ```
 
 `create` starts an empty diagram. `-direction` is the rank flow (default `LR`).
-`-theme` is a theme name (see *Themes*) or an inline theme dict. `setMeta`
-overrides any `meta` key after creation (e.g. `-direction TB`, `-nodeGap 40`);
-it re-validates `direction`.
+`-theme` is a theme name (see *Themes*) or an inline theme dict; anything else
+raises `{TCLUTILS TUDIAGRAM THEME}`. `-title` is drawn above the graph (see
+*Model*). `setMeta` overrides any `meta` key after creation (e.g.
+`-direction TB`, `-nodeGap 40`); it re-validates `direction` and `theme`.
 
 `addNode` adds a node; `id` must be unique. `-label` defaults to the id.
 `-shape` is one of `box` (default), `rounded`, `dot`, `circle`, `stadium`,
@@ -119,8 +124,9 @@ to inspect coordinates.
 ```
 
 Resolves a theme name to its dict. Known names are `default`, `pipeline` and
-`mono`. An unknown name returns `default`; an inline dict that carries a `fill`
-key is merged over `default` and returned as-is. A theme dict has the keys
+`mono`. An inline dict that carries a `fill` key is merged over `default` and
+returned. Any other value (an unknown name, a dict without `fill`) raises
+`{TCLUTILS TUDIAGRAM THEME}`; the message lists the known names. A theme dict has the keys
 `fill stroke text edge font pad`.
 
 ### Rendering and output
@@ -205,9 +211,12 @@ set model [::tclutils::tuflow::parse $mermaidText]   ;# -> tudiagram model
   shape identical on the SVG and raster backends.
 - **Fonts:** labels use the `tupngdraw` 6x8 bitmap font by default, which covers
   ASCII and the German umlauts (real codepoints `\u00xx`). With `-fontfile` on
-  the raster backend a real outline font is used via `fillcontours` (lazy
-  `Glyphs`, unbundled); a set-but-missing path is a hard error, a missing
-  `Glyphs` package degrades silently to the bitmap font.
+  the raster backend a real outline font is used via `fillcontours`. Glyphs
+  (A. Buratti) is not part of tclutils. Put the directory that contains
+  `pkgIndex.tcl` on `auto_path`; the package loads Bezier and BContour from
+  its own `lib/`. A set-but-missing font file is `{TCLUTILS TUDIAGRAM FONT}`.
+  A missing Glyphs package keeps the 6x8 bitmap and raises no error. SVG
+  ignores `-fontfile`. The layout metric stays 6x8 either way.
 - **Companion modules:** `tclutils::tusvg` / `tclutils::tupngdraw` (backends),
   `tclutils::tuflow` (facade / dispatch), `tclutils::tupie` and
   `tclutils::tuxychart` (the non-graph renderers in the same family).
@@ -221,5 +230,7 @@ set model [::tclutils::tuflow::parse $mermaidText]   ;# -> tudiagram model
 - `ARG` — bad argument (unknown `-shape`, non-integer `-scale`, unknown render
   backend).
 - `FONT` — a `-fontfile` path that does not exist (raster backend).
+- `THEME` — `theme`, `create -theme` or `setMeta -theme` with an unknown theme
+  name or a dict without `fill`.
 - `NONODE` / `EMPTY` — reported by `validate` (as list entries, not thrown):
   an edge endpoint with no matching node, or a model with no nodes.

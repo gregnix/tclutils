@@ -1,4 +1,4 @@
-.TH tunl n 0.1 tclutils
+.TH tunl n 0.2 tclutils
 .SH tclutils::tunl
 .PP
 \fBnl\fR\-like line numbering in pure Tcl.
@@ -9,6 +9,18 @@
 .CE
 .PP
 Options: \fB\-style all|nonempty|none\fR (default \fBnonempty\fR), \fB\-start N\fR (default 1), \fB\-increment N\fR (default 1), \fB\-width N\fR (default 6), \fB\-separator S\fR (default tab). A trailing newline is preserved and is not numbered.
+.PP
+\fB\-start\fR and \fB\-increment\fR are integers (negative allowed, any size); \fB\-width\fR is an integer of at least 1. The number is right\-aligned in \fB\-width\fR columns.
+.SS Errors
+.TS
+l l.
+Case	\fB\-errorcode\fR
+\fB\-style\fR not \fBall\fR, \fBnonempty\fR, \fBnone\fR	\fB{TCLUTILS TUNL STYLE}\fR
+\fB\-start\fR not an integer	\fB{TCLUTILS TUNL START}\fR
+\fB\-increment\fR not an integer	\fB{TCLUTILS TUNL INCREMENT}\fR
+\fB\-width\fR not an integer >= 1	\fB{TCLUTILS TUNL WIDTH}\fR
+unknown option	\fB{TCLUTILS COMMON OPTION \-name}\fR
+.TE
 .SS CLI
 .CS
 tclsh bin/tunl.tcl -width 3 -separator " " file.txt

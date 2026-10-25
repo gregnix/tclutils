@@ -15,7 +15,7 @@ if {[info exists ::env(TCLUTILS_TM)]} { tcl::tm::path add $::env(TCLUTILS_TM) }
 testConstraint sqlite [expr {![catch {package require sqlite3}]}]
 
 if {[testConstraint sqlite]} {
-    package require tclutils::tunotesdb
+    package require tclutils::tunotesdb 0.2
     package require tclutils::tunotes
 }
 
@@ -398,6 +398,66 @@ test tunotesdb-7.6 {a failed import leaves nothing behind} -constraints sqlite -
     catch {::tclutils::tunotesdb::fromStore $db $store -clear 1}
     ::tclutils::tunotesdb::count $db
 } -result 1 -cleanup {closeDb}
+
+test tunotesdb-7.7 {re-importing a parent keeps its children} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" "alpha"]
+    set b [::tclutils::tunotesdb::create $db "B" "beta" {} $a]
+    set c [::tclutils::tunotesdb::create $db "C" "gamma" {} $b]
+} -body {
+    set note [dict get [::tclutils::tunotesdb::toStore $db] $a]
+    dict set note title "A2"
+    ::tclutils::tunotesdb::fromStore $db [dict create $a $note]
+    list [::tclutils::tunotesdb::count $db] \
+        [dict get [::tclutils::tunotesdb::get $db $a] title] \
+        [expr {[::tclutils::tunotesdb::path $db $c] eq [list $a $b $c]}] \
+        [llength [::tclutils::tunotesdb::search $db A2]]
+} -result {3 A2 1 1} -cleanup {closeDb}
+
+test tunotesdb-7.8 {a child may come before its parent} -constraints sqlite -setup {
+    set db [freshDb]
+} -body {
+    set store [dict create \
+        2 [dict create id 2 parent_id 1 title C content c \
+               created x modified x tags {}] \
+        1 [dict create id 1 parent_id "" title P content p \
+               created x modified x tags {}]]
+    ::tclutils::tunotesdb::fromStore $db $store
+    list [::tclutils::tunotesdb::count $db] \
+        [::tclutils::tunotesdb::children $db 1]
+} -result {2 2} -cleanup {closeDb}
+
+test tunotesdb-7.9 {a missing parent is NOTFOUND, nothing is imported} -constraints sqlite -setup {
+    set db [freshDb]
+    ::tclutils::tunotesdb::create $db "Keep" "me"
+} -body {
+    set store [dict create 2 [dict create id 2 parent_id 99 title C \
+        content c created x modified x tags {}]]
+    set rc [catch {::tclutils::tunotesdb::fromStore $db $store} m o]
+    list $rc [dict get $o -errorcode] [::tclutils::tunotesdb::count $db]
+} -result {1 {TCLUTILS TUNOTESDB NOTFOUND} 1} -cleanup {closeDb}
+
+test tunotesdb-7.10 {move and update to "" make a root} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" "alpha"]
+    set b [::tclutils::tunotesdb::create $db "B" "beta" {} $a]
+    set c [::tclutils::tunotesdb::create $db "C" "gamma" {} $a]
+} -body {
+    ::tclutils::tunotesdb::move $db $b ""
+    ::tclutils::tunotesdb::update $db $c "C" "gamma" {} ""
+    list [::tclutils::tunotesdb::parent $db $b] \
+        [::tclutils::tunotesdb::parent $db $c] \
+        [llength [::tclutils::tunotesdb::roots $db]]
+} -result {{} {} 3} -cleanup {closeDb}
+
+test tunotesdb-7.11 {parent of a root is "", siblings of a root work} -constraints sqlite -setup {
+    set db [freshDb]
+    set a [::tclutils::tunotesdb::create $db "A" "alpha"]
+    set b [::tclutils::tunotesdb::create $db "B" "beta"]
+} -body {
+    list [::tclutils::tunotesdb::parent $db $a] \
+        [expr {[::tclutils::tunotesdb::siblings $db $a] eq $b}]
+} -result {{} 1} -cleanup {closeDb}
 
 # ------------------------------------------------------------ ensemble ----
 

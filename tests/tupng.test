@@ -165,4 +165,73 @@ test tupng-4.5 {bad signature -> DECODE SIGNATURE} -body {
     dict get $o -errorcode
 } -result {TCLUTILS TUPNG DECODE SIGNATURE}
 
+# --- 0.5: tRNS colour key for truecolour, chunk CRC check ---
+# insert a chunk right after IHDR (signature 8 + IHDR 25 bytes)
+proc _withChunk {png type data} {
+    string cat [string range $png 0 32] \
+        [::tclutils::tupng::_chunk $type $data] [string range $png 33 end]
+}
+
+test tupng-5.1 {truecolour tRNS colour key makes matching pixels transparent} -body {
+    set png [::tclutils::tupng::encodeRGB {{FF0000 00FF00} {0000FF FF0000}}]
+    set png [_withChunk $png tRNS [binary format S3 {255 0 0}]]
+    binary scan [dict get [::tclutils::tupng::decode $png] rgba] cu* px
+    lmap {r g b a} $px {set a}
+} -result {0 255 255 0}
+
+test tupng-5.2 {truecolour tRNS uses the low byte of each 16-bit sample} -body {
+    set png [::tclutils::tupng::encodeRGB {{102030 112233}}]
+    set png [_withChunk $png tRNS [binary format S3 {0x0010 0x0020 0x0030}]]
+    binary scan [dict get [::tclutils::tupng::decode $png] rgba] cu* px
+    set px
+} -result {16 32 48 0 17 34 51 255}
+
+test tupng-5.3 {grayscale tRNS still works} -body {
+    set png [::tclutils::tupng::encodeGray {{0 128 255}}]
+    set png [_withChunk $png tRNS [binary format S 128]]
+    binary scan [dict get [::tclutils::tupng::decode $png] rgba] cu* px
+    lmap {r g b a} $px {set a}
+} -result {255 0 255}
+
+test tupng-5.4 {damaged chunk data -> CRC} -body {
+    set png [::tclutils::tupng::encodeRGB {{FF0000 00FF00}}]
+    # flip one byte of the IHDR width (offset 16)
+    set bad [string replace $png 19 19 [binary format cu 3]]
+    catch {::tclutils::tupng::decode $bad} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPNG CRC}
+
+test tupng-5.5 {damaged CRC field -> CRC} -body {
+    set png [::tclutils::tupng::encodeGray {{1 2 3}}]
+    # IHDR CRC sits at offsets 29..32
+    set bad [string replace $png 30 30 \
+        [binary format cu [expr {([scan [string index $png 30] %c] + 1) % 256}]]]
+    catch {::tclutils::tupng::decode $bad} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPNG CRC}
+
+test tupng-5.6 {truncated chunk -> CRC} -body {
+    set png [::tclutils::tupng::encodeGray {{1 2 3}}]
+    set n [string length $png]
+    # cut IEND's CRC
+    catch {::tclutils::tupng::decode [string range $png 0 [expr {$n - 3}]]} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPNG CRC}
+
+test tupng-5.7 {intact PNG still decodes (CRC accepted)} -body {
+    set png [::tclutils::tupng::encodeRGBA {{FF000080 00FF00FF}} -filter paeth]
+    binary scan [dict get [::tclutils::tupng::decode $png] rgba] cu* px
+    set px
+} -result {255 0 0 128 0 255 0 255}
+
+rename _withChunk {}
+
+
+# --- unreleased: expr ternary no longer normalises the tRNS bytes ------------
+test tupng-6.1 {encodeIndexed keeps tRNS bytes that look like a number} -body {
+    # alpha values 48 49 48 are the bytes "010"; expr made them "10" or "8"
+    set png [::tclutils::tupng::encodeIndexed {{1 2 3 48} {4 5 6 49} {7 8 9 48}} {{0 1 2}}]
+    expr {[string first tRNS010 $png] >= 0}
+} -result 1
+
 cleanupTests

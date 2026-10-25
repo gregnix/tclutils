@@ -1,4 +1,4 @@
-.TH tupng n 0.4 tclutils
+.TH tupng n 0.5 tclutils
 .SH tclutils::tupng
 .PP
 A pure\-Tcl PNG \fBencoder/decoder\fR \-\- no Tk, no external packages, only the core \fBzlib\fR command. It complements \fBtclutils::tuimage\fR (which inspects PNG headers). The encoder writes 8\-bit images in four colour types:
@@ -28,3 +28,5 @@ tupng::writeIndexed out.png {FF0000 0000FF00} {{0 1} {1 0}}   ;# entry 1 transpa
 .SS "Decoding (0.3)"
 .PP
 \fBtupng::decode bytes\fR and \fBtupng::readPNG file\fR reconstruct an 8\-bit, non\-interlaced PNG (colour types 0/2/3/4/6) and return a dict: \fBwidth height colortype bitdepth rgba\fR, where \fBrgba\fR is width\fIheight\fR4 packed bytes (row\-major R G B A) \-\- the inverse of \fBencodeRGBARaw\fR, so encode/decode round\-trips byte\-exactly. Errors carry \fB{TCLUTILS TUPNG DECODE <reason>}\fR (SIGNATURE, IHDR, BITDEPTH, INTERLACE, COLORTYPE, IDAT, FILTER). 16\-bit and interlaced PNGs are not supported.
+.PP
+Every chunk's CRC\-32 is verified; a damaged chunk, or one cut off before its CRC, raises \fB{TCLUTILS TUPNG CRC}\fR. A \fBtRNS\fR colour key is honoured for greyscale (type 0) and truecolour (type 2): pixels equal to the key get alpha 0, all others 255. For a palette (type 3) \fBtRNS\fR holds per\-entry alpha. Ancillary chunks other than \fBtRNS\fR are skipped (after the CRC check).

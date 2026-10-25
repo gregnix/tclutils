@@ -1,4 +1,4 @@
-.TH tummdb n 0.1 tclutils
+.TH tummdb n 0.2 tclutils
 .SH tclutils::tummdb
 .PP
 Pure\-Tcl reader for the MaxMind DB (\fB.mmdb\fR) binary format.
@@ -6,8 +6,8 @@ Pure\-Tcl reader for the MaxMind DB (\fB.mmdb\fR) binary format.
 \fBtummdb\fR resolves IPv4 and IPv6 addresses to their data records in GeoLite2, GeoIP2 and DB\-IP databases. It reads version 2.0 of the binary format and builds on \fBtclutils::tubin\fR for all binary primitives.
 .SS Package
 .CS
-package require tclutils::tubin 0.2
-package require tclutils::tummdb 0.1
+package require tclutils::tubin 0.3-
+package require tclutils::tummdb 0.2
 .CE
 .SS "Open and close"
 .CS

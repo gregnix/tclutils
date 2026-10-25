@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuawk 0.1
+package require tclutils::tuawk 0.2
 
 test tuawk-1.1 {print second field of each record} -body {
     ::tclutils::tuawk::run "a b c\nd e f" {{} {emit $2}}
@@ -73,5 +73,63 @@ test tuawk-6.1 {file: count fields across all records} -body {
     ::tclutils::tuawk::file $f \
         {BEGIN {set t 0} {} {set t [expr {$t + $NF}]} END {emit $t}}
 } -result "6\n"
+
+# Rule variables live in their own frame, never in same-named globals
+# (Tcl 8.6 namespace resolution would otherwise find them).
+test tuawk-7.1 {BEGIN does not overwrite a global of the same name} -setup {
+    set ::s 99
+} -body {
+    set r [::tclutils::tuawk::run "1\n2" \
+        {BEGIN {set s 0} {} {incr s $1} END {emit $s}}]
+    list $r $::s
+} -cleanup {
+    unset -nocomplain ::s
+} -result [list "3\n" 99]
+
+test tuawk-7.2 {global NR and NF stay untouched} -setup {
+    set ::NR keep; set ::NF keep
+} -body {
+    set r [::tclutils::tuawk::run "a b\nc" {{} {emit $NR $NF}}]
+    list $r $::NR $::NF
+} -cleanup {
+    unset -nocomplain ::NR ::NF
+} -result [list "1 2\n2 1\n" keep keep]
+
+test tuawk-7.3 {dict incr starts fresh despite a global n} -setup {
+    set ::n 5
+} -body {
+    ::tclutils::tuawk::run "x\ny\nx" \
+        {{} {dict incr n $1} END {dict for {k v} $n {emit $k $v}}}
+} -cleanup {
+    unset -nocomplain ::n
+} -result "x 2\ny 1\n"
+
+test tuawk-7.4 {variable in BEGIN still works} -body {
+    ::tclutils::tuawk::run "a\nb" \
+        {BEGIN {variable t 0} {} {incr t} END {emit $t}}
+} -result "2\n"
+
+test tuawk-7.5 {break skips the remaining rules of the record} -body {
+    ::tclutils::tuawk::run "a\nb\nc" \
+        {{} {if {$0 eq "b"} break} {} {emit $0}}
+} -result "a\nc\n"
+
+test tuawk-7.6 {error in a pattern keeps its errorcode} -body {
+    catch {::tclutils::tuawk::run "a b" {{$3 > 1} {}}} err opts
+    dict get $opts -errorcode
+} -result {TCL LOOKUP VARNAME 3}
+
+test tuawk-8.1 {option without value rejected} -body {
+    catch {::tclutils::tuawk::run "a" {} -fs} err opts
+    list $err [dict get $opts -errorcode]
+} -result {{missing value for option "-fs"} {TCLUTILS TUAWK OPTION}}
+
+test tuawk-8.2 {NR and NF are 0 in END without records} -body {
+    ::tclutils::tuawk::run "" {END {emit $NR $NF}}
+} -result "0 0\n"
+
+test tuawk-8.3 {NR is 0 in BEGIN} -body {
+    ::tclutils::tuawk::run "a" {BEGIN {emit $NR}}
+} -result "0\n"
 
 cleanupTests

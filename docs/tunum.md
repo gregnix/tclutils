@@ -10,7 +10,7 @@ own or as the numeric backend for table footers (`tkutils::tkutlfooter`).
 ## Package
 
 ```tcl
-package require tclutils::tunum 0.3
+package require tclutils::tunum 0.4
 ```
 
 Version 0.2 adds the `-locale` option to `parse`; version 0.3 adds `format`;

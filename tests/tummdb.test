@@ -98,4 +98,18 @@ test bad-file {opening a non-MMDB file errors} -body {
     list $rc [lrange $::errorCode 0 1]
 } -result {1 {TCLUTILS TUMMDB}}
 
+
+# --- unreleased: an IPv6 group that looks like a number stays hex -----------
+test expandv6-num {a lone group like 1e3 / 0010 before :: is read as hex} -body {
+    list [lindex [::tclutils::tummdb::ExpandV6 1e3::] 0] \
+         [lindex [::tclutils::tummdb::ExpandV6 0010::] 0]
+} -result {483 16}
+
+test expandv6-split {"::" is split as a whole, groups on both sides kept} -body {
+    list [::tclutils::tummdb::ExpandV6 2001:db8::1] \
+         [::tclutils::tummdb::ExpandV6 ::1] \
+         [::tclutils::tummdb::ExpandV6 fe80::a:b] \
+         [::tclutils::tummdb::ExpandV6 ::]
+} -result {{8193 3512 0 0 0 0 0 1} {0 0 0 0 0 0 0 1} {65152 0 0 0 0 0 10 11} {0 0 0 0 0 0 0 0}}
+
 cleanupTests

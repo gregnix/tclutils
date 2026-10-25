@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuagrep 0.1
+package require tclutils::tuagrep 0.2
 
 set text "alpha line\nbeta line\ngamma line\ndelta line"
 
@@ -56,5 +56,64 @@ test tuagrep-3.1 {file approximate match returns the line} -body {
 test tuagrep-3.2 {files with -fileswithmatches lists matching files} -body {
     lsort [::tclutils::tuagrep::files [list $f1 $f2] needle -maxdist 1 -fileswithmatches 1]
 } -result [lsort [list $f1 $f2]]
+
+test tuagrep-4.1 {-maxdist must be a non-negative integer} -body {
+    catch {::tclutils::tuagrep::search "a\nb" zzz -maxdist abc} err opts
+    list $err [dict get $opts -errorcode]
+} -result {{-maxdist must be a non-negative integer} {TCLUTILS TUAGREP MAXDIST}}
+
+test tuagrep-4.2 {negative -maxdist rejected} -body {
+    catch {::tclutils::tuagrep::match a a -maxdist -1} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUAGREP MAXDIST}
+
+test tuagrep-4.3 {search: final newline adds no empty line (-invert)} -body {
+    ::tclutils::tuagrep::search "eins\nzwei\n" xyz -invert 1
+} -result {eins zwei}
+
+test tuagrep-4.4 {search: final newline adds no empty line (maxdist)} -body {
+    ::tclutils::tuagrep::search "eins\nzwei\n" ab -maxdist 2 -count 1
+} -result 2
+
+test tuagrep-4.5 {search: empty text has no lines} -body {
+    ::tclutils::tuagrep::search "" x -invert 1 -count 1
+} -result 0
+
+test tuagrep-4.6 {search ignores -filenames (no file name)} -body {
+    ::tclutils::tuagrep::search "gamma line" gama -filenames 1
+} -result {{gamma line}}
+
+test tuagrep-4.7 {unknown option has an errorcode} -body {
+    catch {::tclutils::tuagrep::search a a -x 1} err opts
+    list $err [dict get $opts -errorcode]
+} -result {{unknown option -x} {TCLUTILS TUAGREP OPTION}}
+
+test tuagrep-4.8 {missing option value has an errorcode} -body {
+    catch {::tclutils::tuagrep::match a a -maxdist} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUAGREP OPTION}
+
+test tuagrep-4.9 {extra arguments have an errorcode} -body {
+    catch {::tclutils::tuagrep::search a a extra} err opts
+    list $err [dict get $opts -errorcode]
+} -result {{unexpected arguments: extra} {TCLUTILS TUAGREP ARGS}}
+
+test tuagrep-4.10 {boolean options are checked} -body {
+    catch {::tclutils::tuagrep::search a a -invert ja} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON BOOLEAN -invert}
+
+
+# --- unreleased: -fileswithmatches returns the file name unchanged ----------
+test tuagrep-5.1 {file -fileswithmatches keeps a numeric-looking name} -setup {
+    set old [pwd]
+    makeFile "a needle here\n" 010
+    cd [temporaryDirectory]
+} -body {
+    ::tclutils::tuagrep::file 010 needle -maxdist 0 -fileswithmatches 1
+} -cleanup {
+    cd $old
+    removeFile 010
+} -result {010}
 
 cleanupTests

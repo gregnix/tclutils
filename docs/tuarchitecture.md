@@ -10,7 +10,7 @@ header, parse here, and lay the graph out.
 ## Package
 
 ```tcl
-package require tclutils::tuarchitecture 0.1
+package require tclutils::tuarchitecture 0.2
 ```
 
 ## Commands

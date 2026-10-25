@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tusplit 0.1
+package require tclutils::tusplit 0.2
 package require tclutils::common 0.1
 
 set tmp [makeDirectory tusplit]
@@ -53,5 +53,34 @@ test tusplit-1.6 {reject both line and byte modes} -body {
     set in [makeFile abc both.txt]
     ::tclutils::tusplit::file $in -lines 1 -bytes 1
 } -returnCodes error -match glob -result {*one of -lines or -bytes*}
+
+test tusplit-2.1 {splitBytes rejects characters above \xFF} -body {
+    set out [makeDirectory bytes-wide]
+    set code [catch {
+        ::tclutils::tusplit::splitBytes "a\u20acb" -bytes 2 -outdir $out
+    } err opts]
+    list $code [dict get $opts -errorcode] \
+        [string match {*encoding convertto*} $err] \
+        [llength [glob -nocomplain -directory $out *]]
+} -result {1 {TCLUTILS TUSPLIT BYTES} 1 0}
+
+test tusplit-2.2 {splitBytes accepts converted text} -body {
+    set out [makeDirectory bytes-conv]
+    set files [::tclutils::tusplit::splitBytes \
+        [encoding convertto utf-8 "a\u20ac"] -bytes 2 -outdir $out]
+    list [llength $files] [readBin [lindex $files 1]]
+} -result [list 2 "\x82\xac"]
+
+test tusplit-2.3 {file: missing value has an errorcode} -body {
+    set in [makeFile abc missing.txt]
+    catch {::tclutils::tusplit::file $in -lines} err opts
+    list $err [dict get $opts -errorcode]
+} -result {{missing value for option "-lines"} {TCLUTILS COMMON OPTION -lines}}
+
+test tusplit-2.4 {file: missing value of a passed-on option} -body {
+    set in [makeFile abc missing2.txt]
+    catch {::tclutils::tusplit::file $in -prefix} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON OPTION -prefix}
 
 cleanupTests

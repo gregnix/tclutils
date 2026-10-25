@@ -11,7 +11,8 @@
 ```
 `toHuman` scales a number to a unit suffix (SI uses 1000, IEC 1024), e.g. `1500`
 becomes `1.5K` and `1536 -to iec` becomes `1.5Ki`. `fromHuman` parses such strings
-back; `-from auto` treats a trailing `i` as IEC. Default precision is 1 decimal;
+back; `-from auto` treats an `i` right after the unit letter as IEC, so `2Ki`
+and `2KiB` are 2048 while `2K` and `2KB` are 2000. Default precision is 1 decimal;
 values below the first unit are emitted as integers.
 
 ## CLI

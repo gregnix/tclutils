@@ -12,7 +12,7 @@ set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 catch {tcl::tm::path add [file join $root lib tm]}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
-package require tclutils::tusparql 0.1
+package require tclutils::tusparql 0.2
 package require tclutils::tujson 0.1
 
 testConstraint sparqlnet [expr {[info exists ::env(SPARQL_NET)] && $::env(SPARQL_NET)}]
@@ -60,6 +60,26 @@ test tusparql-1.6 {_getUrl encodes the query and forces JSON} -body {
          [string match {*%3Fx*} $u]
 } -result {1 1 1}
 
+test tusparql-1.7 {_getUrl appends with & to an endpoint with a query} -body {
+    list [::tclutils::tusparql::_getUrl http://h/sparql?key=1 x] \
+         [::tclutils::tusparql::_getUrl http://h/sparql? x]
+} -result {http://h/sparql?key=1&query=x&format=json http://h/sparql?query=x&format=json}
+
+test tusparql-1.8 {_rows without head vars takes the keys of all bindings} -body {
+    ::tclutils::tusparql::_rows [::tclutils::tujson::parse {{"head":{},
+        "results":{"bindings":[{"a":{"type":"literal","value":"1"}},
+          {"a":{"type":"literal","value":"2"},
+           "b":{"type":"literal","value":"3"}}]}}}]
+} -result {{a 1} {a 2 b 3}}
+
+test tusparql-1.9 {Accept: -accept by default, -headers wins, sent once} -body {
+    set d {-method get -timeout 1 -headers {} -accept application/x}
+    list [::tclutils::tusparql::_headers $d] \
+         [::tclutils::tusparql::_headers \
+              [dict replace $d -headers {X 1 accept text/csv}]] \
+         [::tclutils::tusparql::_headers [dict replace $d -headers {X 1}]]
+} -result {{Accept application/x} {X 1 accept text/csv} {X 1 Accept application/x}}
+
 # ---------------------------------------------------------------------------
 # live endpoint (only with SPARQL_NET=1)
 # ---------------------------------------------------------------------------
@@ -72,5 +92,13 @@ test tusparql-2.1 {a real SELECT against Wikidata returns labelled rows} -constr
     set rows [::tclutils::tusparql::query https://query.wikidata.org/sparql $q]
     expr {[llength $rows] > 0 && [dict exists [lindex $rows 0] itemLabel]}
 } -result 1
+
+
+# --- unreleased: a single head var that looks like a number -----------------
+test tusparql-3.1 {_rows keeps a single numeric-looking head var as given} -body {
+    set d [dict create head [dict create vars [list 010]] \
+        results [dict create bindings [list [dict create 010 [dict create type literal value x]]]]]
+    ::tclutils::tusparql::_rows $d
+} -result {{010 x}}
 
 cleanupTests

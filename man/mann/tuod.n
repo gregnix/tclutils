@@ -1,4 +1,4 @@
-.TH tuod n 0.1 tclutils
+.TH tuod n 0.2 tclutils
 .SH tclutils::tuod
 .PP
 \fBtuod\fR provides small \fBod\fR\-like binary dump helpers in pure Tcl.
@@ -24,3 +24,15 @@ puts [::tclutils::tuod::data $bytes -format hex -width 16]
 .CE
 .PP
 \fBbytes\fR returns unsigned byte values. This avoids Tcl's signed\-byte pitfall when using \fBbinary scan\fR with \fBc\fR.
+.PP
+\fBdata\fR and \fBfile\fR check \fB\-format\fR and \fB\-address\fR before the first byte, so a wrong value is reported also for empty data. The data must be bytes (every character 0..255).
+.SS Errors
+.CS
+{TCLUTILS TUOD FORMAT value}    unknown -format
+{TCLUTILS TUOD ADDRESS value}   unknown -address
+{TCLUTILS TUOD WIDTH}           -width not a positive integer
+{TCLUTILS TUOD OFFSET}          -offset negative or not an integer
+{TCLUTILS TUOD LENGTH}          -length not an integer
+{TCLUTILS TUOD BYTES}           data contains a character above 255
+{TCLUTILS COMMON OPTION -name}  unknown option, option without value
+.CE

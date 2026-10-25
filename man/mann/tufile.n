@@ -1,10 +1,10 @@
-.TH tufile n 0.1 tclutils
+.TH tufile n 0.2 tclutils
 .SH tclutils::tufile
 .PP
 Magic\-signature file type detection in pure Tcl, like Unix \fBfile\fR, with a user\-extensible signature table and extension\-mismatch checking. Reads only the file header.
 .SS Package
 .CS
-package require tclutils::tufile 0.1
+package require tclutils::tufile 0.2
 .CE
 .SS API
 .IP \(bu

@@ -8,7 +8,8 @@ package require tclutils::tuodf 0.1
 package require tclutils::tupdf 0.1
 
 set bin [file join $root bin]
-set tmp [makeDirectory cli]
+# per-process name: two suites in the same tree must not share it
+set tmp [makeDirectory cli-[pid]]
 set data [file join $tmp data.txt]
 set f [open $data w]
 puts $f "banana"
@@ -68,7 +69,8 @@ test cli-1.5 {tugrep command} -body {
 
 test cli-1.6 {tuwc command} -body {
     runcli tuwc.tcl $data
-} -match glob -result "*4*4*26*26*$data"
+} -match glob -result "*4*4*26*[file size $data]*$data"
+# bytes = size on disk: 26 with LF, 30 where makeFile writes CRLF (Windows)
 
 test cli-1.7 {tufind command} -body {
     set found [split [runcli tufind.tcl $tmp *.txt] 

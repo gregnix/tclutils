@@ -5,7 +5,7 @@ engines are interchangeable and `tkutils::tkunotes` works with either.
 
 ```tcl
 package require sqlite3
-package require tclutils::tunotesdb 0.1
+package require tclutils::tunotesdb 0.2
 
 sqlite3 db notes.db
 tclutils::tunotesdb::init db
@@ -125,7 +125,10 @@ compared in Tcl, so a tag containing a space stays one tag.
 
 `toStore` hands the data to code that expects the in-memory engine — including
 `tclutils::tunotes::toJson` for a JSON export. `fromStore` runs in one
-transaction: a failure half-way leaves the database as it was.
+transaction: a failure half-way leaves the database as it was. A note whose id
+already exists is updated in place, so its children stay. The order of the
+store does not matter (a child may come before its parent); every `parent_id`
+must name a note in the store or in the database, otherwise `NOTFOUND`.
 
 ## Errors
 
@@ -135,7 +138,7 @@ transaction: a failure half-way leaves the database as it was.
 |---|---|
 | `NODB` | the handle is not a usable sqlite3 command |
 | `NOFTS5` | SQLite without FTS5 |
-| `NOTFOUND` | no note with that id, or no such parent |
+| `NOTFOUND` | no note with that id, or no such parent (also a `parent_id` in `fromStore`) |
 | `CYCLE` | a move would put a note under itself or a descendant |
 | `BADQUERY` | FTS5 could not parse the search query |
 | `BADOPTION` | unknown option, or an unusable `-limit` |

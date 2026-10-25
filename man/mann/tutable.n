@@ -1,4 +1,4 @@
-.TH tutable n 0.1 tclutils
+.TH tutable n 0.2 tclutils
 .SH tclutils::tutable
 .PP
 Render a text table from headers and rows. Two styles: \fBmarkdown\fR (GitHub pipe table, the default) and \fBbox\fR (ASCII \fB+\fR/\fB\-\fR/\fB|\fR borders). Per\-column alignment (\fBl\fR/\fBr\fR/\fBc\fR) is supported. Pure Tcl; uses \fBtclutils::common\fR for options.
@@ -7,4 +7,8 @@ tutable::render {Name Age} {{Alice 30} {Bob 7}}
 tutable::render {Item Qty} {{Apples 12} {Pears 3}} -align {l r} -style box
 .CE
 .PP
-Rows may be ragged: missing trailing cells render empty. \fB\-style\fR other than \fBmarkdown\fR/\fBbox\fR, or an alignment other than \fBl\fR/\fBr\fR/\fBc\fR, raises \fB{TCLUTILS TUTABLE OPT}\fR. This is a string renderer; for the Unix \fBcolumn\fR\-style filter use \fBtucolumn\fR.
+Rows may be ragged: missing trailing cells render empty. A row with more cells than there are headers raises \fB{TCLUTILS TUTABLE COLUMNS}\fR; nothing is dropped silently. An empty header list raises \fB{TCLUTILS TUTABLE HEADERS}\fR. \fB\-style\fR other than \fBmarkdown\fR/\fBbox\fR, or an alignment other than \fBl\fR/\fBr\fR/\fBc\fR, raises \fB{TCLUTILS TUTABLE OPT}\fR.
+.PP
+In \fBmarkdown\fR every column is at least three characters wide, the width of the separator cell (\fB:\-\-\fR, \fB\-\-:\fR, \fB:\-:\fR), so cells and separator line up. \fBbox\fR columns keep the width of their longest cell.
+.PP
+This is a string renderer; for the Unix \fBcolumn\fR\-style filter use \fBtucolumn\fR.

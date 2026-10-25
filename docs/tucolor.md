@@ -9,7 +9,7 @@ from Tk's `winfo rgb`, so values match X11/Tk exactly.
 ## Package
 
 ```tcl
-package require tclutils::tucolor 0.1
+package require tclutils::tucolor 0.2
 ```
 
 ## Commands
@@ -24,7 +24,15 @@ package require tclutils::tucolor 0.1
 ::tclutils::tucolor::fromHsv {h s v}     ;# -> {r g b}
 ```
 
-`color` accepts a known name, `#rgb`, `#rrggbb`, or a `{r g b}` triple (0..255).
+`color` accepts a known name, `#rgb`, `#rrggbb`, or a `{r g b}` triple of
+decimal integers 0..255. Triple components are read as decimal on Tcl 8.6 and
+9.0 alike: `{010 20 30}` is `10 20 30`, `{08 0 0}` is `8 0 0`. Hex (`0x10`),
+signs and fractions in a triple are rejected (`NAME`).
+
+`fromHsv` takes `h` 0..360 and `s`, `v` 0..100 as decimal numbers; fractions
+are allowed (`{120.5 50 50}`), `360` equals `0`. Anything else -- a value out of
+range, a negative hue, a non-number, not exactly three elements -- raises
+`{TCLUTILS TUCOLOR HSV}`.
 
 ## Usage
 
@@ -53,4 +61,9 @@ fromHsv {120 100 100}   ;# -> 0 255 0
 
 ## Error codes
 
-`-errorcode {TCLUTILS TUCOLOR <REASON>}` (`NAME`).
+`-errorcode {TCLUTILS TUCOLOR <REASON>}`:
+
+| Reason | When |
+|---|---|
+| `NAME` | colour not recognised (`rgb`, `hex`, `nearest`, `toHsv`) |
+| `HSV` | `fromHsv` input not `{h s v}` with h 0..360, s/v 0..100 |

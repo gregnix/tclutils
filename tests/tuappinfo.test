@@ -32,4 +32,45 @@ test writeLog-1 {writeLog writes the report to a file} -body {
     string match {*==== T ====*} $c
 } -result 1
 
+test anon-2 {anonymize masks Executable, auto_path and tm::path} -setup {
+    set savedAuto $::auto_path
+    lappend ::auto_path /opt/geheim/lib
+    set ::tuaTm [file normalize [file join [makeDirectory appinfo-tm] tm]]
+    file mkdir $::tuaTm
+    tcl::tm::path add $::tuaTm
+} -body {
+    set r [${ns}::buildReport -anonymize 1]
+    list [string match *[info nameofexecutable]* $r] \
+         [string match */opt/geheim* $r] \
+         [string match {*<path>/lib*} $r] \
+         [string match *$::tuaTm* $r] \
+         [string match {*Executable: <*} $r]
+} -cleanup {
+    set ::auto_path $savedAuto
+    tcl::tm::path remove $::tuaTm
+} -result {0 0 1 0 1}
+
+test anon-3 {path rule: below HOME -> <HOME>/rest, else <path>/tail} -setup {
+    set savedHome [expr {[info exists ::env(HOME)] ? $::env(HOME) : ""}]
+    set ::env(HOME) /home/tester
+} -body {
+    list [${ns}::_maskPath /home/tester/lib/tm [${ns}::_home]] \
+         [${ns}::_maskPath /home/tester [${ns}::_home]] \
+         [${ns}::_maskPath /home/testerX/lib [${ns}::_home]] \
+         [${ns}::_maskPath /usr/share/tcltk/ [${ns}::_home]]
+} -cleanup {
+    set ::env(HOME) $savedHome
+} -result {<HOME>/lib/tm <HOME> <path>/lib <path>/tcltk}
+
+test opt-1 {unknown option -> OPTION} -body {
+    catch {${ns}::buildReport -titel x} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUAPPINFO OPTION}
+
+test opt-2 {option without value -> OPTION, non-boolean -anonymize -> VALUE} -body {
+    catch {${ns}::buildReport -title} m o
+    catch {${ns}::buildReport -anonymize vielleicht} m2 o2
+    list [dict get $o -errorcode] [dict get $o2 -errorcode]
+} -result {{TCLUTILS TUAPPINFO OPTION} {TCLUTILS TUAPPINFO VALUE}}
+
 cleanupTests

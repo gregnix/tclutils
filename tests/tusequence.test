@@ -59,7 +59,7 @@ test tusequence-1.9 {block start carries type and label} -body {
 
 test tusequence-2.1 {arrow operators map to line/head specs} -body {
     list [::tclutils::tusequence::_arrowSpec ->>] [::tclutils::tusequence::_arrowSpec -->] [::tclutils::tusequence::_arrowSpec -x] [::tclutils::tusequence::_arrowSpec --)]
-} -result {{line solid head filled} {line dotted head open} {line solid head cross} {line dotted head open}}
+} -result {{line solid head filled both 0} {line dotted head open both 0} {line solid head cross both 0} {line dotted head open both 0}}
 
 # --- errors ------------------------------------------------------------------
 
@@ -96,6 +96,54 @@ test tusequence-3.4 {a self-message is flagged in the layout} -body {
     set m [M::parse "sequenceDiagram\nA->>A: think"]
     set L [::tclutils::tusequence::_layout $m {-width 0 -height 0 -scale 1}]
     dict get [lindex [dict get $L msgs] 0] self
+} -result 1
+
+# --- fixes 0.2: bidirectional arrows, title drawn -------------------------------
+
+test tusequence-4.1 {A<<->>B is a solid bidirectional message, not participant A<<} -body {
+    set m [M::parse "sequenceDiagram\nA<<->>B: hi"]
+    list [dict get $m participants] [dict get [step $m 0] op] \
+        [::tclutils::tusequence::_arrowSpec <<->>]
+} -result {{A B} <<->> {line solid head filled both 1}}
+test tusequence-4.2 {A<<-->>B is dotted and bidirectional} -body {
+    set m [M::parse "sequenceDiagram\nA<<-->>B: hi"]
+    list [dict get $m participants] [::tclutils::tusequence::_arrowSpec <<-->>]
+} -result {{A B} {line dotted head filled both 1}}
+test tusequence-4.3 {one-way arrows keep both 0} -body {
+    list [dict get [::tclutils::tusequence::_arrowSpec ->>] both] \
+        [dict get [::tclutils::tusequence::_arrowSpec -->>] line]
+} -result {0 dotted}
+test tusequence-4.4 {a bidirectional message draws two filled heads} -body {
+    set one [M::toSvg [M::parse "sequenceDiagram\nA->>B: hi"]]
+    set two [M::toSvg [M::parse "sequenceDiagram\nA<<->>B: hi"]]
+    expr {[regexp -all {<polygon} $two] - [regexp -all {<polygon} $one]}
+} -result 1
+test tusequence-4.5 {the title is drawn in SVG} -body {
+    set svg [M::toSvg [M::parse "sequenceDiagram\ntitle ZZTITLE\nA->>B: hi"]]
+    expr {[string first ZZTITLE $svg] >= 0}
+} -result 1
+test tusequence-4.6 {the title band moves the participant boxes down} -body {
+    set o {-width 0 -height 0 -scale 1}
+    set a [::tclutils::tusequence::_layout [M::parse "sequenceDiagram\nA->>B: hi"] $o]
+    set b [::tclutils::tusequence::_layout \
+        [M::parse "sequenceDiagram\ntitle T\nA->>B: hi"] $o]
+    list [expr {[dict get $b topY] - [dict get $a topY]}] \
+        [expr {[dict get $b H] - [dict get $a H]}]
+} -result {24.0 24.0}
+test tusequence-4.7 {a long title widens the auto width; PNG grows too} -body {
+    set m [M::parse "sequenceDiagram\ntitle [string repeat x 60]\nA->>B: hi"]
+    binary scan [M::toPng $m] @16II w h
+    expr {$w >= 60*6}
+} -result 1
+
+
+# --- unreleased: ids and titles that look like numbers stay as text ---------
+test tusequence-5.1 {a participant id like 010 is its own label, unchanged} -body {
+    dict get [M::parse "sequenceDiagram\nparticipant 010"] labels
+} -result {010 010}
+test tusequence-5.2 {a title like 0x1F is drawn as written} -body {
+    set svg [M::toSvg [M::parse "sequenceDiagram\ntitle 0x1F\nA->>B: hi"]]
+    expr {[string first 0x1F $svg] >= 0}
 } -result 1
 
 cleanupTests

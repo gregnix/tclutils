@@ -31,7 +31,8 @@ if {[tuexe::exists ffmpeg]} { ... }
 
 ## Errors
 
-Unknown options carry `{TCLUTILS TUEXE OPTION}`.
+Unknown options and an option without a value (`find sh -dirs`) carry
+`{TCLUTILS TUEXE OPTION}`.
 
 ## Demo
 

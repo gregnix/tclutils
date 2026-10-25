@@ -1,9 +1,9 @@
-.TH tudhash n 0.1 tclutils
+.TH tudhash n 0.2 tclutils
 .SH tclutils::tudhash
 .PP
 A perceptual \fBdifference hash\fR (dHash) in pure Tcl, Tk\-free. dHash turns an image into a 64\-bit fingerprint so that visually similar images get similar fingerprints: two pictures are "the same" when the \fBHamming distance\fR between their hashes is small. This finds near\-duplicate scans/photos (rescaled, recompressed, slightly adjusted) that an exact byte hash (\fBsha256\fR, \fBxxhash\fR) would never match.
 .PP
-Pure Tcl, 8.6+ / 9.x. The bit convention matches the common dHash (e.g. python \fBimagehash.dhash\fR), verified against it.
+Pure Tcl, 8.6+ / 9.x. The bit order matches the common dHash (e.g. python \fBimagehash.dhash\fR): 9x8 reduction, each pixel compared with its right neighbour, row by row, most significant bit first. The reduction differs: \fBtudhash\fR uses a plain box average, \fBimagehash\fR resizes with PIL's Lanczos filter. For the same picture the two hashes can therefore differ by a few bits; they are identical only when both reductions give the same 9x8 grid.
 .SS Commands
 .CS
 tudhash::fromGray w h grayList         ;# -> 16 hex chars (64-bit hash)
@@ -63,10 +63,10 @@ Error code \fB{TCLUTILS TUDHASH <REASON>}\fR:
 .TS
 l l.
 REASON	When
-\fBDIM\fR	width/height not positive integers
+\fBDIM\fR	width/height not positive (decimal) integers; checked first, also by \fBfromRGB\fR
 \fBDATA\fR	grayList/rgbList has the wrong number of values
 \fBHASH\fR	a hash passed to \fBdistance\fR/\fBsimilar\fR is not 16 hex chars
 .TE
 .SS Testing
 .PP
-\fBtests/tudhash.test\fR checks the bit convention against a real 9×8 reduction from \fBimagehash\fR, the all\-ones/all\-zeros gradients, the distance/similar helpers, the RGB→gray path and the down\-scaler. Set \fBTCLUTILS_TM\fR and run with \fBtclsh\fR (passes on 8.6 and 9.0).
+\fBtests/tudhash.test\fR checks the bit order against a real 9×8 reduction from \fBimagehash\fR, the all\-ones/all\-zeros gradients, the distance/similar helpers, the RGB→gray path and the down\-scaler. Set \fBTCLUTILS_TM\fR and run with \fBtclsh\fR (passes on 8.6 and 9.0).

@@ -23,7 +23,11 @@ emitted only when its level is at least the logger's current level. Output is
 `TIMESTAMP [LEVEL] name: message` (timestamp and name optional).
 
 Options to `new`: `-channel` (default `stderr`), `-level` (default `info`),
-`-name` (prefix, default `""`), `-timestamp` (default `1`).
+`-name` (prefix, default `""`), `-timestamp` (default `1`). All options are
+checked before the logger is created: a bad `-level`
+(`{TCLUTILS TULOG LEVEL}`), a non-boolean `-timestamp`
+(`{TCLUTILS COMMON BOOLEAN -timestamp}`) or an unknown option
+(`{TCLUTILS COMMON OPTION <opt>}`) leaves no logger and no state behind.
 
 `::tclutils::tulog::assert exprStr ?msg?` evaluates `exprStr` in the caller's
 scope and raises `{TCLUTILS TULOG ASSERT}` if it is false -- a debug-time check.

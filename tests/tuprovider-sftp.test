@@ -150,4 +150,25 @@ test sftp-all {full provider lifecycle against a real sftp server} -constraints 
 } -result {caps {delete get list mkdir move put stat} list hello.txt stat {file 10} get {hello sftp} put {round trip} deleted 1 mkdir dir moved dir}
 
 sftptest::teardown
+
+# --- unreleased: a host that looks like a number is passed on unchanged ------
+test sftp-base-1 {the target host keeps its text (no expr normalisation)} -body {
+    set p [::tclutils::tuprovider::Sftp new sftp://010]
+    set cmd [[info object namespace $p]::my _base /tmp/batch]
+    $p destroy
+    lindex $cmd end
+} -result {010}
+test sftp-tmp-1 {TMPDIR is used as given} -setup {
+    set hadTmp [info exists ::env(TMPDIR)]
+    if {$hadTmp} { set oldTmp $::env(TMPDIR) }
+    set ::env(TMPDIR) 010
+} -body {
+    set p [::tclutils::tuprovider::Sftp new sftp://host]
+    set t [[info object namespace $p]::my _tmp]
+    $p destroy
+    file dirname $t
+} -cleanup {
+    if {$hadTmp} { set ::env(TMPDIR) $oldTmp } else { unset ::env(TMPDIR) }
+} -result {010}
+
 cleanupTests

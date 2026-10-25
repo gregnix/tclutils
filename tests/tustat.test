@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tustat 0.1
+package require tclutils::tustat 0.2
 
 set tmp [makeDirectory tustat]
 set f [makeFile "abc" [file join $tmp file.txt]]
@@ -20,5 +20,36 @@ test tustat-1.2 {files returns list of dicts} -body {
 test tustat-1.3 {format contains size} -body {
     string match {*size*4*} [::tclutils::tustat::render [::tclutils::tustat::file $f]]
 } -result 1
+
+testConstraint symlink [expr {$tcl_platform(platform) eq "unix"}]
+
+test tustat-2.1 {link reports its own values and target} -constraints symlink -body {
+    set link [file join $tmp link.txt]
+    file delete -force $link
+    file link -symbolic $link $f
+    set d [::tclutils::tustat::file $link]
+    file lstat $link st
+    list [dict get $d type] [expr {[dict get $d size] == $st(size)}] \
+        [expr {[dict get $d mode] == $st(mode)}] [dict get $d target]
+} -cleanup {
+    file delete -force $link
+} -result [list link 1 1 $f]
+
+test tustat-2.2 {dangling link is no error} -constraints symlink -body {
+    set link [file join $tmp dead.txt]
+    file delete -force $link
+    # file link refuses a missing target; ln -s does not.
+    exec ln -s [file join $tmp no-such-file] $link
+    set d [::tclutils::tustat::file $link]
+    list [dict get $d type] [file tail [dict get $d target]]
+} -cleanup {
+    file delete -force $link
+} -result {link no-such-file}
+
+test tustat-2.3 {plain file has no target, modeOctal} -body {
+    set d [::tclutils::tustat::file $f]
+    list [dict exists $d target] \
+        [expr {[dict get $d modeOctal] eq [format %o [dict get $d mode]]}]
+} -result {0 1}
 
 cleanupTests

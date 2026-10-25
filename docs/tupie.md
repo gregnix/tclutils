@@ -17,7 +17,7 @@ A slice is drawn as a filled polygon (centre plus arc-sampled rim points), so th
 ## Package
 
 ```tcl
-package require tclutils::tupie 0.1
+package require tclutils::tupie 0.2
 ```
 
 ## Commands
@@ -44,9 +44,10 @@ Render options (all optional):
 -fontfile F    real TTF/OTF for labels (raster)   (default: 6x8 bitmap font)
 ```
 
-The SVG backend ignores `-scale` and `-fontfile` (it uses a fixed `monospace`
-viewer font locked to the 6x8 metric). On the raster backend `-scale N`
-multiplies the pixel dimensions and the font scale by `N`.
+The SVG backend ignores `-fontfile` (it uses a fixed `monospace` viewer font
+locked to the 6x8 metric). On SVG `-scale N` keeps the canvas at `-width` ×
+`-height` and multiplies text, lines and spacing by `N`. On the raster backend
+`-scale N` multiplies the pixel dimensions and the font scale by `N`.
 
 ## Input grammar (Mermaid `pie` subset)
 
@@ -56,11 +57,15 @@ pie showData
 pie title <text>
 pie showData title <text>
 title <text>                 %% alternatively on its own line
-"<label>" : <value>          %% a slice; quotes optional, value int or float
+"<label>" : <value>          %% a slice; quotes optional, value int, float or 1e3
 %% ...                       %% comment, ignored
 ```
 
-At least one slice is required and the values must sum to a positive number.
+A value is a decimal number, optionally with an exponent (`42`, `2.5`, `1e3`,
+`2.5E-1`); leading zeros are decimal (`010` is 10). A negative value raises
+`{TCLUTILS TUPIE VALUE}` naming the line. A line whose value is not a number is
+not a slice. At least one slice is required and the values must sum to a
+positive number.
 
 ## Usage
 
@@ -109,6 +114,6 @@ package require tclutils::tuflow
 
 ## Error codes
 
-`-errorcode {TCLUTILS TUPIE <REASON>}` — `EMPTY` (no slices), `VALUE` (values do
-not sum to a positive number), `ARG` (bad render option, e.g. non-integer
+`-errorcode {TCLUTILS TUPIE <REASON>}` — `EMPTY` (no slices), `VALUE` (a negative
+slice value, or values that do not sum to a positive number), `ARG` (bad render option, e.g. non-integer
 `-scale`), `FONT` (a `-fontfile` path that does not exist).

@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tutee 0.1
+package require tclutils::tutee 0.2
 package require tclutils::common 0.1
 
 set tmp [makeDirectory tutee]
@@ -45,5 +45,42 @@ test tutee-1.4 {copyChannel returns byte count} -body {
     }
     list $n [::tclutils::common::readFile $out]
 } -result {6 abcdef}
+
+test tutee-2.1 {failed open closes the channels opened before} -body {
+    set a [file join $tmp keep.txt]
+    set bad [file join $tmp missing-dir x.txt]
+    set before [llength [file channels]]
+    catch {::tclutils::tutee::write new [list $a $bad]}
+    expr {[llength [file channels]] - $before}
+} -result 0
+
+test tutee-2.2 {failed open leaves earlier existing targets untouched} -body {
+    set a [file join $tmp keep2.txt]
+    ::tclutils::common::writeFile $a "old content"
+    set bad [file join $tmp missing-dir x.txt]
+    set code [catch {::tclutils::tutee::write new [list $a $bad]}]
+    list $code [::tclutils::common::readFile $a]
+} -result {1 {old content}}
+
+test tutee-2.3 {failed open removes targets created by this call} -body {
+    set a [file join $tmp fresh.txt]
+    file delete -force $a
+    set bad [file join $tmp missing-dir x.txt]
+    catch {::tclutils::tutee::write new [list $a $bad]}
+    file exists $a
+} -result 0
+
+test tutee-2.4 {failed open reports the open error} -body {
+    set bad [file join $tmp missing-dir x.txt]
+    catch {::tclutils::tutee::write new [list $bad]} err opts
+    lrange [dict get $opts -errorcode] 0 1
+} -result {POSIX ENOENT}
+
+test tutee-2.5 {overwrite still empties a longer existing file} -body {
+    set a [file join $tmp shorter.txt]
+    ::tclutils::common::writeFile $a "a much longer old content"
+    ::tclutils::tutee::write new [list $a]
+    ::tclutils::common::readFile $a
+} -result "new\n"
 
 cleanupTests

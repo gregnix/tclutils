@@ -1,4 +1,4 @@
-# tclutils 0.67.0
+# tclutils 0.68.0
 
 `tclutils` is a collection of small, pure-Tcl utility modules — coreutils-style
 text filters, data-format parsers/encoders, binary and checksum helpers, and a
@@ -15,7 +15,7 @@ umbrella package (loads the core modules plus the `tuflow` diagram facade)
 or a single module:
 
 ```tcl
-::tcl::tm::path add /path/to/tclutils-0.67.0/lib/tm
+::tcl::tm::path add /path/to/tclutils-0.68.0/lib/tm
 package require tclutils          ;# umbrella: core modules + tuflow facade
 package require tclutils::tucsv    ;# or just one module
 ```
@@ -97,9 +97,17 @@ The suite passes on both Tcl 8.6 and Tcl 9.x.
 
 ## Conventions & status
 
+- Folder index: [`docs/guide/guide-tclutils.md`](docs/guide/guide-tclutils.md).
+  Provider howtos and the deploy record are listed there.
+- Module API: `docs/<module>.md`, one file per module. `man/mann/<module>.n`
+  is generated from that file (`tclsh tools/md2man.tcl`).
 - House rules and module scope: [`docs/guide/module-status.md`](docs/guide/module-status.md)
 - Roadmap and backlog: [`docs/guide/roadmap.md`](docs/guide/roadmap.md)
 - Architecture notes: [`docs/guide/architecture.md`](docs/guide/architecture.md)
+- Runnable scripts: [`examples/README.md`](examples/README.md)
+- Handbook (PDF, built from the book sources): German
+  [`docs/handbook/de/Tclutils-de.pdf`](docs/handbook/de/Tclutils-de.pdf),
+  English [`docs/handbook/en/Tclutils-en.pdf`](docs/handbook/en/Tclutils-en.pdf).
 
 ## License
 

@@ -1,4 +1,4 @@
-.TH tupie n 0.1 tclutils
+.TH tupie n 0.2 tclutils
 .SH tclutils::tupie
 .PP
 A Mermaid\-style \fBpie chart\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBpie\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
@@ -8,7 +8,7 @@ A pie chart is not a node\-edge graph, so \fBtupie\fR does \fBnot\fR go through 
 A slice is drawn as a filled polygon (centre plus arc\-sampled rim points), so the \fBsame\fR routine renders identically on the raster and the SVG backend.
 .SS Package
 .CS
-package require tclutils::tupie 0.1
+package require tclutils::tupie 0.2
 .CE
 .SS Commands
 .CS
@@ -30,7 +30,7 @@ Render options (all optional):
 -fontfile F    real TTF/OTF for labels (raster)   (default: 6x8 bitmap font)
 .CE
 .PP
-The SVG backend ignores \fB\-scale\fR and \fB\-fontfile\fR (it uses a fixed \fBmonospace\fR viewer font locked to the 6x8 metric). On the raster backend \fB\-scale N\fR multiplies the pixel dimensions and the font scale by \fBN\fR.
+The SVG backend ignores \fB\-fontfile\fR (it uses a fixed \fBmonospace\fR viewer font locked to the 6x8 metric). On SVG \fB\-scale N\fR keeps the canvas at \fB\-width\fR × \fB\-height\fR and multiplies text, lines and spacing by \fBN\fR. On the raster backend \fB\-scale N\fR multiplies the pixel dimensions and the font scale by \fBN\fR.
 .SS "Input grammar (Mermaid \fBpie\fR subset)"
 .CS
 pie                          %% header; the following are optional and in order
@@ -38,11 +38,11 @@ pie showData
 pie title <text>
 pie showData title <text>
 title <text>                 %% alternatively on its own line
-"<label>" : <value>          %% a slice; quotes optional, value int or float
+"<label>" : <value>          %% a slice; quotes optional, value int, float or 1e3
 %% ...                       %% comment, ignored
 .CE
 .PP
-At least one slice is required and the values must sum to a positive number.
+A value is a decimal number, optionally with an exponent (\fB42\fR, \fB2.5\fR, \fB1e3\fR, \fB2.5E\-1\fR); leading zeros are decimal (\fB010\fR is 10). A negative value raises \fB{TCLUTILS TUPIE VALUE}\fR naming the line. A line whose value is not a number is not a slice. At least one slice is required and the values must sum to a positive number.
 .SS Usage
 .CS
 package require tclutils::tupie
@@ -80,4 +80,4 @@ Labels use the \fBtupngdraw\fR 6x8 bitmap font by default, which covers ASCII an
 Companion modules: \fBtclutils::tupngdraw\fR and \fBtclutils::tusvg\fR (backends), \fBtclutils::tuflow\fR (facade / dispatch), \fBtclutils::tudiagram\fR (the node\-edge graph renderer for the other Mermaid types).
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUPIE <REASON>}\fR — \fBEMPTY\fR (no slices), \fBVALUE\fR (values do not sum to a positive number), \fBARG\fR (bad render option, e.g. non\-integer \fB\-scale\fR), \fBFONT\fR (a \fB\-fontfile\fR path that does not exist).
+\fB\-errorcode {TCLUTILS TUPIE <REASON>}\fR — \fBEMPTY\fR (no slices), \fBVALUE\fR (a negative slice value, or values that do not sum to a positive number), \fBARG\fR (bad render option, e.g. non\-integer \fB\-scale\fR), \fBFONT\fR (a \fB\-fontfile\fR path that does not exist).

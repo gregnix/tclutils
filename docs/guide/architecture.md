@@ -141,7 +141,7 @@ the monthcanvas look), `tucodepng` (ASCII/Latin-1 code-page chart → PNG), plus
 `tulayout` holds the page-layout helpers (millimetre coordinates, block-dict
 placement) shared by the PNG/SVG renderers and PDF layout.
 Alongside the raster path, `tusvg` is the **vector** generator: a pure-Tcl SVG
-builder (shapes/paths/text/gradients/groups) with a library of ~110 named
+builder (shapes/paths/text/gradients/groups) with a library of 149 named
 toolbar icons, used by `tkutils::tkuicon`.
 
 ## Terminal and color
@@ -162,13 +162,20 @@ Non-graph types own a self-contained 2D renderer (`tupie`, `tuxychart`,
 `tuquadrant`, `tujourney`, `tutimeline`, `tusankey`, `tugantt`, `tusequence`,
 `tukanban`, `tupacket`, `tutreemap`, `turadar`). Both paths render through the shared
 `tusvg` / `tupngdraw` canvas protocol, so SVG and PNG output stay congruent.
-`docir::diagram` wires this subsystem into the docir sinks.
+`parse` accepts the graph types and rejects the others with
+`{TCLUTILS TUFLOW UNSUPPORTED}`; `toSvg` and `toPng` draw both. On a graph,
+`toPng` takes `-scale` and `-fontfile` (a TTF/OTF via the unbundled Glyphs
+package; a missing package keeps the 6x8 bitmap). The other families also
+take `-width` and `-height`, and `pie` takes `-legend`. `toSvg` of a graph
+ignores those options. `docir::diagram` wires this subsystem into the docir sinks.
 
 ## Data and serialization
 
 Format readers/writers/encoders: `tucsv`, `tujson` (parser + encoder), `tuxml`,
 `tummdb` (a pure-Tcl MaxMind `.mmdb` geolocation reader), plus `tusqlite` — NULL-safe `insert`/`rows`/`value` helpers over a
-caller-supplied `sqlite3` handle (it does not load `sqlite3` itself).
+caller-supplied `sqlite3` handle (it does not load `sqlite3` itself). `tutdbc`
+is the same shape over a caller-supplied TDBC connection and is not in the
+umbrella.
 
 ## Stream and filesystem
 
@@ -186,8 +193,8 @@ approximate grep on top of it while following the shape of `tugrep`.
 The PIM interchange formats are readers/writers like the data layer, but for
 contact/calendar/config data: `tunotes` (a value-based hierarchical note store),
 `tunotesdb` (the same store on SQLite with FTS5 search), `tuical` (iCalendar), `tuini`, `tuvcard`, `tuldif`, and `tubookmark`. The
-document helpers `tumd`, `tupdf`, `tuodf`, and `tucal` are intentionally small
-inspectors/generators, not full engines.
+document helpers `tumd`, `tupdf` (structure), `tupdftext` (page text),
+`tuodf`, and `tucal` are intentionally small inspectors/generators, not full engines.
 
 ## Date, web, and identifiers
 

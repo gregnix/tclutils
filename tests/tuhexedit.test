@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuhexedit 0.1
+package require tclutils::tuhexedit 0.2
 package require tclutils::tubin 0.1
 
 set binFile [makeFile "ABCD content.xml EFG PK\x03\x04 END" tuhexedit-input.bin]
@@ -36,6 +36,61 @@ test tuhexedit-1.6 {dump delegates to tuhexdump} -body {
     set f [makeFile "ABC" tuhexedit-dump.bin]
     ::tclutils::tuhexedit::dump $f -width 8
 } -result {00000000  41 42 43 0a              |ABC.|}
+
+test tuhexedit-2.1 {bad hex offset is rejected} -body {
+    set f [makeFile "ABCDEFGH" tuhexedit-off.bin]
+    set out {}
+    foreach o {0xZZ 0x -1 abc} {
+        catch {::tclutils::tuhexedit::readBytes $f $o 2} msg opts
+        lappend out [dict get $opts -errorcode]
+    }
+    set out
+} -result {{TCLUTILS TUHEXEDIT OFFSET} {TCLUTILS TUHEXEDIT OFFSET} {TCLUTILS TUHEXEDIT OFFSET} {TCLUTILS TUHEXEDIT OFFSET}}
+
+test tuhexedit-2.2 {hex offset} -body {
+    set f [makeFile "ABCDEFGH" tuhexedit-off2.bin]
+    ::tclutils::tuhexedit::readBytes $f 0x3 2
+} -result DE
+
+test tuhexedit-2.3 {write past the end is rejected, file unchanged} -body {
+    set f [makeFile "ABCDEFGH" tuhexedit-range.bin]
+    file delete -force $f.bak
+    set size [file size $f]
+    catch {::tclutils::tuhexedit::writeBytes $f [expr {$size - 1}] XY} msg opts
+    list [dict get $opts -errorcode] [file size $f] [file exists $f.bak]
+} -result [list {TCLUTILS TUHEXEDIT RANGE} 9 0]
+
+test tuhexedit-2.4 {patch past the end is rejected} -body {
+    set f [makeFile "ABCDEFGH" tuhexedit-range2.bin]
+    catch {::tclutils::tuhexedit::patch $f 100 {58} -backup 0} msg opts
+    list [dict get $opts -errorcode] [file size $f]
+} -result {{TCLUTILS TUHEXEDIT RANGE} 9}
+
+test tuhexedit-2.5 {write up to the last byte is fine} -body {
+    set f [makeFile "ABCDEFGH" tuhexedit-range3.bin]
+    ::tclutils::tuhexedit::writeBytes $f 7 "Z\n" 0
+    list [::tclutils::tuhexedit::readBytes $f 0 9] [file size $f]
+} -result [list "ABCDEFGZ\n" 9]
+
+test tuhexedit-2.6 {writeBytes rejects characters above 255} -body {
+    set f [makeFile "ABCDEFGH" tuhexedit-bytes.bin]
+    catch {::tclutils::tuhexedit::writeBytes $f 0 "\u20ac" 0} msg opts
+    list [dict get $opts -errorcode] [::tclutils::tuhexedit::readBytes $f 0 8]
+} -result {{TCLUTILS TUHEXEDIT BYTES} ABCDEFGH}
+
+test tuhexedit-2.7 {findString with a character the encoding lacks} -body {
+    set out {}
+    foreach enc {iso8859-1 ascii} {
+        catch {::tclutils::tuhexedit::findString $binFile "\u20ac" $enc} msg opts
+        lappend out [dict get $opts -errorcode]
+    }
+    set out
+} -result {{TCLUTILS TUHEXEDIT ENCODING} {TCLUTILS TUHEXEDIT ENCODING}}
+
+test tuhexedit-2.8 {findString with unknown encoding keeps Tcl code} -body {
+    catch {::tclutils::tuhexedit::findString $binFile x no-such-enc} msg opts
+    lrange [dict get $opts -errorcode] 0 2
+} -result {TCL LOOKUP ENCODING}
 
 foreach b [glob -nocomplain [file join [temporaryDirectory] *.bak]] { file delete -force $b }
 cleanupTests

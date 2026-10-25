@@ -1,4 +1,4 @@
-.TH tufold n 0.1 tclutils
+.TH tufold n 0.2 tclutils
 .SH tclutils::tufold
 .PP
 \fBtufold\fR folds long lines to a fixed width, similar to Unix \fBfold\fR.
@@ -21,4 +21,9 @@ puts [::tclutils::tufold::file README.md -width 72 -words 1]
 -words boolean     prefer breaking at blanks when possible
 .CE
 .PP
-\fB\-words 1\fR is a small convenience mode. It is not a full formatter.
+\fB\-words 1\fR is a small convenience mode. It is not a full formatter. A line longer than \fB\-width\fR is broken at the last blank at or before column \fB\-width\fR+1. The blanks at the break are dropped: trailing blanks of the line and leading blanks of the next one. A word longer than \fB\-width\fR is cut hard.
+.PP
+Difference from Unix \fBfold \-s\fR: \fBfold \-s\fR keeps the blanks, breaks after the last blank within the width and keeps leading blanks of the next line. For \fB"ab   cd"\fR with width 3, \fBfold \-s\fR gives \fB"ab "\fR, \fB"  "\fR, \fB"cd"\fR; \fBtufold\fR gives \fBab\fR, \fBcd\fR.
+.SS Errors
+.PP
+\fB\-width\fR not a positive integer raises \fB{TCLUTILS COMMON INTEGER \-width}\fR, \fB\-words\fR not a boolean \fB{TCLUTILS COMMON BOOLEAN \-words}\fR, an unknown option \fB{TCLUTILS COMMON OPTION \-name}\fR.

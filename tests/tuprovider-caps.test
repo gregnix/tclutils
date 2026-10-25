@@ -5,7 +5,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuprovider 0.1
+package require tclutils::tuprovider 0.2
 
 proc ::readCapsTable {path} {
     set fh [open $path r]

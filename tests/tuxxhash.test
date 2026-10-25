@@ -9,7 +9,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 tcl::tm::path add [file join [file dirname $here] lib tm]
 if {[info exists ::env(TCLUTILS_TM)]} { ::tcl::tm::path add $::env(TCLUTILS_TM) }
-package require tclutils::tuxxhash
+package require tclutils::tuxxhash 0.2
 namespace import ::tclutils::tuxxhash::*
 
 test xxh-1 {empty string}        -body { xxh32 "" }        -result 02cc5d05
@@ -27,7 +27,7 @@ test xxh-10 {seed = PRIME1} -body { xxh32 "abc" 2654435761 } -result a1ae7709
 test xxh-11 {binary bytes 0..255} -body {
     set b {}
     for {set i 0} {$i < 256} {incr i} { lappend b $i }
-    xxh32 [binary format c* $b] 0
+    xxh32 [binary format c* $b] 0 -encoding binary
 } -result 59441253
 
 test xxh-12 {file hashing matches in-memory} -body {
@@ -42,5 +42,34 @@ test xxh-13 {bad seed rejected} -body {
     catch {xxh32 "x" notanint} e opts
     list $e [dict get $opts -errorcode]
 } -result {{seed must be an integer, got "notanint"} {TCLUTILS TUXXHASH SEED}}
+
+test xxh-14 {text is hashed as UTF-8 bytes} -body {
+    list [xxh32 "Gr\u00f6\u00dfe"] \
+        [xxh32 [encoding convertto utf-8 "Gr\u00f6\u00dfe"] 0 -encoding binary]
+} -result {3a44ca22 3a44ca22}
+
+test xxh-15 {characters above 255 hash as UTF-8 (no error on 9.0)} -body {
+    expr {[xxh32 "\u20ac"] eq [xxh32 "\xe2\x82\xac" 0 -encoding binary]}
+} -result 1
+
+test xxh-16 {-encoding binary refuses characters above 255} -body {
+    catch {xxh32 "\u20ac" -encoding binary} e opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUXXHASH BYTES}
+
+test xxh-17 {seed with -encoding; bad encoding and option} -body {
+    list [xxh32 "abc" 2654435761 -encoding utf-8] \
+        [catch {xxh32 "x" -encoding latin1} e o] [dict get $o -errorcode] \
+        [catch {xxh32 "x" -seed 1} e o] [dict get $o -errorcode]
+} -result {a1ae7709 1 {TCLUTILS TUXXHASH ENCODING} 1 {TCLUTILS TUXXHASH OPTION}}
+
+test xxh-18 {file bytes equal the UTF-8 text hash} -body {
+    set f [makeFile {} xxh2.tmp]
+    set ch [open $f w]; fconfigure $ch -encoding utf-8
+    puts -nonewline $ch "Gr\u00f6\u00dfe"; close $ch
+    set a [xxh32file $f]
+    removeFile xxh2.tmp
+    set a
+} -result 3a44ca22
 
 cleanupTests

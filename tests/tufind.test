@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tufind 0.1
+package require tclutils::tufind 0.2
 
 proc DeleteTree {path} {
     if {![file exists $path]} { return }
@@ -65,4 +65,15 @@ test tufind-1.9 {tails option} -body {
 } -result {a.txt}
 
 DeleteTree $tmp
+
+# --- unreleased: -tails returns the name unchanged --------------------------
+test tufind-2.1 {-tails keeps a numeric-looking name} -setup {
+    set nd [makeDirectory tufind-num]
+    close [open [file join $nd 1.50] w]
+} -body {
+    ::tclutils::tufind::files $nd * -tails 1
+} -cleanup {
+    removeDirectory tufind-num
+} -result {1.50}
+
 cleanupTests

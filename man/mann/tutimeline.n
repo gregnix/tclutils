@@ -1,4 +1,4 @@
-.TH tutimeline n 0.1 tclutils
+.TH tutimeline n 0.2 tclutils
 .SH tclutils::tutimeline
 .PP
 A Mermaid\-style \fBtimeline\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBtimeline\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
@@ -8,7 +8,7 @@ A timeline is not a node\-edge graph, so \fBtutimeline\fR does \fBnot\fR go thro
 The chart is drawn horizontally: a time axis with the period labels below it, each period's events stacked as boxes above it, and sections as coloured bands across the top.
 .SS Package
 .CS
-package require tclutils::tutimeline 0.1
+package require tclutils::tutimeline 0.2
 .CE
 .SS Commands
 .CS
@@ -29,7 +29,7 @@ Render options (all optional):
 -fontfile F    real TTF/OTF for labels (raster)    (default: 6x8 bitmap font)
 .CE
 .PP
-The SVG backend ignores \fB\-scale\fR and \fB\-fontfile\fR (it uses a fixed \fBmonospace\fR viewer font locked to the 6x8 metric). On the raster backend \fB\-scale N\fR multiplies the pixel dimensions and the font scale by \fBN\fR.
+The SVG backend ignores \fB\-fontfile\fR (it uses a fixed \fBmonospace\fR viewer font locked to the 6x8 metric). On SVG \fB\-scale N\fR keeps the canvas at \fB\-width\fR × \fB\-height\fR and multiplies text, lines and spacing by \fBN\fR. On the raster backend \fB\-scale N\fR multiplies the pixel dimensions and the font scale by \fBN\fR.
 .SS "Input grammar (Mermaid \fBtimeline\fR subset)"
 .CS
 timeline                           %% header
@@ -41,7 +41,7 @@ section <name>                     %% starts a section
 %% ...                             %% comment, ignored
 .CE
 .PP
-At least one time period is required. Periods listed before any \fBsection\fR keep an empty section.
+The separator is a colon followed by white space or the end of the line (\fB" : "\fR, \fB": "\fR). A colon inside a word does not split, so \fB12:30 : Lunch\fR is the period \fB12:30\fR with the event \fBLunch\fR, and \fB2020:Start\fR is one period without events. At least one time period is required. Periods listed before any \fBsection\fR keep an empty section.
 .SS Usage
 .CS
 package require tclutils::tutimeline

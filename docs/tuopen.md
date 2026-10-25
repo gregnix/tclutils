@@ -1,7 +1,8 @@
 # tclutils::tuopen
 
 Open a URL or file path with the operating system's default application
-(`xdg-open` on Linux/BSD, `open` on macOS, `cmd /c start` on Windows).
+(`xdg-open` on Linux/BSD, `open` on macOS, `rundll32` / `cmd /c start` on
+Windows).
 
 ## API
 
@@ -9,8 +10,19 @@ Open a URL or file path with the operating system's default application
 ::tclutils::tuopen::launch https://tcl.tk/     ;# opens in the default browser
 ::tclutils::tuopen::launch /path/to/report.pdf  ;# opens in the default viewer
 ::tclutils::tuopen::command http://x -platform windows
-#  -> cmd.exe /c start {} http://x
+#  -> rundll32 url.dll,FileProtocolHandler http://x
+::tclutils::tuopen::command C:/doc/a.pdf -platform windows
+#  -> cmd.exe /c start {} C:/doc/a.pdf
 ```
+
+On Windows a URL -- a target that starts with a scheme of two or more
+characters and `:` (`https:`, `mailto:`, `file:`) -- is opened with
+`rundll32 url.dll,FileProtocolHandler <url>`. That bypasses `cmd.exe`, which
+would treat `&` in a query string as a command separator and cut the URL.
+Anything else (files, folders, `C:/...`) goes to `cmd.exe /c start "" <path>`.
+
+All seven commands (`launch`, `command`, `edit`, `editCommand`, `openDir`,
+`configDir`, `configFile`) are exported for `namespace import`.
 
 Commands:
 

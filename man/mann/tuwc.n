@@ -1,4 +1,4 @@
-.TH tuwc n 0.1 tclutils
+.TH tuwc n 0.2 tclutils
 .SH tclutils::tuwc
 .PP
 \fBtclutils::tuwc\fR counts lines, words, characters and bytes.
@@ -19,3 +19,15 @@ lines 10 words 42 chars 180 bytes 190
 .CE
 .PP
 The \fBfile\fR command additionally adds the key \fBfile\fR.
+.TS
+l l.
+Key	Meaning
+\fBlines\fR	number of \fB\en\fR, plus one when the text does not end in \fB\en\fR
+\fBwords\fR	runs of non\-whitespace
+\fBchars\fR	characters (code points)
+\fBbytes\fR	\fBtext\fR: length in UTF\-8; \fBfile\fR: size of the file in bytes
+.TE
+.PP
+\fBlines\fR differs from \fBwc \-l\fR: a last line without \fB\en\fR counts. An empty text has 0 lines, \fB"\en"\fR has one.
+.PP
+\fBfile\fR reads with the system encoding and turns \fB\er\en\fR into \fB\en\fR; \fBlines\fR, \fBwords\fR and \fBchars\fR count that text. \fBbytes\fR is the file size on disk, as with \fBwc \-c\fR.

@@ -19,7 +19,7 @@ as coloured dots, and an actor legend.
 ## Package
 
 ```tcl
-package require tclutils::tujourney 0.1
+package require tclutils::tujourney 0.2
 ```
 
 ## Commands
@@ -46,9 +46,10 @@ Render options (all optional):
 -fontfile F    real TTF/OTF for labels (raster)    (default: 6x8 bitmap font)
 ```
 
-The SVG backend ignores `-scale` and `-fontfile` (it uses a fixed `monospace`
-viewer font locked to the 6x8 metric). On the raster backend `-scale N`
-multiplies the pixel dimensions and the font scale by `N`.
+The SVG backend ignores `-fontfile` (it uses a fixed `monospace` viewer font
+locked to the 6x8 metric). On SVG `-scale N` keeps the canvas at `-width` ×
+`-height` and multiplies text, lines and spacing by `N`. On the raster backend
+`-scale N` multiplies the pixel dimensions and the font scale by `N`.
 
 ## Input grammar (Mermaid `journey` subset)
 
@@ -56,12 +57,16 @@ multiplies the pixel dimensions and the font scale by `N`.
 journey                            %% header
 title <text>                       %% chart title
 section <name>                     %% starts a section
-<task>: <score>: <actor>, <actor>  %% a task with a 1..5 score and actors
+<task>: <score>: <actor>, <actor>  %% a task with a score (usually 1..5) and actors
 <task>: <score>                    %% actors are optional
+accTitle: ... / accDescr: ...      %% ignored
 %% ...                             %% comment, ignored
 ```
 
-At least one task is required. Tasks listed before any `section` keep an empty
+The score is a number >= 0 written with digits and an optional fraction (`5`,
+`2.5`); Mermaid's scale is 1..5, larger values stretch the axis. A task line
+whose score is anything else (`gut`, `-1`) raises `{TCLUTILS TUJOURNEY VALUE}`
+naming the line. At least one task is required. Tasks listed before any `section` keep an empty
 section.
 
 ## Usage
@@ -112,6 +117,7 @@ package require tclutils::tuflow
 
 ## Error codes
 
-`-errorcode {TCLUTILS TUJOURNEY <REASON>}` — `EMPTY` (no tasks), `ARG` (bad
+`-errorcode {TCLUTILS TUJOURNEY <REASON>}` — `EMPTY` (no tasks), `VALUE` (a
+task score that is not a number >= 0; the message names the line), `ARG` (bad
 render option, e.g. non-integer `-scale`), `FONT` (a `-fontfile` path that does
 not exist).

@@ -1,10 +1,10 @@
-.TH tuawk n 0.1 tclutils
+.TH tuawk n 0.2 tclutils
 .SH tclutils::tuawk
 .PP
 An awk\-style record/field processor in pure Tcl. Records map to fields, rules are \fB{pattern action}\fR pairs, with \fBBEGIN\fR/\fBEND\fR. It is not an awk\-language interpreter: patterns are Tcl expressions (or \fB/regex/\fR against \fB$0\fR) and actions are Tcl scripts.
 .SS Package
 .CS
-package require tclutils::tuawk 0.1
+package require tclutils::tuawk 0.2
 .CE
 .SS API
 .IP \(bu
@@ -18,11 +18,17 @@ Pattern: empty matches always; \fB/regex/\fR matches \fB$0\fR; otherwise a Tcl \
 .IP \(bu
 Action: a Tcl script. An empty action means \fBemit $0\fR.
 .IP \(bu
-Fields: \fB$0\fR (whole record), \fB$1\fR..\fB$NF\fR, \fB$NR\fR. Variables set in actions persist across records (like awk globals), ideal for aggregation with BEGIN/END.
+Fields: \fB$0\fR (whole record), \fB$1\fR..\fB$NF\fR, \fB$NR\fR. \fBNR\fR and \fBNF\fR start at 0, so they are set in \fBBEGIN\fR and in \fBEND\fR even without any record.
+.IP \(bu
+Variables set in actions persist across records (like awk globals), ideal for aggregation with BEGIN/END. All rules of one call run in one private frame (a coroutine in a sandbox namespace that is deleted afterwards): \fBset x\fR always creates a rule variable and never touches a global \fBx\fR, under Tcl 8.6 and 9 alike. \fBvariable x\fR is not needed (but still works).
+.IP \(bu
+In an action, \fBbreak\fR skips the remaining rules for the current record (like awk \fBnext\fR); \fBcontinue\fR goes on with the next rule.
 .IP \(bu
 \fBemit args...\fR prints (joined by OFS, terminated by ORS).
 .PP
 Options: \fB\-fs\fR (default whitespace runs; one char = \fBsplit\fR; multiple = regex), \fB\-ofs\fR (default \fB" "\fR), \fB\-ors\fR (default \fB"\en"\fR).
+.PP
+Errors: unknown option or an option without value \fBTCLUTILS TUAWK OPTION\fR; an odd \fBrules\fR list \fBTCLUTILS TUAWK RULES\fR. Errors in patterns and actions pass through unchanged (a field beyond \fBNF\fR: \fBTCL LOOKUP VARNAME n\fR).
 .CS
 tuawk::run "a b c\nd e f" {{} {emit $2}}              ;# -> "b\ne\n"
 tuawk::run $data {BEGIN {set s 0} {} {set s [expr {$s+$1}]} END {emit "sum: $s"}}

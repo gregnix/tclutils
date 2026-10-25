@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuexpand 0.1
+package require tclutils::tuexpand 0.2
 
 test tuexpand-1.1 {tab at column 0 -> 8 spaces} {
     ::tclutils::tuexpand::expand "\tx"
@@ -38,4 +38,35 @@ test tuexpand-1.10 {invalid mode rejected} {
     set f [makeFile "x\n" tuexpand-mode.txt]
     catch {::tclutils::tuexpand::file $f -mode bogus} m o; dict get $o -errorcode
 } {TCLUTILS TUEXPAND MODE}
+test tuexpand-2.1 {unexpand without -all keeps inner tabs} {
+    ::tclutils::tuexpand::unexpand "a\tb"
+} "a\tb"
+test tuexpand-2.2 {unexpand without -all: leading blanks only, rest copied} {
+    ::tclutils::tuexpand::unexpand "   \tc  d\te"
+} "\tc  d\te"
+test tuexpand-2.3 {unexpand -all: run one column before a stop} {
+    ::tclutils::tuexpand::unexpand "abcdefg          x" -all 1
+} "abcdefg\t\t x"
+test tuexpand-2.4 {unexpand -all: single space before a stop stays} {
+    ::tclutils::tuexpand::unexpand "abcdefg x" -all 1
+} "abcdefg x"
+test tuexpand-2.5 {unexpand -all: two blanks over a stop, -tabs 4} {
+    ::tclutils::tuexpand::unexpand "abc  x" -tabs 4 -all 1
+} "abc\t x"
+test tuexpand-2.6 {unexpand -all: spaces before a tab are absorbed} {
+    ::tclutils::tuexpand::unexpand "ab  \tc" -all 1
+} "ab\tc"
+test tuexpand-2.7 {unexpand -all keeps a one-column tab} {
+    ::tclutils::tuexpand::unexpand "abcdefg\tx" -all 1
+} "abcdefg\tx"
+test tuexpand-2.8 {expand rejects -all} {
+    catch {::tclutils::tuexpand::expand "a\tb" -all 1} m o
+    dict get $o -errorcode
+} {TCLUTILS COMMON OPTION -all}
+test tuexpand-2.9 {file -mode expand rejects -all} {
+    set f [makeFile "x\n" tuexpand-all.txt]
+    catch {::tclutils::tuexpand::file $f -mode expand -all 1} m o
+    dict get $o -errorcode
+} {TCLUTILS COMMON OPTION -all}
+
 cleanupTests

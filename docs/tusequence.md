@@ -8,7 +8,7 @@ through the pure-Tcl engine. A self-contained 2D renderer in the
 ## Package
 
 ```tcl
-package require tclutils::tusequence 0.1
+package require tclutils::tusequence 0.2
 ```
 
 ## Commands
@@ -28,6 +28,7 @@ content. Pass explicit values to override.
 
 ```text
 sequenceDiagram
+  title text
   participant A            |  participant A as Alias  |  actor A
   autonumber
   A->>B: message
@@ -41,8 +42,13 @@ sequenceDiagram
 - **Participants** are declared with `participant`/`actor` (optionally
   `... as Alias`) or created implicitly on first use in a message. They render
   in declaration order.
+- **Title**: `title text` is drawn centred above the participant boxes; the
+  diagram moves down by a 24-pixel band and the auto width grows to fit the
+  title.
 - **Arrows**: `->` `-->` `->>` `-->>` `-x` `--x` `-)` `--)`. One dash = solid,
   two = dotted; `>>` = filled head, `>`/`)` = open head, `x` = cross.
+  `<<->>` (solid) and `<<-->>` (dotted) are bidirectional: a filled head at
+  both ends.
 - **Self-messages** (`A->>A: ...`) draw as a loop on the lifeline.
 - **Activations**: `activate`/`deactivate`, or the shorthand `+`/`-` on a
   message arrow (`A->>+B` activates B, `B-->>-A` deactivates B).
@@ -61,8 +67,10 @@ and actor links/popups.
 ## Options
 
 `-fontfile` (a TTF for real-font labels via `Glyphs`; PNG only -- otherwise the
-built-in bitmap font), `-scale` (positive integer; enlarges the PNG canvas, SVG
-ignores it).
+built-in bitmap font), `-scale` (positive integer; on PNG the canvas and the drawing grow by the
+factor; on SVG the drawing grows by the factor but the canvas keeps the size
+computed at scale 1, so with `-scale` > 1 the SVG shows only the upper-left part
+-- use `-scale 1` for SVG).
 
 ## Usage
 

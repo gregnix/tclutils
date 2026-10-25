@@ -1,10 +1,10 @@
-.TH tucolor n 0.1 tclutils
+.TH tucolor n 0.2 tclutils
 .SH tclutils::tucolor
 .PP
 Named\-color database and conversions: resolve color names / hex / RGB triples to RGB, convert to hex and HSV, and find the nearest named color. The name table (CSS3 / X11 standard colors, 148 entries) is \fBembedded\fR, so the module is pure Tcl and \fBGUI\-free\fR — no Tk / X11 needed at runtime. The table was generated from Tk's \fBwinfo rgb\fR, so values match X11/Tk exactly.
 .SS Package
 .CS
-package require tclutils::tucolor 0.1
+package require tclutils::tucolor 0.2
 .CE
 .SS Commands
 .CS
@@ -17,7 +17,9 @@ package require tclutils::tucolor 0.1
 ::tclutils::tucolor::fromHsv {h s v}     ;# -> {r g b}
 .CE
 .PP
-\fBcolor\fR accepts a known name, \fB#rgb\fR, \fB#rrggbb\fR, or a \fB{r g b}\fR triple (0..255).
+\fBcolor\fR accepts a known name, \fB#rgb\fR, \fB#rrggbb\fR, or a \fB{r g b}\fR triple of decimal integers 0..255. Triple components are read as decimal on Tcl 8.6 and 9.0 alike: \fB{010 20 30}\fR is \fB10 20 30\fR, \fB{08 0 0}\fR is \fB8 0 0\fR. Hex (\fB0x10\fR), signs and fractions in a triple are rejected (\fBNAME\fR).
+.PP
+\fBfromHsv\fR takes \fBh\fR 0..360 and \fBs\fR, \fBv\fR 0..100 as decimal numbers; fractions are allowed (\fB{120.5 50 50}\fR), \fB360\fR equals \fB0\fR. Anything else \-\- a value out of range, a negative hue, a non\-number, not exactly three elements \-\- raises \fB{TCLUTILS TUCOLOR HSV}\fR.
 .SS Usage
 .CS
 package require tclutils::tucolor
@@ -42,4 +44,10 @@ HSV is the common hexcone model; round\-tripping \fBtoHsv\fR/\fBfromHsv\fR may d
 Being GUI\-free, it complements \fBtuterm\fR (resolve any color name → RGB for 24\-bit ANSI), \fBtupng\fR/\fBtupngdraw\fR and \fBtusvg\fR.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUCOLOR <REASON>}\fR (\fBNAME\fR).
+\fB\-errorcode {TCLUTILS TUCOLOR <REASON>}\fR:
+.TS
+l l.
+Reason	When
+\fBNAME\fR	colour not recognised (\fBrgb\fR, \fBhex\fR, \fBnearest\fR, \fBtoHsv\fR)
+\fBHSV\fR	\fBfromHsv\fR input not \fB{h s v}\fR with h 0..360, s/v 0..100
+.TE

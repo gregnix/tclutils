@@ -1,14 +1,15 @@
 # tusize
 
 A small `du`: recursive byte totals and human-readable formatting. Symlinks are
-not followed (their own entry size is counted), so cyclic links cannot loop.
+not followed: a link counts with its own size (`file lstat`, on Unix the
+length of the target path), so cyclic links cannot loop.
 
 ## Commands
 
 | Command | Result |
 |---------|--------|
 | `bytes path` | size of a file, or recursive total of a directory (incl. dotfiles) |
-| `human n ?-si 0\|1?` | human-readable size; binary units (KiB) by default, decimal (kB) with `-si 1` |
+| `human n ?-si 0\|1?` | human-readable size; binary units (KiB ... YiB) by default, decimal (kB ... YB) with `-si 1` |
 | `entries dir` | list of `{bytes path}` for each immediate child, sorted by path |
 
 ```tcl

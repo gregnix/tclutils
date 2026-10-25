@@ -1,4 +1,4 @@
-.TH tutr n 0.1 tclutils
+.TH tutr n 0.2 tclutils
 .SH tclutils::tutr
 .PP
 Small \fBtr\fR\-like text transformation helpers.
@@ -19,4 +19,21 @@ Commands:
 .IP \(bu
 \fBfile path set1 set2 ?\-delete bool? ?\-squeeze bool?\fR
 .PP
-Character sets support literal characters and simple ranges like \fBa\-z\fR or \fB0\-9\fR.
+Character sets support literal characters and simple ranges like \fBa\-z\fR or \fB0\-9\fR. A \fB\-\fR at the start or end of a set stands for itself. A descending range such as \fBc\-a\fR raises \fB{TCLUTILS TUTR RANGE}\fR.
+.PP
+\fBtranslate\fR maps the n\-th character of \fBset1\fR to the n\-th of \fBset2\fR; a shorter \fBset2\fR is padded with its last character. A character listed more than once in \fBset1\fR maps to its last partner, as with \fBtr\fR. An empty \fBset2\fR raises \fB{TCLUTILS TUTR SET2}\fR (unless \fBset1\fR is empty as well).
+.PP
+\fBfile\fR translates \fBset1\fR to \fBset2\fR, or with \fB\-delete 1\fR deletes \fBset1\fR; \fB\-squeeze 1\fR then squeezes the characters of \fBset2\fR. With an empty \fBset2\fR, \fB\-squeeze 1\fR and no \fB\-delete\fR, \fBfile\fR only squeezes \fBset1\fR (like \fBtr \-s set1\fR). An empty \fBset2\fR without \fB\-delete\fR and \fB\-squeeze\fR raises \fB{TCLUTILS TUTR SET2}\fR.
+.CS
+::tclutils::tutr::translate abcabc aa xy         ;# -> ybcybc
+::tclutils::tutr::file in.txt " " "" -squeeze 1  ;# squeeze blanks only
+.CE
+.SS Errors
+.TS
+l l.
+Case	\fB\-errorcode\fR
+descending range	\fB{TCLUTILS TUTR RANGE}\fR
+empty \fBset2\fR where one is needed	\fB{TCLUTILS TUTR SET2}\fR
+\fBfile\fR: unknown option	\fB{TCLUTILS COMMON OPTION \-name}\fR
+\fBfile\fR: \fB\-delete\fR/\fB\-squeeze\fR not a boolean	\fB{TCLUTILS COMMON BOOLEAN \-name}\fR
+.TE

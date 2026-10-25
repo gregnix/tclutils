@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tufuzzy 0.1
+package require tclutils::tufuzzy 0.2
 
 test tufuzzy-1.1 {levenshtein kitten/sitting} -body {
     ::tclutils::tufuzzy::distance kitten sitting
@@ -57,5 +57,30 @@ test tufuzzy-5.1 {bestMatch picks the closest candidate} -body {
 test tufuzzy-5.2 {bestMatch empty candidates} -body {
     ::tclutils::tufuzzy::bestMatch x {}
 } -result {}
+
+test tufuzzy-6.1 {-nocase must be a boolean} -body {
+    catch {::tclutils::tufuzzy::distance a b -nocase ja} err opts
+    list $err [dict get $opts -errorcode]
+} -result {{-nocase requires a boolean value} {TCLUTILS COMMON BOOLEAN -nocase}}
+
+test tufuzzy-6.2 {unknown option has an errorcode} -body {
+    catch {::tclutils::tufuzzy::similarity a b -x 1} err opts
+    list $err [dict get $opts -errorcode]
+} -result {{unknown option -x} {TCLUTILS TUFUZZY OPTION}}
+
+test tufuzzy-6.3 {missing option value has an errorcode} -body {
+    catch {::tclutils::tufuzzy::subsequence a b -nocase} err opts
+    list $err [dict get $opts -errorcode]
+} -result {{missing value for option -nocase} {TCLUTILS TUFUZZY OPTION}}
+
+test tufuzzy-6.4 {extra arguments have an errorcode} -body {
+    catch {::tclutils::tufuzzy::searchDistance a b c} err opts
+    list $err [dict get $opts -errorcode]
+} -result {{unexpected arguments: c} {TCLUTILS TUFUZZY ARGS}}
+
+test tufuzzy-6.5 {bestMatch checks options even without candidates} -body {
+    catch {::tclutils::tufuzzy::bestMatch a {} -nocase ja} err opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON BOOLEAN -nocase}
 
 cleanupTests

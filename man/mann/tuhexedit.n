@@ -1,4 +1,4 @@
-.TH tuhexedit n 0.1 tclutils
+.TH tuhexedit n 0.2 tclutils
 .SH tclutils::tuhexedit
 .PP
 Small binary read/write/search/patch helpers in pure Tcl.
@@ -6,7 +6,7 @@ Small binary read/write/search/patch helpers in pure Tcl.
 \fBtuhexedit\fR is a library module, not a GUI editor. It builds on \fBtclutils::tubin\fR and reuses \fBtclutils::tuhexdump\fR for dump output.
 .SS Package
 .CS
-package require tclutils::tuhexedit 0.1
+package require tclutils::tuhexedit 0.2
 .CE
 .SS "Read bytes"
 .CS
@@ -41,9 +41,21 @@ puts [::tclutils::tuhexedit::dump file.bin -offset 0 -length 128]
 The dump command delegates to \fBtclutils::tuhexdump\fR.
 .SS Limits
 .PP
-\fBpatch\fR and \fBwriteBytes\fR are in\-place, length\-preserving operations. They do not insert or delete bytes and therefore do not shift the remaining file content.
+\fBpatch\fR and \fBwriteBytes\fR are in\-place, length\-preserving operations. They do not insert or delete bytes and therefore do not shift the remaining file content. A write that would pass the end of the file is rejected with \fB{TCLUTILS TUHEXEDIT RANGE}\fR; the file and its backup stay untouched.
 .PP
 \fBfindHex\fR, \fBfindString\fR, and \fBpatch\fR currently read the complete file into memory. \fBreadBytes\fR is the partial\-read API for large files.
+.SS Errors
+.CS
+{TCLUTILS TUHEXEDIT OFFSET}    offset negative, not an integer, or 0x without hex digits
+{TCLUTILS TUHEXEDIT LENGTH}    length negative or not an integer
+{TCLUTILS TUHEXEDIT RANGE}     writeBytes/patch would write past the end of the file
+{TCLUTILS TUHEXEDIT BYTES}     writeBytes data with a character above 255
+{TCLUTILS TUHEXEDIT ENCODING}  findString text the encoding cannot represent
+{TCLUTILS TUHEXEDIT NEEDLE}    empty search pattern
+{TCL LOOKUP ENCODING name}     unknown encoding (from Tcl)
+.CE
+.PP
+Offsets are a decimal integer or hex with \fB0x\fR (\fB0x100\fR).
 .SS "Additional exported commands"
 .PP
 Documented for completeness (same module, also covered by the test suite):

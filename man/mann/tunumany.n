@@ -1,4 +1,4 @@
-.TH tunumany n 0.1 tclutils
+.TH tunumany n 0.2 tclutils
 .SH tclutils::tunumany
 .PP
 A single entry point for "string → number" that \fBroutes\fR to the right backend instead of merging them. The two specialised parsers do not overlap:
@@ -10,7 +10,7 @@ SI/IEC unit notation (\fB1.5K\fR, \fB2Mi\fR, \fB3G\fR) → \fBtclutils::tunumfmt
 \fBtunumany\fR recognises both notations and dispatches, so callers that may receive either kind of input have one function to call.
 .SS Package
 .CS
-package require tclutils::tunumany 0.1
+package require tclutils::tunumany 0.2
 .CE
 .PP
 Soft\-depends on \fBtclutils::tunum\fR and \fBtclutils::tunumfmt\fR (each loaded on demand; a missing backend simply means that notation is not parsed).
@@ -22,7 +22,7 @@ Soft\-depends on \fBtclutils::tunum\fR and \fBtclutils::tunumfmt\fR (each loaded
 Returns the parsed number, or \fBVAL\fR (default \fB""\fR) when nothing parses.
 .SS Routing
 .PP
-With \fB\-prefer auto\fR (the default): a plain number followed by an SI/IEC unit letter (\fBK M G T P E Z Y\fR, optional trailing \fBi\fR) routes to the SI/IEC backend; everything else routes to the locale/currency backend. If the chosen route fails the other is tried as a fallback. Use \fB\-prefer si\fR or \fB\-prefer locale\fR to force a route.
+With \fB\-prefer auto\fR (the default): a plain number followed by an SI/IEC unit letter (\fBK M G T P E Z Y\fR, also lower case, optional trailing \fBi\fR) routes to the SI/IEC backend; everything else routes to the locale/currency backend. If the chosen route fails the other is tried as a fallback. Use \fB\-prefer si\fR or \fB\-prefer locale\fR to force a route.
 .SS Examples
 .CS
 ::tclutils::tunumany::parse "1.234,56"   ;# -> 1234.56   (locale EU)
@@ -30,13 +30,16 @@ With \fB\-prefer auto\fR (the default): a plain number followed by an SI/IEC uni
 ::tclutils::tunumany::parse "12 €"       ;# -> 12.0      (currency)
 ::tclutils::tunumany::parse "1.5K"       ;# -> 1500      (SI)
 ::tclutils::tunumany::parse "2Mi"        ;# -> 2097152   (IEC)
+::tclutils::tunumany::parse "2KiB"       ;# -> 2048      (IEC with byte sign)
 ::tclutils::tunumany::parse "x" -default 0   ;# -> 0
 .CE
 .SS Notes
 .IP \(bu
 This is the deliberate alternative to merging \fBtunum\fR and \fBtunumfmt\fR: it keeps each parser focused while giving one dispatch point.
 .IP \(bu
+Lower\-case unit letters mean the same units: \fB1.5m\fR is 1.5 \fBmega\fR (1500000), not milli. A decimal comma before the unit (\fB1,5K\fR) is not recognised.
+.IP \(bu
 Output is always a Tcl number (or the default); format for display separately.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUNUMANY <REASON>}\fR (\fBOPTION\fR, \fBPREFER\fR).
+\fB\-errorcode {TCLUTILS TUNUMANY <REASON>}\fR: \fBOPTION\fR (unknown option, or an option without a value such as \fBparse 1.5 \-default\fR), \fBPREFER\fR.

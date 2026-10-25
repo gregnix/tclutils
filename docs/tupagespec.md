@@ -16,6 +16,9 @@ list of numbers back into `"1-3,5,7-9"`. Pure Tcl, no dependencies.
 tolerated), an open end `A-` (A..total), an open start `-B` (1..B); the keywords
 `end`/`last` stand for `total`; an empty spec or `all`/`*` selects every page.
 `-base 1` (default) returns 1-based page numbers, `-base 0` returns 0-based.
+Numbers are runs of ASCII digits and always decimal, also with leading zeros
+(`08` is page 8, `07-09` is 7 8 9) — the same under Tcl 8.6 and 9; a
+digit-only `total` is read the same way.
 
 ```tcl
 tupagespec::parse "1-3,5"  10          ;# -> 1 2 3 5

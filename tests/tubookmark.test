@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tubookmark 0.1
+package require tclutils::tubookmark 0.2
 
 set ::SAMPLE {<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <TITLE>Bookmarks</TITLE>
@@ -67,5 +67,34 @@ test tubookmark-3.1 {round-trip (normalized, sorted by url)} -body {
     }
     expr {[norm $rt] eq [norm $bms]}
 } -result 1
+
+
+test tubookmark-4.1 {header lines start at column 0} -body {
+    set html [::tclutils::tubookmark::serialize {}]
+    lrange [split $html \n] 0 4
+} -result {{<!DOCTYPE NETSCAPE-Bookmark-file-1>} {<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">} <TITLE>Bookmarks</TITLE> <H1>Bookmarks</H1> <DL><p>}
+
+test tubookmark-4.2 {quotes in TAGS, ADD_DATE and HREF are escaped} -body {
+    set bms [list [dict create title T url {http://x.test/?q="1"} \
+        folder "" tags {a"b c} adddate {1"2}]]
+    set html [::tclutils::tubookmark::serialize $bms]
+    set b [lindex [::tclutils::tubookmark::parse $html] 0]
+    list [string match {*TAGS="a&quot;b,c" ADD_DATE="1&quot;2"*} $html] \
+        [dict get $b url] [dict get $b tags] [dict get $b adddate]
+} -result [list 1 {http://x.test/?q="1"} [list {a"b} c] {1"2}]
+
+test tubookmark-4.3 {two links in one line are two bookmarks} -body {
+    set html {<DL><p><DT><A HREF="http://a.test">A</A><DT><A HREF="http://b.test">B</A></DL>}
+    set out {}
+    foreach b [::tclutils::tubookmark::parse $html] {
+        lappend out [dict get $b title] [dict get $b url]
+    }
+    set out
+} -result {A http://a.test B http://b.test}
+
+test tubookmark-4.4 {a title with markup stays inside its link} -body {
+    set html {<DT><A HREF="http://a.test">a <b>x</b></A> <A HREF="http://b.test">B</A>}
+    llength [::tclutils::tubookmark::parse $html]
+} -result 2
 
 cleanupTests

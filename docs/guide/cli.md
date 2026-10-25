@@ -1,9 +1,12 @@
 # CLI wrappers
 
-tclutils ships 34 thin CLI wrapper scripts in `bin/`. They call the
+tclutils 0.68.0 ships 34 thin CLI wrapper scripts in `bin/` (`_bootstrap.tcl`
+is the path helper, not a wrapper). They call the
 package APIs directly, so the library stays usable from normal Tcl code
 while also offering convenient command-line entry points. Each wrapper
 sources `bin/_bootstrap.tcl` to find the library on the module path.
+Diagram demos are scripts under `examples/`, not wrappers:
+`examples/demo-tuflow.tcl` and `examples/demo-tudiagram.tcl`.
 
 ## Implemented wrappers
 

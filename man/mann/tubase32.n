@@ -1,4 +1,4 @@
-.TH tubase32 n 0.1 tclutils
+.TH tubase32 n 0.2 tclutils
 .SH tclutils::tubase32
 .PP
 RFC 4648 base32 (and base32hex) encode/decode in pure Tcl. Tcl core provides base64 but not base32, so this fills the gap with a matching API.
@@ -12,10 +12,18 @@ Commands:
 .IP \(bu
 \fBencode data ?\-pad bool? ?\-hex bool?\fR — base32 string. \fB\-pad 0\fR omits the trailing \fB=\fR; \fB\-hex 1\fR uses the base32hex alphabet (RFC 4648 §7). Default \fB\-pad 1 \-hex 0\fR.
 .IP \(bu
-\fBdecode text ?\-hex bool?\fR — back to a binary string. Whitespace and \fB=\fR padding are ignored; input is case\-insensitive.
+\fBdecode text ?\-hex bool?\fR — back to a binary string. Whitespace and \fB=\fR padding are ignored; input is case\-insensitive. The tail is checked as in RFC 4648 §3.5: the number of data characters must be one \fBencode\fR produces (a multiple of 8 plus 0, 2, 4, 5 or 7), and the bits left after the last whole byte must be zero. \fBdecode MY\fR is \fBf\fR; \fBdecode MZ\fR is an error.
 .IP \(bu
 \fBencodeFile path ?\-pad bool? ?\-hex bool?\fR — encode a file's bytes.
 .IP \(bu
 \fBdecodeFile path ?\-hex bool?\fR — decode a file's text.
 .PP
-Errors use error code \fB{TCLUTILS TUBASE32 CHAR}\fR for an invalid input character.
+Unlike \fBtclutils::tubase64::decode\fR (which returns an empty string for text that is not base64), invalid base32 raises an error:
+.TS
+l l.
+Error code	When
+\fB{TCLUTILS TUBASE32 CHAR}\fR	a character outside the alphabet
+\fB{TCLUTILS TUBASE32 LENGTH}\fR	1, 3 or 6 data characters in the last group
+\fB{TCLUTILS TUBASE32 BITS}\fR	non\-zero bits after the last byte
+\fB{TCLUTILS COMMON BOOLEAN \-pad}\fR / \fB\-hex\fR	option value not a boolean
+.TE

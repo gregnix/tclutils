@@ -1,4 +1,4 @@
-.TH tubookmark n 0.1 tclutils
+.TH tubookmark n 0.2 tclutils
 .SH tclutils::tubookmark
 .PP
 Read and write the \fBNetscape bookmark file format\fR — the HTML interchange format browsers use to import/export bookmarks. A bookmark is a dict \fB{title url folder tags adddate}\fR; \fBfolder\fR is a \fB/\fR\-joined path ("" = top level) and \fBtags\fR is a list. Entity (un)escaping reuses \fBtclutils::tuxml\fR.
@@ -14,4 +14,6 @@ Commands:
 .IP \(bu
 \fBserialize bookmarks ?\-title T?\fR → Netscape bookmark HTML, grouping bookmarks into nested folders by their \fBfolder\fR path.
 .PP
-Parsing targets the standard export layout (one \fB<DT>\fR per line).
+\fBparse\fR reads the document tag by tag, so the standard export layout (one \fB<DT>\fR per line) and compact files (several links, or \fB<H3>\fR/\fB<DL>\fR and links, on one line) give the same result; every \fB<A>…</A>\fR is one bookmark. Entities in the title and in the \fBHREF\fR, \fBTAGS\fR and \fBADD_DATE\fR values are unescaped; \fBTAGS\fR is split at commas.
+.PP
+\fBserialize\fR escapes \fB&\fR, \fB<\fR, \fB>\fR in titles and folder names, and additionally \fB"\fR (as \fB&quot;\fR) in the \fBHREF\fR, \fBTAGS\fR and \fBADD_DATE\fR attribute values. Every header line starts at column 0.

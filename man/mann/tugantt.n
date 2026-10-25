@@ -1,10 +1,10 @@
-.TH tugantt n 0.1 tclutils
+.TH tugantt n 0.2 tclutils
 .SH tclutils::tugantt
 .PP
 Parses a Mermaid \fBgantt\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtusankey\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here.
 .SS Package
 .CS
-package require tclutils::tugantt 0.1
+package require tclutils::tugantt 0.2
 .CE
 .SS Commands
 .CS
@@ -26,19 +26,23 @@ gantt
 .IP \(bu
 \fBTags\fR (optional, must come first): \fBactive\fR, \fBdone\fR, \fBcrit\fR, \fBmilestone\fR. They set the bar colour; a \fBmilestone\fR is drawn as a diamond.
 .IP \(bu
-\fBStart\fR: an explicit date, \fBafter <id> [<id> ...]\fR (the latest end of the referenced tasks), or omitted — the task then starts at the end of the preceding task.
+\fBStart\fR: an explicit date, \fBafter <id> [<id> ...]\fR (the latest end of the referenced tasks), or omitted — the task then starts at the end of the preceding task. The first task needs a start: if it has no date and no \fBafter\fR that names an earlier task, drawing raises \fB{TCLUTILS TUGANTT DATE}\fR (Mermaid, too, needs a start date; there is no fallback to 1970 or today).
+.IP \(bu
+\fBDates\fR must exist: the parsed date is formatted back with the same format and compared with the input (leading zeros do not matter, \fB2026\-3\-2\fR is fine). \fB2026\-13\-45\fR or \fB2026\-02\-30\fR raise \fBDATE\fR on Tcl 8.6 and 9.0 alike.
 .IP \(bu
 \fBEnd\fR: an explicit date, or a duration \fB5d\fR / \fB2w\fR / \fB8h\fR / \fB30m\fR.
 .IP \(bu
 \fBdateFormat\fR / \fBaxisFormat\fR accept the usual tokens \fBYYYY MM DD HH mm ss\fR (mapped to \fBclock\fR format); \fBX\fR means a Unix timestamp.
 .IP \(bu
+\fBAxis\fR: about six ticks, snapped to whole units of the axis format (seconds if it shows seconds, minutes if it shows minutes, hours if it shows hours, otherwise days); a tick whose label repeats the previous one is dropped, so a short span shows each date once.
+.IP \(bu
 Comments start with \fB%%\fR.
 .SS "v1 scope"
 .PP
-Covered: title, dateFormat/axisFormat, sections, tags, ids, explicit dates, \fBafter\fR dependencies, durations, and milestones. \fBNot\fR in v1: \fBexcludes\fR / weekend exclusion, \fBuntil\fR, \fBvert\fR markers, compact display mode, and custom \fBtickInterval\fR. The chart height is fixed (\fB\-height\fR); tasks fill from the top.
+Covered: title, dateFormat/axisFormat, sections, tags, ids, explicit dates, \fBafter\fR dependencies, durations, and milestones. \fBNot\fR in v1: \fBexcludes\fR / weekend exclusion, \fBuntil\fR, \fBvert\fR markers, compact display mode, and custom \fBtickInterval\fR. Without \fB\-height\fR the chart grows with the number of tasks (at least 400 pixels); with \fB\-height\fR the height is fixed and tasks fill from the top.
 .SS Options
 .PP
-\fB\-width\fR / \fB\-height\fR (default 800 x 400), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in bitmap font), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+\fB\-width\fR (default 800) / \fB\-height\fR (default 0 = automatic: 400, or more when the title, the task rows and the axis labels need it \-\- each task row takes 26 pixels), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in bitmap font), \fB\-scale\fR (positive integer; on PNG the canvas grows by the factor; on SVG the canvas keeps its size and text, lines and spacing grow by the factor).
 .SS Usage
 .CS
 package require tclutils::tugantt
@@ -63,4 +67,4 @@ Companion: \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (canvas), \fBtcluti
 Bars use rect primitives and milestones a polygon, so SVG and PNG stay congruent. Bar colours: normal blue, \fBactive\fR light blue, \fBdone\fR grey, \fBcrit\fR red, \fBmilestone\fR amber.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUGANTT <REASON>}\fR \-\- \fBEMPTY\fR (no tasks), \fBARG\fR (bad \fB\-scale\fR), \fBDATE\fR (a date that does not match \fBdateFormat\fR), \fBFONT\fR (font file not found).
+\fB\-errorcode {TCLUTILS TUGANTT <REASON>}\fR \-\- \fBEMPTY\fR (no tasks), \fBARG\fR (bad \fB\-scale\fR), \fBDATE\fR (a date that does not match \fBdateFormat\fR or does not exist, or a first task without a start date \-\- raised when drawing, not by \fBparse\fR), \fBFONT\fR (font file not found).

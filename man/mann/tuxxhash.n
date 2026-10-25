@@ -1,4 +1,4 @@
-.TH tuxxhash n 0.1 tclutils
+.TH tuxxhash n 0.2 tclutils
 .SH tclutils::tuxxhash
 .PP
 xxHash32 (XXH32) in pure Tcl, Tk\-free. A \fBfast, non\-cryptographic\fR hash for content de\-duplication and change detection — not for security. The pure\-Tcl implementation provides the 32\-bit variant and matches the reference xxHash32 bit for bit (verified against the canonical vectors and python\-xxhash).
@@ -6,18 +6,20 @@ xxHash32 (XXH32) in pure Tcl, Tk\-free. A \fBfast, non\-cryptographic\fR hash fo
 Pure Tcl, 8.6+ / 9.x. No dependencies.
 .SS Commands
 .CS
-tuxxhash::xxh32     data ?seed?   ;# -> 8 hex chars
-tuxxhash::xxh32file path ?seed?   ;# -> 8 hex chars (whole file)
+tuxxhash::xxh32     data ?seed? ?-encoding utf-8|binary?   ;# -> 8 hex chars
+tuxxhash::xxh32file path ?seed?                        ;# -> 8 hex chars
 .CE
 .PP
-\fBdata\fR is hashed as \fBbytes\fR. A binary string (e.g. a file's contents) is used as\-is; a plain text string is hashed as its UTF\-8 bytes — encode explicitly with \fBencoding convertto\fR if you need a specific encoding. \fBseed\fR is an optional 32\-bit integer (default 0).
+Like \fBtclutils::tuhash\fR: digests of text are UTF\-8, files hash their bytes. \fBxxh32\fR encodes \fBdata\fR to UTF\-8 before hashing (\fB\-encoding utf\-8\fR, the default), so \fBxxh32 "Größe"\fR is the hash of the 7 bytes \fB47 72 c3 b6 c3 9f 65\fR and equals \fBxxh32file\fR of a UTF\-8 file with that text. \fB\-encoding binary\fR takes \fBdata\fR as raw bytes (each character 0–255) — use it for a binary string, e.g. from \fBbinary format\fR or a channel in \fB\-translation binary\fR. \fBxxh32file\fR always hashes the file's bytes. \fBseed\fR is an optional 32\-bit integer (default 0); it comes before \fB\-encoding\fR.
 .SS Example
 .CS
-package require tclutils::tuxxhash
+package require tclutils::tuxxhash 0.2
 namespace import ::tclutils::tuxxhash::*
 
 xxh32 "The quick brown fox jumps over the lazy dog"   ;# -> e85ea4de
 xxh32 "" 0                                            ;# -> 02cc5d05
+xxh32 "Größe"                                         ;# -> 3a44ca22
+xxh32 [binary format c* {0 1 2}] 0 -encoding binary   ;# raw bytes
 xxh32file /share/2026/rechnung.pdf                    ;# content fingerprint
 .CE
 .PP
@@ -32,8 +34,11 @@ Error code \fB{TCLUTILS TUXXHASH <REASON>}\fR:
 l l.
 REASON	When
 \fBSEED\fR	seed is not an integer
+\fBOPTION\fR	an argument other than \fB\-encoding\fR, or too many arguments
+\fBENCODING\fR	\fB\-encoding\fR is neither \fButf\-8\fR nor \fBbinary\fR
+\fBBYTES\fR	\fB\-encoding binary\fR with a character above 255
 \fBIO\fR	\fBxxh32file\fR could not open the file
 .TE
 .SS Testing
 .PP
-\fBtests/tuxxhash.test\fR checks the output against reference vectors (empty, short, 16\-byte block boundary, long, seeded, binary bytes) and the file path. Set \fBTCLUTILS_TM\fR to the module directory and run with \fBtclsh\fR (passes on 8.6 and 9.0).
+\fBtests/tuxxhash.test\fR checks the output against reference vectors (empty, short, 16\-byte block boundary, long, seeded, binary bytes), UTF\-8 text against the same bytes with \fB\-encoding binary\fR, and the file path. Set \fBTCLUTILS_TM\fR to the module directory and run with \fBtclsh\fR (passes on 8.6 and 9.0).

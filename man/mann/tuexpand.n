@@ -1,4 +1,4 @@
-.TH tuexpand n 0.1 tclutils
+.TH tuexpand n 0.2 tclutils
 .SH tclutils::tuexpand
 .PP
 \fBexpand\fR/\fBunexpand\fR\-like conversion between tabs and spaces in pure Tcl, with correct tab\-stop alignment.
@@ -9,7 +9,23 @@
 ::tclutils::tuexpand::file     path ?-mode expand|unexpand? ?-tabs N? ?-all 0|1?
 .CE
 .PP
-\fB\-tabs\fR sets the tab width (default 8). \fBunexpand\fR converts only leading blanks by default; \fB\-all 1\fR converts blank runs throughout. Single spaces are never turned into tabs.
+\fB\-tabs\fR sets the tab width (default 8). \fB\-all\fR belongs to \fBunexpand\fR only; \fBexpand\fR rejects it as an unknown option.
+.PP
+\fBunexpand\fR converts only the leading blanks (spaces and tabs) by default and copies the rest of the line unchanged, so tabs inside the line stay tabs. \fB\-all 1\fR converts every run of blanks. Within a run of two or more blanks, or a run at the start of the line, each tab stop the run reaches becomes a tab; the spaces left after the last stop stay spaces. A single space inside the line stays a space, also right before a tab stop. Spaces right before a tab are absorbed by it. This matches GNU \fBunexpand\fR (\fB\-a\fR for \fB\-all 1\fR).
+.CS
+::tclutils::tuexpand::unexpand "a\tb"                       ;# -> a\tb
+::tclutils::tuexpand::unexpand "abcdefg          x" -all 1  ;# -> abcdefg\t\t x
+.CE
+.SS Errors
+.TS
+l l.
+Case	\fB\-errorcode\fR
+\fBfile\fR: unknown \fB\-mode\fR	\fB{TCLUTILS TUEXPAND MODE}\fR
+\fBfile\fR: \fB\-mode\fR without value	\fB{TCLUTILS TUEXPAND OPTION}\fR
+unknown option (also \fB\-all\fR for \fBexpand\fR)	\fB{TCLUTILS COMMON OPTION \-name}\fR
+\fB\-tabs\fR not a positive integer	\fB{TCLUTILS COMMON INTEGER \-tabs}\fR
+\fB\-all\fR not a boolean	\fB{TCLUTILS COMMON BOOLEAN \-all}\fR
+.TE
 .SS CLI
 .CS
 tclsh bin/tuexpand.tcl -tabs 4 file.txt

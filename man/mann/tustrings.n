@@ -1,4 +1,4 @@
-.TH tustrings n 0.1 tclutils
+.TH tustrings n 0.2 tclutils
 .SH tclutils::tustrings
 .PP
 \fBtclutils::tustrings\fR extracts printable ASCII strings from binary data.
@@ -13,7 +13,15 @@ package require tclutils::tustrings
 .CE
 .SS Options
 .IP \(bu
-\fB\-minlength n\fR, default \fB4\fR
+\fB\-minlength n\fR, default \fB4\fR, a positive integer
+.PP
+There is no \fB\-encoding\fR option: printable means the bytes 32..126. The data must be bytes (every character 0..255).
+.SS Errors
+.CS
+{TCLUTILS COMMON OPTION -name}        unknown option, option without value
+{TCLUTILS COMMON INTEGER -minlength}  -minlength not a positive integer
+{TCLUTILS TUSTRINGS BYTES}            data contains a character above 255
+.CE
 .SS Example
 .CS
 set strings [::tclutils::tustrings::file test.pdf -minlength 6]

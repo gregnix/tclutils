@@ -1,4 +1,4 @@
-.TH tucomm n 0.1 tclutils
+.TH tucomm n 0.2 tclutils
 .SH tclutils::tucomm
 .PP
 \fBtucomm\fR provides a small \fBcomm\fR\-like comparison for sorted line lists or files. It returns a dictionary with three groups:
@@ -9,7 +9,7 @@ both   ;# lines present in both inputs
 .CE
 .SS Usage
 .CS
-package require tclutils::tucomm
+package require tclutils::tucomm 0.2
 
 set result [::tclutils::tucomm::files a.txt b.txt]
 dict get $result onlyA
@@ -25,8 +25,17 @@ dict get $result both
 .CE
 .SS Options
 .CS
--sort boolean      sort the inputs before comparing
--nocase boolean    compare case-insensitively
+-sort boolean      sort the inputs before comparing (default 0)
+-nocase boolean    compare case-insensitively (default 0)
+-separator s       formatColumns only: indent per column (default: tab)
 .CE
 .PP
-By default, \fBtucomm\fR expects sorted inputs, like Unix \fBcomm\fR.
+By default, \fBtucomm\fR expects sorted inputs, like Unix \fBcomm\fR. The comparison is a merge using \fBstring compare\fR (with \fB\-nocase 1\fR on the lower\-cased line), that is code\-point order like \fBcomm\fR and \fBsort\fR in the C locale. \fB\-sort 1\fR sorts both inputs in exactly that order (plain \fBlsort\fR, with \fB\-nocase 1\fR by the lower\-cased line), so equal lines always end up in \fBboth\fR, also with digits or mixed case:
+.CS
+::tclutils::tucomm::compareLines {a9 a10} {a10} -sort 1
+# -> onlyA a9 onlyB {} both a10
+.CE
+.PP
+Unsorted input without \fB\-sort 1\fR gives a wrong result without an error.
+.PP
+\fBformatColumns\fR writes the groups one after the other: first all \fBonlyA\fR lines without indent, then all \fBonlyB\fR lines with one separator, then all \fBboth\fR lines with two separators. Unlike \fBcomm\fR, the three groups are not merged into one sorted sequence. There is no trailing newline.

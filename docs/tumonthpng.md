@@ -17,10 +17,14 @@ package require tclutils::tumonthpng
 
 Options (defaults): `-theme default` (`default|dark|light`), `-scale 2`,
 `-today {}` (ISO `yyyy-mm-dd`; empty = system date), `-holidays {}` (dict
-date->name), `-notes {}` (dict date->text), `-firstweekday 1` (1 = Monday),
-`-showweeks 1` (ISO week-number column), `-weekdays {Mo Di Mi Do Fr Sa So}`,
+date->name), `-notes {}` (dict date->text), `-firstweekday 1` (1 = Monday ..
+7 = Sunday; shifts the grid *and* the weekday header),
+`-showweeks 1` (ISO week-number column), `-weekdays {Mo Di Mi Do Fr Sa So}`
+(always given Monday..Sunday; the header is rotated to `-firstweekday`),
 `-monthnames {Januar ... Dezember}`, `-title {}` (override the "Month Year"
 title). Cell colours follow the chosen theme, ported from monthcanvas.
+
+`year` is an integer 1..9999 (decimal; a leading zero is not octal).
 
 A selection overlay (for interactive front-ends) is also available:
 `-select {}` (list of ISO dates to highlight), `-selectstyle outline` (default),
@@ -65,6 +69,21 @@ three consecutive months side by side in one image (year rollover handled).
 `-weekdays`, `-monthnames`, `-firstweekday`) apply; holidays/notes/today are
 matched per date across every month. Each block carries its own "<Month> <year>"
 heading. Mirrors monthcanvas drawQuarter/drawYear.
+
+`-title TEXT` on `renderQuarter`/`renderYear` adds a heading band of
+18 x `-scale` pixels above the whole sheet, centred over the full width (drawn
+through `-textcmd` when given). Without `-title` the sheet has no extra band.
+
+## Errors
+
+| Error code | Cause |
+|---|---|
+| `{TCLUTILS TUMONTHPNG MONTH}` | month not 1..12 |
+| `{TCLUTILS TUMONTHPNG YEAR}` | year not an integer 1..9999 |
+| `{TCLUTILS TUMONTHPNG FIRSTWEEKDAY}` | `-firstweekday` not 1..7 |
+| `{TCLUTILS TUMONTHPNG THEME}` | unknown theme |
+| `{TCLUTILS TUMONTHPNG SELECT}` | bad `-select` entry |
+| `{TCLUTILS TUMONTHPNG SELECTSTYLE}` | `-selectstyle` not `outline`, `fill`, `both` |
 
 ## Notes
 

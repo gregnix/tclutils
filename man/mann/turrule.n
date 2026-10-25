@@ -1,9 +1,22 @@
-.TH turrule n 0.1 tclutils
+.TH turrule n 0.2 tclutils
 .SH tclutils::turrule
 .PP
 Expand iCalendar \fBRRULE\fR recurrence rules into concrete occurrences.
 .PP
-Supported subset of RFC 5545: \fBFREQ\fR DAILY/WEEKLY/MONTHLY/YEARLY, \fBINTERVAL\fR, \fBCOUNT\fR, \fBUNTIL\fR, \fBBYDAY\fR (weekday list for WEEKLY; ordinal forms like \fB1MO\fR / \fB\-1FR\fR for MONTHLY/YEARLY) and \fBBYMONTHDAY\fR (day list, negatives count from the month end). Not supported: \fBBYSETPOS\fR, \fBBYWEEKNO\fR, \fBBYYEARDAY\fR, \fBBYMONTH\fR, non\-default \fBWKST\fR. Date math is done in UTC for calendar stability.
+Supported subset of RFC 5545: \fBFREQ\fR DAILY/WEEKLY/MONTHLY/YEARLY, \fBINTERVAL\fR, \fBCOUNT\fR, \fBUNTIL\fR, \fBBYMONTH\fR, \fBBYDAY\fR and \fBBYMONTHDAY\fR, \fBWKST=MO\fR. Date math is done in UTC for calendar stability.
+.TS
+l l.
+Part	Meaning
+\fBBYDAY\fR	weekday list (\fBMO,WE\fR); with MONTHLY/YEARLY also ordinals (\fB1MO\fR, \fB4TH\fR, \fB\-1FR\fR)
+\fBBYMONTHDAY\fR	day list, negatives count from the month end; not with WEEKLY
+\fBBYMONTH\fR	month list 1–12; YEARLY expands to these months, other frequencies are limited to them
+.TE
+.PP
+YEARLY expands like this: with \fBBYMONTH\fR each listed month (a \fBBYDAY\fR ordinal counts within the month: \fBBYMONTH=11;BYDAY=4TH\fR is the fourth Thursday of November); without \fBBYMONTH\fR a \fBBYMONTHDAY\fR applies to every month, and a \fBBYDAY\fR ordinal counts within the year (\fBBYDAY=20MO\fR); without any of them the DTSTART month and day. When \fBBYDAY\fR and \fBBYMONTHDAY\fR are both given, only days matching both remain (\fBFREQ=MONTHLY;BYDAY=FR;BYMONTHDAY=13\fR).
+.PP
+\fBUNTIL\fR as a date (\fBUNTIL=20250120\fR) includes that whole day; with a time it is exact.
+.PP
+Any other rule part — \fBBYSETPOS\fR, \fBBYWEEKNO\fR, \fBBYYEARDAY\fR, \fBBYHOUR\fR, \fBBYMINUTE\fR, \fBBYSECOND\fR, \fBWKST\fR other than \fBMO\fR, an unknown name — raises \fB{TCLUTILS TURRULE UNSUPPORTED}\fR instead of being ignored.
 .SS API
 .CS
 ::tclutils::turrule::parse "FREQ=WEEKLY;BYDAY=TU,TH;COUNT=4"   ;# -> dict
@@ -19,4 +32,17 @@ Commands:
 .IP \(bu
 \fBoccurrences \-dtstart ISO \-rule RRULE ?\-from ISO? ?\-to ISO? ?\-count N?\fR → occurrence list. \fBCOUNT\fR is counted from DTSTART; \fB\-from/\-to\fR only window the output. The result must be bounded by \fB\-to\fR, \fB\-count\fR, \fBCOUNT\fR or \fBUNTIL\fR (else \fB{TCLUTILS TURRULE UNBOUNDED}\fR). Date\-only DTSTART yields dates; a datetime DTSTART preserves the time of day.
 .IP \(bu
-\fBeventsInRange ics fromIso toIso\fR → list of \fB{uid summary start}\fR for every VEVENT occurrence in range (uses \fBtclutils::tuical\fR to parse).
+\fBeventsInRange ics fromIso toIso\fR → list of \fB{uid summary start}\fR for every VEVENT occurrence in range (uses \fBtclutils::tuical\fR to parse). An RRULE with an unsupported part raises the error of \fBoccurrences\fR.
+.SS Errors
+.PP
+\fB{TCLUTILS TURRULE <REASON>}\fR:
+.TS
+l l.
+Reason	When
+\fBFREQ\fR	no \fBFREQ\fR, or an unsupported one
+\fBUNBOUNDED\fR	no \fB\-to\fR, \fB\-count\fR, \fBCOUNT\fR or \fBUNTIL\fR
+\fBDATE\fR	a date that cannot be read
+\fBUNSUPPORTED\fR	a rule part outside the subset above
+\fBBYDAY\fR	unknown weekday code, ordinal 0 or above 53, ordinal with DAILY/WEEKLY
+\fBVALUE\fR	\fBBYMONTH\fR outside 1–12, \fBBYMONTHDAY\fR outside ±1–31 or not an integer
+.TE

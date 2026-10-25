@@ -399,4 +399,78 @@ test tudiagram-9.10 {_edgeLabelPoint returns a point at the fraction with a left
     list [expr {round($x)}] [expr {round($y)}] [expr {round($nx)}] [expr {round($ny)}]
 } -result {0 40 -1 0}
 
+# --- fixes 0.5: title is drawn, unknown theme is an error ------------------------
+
+proc titleDoc {title} {
+    set d [D::create -title $title -direction LR]
+    set d [D::addNode $d A -label Eingang]
+    set d [D::addNode $d B -label Lager]
+    D::addEdge $d A B
+}
+
+test tudiagram-10.1 {the title text appears in the SVG} -body {
+    expr {[string first ZZTITLE [D::toSvg [titleDoc ZZTITLE]]] >= 0}
+} -result 1
+test tudiagram-10.2 {layout moves the nodes down by the title band} -body {
+    set a [D::layout [titleDoc ""]]
+    set b [D::layout [titleDoc Lager]]
+    set ya [dict get [lindex [dict get $a nodes] 0] y]
+    set yb [dict get [lindex [dict get $b nodes] 0] y]
+    list [expr {$yb - $ya}] [dict get $b meta titleH] \
+        [expr {[dict get $b meta height] - [dict get $a meta height]}]
+} -result {26 26 26}
+test tudiagram-10.3 {edge points move down with the nodes} -body {
+    set a [D::layout [titleDoc ""]]
+    set b [D::layout [titleDoc T]]
+    expr {[lindex [dict get [lindex [dict get $b edges] 0] points] 1]
+        - [lindex [dict get [lindex [dict get $a edges] 0] points] 1]}
+} -result 26.0
+test tudiagram-10.4 {a long title widens the canvas} -body {
+    set t [string repeat x 80]
+    dict get [D::layout [titleDoc $t]] meta width
+} -result 1000
+test tudiagram-10.5 {no title: no band} -body {
+    dict get [D::layout [titleDoc ""]] meta titleH
+} -result 0
+test tudiagram-10.6 {a titled model renders valid PNG} -constraints tupngdraw -body {
+    binary scan [D::toPng [titleDoc Lager]] H8 s
+    set s
+} -result 89504e47
+test tudiagram-10.7 {theme with an unknown name raises THEME} -body {
+    catch {D::theme neon} m o
+    list [dict get $o -errorcode] [string match {*default, pipeline, mono*} $m]
+} -result {{TCLUTILS TUDIAGRAM THEME} 1}
+test tudiagram-10.8 {create -theme with an unknown name raises THEME} -body {
+    catch {D::create -theme neon} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDIAGRAM THEME}
+test tudiagram-10.9 {setMeta -theme with an unknown name raises THEME} -body {
+    catch {D::setMeta [D::create] -theme neon} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDIAGRAM THEME}
+test tudiagram-10.10 {known names and colour dicts still work} -body {
+    list [dict get [D::theme mono] fill] [dict get [D::theme {fill #123456}] stroke] \
+        [dict get [D::setMeta [D::create] -theme pipeline] meta theme]
+} -result [list #ffffff #52525b pipeline]
+
+
+# --- unreleased: title, group ids that look like numbers stay as text -------
+test tudiagram-11.1 {a title like 0x1F appears in the SVG as written} -body {
+    set svg [D::toSvg [titleDoc 0x1F]]
+    expr {[string first 0x1F $svg] >= 0}
+} -result 1
+test tudiagram-11.2 {a group id like 010 lays out like any other group id} -body {
+    set r {}
+    foreach gid {g010 010} {
+        set d [D::create -direction LR]
+        foreach n {a b c} { set d [D::addNode $d $n] }
+        set d [D::addEdge $d a b]
+        set d [D::addEdge $d b c]
+        set d [D::addGroup $d $gid -label G -members {a c}]
+        set l [D::layout $d]
+        lappend r [lmap n [dict get $l nodes] {list [dict get $n x] [dict get $n y]}]
+    }
+    expr {[lindex $r 0] eq [lindex $r 1]}
+} -result 1
+
 cleanupTests

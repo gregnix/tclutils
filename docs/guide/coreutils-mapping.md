@@ -5,7 +5,10 @@ This file maps common Unix commands to the corresponding `tclutils` modules.
 | Unix tool | tclutils package | Status |
 |---|---|---|
 | find | `tclutils::tufind` | implemented |
+| file | `tclutils::tufile` | implemented type detection |
 | grep | `tclutils::tugrep` | implemented |
+| awk | `tclutils::tuawk` | implemented basis |
+| cal | `tclutils::tucal` | implemented text calendars |
 | sed | `tclutils::tused` | implemented subset |
 | wc | `tclutils::tuwc` | implemented |
 | cat | `tclutils::tucat` | implemented |
@@ -15,7 +18,7 @@ This file maps common Unix commands to the corresponding `tclutils` modules.
 | uniq | `tclutils::tuuniq` | implemented |
 | cut | `tclutils::tucut` | implemented field mode |
 | paste | `tclutils::tupaste` | implemented |
-| join | `tclutils::tujoin` | implemented inner join |
+| join | `tclutils::tujoin` | implemented inner, outer and anti join |
 | diff | `tclutils::tudiff` | implemented line/unified/context/directory |
 | patch | `tclutils::tupatch` | implemented unified diff applier |
 | cmp | `tclutils::tucmp` | implemented |
@@ -63,18 +66,15 @@ Additional developer helpers:
 | CSV | `tclutils::tucsv` | implemented |
 | JSON | `tclutils::tujson` | helper implemented, not full parser |
 | XML | `tclutils::tuxml` | helper implemented, not DOM/XPath |
-
 | Binary primitives | `tclutils::tubin` | implemented |
 | Hex editing | `tclutils::tuhexedit` | implemented library helper |
-
+| agrep | `tclutils::tuagrep` | approximate grep / fuzzy search |
 
 ## Tcl-specific archive helpers
 
 | Tclutils | Purpose |
 |---|---|
-| tuzipfs | Tcl 9 ZipFS mount/list/read helper |
-
-| agrep | tuagrep | approximate grep / fuzzy search |
+| `tuzipfs` | Tcl 9 ZipFS mount/list/read, and since 0.2 the zipkit image primitives (`rcopy`, `copyStdlib`, `mkimg`, `buildImage`) |
 
 
 Document helpers:

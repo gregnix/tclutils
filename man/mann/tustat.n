@@ -1,4 +1,4 @@
-.TH tustat n 0.1 tclutils
+.TH tustat n 0.2 tclutils
 .SH tclutils::tustat
 .PP
 \fBtustat\fR provides stat\-like file metadata helpers around Tcl's \fBfile stat\fR.
@@ -16,4 +16,8 @@ Commands:
 .IP \(bu
 \fBfiles paths\fR returns one metadata dict per path.
 .IP \(bu
-\fBformat statDict ?\-timeformat fmt?\fR formats selected fields.
+\fBrender statDict ?\-timeformat fmt?\fR formats selected fields (\fBpath type size mtime mode ino dev uid gid\fR).
+.PP
+The dict holds the keys of \fBfile stat\fR (\fBatime blksize blocks ctime dev gid ino mode mtime nlink size uid\fR) plus \fBmodeOctal\fR (mode in octal, e.g. \fB100644\fR), \fBpath\fR, \fBnormalized\fR and \fBtype\fR. \fBmode\fR itself is decimal.
+.PP
+Symbolic links are not followed, like \fBstat\fR without \fB\-L\fR: for a link the values come from \fBfile lstat\fR (the link itself), and the extra key \fBtarget\fR holds \fBfile readlink\fR. A dangling link is therefore no error. A missing path raises \fB{POSIX ENOENT ...}\fR.

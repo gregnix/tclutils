@@ -14,7 +14,7 @@ tulayout::snap mm ?-grid 5?
 tulayout::isAutoY block                         ;# y==0 or lockedY
 tulayout::normalizeBlock block ?-defaults dict?
 tulayout::validateBlocks blocks                   ;# id -> block dict
-tulayout::ensureBlocks blocks definitions         ;# fill missing ids
+tulayout::ensureBlocks blocks definitions         ;# merge with definitions
 tulayout::blockOrder blocks ?definitions?
 tulayout::blockRect block ?-height mm?
 tulayout::mergeBlocks base preset ?-keys {x y w show}?
@@ -34,6 +34,30 @@ Each block is a dict. Common keys:
 | `show` | `1` visible, `0` hidden |
 | `lockedY` | `1` = auto vertical placement (`y` stays `0`) |
 
+`normalizeBlock` keeps only `label x y w h show lockedY`, takes missing keys
+from `-defaults` (default `x 0 y 0 w 40 h 8 show 1`), turns `x y w h` into
+doubles and `show` into `0`/`1`. A non-numeric `x`/`y`/`w`/`h` or a
+non-boolean `show` raises `{TCLUTILS TULAYOUT VALUE}` (`bad <key> '<value>'`).
+
+`validateBlocks` normalises every block and checks it: `blocks` must be a
+non-empty dict (`BLOCKS`), ids must not be empty (`BLOCKID`), values must be
+numbers (`VALUE`, `block '<id>': bad <key> '<value>'`) and `x`, `y`, `w`, `h`
+must not be negative (`VALUE`).
+
+`ensureBlocks` merges a (possibly empty) `blocks` dict with `definitions`
+(id -> block dict). For a block in `blocks` a missing key comes from its
+definition, then from the standard values above; a value in the block wins.
+An id that only appears in `definitions` is created from the definition alone.
+The result is checked like `validateBlocks`. With an empty `blocks` every
+block comes from the definitions:
+
+```tcl
+tulayout::ensureBlocks {kopf {x 20}} {kopf {w 170 h 15}}
+;# -> kopf {x 20.0 y 0.0 w 170.0 h 15.0 show 1}
+tulayout::ensureBlocks {} {kopf {w 170 h 15}}
+;# -> kopf {w 170.0 h 15.0}
+```
+
 `mergeBlocks` copies only the keys listed in `-keys` (default `{x y w show}`) from
 `preset` into `base` for matching block ids. This is the usual “apply layout
 preset to a live document” operation.
@@ -46,8 +70,32 @@ set doc [tulayout::mergeLayout $doc $preset]
 
 ### Papers
 
-Supported names: `a4`, `a5`, `letter`. Unknown paper raises
+Supported names: `a4` (210 × 297), `a5` (148 × 210), `letter` (216 × 279),
+case-insensitive. A free size in mm is given as a two-element list
+`{width height}` or as `WxH` / `WXH` (e.g. `54x56`, `80.5X200`); both parts
+must be positive numbers. Only `landscape` swaps width and height. Unknown
+names, malformed sizes such as `1.2.3x5` and non-positive sizes raise
 `{TCLUTILS TULAYOUT PAPER}`.
+
+### Options
+
+All commands with options (`snap`, `normalizeBlock`, `blockRect`,
+`mergeBlocks`, `mergeLayout`, `fitScale`) reject an unknown option or an
+option without a value with `{TCLUTILS TULAYOUT OPTION}`.
+
+### Error codes
+
+| Code | Raised by |
+|------|-----------|
+| `{TCLUTILS TULAYOUT PAPER}` | `pageSize`: unknown paper, malformed or non-positive size |
+| `{TCLUTILS TULAYOUT SCALE}` | `mmToPx`, `pxToMm`: scale not a positive number |
+| `{TCLUTILS TULAYOUT GRID}` | `snap`: grid not a positive number |
+| `{TCLUTILS TULAYOUT OPTION}` | unknown option, option without a value |
+| `{TCLUTILS TULAYOUT BLOCKS}` | `validateBlocks`: `blocks` empty or not a dict; `ensureBlocks`: `blocks`, `definitions` or a block not a dict |
+| `{TCLUTILS TULAYOUT BLOCKID}` | empty block id |
+| `{TCLUTILS TULAYOUT VALUE}` | non-numeric `x y w h`, non-boolean `show`, negative `x y w h` |
+| `{TCLUTILS TULAYOUT LAYOUT}` | `mergeLayout`: target or preset without a `blocks` key |
+| `{TCLUTILS TULAYOUT VIEWPORT}` | `fitScale`: viewport minus twice the margin not positive |
 
 ### Example
 

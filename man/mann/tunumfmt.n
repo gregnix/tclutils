@@ -1,4 +1,4 @@
-.TH tunumfmt n 0.1 tclutils
+.TH tunumfmt n 0.2 tclutils
 .SH tclutils::tunumfmt
 .PP
 \fBnumfmt\fR\-like human\-readable number formatting in pure Tcl (SI and IEC).
@@ -10,7 +10,7 @@
 ::tclutils::tunumfmt::file      path   ?-mode to|from? ?...?
 .CE
 .PP
-\fBtoHuman\fR scales a number to a unit suffix (SI uses 1000, IEC 1024), e.g. \fB1500\fR becomes \fB1.5K\fR and \fB1536 \-to iec\fR becomes \fB1.5Ki\fR. \fBfromHuman\fR parses such strings back; \fB\-from auto\fR treats a trailing \fBi\fR as IEC. Default precision is 1 decimal; values below the first unit are emitted as integers.
+\fBtoHuman\fR scales a number to a unit suffix (SI uses 1000, IEC 1024), e.g. \fB1500\fR becomes \fB1.5K\fR and \fB1536 \-to iec\fR becomes \fB1.5Ki\fR. \fBfromHuman\fR parses such strings back; \fB\-from auto\fR treats an \fBi\fR right after the unit letter as IEC, so \fB2Ki\fR and \fB2KiB\fR are 2048 while \fB2K\fR and \fB2KB\fR are 2000. Default precision is 1 decimal; values below the first unit are emitted as integers.
 .SS CLI
 .CS
 printf '1500\n1048576\n' | tclsh bin/tunumfmt.tcl

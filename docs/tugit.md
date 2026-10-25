@@ -9,7 +9,7 @@ directly.
 ## Package
 
 ```tcl
-package require tclutils::tugit 0.1
+package require tclutils::tugit 0.2
 ```
 
 ## Commands

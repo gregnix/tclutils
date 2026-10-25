@@ -1,4 +1,4 @@
-.TH tufind n 0.1 tclutils
+.TH tufind n 0.2 tclutils
 .SH tclutils::tufind
 .PP
 Portable file finder in pure Tcl.

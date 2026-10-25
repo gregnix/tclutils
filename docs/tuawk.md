@@ -8,7 +8,7 @@ are Tcl scripts.
 ## Package
 
 ```tcl
-package require tclutils::tuawk 0.1
+package require tclutils::tuawk 0.2
 ```
 
 ## API
@@ -21,12 +21,23 @@ package require tclutils::tuawk 0.1
 - Pattern: empty matches always; `/regex/` matches `$0`; otherwise a Tcl `expr`
   (e.g. `$3 > 100`, `$NF == 0`). Special `BEGIN` / `END` run before/after records.
 - Action: a Tcl script. An empty action means `emit $0`.
-- Fields: `$0` (whole record), `$1`..`$NF`, `$NR`. Variables set in actions persist
-  across records (like awk globals), ideal for aggregation with BEGIN/END.
+- Fields: `$0` (whole record), `$1`..`$NF`, `$NR`. `NR` and `NF` start at 0, so
+  they are set in `BEGIN` and in `END` even without any record.
+- Variables set in actions persist across records (like awk globals), ideal for
+  aggregation with BEGIN/END. All rules of one call run in one private frame
+  (a coroutine in a sandbox namespace that is deleted afterwards): `set x`
+  always creates a rule variable and never touches a global `x`, under
+  Tcl 8.6 and 9 alike. `variable x` is not needed (but still works).
+- In an action, `break` skips the remaining rules for the current record (like
+  awk `next`); `continue` goes on with the next rule.
 - `emit args...` prints (joined by OFS, terminated by ORS).
 
 Options: `-fs` (default whitespace runs; one char = `split`; multiple = regex),
 `-ofs` (default `" "`), `-ors` (default `"\n"`).
+
+Errors: unknown option or an option without value `TCLUTILS TUAWK OPTION`;
+an odd `rules` list `TCLUTILS TUAWK RULES`. Errors in patterns and actions
+pass through unchanged (a field beyond `NF`: `TCL LOOKUP VARNAME n`).
 
 ```tcl
 tuawk::run "a b c\nd e f" {{} {emit $2}}              ;# -> "b\ne\n"

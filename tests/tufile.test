@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tufile 0.1
+package require tclutils::tufile 0.2
 
 set tmp [makeDirectory tufile]
 
@@ -110,4 +110,15 @@ test tufile-5.1 {detects a real .odt by its offset-30 mimetype marker} -body {
 } -result {odt application/vnd.oasis.opendocument.text}
 
 ::tclutils::tufile::reset
+
+# --- unreleased: type/mime return registered text unchanged -----------------
+test tufile-6.1 {type and mime keep a numeric-looking name and mime} -setup {
+    ::tclutils::tufile::register 010 -ascii QQZZ -mime 1e3
+    set f [writeBytes [file join $tmp num.bin] "QQZZrest"]
+} -body {
+    list [::tclutils::tufile::type $f] [::tclutils::tufile::mime $f]
+} -cleanup {
+    ::tclutils::tufile::forget 010
+} -result {010 1e3}
+
 cleanupTests

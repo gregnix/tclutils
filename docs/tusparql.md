@@ -34,7 +34,17 @@ Options:
 - `-method get|post` (default get; use post for long queries that would overflow
   a GET URL).
 - `-timeout ms` (default 30000).
-- `-headers {k v ...}` — extra request headers (`Accept` is set automatically).
+- `-accept type` (default `application/sparql-results+json`) — the `Accept`
+  header. The answer is always parsed as SPARQL Results JSON.
+- `-headers {k v ...}` — extra request headers. An `Accept` among them (any
+  case) replaces `-accept`; the header is sent once.
+
+With `-method get` the query goes into the URL as `query=...&format=json`. An
+endpoint that already carries a query string (`.../sparql?key=1`) gets the
+parameters appended with `&`.
+
+When the response has no `head.vars`, the row dicts use the variables of all
+bindings (first-seen order), not only those of the first row.
 
 Localized labels come from the `wikibase:label` service
 (`bd:serviceParam wikibase:language "..."`). When matching by Wikipedia article,

@@ -19,4 +19,12 @@ Commands:
 - `serialize bookmarks ?-title T?` → Netscape bookmark HTML, grouping bookmarks
   into nested folders by their `folder` path.
 
-Parsing targets the standard export layout (one `<DT>` per line).
+`parse` reads the document tag by tag, so the standard export layout (one
+`<DT>` per line) and compact files (several links, or `<H3>`/`<DL>` and links,
+on one line) give the same result; every `<A>…</A>` is one bookmark. Entities
+in the title and in the `HREF`, `TAGS` and `ADD_DATE` values are unescaped;
+`TAGS` is split at commas.
+
+`serialize` escapes `&`, `<`, `>` in titles and folder names, and additionally
+`"` (as `&quot;`) in the `HREF`, `TAGS` and `ADD_DATE` attribute values. Every
+header line starts at column 0.

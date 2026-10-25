@@ -66,4 +66,50 @@ test tupngpad-3.1 {batch: uniform size, all opaque, margin honoured} -setup {
     list [dict get $res size] [lsort -unique $sizes]
 } -cleanup { removeDirectory pin; removeDirectory pout } -result {{18 16} {{18 16}}}
 
+# --- 0.2: option checks, alpha kept on a transparent background ----------
+test tupngpad-4.1 {padTo: unknown -align -> COMMON VALUE} -body {
+    catch {::tclutils::tupngpad::padTo [blk 2 2 0 0 2 2] 2 2 4 4 -align middle} e o
+    list [dict get $o -errorcode] [string match {*Known: center nw*} $e]
+} -result {{TCLUTILS COMMON VALUE -align} 1}
+
+test tupngpad-4.2 {batch: -trim not boolean -> TUPNGPAD TRIM} -body {
+    catch {::tclutils::tupngpad::batch {} [file join [temporaryDirectory] x] \
+        -trim maybe} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPNGPAD TRIM}
+
+test tupngpad-4.3 {batch: -square not boolean -> TUPNGPAD SQUARE} -body {
+    catch {::tclutils::tupngpad::batch {} [file join [temporaryDirectory] x] \
+        -square 2x} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUPNGPAD SQUARE}
+
+test tupngpad-4.4 {batch: unknown -align -> COMMON VALUE, before reading} -body {
+    catch {::tclutils::tupngpad::batch {/nonexistent/a.png} \
+        [file join [temporaryDirectory] x] -align middle} e o
+    dict get $o -errorcode
+} -result {TCLUTILS COMMON VALUE -align}
+
+test tupngpad-4.5 {batch: bad -size -> TUPNGPAD SIZE} -body {
+    lmap sz {{10} {0 5} {a 5} {5 5 5}} {
+        catch {::tclutils::tupngpad::batch {} \
+            [file join [temporaryDirectory] x] -size $sz} e o
+        dict get $o -errorcode
+    }
+} -result [lrepeat 4 {TCLUTILS TUPNGPAD SIZE}]
+
+test tupngpad-4.6 {padTo: half-transparent pixel stays so on transparent bg} -body {
+    set png [::tclutils::tupngpad::padTo [binary format cu* {255 0 0 128}] \
+        1 1 1 1 -background transparent]
+    binary scan [dict get [::tclutils::tupng::decode $png] rgba] cu* px
+    set px
+} -result {255 0 0 128}
+
+test tupngpad-4.7 {padTo: half-transparent pixel blends on white} -body {
+    set png [::tclutils::tupngpad::padTo [binary format cu* {255 0 0 128}] \
+        1 1 1 1]
+    binary scan [dict get [::tclutils::tupng::decode $png] rgba] cu* px
+    set px
+} -result {255 127 127 255}
+
 cleanupTests

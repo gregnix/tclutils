@@ -16,6 +16,14 @@ package require tclutils::tuxargs 0.1
 ::tclutils::tuxargs::command items commandPrefix ?options?
 ```
 
+## Options
+
+```text
+-n count         at most count items per batch (default 100)
+-skipempty bool  drop empty items first (default 1)
+-collect bool    apply/command: collect the results (default 1)
+```
+
 ## Example
 
 ```tcl

@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::turrule 0.1
+package require tclutils::turrule 0.2
 
 proc occ {args} { ::tclutils::turrule::occurrences {*}$args }
 
@@ -56,5 +56,86 @@ test turrule-5.1 {eventsInRange via tuical} -body {
     set evs [::tclutils::turrule::eventsInRange $ics 2025-01-01 2025-12-31]
     list [llength $evs] [dict get [lindex $evs 0] summary] [dict get [lindex $evs 0] start]
 } -result {4 Standup 2025-10-02T09:00:00}
+
+test turrule-6.1 {yearly BYMONTH + BYDAY ordinal (4th Thursday of November)} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=YEARLY;BYMONTH=11;BYDAY=4TH;COUNT=3"
+} -result {2025-11-27 2026-11-26 2027-11-25}
+
+test turrule-6.2 {yearly BYMONTH + BYDAY -1SU (last Sunday of March)} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU;COUNT=2"
+} -result {2025-03-30 2026-03-29}
+
+test turrule-6.3 {yearly BYMONTH + BYMONTHDAY} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=YEARLY;BYMONTH=1,7;BYMONTHDAY=15;COUNT=3"
+} -result {2025-01-15 2025-07-15 2026-01-15}
+
+test turrule-6.4 {yearly BYMONTHDAY without BYMONTH: every month} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=YEARLY;BYMONTHDAY=-1;COUNT=3"
+} -result {2025-01-31 2025-02-28 2025-03-31}
+
+test turrule-6.5 {yearly BYDAY ordinal without BYMONTH counts in the year} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=YEARLY;BYDAY=20MO;COUNT=2"
+} -result {2025-05-19 2026-05-18}
+
+test turrule-6.6 {yearly BYMONTH alone keeps the DTSTART day} -body {
+    occ -dtstart 2025-03-10 -rule "FREQ=YEARLY;BYMONTH=3,9;COUNT=3"
+} -result {2025-03-10 2025-09-10 2026-03-10}
+
+test turrule-6.7 {BYDAY limits BYMONTHDAY (Friday the 13th)} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=MONTHLY;BYDAY=FR;BYMONTHDAY=13;COUNT=2"
+} -result {2025-06-13 2026-02-13}
+
+test turrule-6.8 {BYMONTH limits a weekly rule} -body {
+    occ -dtstart 2025-01-27 -rule "FREQ=WEEKLY;BYDAY=MO;BYMONTH=2;COUNT=3"
+} -result {2025-02-03 2025-02-10 2025-02-17}
+
+test turrule-7.1 {UNTIL as a date includes that whole day} -body {
+    occ -dtstart 2025-01-06T09:00:00 -rule "FREQ=WEEKLY;UNTIL=20250120"
+} -result {2025-01-06T09:00:00 2025-01-13T09:00:00 2025-01-20T09:00:00}
+
+test turrule-7.2 {UNTIL with a time stays exact} -body {
+    occ -dtstart 2025-01-06T09:00:00 -rule "FREQ=WEEKLY;UNTIL=20250120T085959Z"
+} -result {2025-01-06T09:00:00 2025-01-13T09:00:00}
+
+test turrule-8.1 {unsupported rule parts raise UNSUPPORTED} -body {
+    set out {}
+    foreach r {"FREQ=MONTHLY;BYSETPOS=-1;BYDAY=MO;COUNT=2"
+               "FREQ=YEARLY;BYWEEKNO=20;COUNT=2"
+               "FREQ=YEARLY;BYYEARDAY=100;COUNT=2"
+               "FREQ=DAILY;BYHOUR=9;COUNT=2"
+               "FREQ=WEEKLY;WKST=SU;COUNT=2"
+               "FREQ=WEEKLY;BYMONTHDAY=1;COUNT=2"} {
+        catch {occ -dtstart 2025-01-01 -rule $r} e o
+        lappend out [lindex [dict get $o -errorcode] 2]
+    }
+    set out
+} -result {UNSUPPORTED UNSUPPORTED UNSUPPORTED UNSUPPORTED UNSUPPORTED UNSUPPORTED}
+
+test turrule-8.2 {WKST=MO is accepted} -body {
+    occ -dtstart 2025-01-06 -rule "FREQ=WEEKLY;WKST=MO;COUNT=1"
+} -result {2025-01-06}
+
+test turrule-8.3 {unknown weekday code raises BYDAY} -body {
+    set out {}
+    foreach r {"FREQ=WEEKLY;BYDAY=XX;COUNT=2" "FREQ=MONTHLY;BYDAY=1XX;COUNT=2"
+               "FREQ=WEEKLY;BYDAY=1MO;COUNT=2" "FREQ=MONTHLY;BYDAY=0MO;COUNT=2"} {
+        catch {occ -dtstart 2025-01-01 -rule $r} e o
+        lappend out [dict get $o -errorcode]
+    }
+    set out
+} -result {{TCLUTILS TURRULE BYDAY} {TCLUTILS TURRULE BYDAY} {TCLUTILS TURRULE BYDAY} {TCLUTILS TURRULE BYDAY}}
+
+test turrule-8.4 {invalid BYMONTH / BYMONTHDAY raise VALUE} -body {
+    set out {}
+    foreach r {"FREQ=YEARLY;BYMONTH=13;COUNT=2" "FREQ=MONTHLY;BYMONTHDAY=x;COUNT=2"} {
+        catch {occ -dtstart 2025-01-01 -rule $r} e o
+        lappend out [dict get $o -errorcode]
+    }
+    set out
+} -result {{TCLUTILS TURRULE VALUE} {TCLUTILS TURRULE VALUE}}
+
+test turrule-8.5 {daily BYMONTHDAY filters} -body {
+    occ -dtstart 2025-01-01 -rule "FREQ=DAILY;BYMONTHDAY=1,-1;COUNT=3"
+} -result {2025-01-01 2025-01-31 2025-02-01}
 
 cleanupTests

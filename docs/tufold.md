@@ -26,4 +26,18 @@ puts [::tclutils::tufold::file README.md -width 72 -words 1]
 -words boolean     prefer breaking at blanks when possible
 ```
 
-`-words 1` is a small convenience mode. It is not a full formatter.
+`-words 1` is a small convenience mode. It is not a full formatter. A line
+longer than `-width` is broken at the last blank at or before column
+`-width`+1. The blanks at the break are dropped: trailing blanks of the line
+and leading blanks of the next one. A word longer than `-width` is cut hard.
+
+Difference from Unix `fold -s`: `fold -s` keeps the blanks, breaks after the
+last blank within the width and keeps leading blanks of the next line. For
+`"ab   cd"` with width 3, `fold -s` gives `"ab "`, `"  "`, `"cd"`; `tufold`
+gives `ab`, `cd`.
+
+## Errors
+
+`-width` not a positive integer raises `{TCLUTILS COMMON INTEGER -width}`,
+`-words` not a boolean `{TCLUTILS COMMON BOOLEAN -words}`, an unknown option
+`{TCLUTILS COMMON OPTION -name}`.

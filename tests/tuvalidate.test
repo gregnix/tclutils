@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuvalidate 0.1
+package require tclutils::tuvalidate 0.2
 
 test tuvalidate-email-1 {valid emails} -body {
     list [::tclutils::tuvalidate::email a.b+c@example.co.uk] \
@@ -47,5 +47,17 @@ test tuvalidate-pattern-1 {pattern match + bad regex} -body {
 test tuvalidate-inlist-1 {membership} -body {
     list [::tclutils::tuvalidate::inList b {a b c}] [::tclutils::tuvalidate::inList z {a b c}]
 } -result {1 0}
+
+test tuvalidate-port-2 {only ASCII decimal digits, same under 8.6 and 9} -body {
+    lmap p {80 080 0x50 { 80} {80 } +80 0 00 65535 65536 0000000080 1e2 ""} {
+        ::tclutils::tuvalidate::port $p
+    }
+} -result {1 1 0 0 0 0 0 0 1 0 1 0 0}
+
+test tuvalidate-ipv4-2 {strict octets: no leading zeros} -body {
+    lmap a {010.0.0.1 10.0.0.01 0.0.0.0 10.00.0.1 255.255.255.255 { 1.2.3.4}} {
+        ::tclutils::tuvalidate::ipv4 $a
+    }
+} -result {0 0 1 0 1 0}
 
 cleanupTests

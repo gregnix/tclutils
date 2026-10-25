@@ -247,9 +247,13 @@ test tutask-2.8 {cancel inside a running pipe kills the process} -constraints un
     set r
 } -result {cancelled 0 1}
 
+# ping writes in the console code page (cp850 on German Windows, 0x81 = u
+# umlaut), which the system encoding cp1252 does not have: under Tcl 9 the
+# strict default profile fails with EILSEQ before cancel/timeout. iso8859-1
+# accepts every byte, so the tests do not depend on the Windows language.
 test tutask-2.8w {cancel inside a running pipe kills the process (taskkill)} -constraints windows -body {
     set t0 [clock milliseconds]
-    set t [::tt::spawn apply {{} { ::tclutils::tutask::await [::tclutils::tutask::pipe {ping -n 30 127.0.0.1}] }}]
+    set t [::tt::spawn apply {{} { ::tclutils::tutask::await [::tclutils::tutask::pipe {ping -n 30 127.0.0.1} -encoding iso8859-1] }}]
     pause 300
     $t cancel
     set r [list [$t state] [dict get [::tt::stats] pipes] \
@@ -343,7 +347,7 @@ test tutask-4.4 {pipe: a timeout kills the child} -constraints unix -body {
 test tutask-4.4w {pipe: a timeout kills the child (taskkill)} -constraints windows -body {
     set t0 [clock milliseconds]
     set r [::tt::run apply {{} {
-        catch {::tclutils::tutask::await [::tclutils::tutask::pipe {ping -n 30 127.0.0.1}] -timeout 300} m o
+        catch {::tclutils::tutask::await [::tclutils::tutask::pipe {ping -n 30 127.0.0.1} -encoding iso8859-1] -timeout 300} m o
         dict get $o -errorcode
     }}]
     list $r [expr {[clock milliseconds] - $t0 < 5000}] [dict get [::tt::stats] pipes]

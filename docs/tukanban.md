@@ -63,8 +63,9 @@ automatically with the column count and the tallest card stack when `-width` /
 `-width` (default `0` = auto from column count), `-height` (default `0` = auto
 from the tallest stack), `-fontfile` (a TTF for real-font labels via `Glyphs`;
 PNG only -- otherwise the built-in 6x8 bitmap font with German umlauts via real
-codepoints), `-scale` (positive integer; enlarges the PNG canvas, SVG ignores
-it).
+codepoints), `-scale` (positive integer; on PNG the canvas is `-width`×`-scale` by
+`-height`×`-scale`; on SVG the canvas keeps `-width` × `-height` and text, lines
+and spacing grow by the factor).
 
 ## Usage
 

@@ -1,4 +1,4 @@
-.TH tuprovider-sftp n 0.1 tclutils
+.TH tuprovider-sftp n 0.2 tclutils
 .SH "tuprovider::sftp \-\- SFTP provider"
 .PP
 An SFTP backend for the \fBtuprovider\fR interface, built on the OpenSSH \fBsftp\fR client run in batch mode (\fBsftp \-b\fR).

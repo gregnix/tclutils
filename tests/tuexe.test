@@ -89,4 +89,9 @@ test tuexe-3.1 {unknown option errors} -body {
     dict get $o -errorcode
 } -result {TCLUTILS TUEXE OPTION}
 
+test tuexe-3.2 {option without value -> OPTION} -body {
+    catch {::tclutils::tuexe::find sh -dirs} m o
+    list $m [dict get $o -errorcode]
+} -result {{option '-dirs' requires a value} {TCLUTILS TUEXE OPTION}}
+
 cleanupTests

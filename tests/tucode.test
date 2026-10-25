@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tucode 0.1
+package require tclutils::tucode 0.2
 
 test tucode-1.1 {ascii contains NUL and DEL names} -body {
     set out [::tclutils::tucode::ascii]
@@ -38,7 +38,7 @@ test tucode-1.7 {out of range rejected} -body {
 
 test tucode-1.8 {compact hex matrix} -body {
     set out [::tclutils::tucode::render 0 31 -compact 1]
-    expr {[string match *0123456789ABCDEF* $out] && [string match *00* $out]}
+    expr {[string match "*0  1  2*E  F*" $out] && [string match *00* $out]}
 } -result 1
 
 test tucode-1.9 {signs arrows unicode} -body {
@@ -53,5 +53,70 @@ test tucode-1.11 {groups lists new sign groups} -body {
     set g [::tclutils::tucode::groups]
     expr {"arrows" in $g && "boxdraw" in $g}
 } -result 1
+
+test tucode-2.1 {signs takes options after groups} -body {
+    ::tclutils::tucode::signs currency -showName 0
+} -result "Currency symbols
+----------------------------------------
+ 36 24  \$
+162 A2  \u00a2
+163 A3  \u00a3
+164 A4  \u00a4
+165 A5  \u00a5"
+
+test tucode-2.2 {signs takes options before groups} -body {
+    string match *cent* [::tclutils::tucode::signs -showName 0 currency]
+} -result 0
+
+test tucode-2.3 {signs option without value} -body {
+    catch {::tclutils::tucode::signs german -showName} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON OPTION -showName}
+
+test tucode-2.4 {lookup code point forms} -body {
+    set out {}
+    foreach v {U+00E4 u+e4 0xE4 0xe4 228 "\u00e4"} {
+        lappend out [dict get [::tclutils::tucode::lookup $v] code]
+    }
+    set out
+} -result {228 228 228 228 228 228}
+
+test tucode-2.5 {lookup empty value} -body {
+    catch {::tclutils::tucode::lookup ""} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUCODE LOOKUP}
+
+test tucode-2.6 {lookup character above 255 is an error on 8.6 and 9} -body {
+    set out {}
+    foreach v {"\u20ac" U+20AC} {
+        catch {::tclutils::tucode::lookup $v} msg opts
+        lappend out [dict get $opts -errorcode]
+    }
+    set out
+} -result {{TCLUTILS TUCODE LOOKUP} {TCLUTILS TUCODE LOOKUP}}
+
+test tucode-2.7 {lookup space and first character} -body {
+    list [dict get [::tclutils::tucode::lookup " "] code] \
+        [dict get [::tclutils::tucode::lookup ab] code]
+} -result {32 97}
+
+test tucode-2.8 {compact header stands over the columns} -body {
+    ::tclutils::tucode::table 64 79 -compact 1
+} -result "    0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+40  @  A  B  C  D  E  F  G  H  I  J  K  L  M  N  O"
+
+test tucode-2.9 {column separators line up in latin1 table} -body {
+    set cols {}
+    foreach line [lrange [split [::tclutils::tucode::latin1] \n] 2 end] {
+        lappend cols [regexp -all -inline -indices {\|} $line]
+    }
+    list [llength [lsort -unique $cols]] [llength [lindex $cols 0]]
+} -result {1 3}
+
+test tucode-2.10 {no trailing blanks in tables} -body {
+    set out [::tclutils::tucode::table 0 5 -columns 4]
+    append out \n [::tclutils::tucode::table 64 70 -compact 1]
+    regexp -line { $} $out
+} -result 0
 
 cleanupTests

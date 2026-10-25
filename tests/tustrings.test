@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tustrings 0.1
+package require tclutils::tustrings 0.2
 
 test tustrings-1.1 {extract printable strings} -body {
     ::tclutils::tustrings::extract "abc\x00hello\x01xy" -minlength 3
@@ -14,5 +14,33 @@ set stringsFile [makeFile "xx\x00PDF-1.7\x00short\x00" tustrings-input.bin]
 test tustrings-1.2 {file extraction} -body {
     ::tclutils::tustrings::file $stringsFile -minlength 5
 } -result {PDF-1.7 short}
+
+test tustrings-2.1 {unknown option has an error code} -body {
+    catch {::tclutils::tustrings::extract abc -min 2} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON OPTION -min}
+
+test tustrings-2.2 {-encoding is not an option} -body {
+    catch {::tclutils::tustrings::extract abc -encoding utf-8} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON OPTION -encoding}
+
+test tustrings-2.3 {-minlength checked} -body {
+    set out {}
+    foreach v {0 x -2} {
+        catch {::tclutils::tustrings::extract "ab\x00cd" -minlength $v} msg opts
+        lappend out [dict get $opts -errorcode]
+    }
+    set out
+} -result {{TCLUTILS COMMON INTEGER -minlength} {TCLUTILS COMMON INTEGER -minlength} {TCLUTILS COMMON INTEGER -minlength}}
+
+test tustrings-2.4 {-minlength 1} -body {
+    ::tclutils::tustrings::extract "a\x00\x00bc" -minlength 1
+} -result {a bc}
+
+test tustrings-2.5 {characters above 255 are rejected} -body {
+    catch {::tclutils::tustrings::extract "abcd\u20ac"} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUSTRINGS BYTES}
 
 cleanupTests

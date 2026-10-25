@@ -5,7 +5,7 @@
 ## Package
 
 ```tcl
-package require tclutils::tucal 0.1
+package require tclutils::tucal 0.2
 ```
 
 ## API
@@ -32,6 +32,27 @@ Default (empty `-locale`) keeps English abbreviations `Mo Tu We …`.
 
 With `-weeknumbers 1` and `-mondayfirst 1`, Tcl's `%V` gives ISO week numbers.
 With Sunday-first weeks, `%U` is used instead.
+
+## Layout
+
+A month is a grid of 7 day columns, 3 characters wide in `month`, `render`
+and `three` (27 columns), 2 characters wide in `year` (20 columns). Week
+numbers add a 4-column prefix (31 or 24 columns). The month title is centred
+over the day columns. `three` sets three months side by side, `year` four rows
+of three months (January, February, March in the first row, like `cal -y`),
+two blanks between the blocks; the year is centred over the full width (64
+columns without week numbers). No output line ends in a blank.
+
+```text
+         May 2026
+ Su  Mo  Tu  We  Th  Fr  Sa
+                      1   2
+  3   4   5   6   7   8   9
+ 10  11  12  13  14  15  16
+ 17  18  19  20  21  22  23
+ 24  25  26  27  28  29  30
+ 31
+```
 
 ## Examples
 

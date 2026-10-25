@@ -1,10 +1,10 @@
-.TH tugit n 0.1 tclutils
+.TH tugit n 0.2 tclutils
 .SH tclutils::tugit
 .PP
 Parses a Mermaid \fBgitGraph\fR into a \fBtclutils::tudiagram\fR model (best\-effort), so it can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
 .SS Package
 .CS
-package require tclutils::tugit 0.1
+package require tclutils::tugit 0.2
 .CE
 .SS Commands
 .CS

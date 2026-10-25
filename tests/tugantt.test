@@ -104,4 +104,52 @@ test tugantt-3.4 {a milestone is drawn as a diamond polygon} -body {
     expr {[regexp -all {<polygon} $svg] >= 1}
 } -result 1
 
+# --- fixes 0.2: start date required, real dates, unique ticks, auto height --------
+
+test tugantt-6.1 {first task without a start date raises DATE} -body {
+    catch {rtask [M::parse "gantt\nA : 3d"] 0} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUGANTT DATE}
+test tugantt-6.2 {first task with an unresolvable after raises DATE} -body {
+    catch {rtask [M::parse "gantt\nA : after x, 3d"] 0} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUGANTT DATE}
+test tugantt-6.3 {rendering without a start date raises DATE too} -body {
+    catch {M::toSvg [M::parse "gantt\nA : 3d"]} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUGANTT DATE}
+test tugantt-6.4 {an impossible date raises DATE on 8.6 and 9.0} -body {
+    set r {}
+    foreach d {2026-13-45 2026-02-30} {
+        catch {rtask [M::parse "gantt\nA : $d, 3d"] 0} e o
+        lappend r [dict get $o -errorcode]
+    }
+    set r
+} -result {{TCLUTILS TUGANTT DATE} {TCLUTILS TUGANTT DATE}}
+test tugantt-6.5 {a date without leading zeros is still accepted} -body {
+    clock format [expr {wide([dict get [rtask [M::parse "gantt\nA : 2026-3-2, 1d"] 0] start])}] \
+        -format %Y-%m-%d -gmt 1
+} -result 2026-03-02
+test tugantt-6.6 {short span: axis labels are unique and on day boundaries} -body {
+    set lo [clock scan 2026-03-02 -gmt 1]
+    set tk [::tclutils::tugantt::_axisTicks $lo [expr {$lo + 2*86400}] 5 \
+        YYYY-MM-DD YYYY-MM-DD]
+    lmap t $tk {lindex $t 1}
+} -result {2026-03-02 2026-03-03 2026-03-04}
+test tugantt-6.7 {hour axis snaps to minutes when the format shows minutes} -body {
+    set tk [::tclutils::tugantt::_axisTicks 28800.0 30600.0 5 HH:mm HH:mm]
+    lmap t $tk {lindex $t 1}
+} -result {08:00 08:06 08:12 08:18 08:24 08:30}
+test tugantt-6.8 {height grows with the number of tasks when -height is not set} -body {
+    set src "gantt\ntitle T\n[string repeat "A : 2026-01-01, 1d\n" 20]"
+    binary scan [M::toPng [M::parse $src]] @16II w h
+    list $w $h
+} -result {800 584}
+test tugantt-6.9 {few tasks keep the 400 pixel minimum; -height wins} -body {
+    set m [M::parse "gantt\nA : 2026-01-01, 1d"]
+    binary scan [M::toPng $m] @16II w h
+    binary scan [M::toPng $m -height 150] @16II w2 h2
+    list $h $h2
+} -result {400 150}
+
 cleanupTests

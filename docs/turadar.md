@@ -10,7 +10,7 @@ through `tudiagram`.
 ## Package
 
 ```tcl
-package require tclutils::turadar 0.1
+package require tclutils::turadar 0.2
 ```
 
 ## Commands
@@ -43,6 +43,9 @@ showLegend true|false            -> legend toggle (default: on if labelled)
 - A `curve`'s values are positional (axis order) or key-value (`axisId: value`);
   missing axes default to 0, extra values are ignored.
 - `min`/`max` set the scale; `max` defaults to the largest data value, `min` to 0.
+- A curve without `["Label"]` is named by its id. The legend is on by default
+  only when at least one curve has an explicit `["Label"]`; `showLegend true`
+  or `false` overrides that.
 - Blank lines and `%%` comments are ignored. Unknown config lines are ignored.
 
 ## Layout
@@ -68,8 +71,9 @@ optional legend lists the curves.
 
 `-width` / `-height` (default 600 each), `-fontfile` (a TTF for real-font labels
 via `Glyphs`; PNG only -- otherwise the built-in 6x8 bitmap font with German
-umlauts via real codepoints), `-scale` (positive integer; enlarges the PNG
-canvas, SVG ignores it).
+umlauts via real codepoints), `-scale` (positive integer; on PNG the canvas is `-width`×`-scale` by
+`-height`×`-scale`; on SVG the canvas keeps `-width` × `-height` and text, lines
+and spacing grow by the factor).
 
 ## Usage
 

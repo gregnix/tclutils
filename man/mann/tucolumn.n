@@ -11,6 +11,16 @@
 .CE
 .PP
 Table mode aligns delimited columns (input separator defaults to whitespace runs; output separator defaults to two spaces). Fill mode arranges items column\-major into columns fitting \fB\-width\fR (default 80).
+.SS Errors
+.TS
+l l.
+Case	\fB\-errorcode\fR
+\fBfile\fR: unknown \fB\-mode\fR	\fB{TCLUTILS TUCOLUMN MODE}\fR
+\fBfile\fR: \fB\-mode\fR without value	\fB{TCLUTILS TUCOLUMN OPTION}\fR
+unknown option	\fB{TCLUTILS COMMON OPTION \-name}\fR
+\fB\-width\fR/\fB\-gap\fR not a positive integer	\fB{TCLUTILS COMMON INTEGER \-name}\fR
+\fB\-right\fR not a boolean	\fB{TCLUTILS COMMON BOOLEAN \-right}\fR
+.TE
 .SS CLI
 .CS
 tclsh bin/tucolumn.tcl table file.txt

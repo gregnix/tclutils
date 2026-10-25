@@ -8,7 +8,7 @@ dispatches to; normally call `tuflow::toPng` / `tuflow::toSvg`.
 ## Package
 
 ```tcl
-package require tclutils::tuer 0.2
+package require tclutils::tuer 0.3
 ```
 
 Depends on `tclutils::tudiagram 0.3` (the crow's-foot end-marks).
@@ -27,7 +27,8 @@ A <cardinality> B : label        -> a connector A--B labelled <label>, with
                                     crow's-foot cardinality marks at both ends
 ```
 
-Keys (PK / FK) are appended in parentheses on the attribute line. A `..`
+Keys (PK / FK) are appended in parentheses on the attribute line. A label in
+double quotes (`: "places order"`) loses the quotes. A `..`
 (non-identifying) relationship is drawn dashed, `--` (identifying) solid.
 
 ### Cardinality marks

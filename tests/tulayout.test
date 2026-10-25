@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tulayout 0.1
+package require tclutils::tulayout 0.2
 namespace import ::tclutils::tulayout::*
 
 test tulayout-page-1 {a4 portrait and landscape} -body {
@@ -66,5 +66,68 @@ test tulayout-rect-1 {blockRect uses height option} -body {
 test tulayout-fit-1 {fitScale picks limiting axis} -body {
     format %.3f [fitScale 210 297 420 594 -marginPx 0]
 } -result {2.000}
+
+test tulayout-ensure-2 {existing block takes w/h from its definition} -body {
+    set e [ensureBlocks {kopf {x 20}} {kopf {w 170 h 15} fuss {x 20 y 280 w 170 h 10}}]
+    list [dict get $e kopf] [dict get $e fuss]
+} -result {{x 20.0 y 0.0 w 170.0 h 15.0 show 1} {x 20.0 y 280.0 w 170.0 h 10.0}}
+
+test tulayout-ensure-3 {block value wins over definition} -body {
+    dict get [ensureBlocks {a {w 30}} {a {w 50 label A}}] a
+} -result {label A x 0.0 y 0.0 w 30.0 h 8.0 show 1}
+
+test tulayout-ensure-4 {empty blocks: everything from the definitions} -body {
+    ensureBlocks {} {kopf {w 170 h 15} fuss {y 280}}
+} -result {kopf {w 170.0 h 15.0} fuss {y 280.0}}
+
+test tulayout-ensure-5 {odd-length blocks -> BLOCKS} -body {
+    catch {ensureBlocks {a} {}} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TULAYOUT BLOCKS}
+
+test tulayout-validate-3 {non-numeric value -> VALUE with block id} -body {
+    catch {validateBlocks {kopf {x abc}}} m o
+    list $m [dict get $o -errorcode]
+} -result {{block 'kopf': bad x 'abc'} {TCLUTILS TULAYOUT VALUE}}
+
+test tulayout-validate-4 {negative height -> VALUE} -body {
+    catch {validateBlocks {kopf {h -1}}} m o
+    list $m [dict get $o -errorcode]
+} -result {{block 'kopf': height must be >= 0} {TCLUTILS TULAYOUT VALUE}}
+
+test tulayout-validate-5 {normalizeBlock: non-numeric -> VALUE} -body {
+    catch {normalizeBlock {w x}} m o
+    list $m [dict get $o -errorcode]
+} -result {{bad w 'x'} {TCLUTILS TULAYOUT VALUE}}
+
+test tulayout-page-3 {malformed WxH -> PAPER} -body {
+    catch {pageSize 1.2.3x5} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TULAYOUT PAPER}
+
+test tulayout-page-4 {WxH and {w h} forms} -body {
+    list [pageSize 54x56] [pageSize 54X56 landscape] [pageSize {80 200}]
+} -result {{54 56} {56 54} {80 200}}
+
+test tulayout-opt-1 {unknown options are rejected} -body {
+    set r {}
+    foreach cmd {
+        {snap 7 -grd 2}
+        {fitScale 210 297 800 600 -margin 0}
+        {normalizeBlock {x 1} -default {}}
+        {blockRect {x 1 y 1 w 2} -h 3}
+        {mergeBlocks {a {x 1}} {a {x 2}} -key x}
+        {mergeLayout {blocks {a {x 1}}} {blocks {a {x 2}}} -key x}
+    } {
+        catch $cmd m o
+        lappend r [lindex [dict get $o -errorcode] end]
+    }
+    set r
+} -result {OPTION OPTION OPTION OPTION OPTION OPTION}
+
+test tulayout-opt-2 {option without value -> OPTION} -body {
+    catch {snap 7 -grid} m o
+    list $m [dict get $o -errorcode]
+} -result {{option "-grid" requires a value} {TCLUTILS TULAYOUT OPTION}}
 
 cleanupTests

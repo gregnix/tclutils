@@ -1,16 +1,29 @@
 # tclutils manpages
 
-Nroff manual pages for **tclutils 0.22.0**.
+Nroff manual pages for **tclutils 0.68.0**.
 
-The pages are maintained as project documentation, not copied from GNU manuals.
-They document the Tcl package APIs under `man/mann/` and the available CLI
-wrappers under `man/man1/`.
+`man/mann/*.n` is generated from `docs/*.md`. From the tclutils directory:
+
+```bash
+tclsh tools/md2man.tcl docs/<module>.md
+```
+
+The `.TH` version is read from `lib/tm/tclutils/<module>-X.Y.tm`. Edit the
+Markdown and regenerate the page. The pages are project documentation, not
+copied from GNU manuals.
+
+`man/man1/` holds CLI pages for the wrappers that have one. `md2man` writes
+that section when the Markdown declares `section: 1` or the run passes
+`-section 1`.
+
+Where the rest of the documentation lives:
+[`docs/guide/guide-tclutils.md`](../docs/guide/guide-tclutils.md).
 
 ## Layout
 
 ```text
 man/
-├── mann/   Tcl package API pages
+├── mann/   Tcl package API pages, generated from docs/
 └── man1/   CLI command pages
 ```
 
@@ -29,5 +42,5 @@ MANPATH=$PWD/man man tufind
 
 ## Scope
 
-These pages describe the tclutils subset APIs. They do not claim GNU tool
+These pages describe the tclutils APIs. They do not claim GNU tool
 compatibility.

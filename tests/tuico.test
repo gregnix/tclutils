@@ -7,7 +7,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuico 0.1
+package require tclutils::tuico 0.2
 
 # A minimal valid PNG of the given size, built by hand: signature, IHDR with
 # the right dimensions, a stored (uncompressed) IDAT and IEND. Enough for the
@@ -167,6 +167,40 @@ test tuico-5.1 {the ensemble is usable} -setup {
     tclutils::tuico write $out [list [list 16 [makePng 16]]]
     llength [tclutils::tuico info $out]
 } -result 1 -cleanup {file delete -force $out}
+
+# --- 0.2: directory fields are read unsigned ---
+test tuico-6.1 {entry count above 32767 is unsigned -> TRUNCATED, not {}} -setup {
+    set big [file join $tmpDir big.ico]
+    set fh [open $big wb]
+    puts -nonewline $fh [binary format sss 0 1 0x8000]
+    close $fh
+} -body {
+    catch {::tclutils::tuico::info $big} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUICO TRUNCATED} -cleanup {file delete -force $big}
+
+test tuico-6.2 {65535 entries announced, one present -> TRUNCATED} -setup {
+    set big [file join $tmpDir big2.ico]
+    set fh [open $big wb]
+    puts -nonewline $fh [binary format sss 0 1 0xFFFF]
+    puts -nonewline $fh [binary format cucucucussii 16 16 0 0 1 32 0 22]
+    close $fh
+} -body {
+    catch {::tclutils::tuico::info $big} message options
+    dict get $options -errorcode
+} -result {TCLUTILS TUICO TRUNCATED} -cleanup {file delete -force $big}
+
+test tuico-6.3 {offset and length are unsigned 32-bit} -setup {
+    set f [file join $tmpDir hi.ico]
+    set fh [open $f wb]
+    puts -nonewline $fh [binary format sss 0 1 1]
+    puts -nonewline $fh [binary format cucucucussii 16 16 0 0 1 32 \
+        0x80000000 0x80000000]
+    close $fh
+} -body {
+    set e [lindex [::tclutils::tuico::info $f] 0]
+    list [dict get $e offset] [dict get $e length]
+} -result {2147483648 2147483648} -cleanup {file delete -force $f}
 
 removeDirectory tuico
 cleanupTests

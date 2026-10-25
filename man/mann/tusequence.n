@@ -1,10 +1,10 @@
-.TH tusequence n 0.1 tclutils
+.TH tusequence n 0.2 tclutils
 .SH tclutils::tusequence
 .PP
 Parses a Mermaid \fBsequenceDiagram\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtugantt\fR / \fBtusankey\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here.
 .SS Package
 .CS
-package require tclutils::tusequence 0.1
+package require tclutils::tusequence 0.2
 .CE
 .SS Commands
 .CS
@@ -19,6 +19,7 @@ package require tclutils::tusequence 0.1
 .SS "Supported syntax (Mermaid subset)"
 .CS
 sequenceDiagram
+  title text
   participant A            |  participant A as Alias  |  actor A
   autonumber
   A->>B: message
@@ -31,7 +32,9 @@ sequenceDiagram
 .IP \(bu
 \fBParticipants\fR are declared with \fBparticipant\fR/\fBactor\fR (optionally \fB... as Alias\fR) or created implicitly on first use in a message. They render in declaration order.
 .IP \(bu
-\fBArrows\fR: \fB\->\fR \fB\-\->\fR \fB\->>\fR \fB\-\->>\fR \fB\-x\fR \fB\-\-x\fR \fB\-)\fR \fB\-\-)\fR. One dash = solid, two = dotted; \fB>>\fR = filled head, \fB>\fR/\fB)\fR = open head, \fBx\fR = cross.
+\fBTitle\fR: \fBtitle text\fR is drawn centred above the participant boxes; the diagram moves down by a 24\-pixel band and the auto width grows to fit the title.
+.IP \(bu
+\fBArrows\fR: \fB\->\fR \fB\-\->\fR \fB\->>\fR \fB\-\->>\fR \fB\-x\fR \fB\-\-x\fR \fB\-)\fR \fB\-\-)\fR. One dash = solid, two = dotted; \fB>>\fR = filled head, \fB>\fR/\fB)\fR = open head, \fBx\fR = cross. \fB<<\->>\fR (solid) and \fB<<\-\->>\fR (dotted) are bidirectional: a filled head at both ends.
 .IP \(bu
 \fBSelf\-messages\fR (\fBA\->>A: ...\fR) draw as a loop on the lifeline.
 .IP \(bu
@@ -47,7 +50,7 @@ sequenceDiagram
 \fBactor\fR is drawn as a box (no stick figure). Fragment frames span the full width and are indented per nesting depth, rather than enclosing only the involved lifelines. Not in v1: create/destroy of participants, \fBbox\fR grouping, and actor links/popups.
 .SS Options
 .PP
-\fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in bitmap font), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+\fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in bitmap font), \fB\-scale\fR (positive integer; on PNG the canvas and the drawing grow by the factor; on SVG the drawing grows by the factor but the canvas keeps the size computed at scale 1, so with \fB\-scale\fR > 1 the SVG shows only the upper\-left part \-\- use \fB\-scale 1\fR for SVG).
 .SS Usage
 .CS
 package require tclutils::tusequence

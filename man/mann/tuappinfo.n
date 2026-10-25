@@ -1,4 +1,4 @@
-.TH tuappinfo n 0.1 tclutils
+.TH tuappinfo n 0.2 tclutils
 .SH tclutils::tuappinfo
 .PP
 Collect application / system information into a plain\-text report: Tcl/Tk versions, executable, platform, selected environment variables, search paths, loaded packages, and an optional list of explicitly tracked module files. Supports anonymisation of user / host / path data. Pure Tcl, no GUI \-\- the caller renders the returned text (e.g. in a Tk window or a log file).
@@ -11,7 +11,9 @@ Collect application / system information into a plain\-text report: Tcl/Tk versi
 .IP \(bu
 \fBtrackTm\fR — record a module file path so it appears under "Loaded TM Modules" (otherwise that section reads "(none tracked)").
 .IP \(bu
-\fBbuildReport\fR — return the full report as a single string. \fB\-anonymize 1\fR masks user/host names (stable hash), \fBHOME\fR/\fBTEMP\fR paths, and \fBPATH\fR.
+\fBbuildReport\fR — return the full report as a single string. \fB\-anonymize 1\fR masks user/host names (stable hash), \fBTEMP\fR/\fBTMP\fR (\fB<TEMP>\fR), \fBPATH\fR (\fB<anonymized>\fR), tracked module files (\fB<tm\-HASH>.tm\fR) and every path in the report (\fBExecutable\fR, \fBHOME\fR, \fBauto_path\fR, \fBtm::path\fR) by one rule: a path equal to or below the home directory (\fB$HOME\fR, else \fB$USERPROFILE\fR) becomes \fB<HOME>/rest\fR (\fBHOME\fR itself \fB<HOME>\fR), any other path becomes \fB<path>/<last component>\fR, e.g. \fB/usr/share/tcltk\fR \-> \fB<path>/tcltk\fR. Separators are shown as \fB/\fR; on Windows the home prefix is compared without case.
+.IP \(bu
+Options: unknown options and an option without a value raise \fB{TCLUTILS TUAPPINFO OPTION}\fR, a non\-boolean \fB\-anonymize\fR raises \fB{TCLUTILS TUAPPINFO VALUE}\fR.
 .IP \(bu
 \fBwriteLog\fR — write \fBbuildReport\fR to \fBfile\fR; returns the file path.
 .CS

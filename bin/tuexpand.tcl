@@ -1,7 +1,11 @@
 #!/usr/bin/env tclsh
 source [file join [file dirname [info script]] _bootstrap.tcl]
-package require tclutils::tuexpand 0.1
-proc usage {} { puts stderr "usage: tuexpand ?expand|unexpand? ?-tabs N? ?-all 0|1? ?file?"; exit 2 }
+package require tclutils::tuexpand 0.2
+proc usage {} {
+    puts stderr "usage: tuexpand ?expand? ?-tabs N? ?file?"
+    puts stderr "       tuexpand unexpand ?-tabs N? ?-all 0|1? ?file?"
+    exit 2
+}
 set mode expand; set opts {}; set files {}
 set args $argv
 if {[llength $args] && [lindex $args 0] in {expand unexpand}} {
@@ -10,7 +14,7 @@ if {[llength $args] && [lindex $args 0] in {expand unexpand}} {
 set i 0
 while {$i < [llength $args]} {
     set a [lindex $args $i]
-    if {$a in {-tabs -all}} {
+    if {$a eq "-tabs" || ($a eq "-all" && $mode eq "unexpand")} {
         incr i; if {$i >= [llength $args]} usage
         lappend opts $a [lindex $args $i]
     } elseif {[string match -* $a]} { usage } else { lappend files $a }

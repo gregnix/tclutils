@@ -73,4 +73,19 @@ test tuterm-5.2 {unknown color errors} -body {
 test tuterm-5.3 {enableVT no-op on non-windows} -constraints {unix} -body {
     ::tclutils::tuterm::enableVT
 } -result 1
+test tuterm-6.1 {names reset returns empty list instead of a dict error} -body {
+    ::tclutils::tuterm::names reset
+} -result {}
+
+test tuterm-6.2 {enable rejects a non-boolean with COMMON BOOLEAN} -body {
+    set before [::tclutils::tuterm::enable]
+    set r [catch {::tclutils::tuterm::enable ja} m o]
+    list $r [dict get $o -errorcode] [expr {[::tclutils::tuterm::enable] == $before}]
+} -result {1 {TCLUTILS COMMON BOOLEAN bool} 1}
+
+test tuterm-6.3 {enable accepts boolean words} -body {
+    set r [list [::tclutils::tuterm::enable no] [::tclutils::tuterm::enable yes]]
+    set r
+} -result {0 1}
+
 cleanupTests

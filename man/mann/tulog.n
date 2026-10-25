@@ -1,4 +1,4 @@
-.TH tulog n 0.1 tclutils
+.TH tulog n 0.2 tclutils
 .SH tclutils::tulog
 .PP
 A small, dependency\-free leveled logger. A logger is a \fBcallable command\fR\fB \fR\fBobject\fR, so the level names \fBinfo\fR/\fBerror\fR are subcommands rather than procs that would shadow the Tcl built\-ins.
@@ -17,6 +17,6 @@ $log destroy
 .PP
 Levels increase in severity: \fBdebug\fR < \fBinfo\fR < \fBwarn\fR < \fBerror\fR; a message is emitted only when its level is at least the logger's current level. Output is \fBTIMESTAMP [LEVEL] name: message\fR (timestamp and name optional).
 .PP
-Options to \fBnew\fR: \fB\-channel\fR (default \fBstderr\fR), \fB\-level\fR (default \fBinfo\fR), \fB\-name\fR (prefix, default \fB""\fR), \fB\-timestamp\fR (default \fB1\fR).
+Options to \fBnew\fR: \fB\-channel\fR (default \fBstderr\fR), \fB\-level\fR (default \fBinfo\fR), \fB\-name\fR (prefix, default \fB""\fR), \fB\-timestamp\fR (default \fB1\fR). All options are checked before the logger is created: a bad \fB\-level\fR (\fB{TCLUTILS TULOG LEVEL}\fR), a non\-boolean \fB\-timestamp\fR (\fB{TCLUTILS COMMON BOOLEAN \-timestamp}\fR) or an unknown option (\fB{TCLUTILS COMMON OPTION <opt>}\fR) leaves no logger and no state behind.
 .PP
 \fB::tclutils::tulog::assert exprStr ?msg?\fR evaluates \fBexprStr\fR in the caller's scope and raises \fB{TCLUTILS TULOG ASSERT}\fR if it is false \-\- a debug\-time check.

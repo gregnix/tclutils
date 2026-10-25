@@ -1,13 +1,152 @@
 # Changelog
 
-## unreleased - 2026-10-24
+## 0.68.0 - 2026-10-24
 
-- `tests/tupdftext.test`: the expected results with umlauts, the euro
-  sign and U+FFFD are written as `\uXXXX`. Run directly with a system
-  encoding other than UTF-8 (`tclsh tupdftext.test` under `LANG=C`) the
-  file was read in that encoding and five tests failed (bookkit review
-  2026-10-24). Through `all.tcl` (`source -encoding utf-8`) nothing
-  changes.
+Fixes found while writing and checking the tclutils book. 76 modules get a
+new version; every fix has a regression test. Tests: 2355 (was 1995),
+0 failures under Tcl 8.6.14 and 9.0.4 (Linux), `tests/all.tcl` also passes
+on Windows and macOS. The manual ships as PDF in German and English.
+Recommended pairing: tclutils 0.68.0 + tkutils 0.47.0 + ctrlutils 0.4.
+
+Module versions -- delete the old file when copying over an older tree
+(e.g. `tuawk-0.1.tm` next to `tuawk-0.2.tm`), and `tclutils-0.67.0.tm`:
+0.1 -> 0.2: `tuagrep tuappinfo tuarchitecture tuawk tubase32 tubookmark
+tucal tuclass tucmp tucode tucolor tucomm tudeploy tudhash tuexe tuexpand
+tufile tufind tufold tufuzzy tugantt tugit tuhexdump tuhexedit tuico
+tujourney tulayout tuldif tulog tummdb tunl tunotesdb tunumany tunumfmt tuod
+tuopen tupacket tupagespec tupaste tupatch tupie tupngpad tuprovider
+tuprovider::sftp turadar turrule tuseq tusequence tushuf tusize tusparql
+tusplit tustat tustrings tutable tutablepng tutdbc tutee tuterm tutimeline
+tutr tutreemap tutsort tuvalidate tuwc tuxxhash`; `tuer` 0.3, `tuflow` 0.3,
+`tusvg` 0.3, `tuzipfs` 0.3, `tudiagram` 0.5, `tumonthpng` 0.5, `tupng` 0.5,
+`tupngdraw` 0.13, `tujoin` 0.1.2, `tugrep` 0.1.3. The umbrella requires the
+new versions.
+
+### Changed behaviour
+
+- `tucmp`: `data` compares bytes; characters above 255 raise `BYTES`.
+- `tuxxhash`: text is hashed as UTF-8 (as `tuhash`); `-encoding binary` for
+  raw bytes.
+- `tustat`, `tusize`: a symbolic link is reported with its own data
+  (`lstat`); `tustat` adds `target`.
+- `tuwc`: `file` reports `bytes` as the file size.
+- `tucal`: `year` runs the months row-wise like `cal`.
+- `tubase32`: `decode` is strict (RFC 4648): `LENGTH`, `BITS`.
+- `tuldif`: base64 values are UTF-8; `changetype:` raises `CHANGETYPE`.
+- `turrule`: `YEARLY` with `BYMONTH`/`BYDAY`/`BYMONTHDAY`;
+  `BYDAY`+`BYMONTHDAY` intersect; a date-only `UNTIL` includes the day;
+  unsupported parts raise `UNSUPPORTED`.
+- `tuhexedit`: no write past the end of the file (`RANGE`).
+- `tucomm`: `-sort 1` sorts in the order the comparison uses.
+- `tuagrep`: `search` has no empty last line; `-filenames` ignored for text.
+- `tuexpand`: `unexpand` as GNU; `expand` rejects `-all`. `tuseq`: `range`
+  rejects `-separator`.
+- `tutr`: descending ranges and empty set2 are errors; the last mapping
+  wins.
+- `tustrings`: `-encoding` removed. `tujoin`: new error messages.
+- `tucode`: `lookup` of a character above 255 raises `LOOKUP` on 8.6 too.
+- `tucolor`: triples decimal; `fromHsv` checks ranges (negative hue is an
+  error).
+- `tumonthpng`: header follows `-firstweekday`; `-weekdays` always Monday
+  first.
+- `tupngpad`: unknown `-align` is an error.
+- `tuterm`: `enable` takes booleans only.
+- `tulayout`: `ensureBlocks` takes `w`/`h` from the definitions; unknown
+  options are errors.
+- `tuappinfo`: `-anonymize` hides every path.
+- `tuvalidate`: `port` decimal digits only; `ipv4` rejects leading zeros.
+- `tuopen`: on Windows URLs go through `rundll32`.
+- `tuflow`: case-insensitive header, `A & B --> C`, `sankey` rejected by
+  `parse`.
+- `tudiagram`: titles are drawn (26 px band); unknown theme raises `THEME`.
+- `tusequence`: title drawn; `<<->>` arrows.
+- `turadar`: legend only with named curves. `tutreemap`: values <= 0
+  dropped.
+- `tupie`: `1e3` accepted, negative values raise `VALUE`.
+- `tujourney`: fractional scores accepted, others raise `VALUE`.
+- `tutimeline`: splits at `: ` only (`12:30` stays whole).
+- `tugantt`: no start date raises `DATE` (8.6 too); automatic height.
+
+### Fixes
+
+- Line filters: `tunl` checks `-start`/`-increment`/`-width`; `tutable`
+  `COLUMNS`/`HEADERS`, markdown columns at least 3 wide; `tufold -words 1`
+  drops trailing blanks; `tushuf`/`tuseq` take 64-bit values on 8.6;
+  `tuseq text` finds options anywhere.
+- Pipelines: `tuawk` rules run in a private frame (8.6 no longer touches
+  globals), `NR`/`NF` start at 0; `tutee` closes channels when an open
+  fails; `tutsort` names only cycle nodes; error codes in `tupaste`,
+  `tujoin`, `tufuzzy`, `tuagrep`, `tusplit` (`BYTES` in `splitBytes`).
+- Binary: `tucode signs` options, `lookup U+00E4`, aligned tables;
+  `tuhexdump`, `tuod`, `tustrings` check options and raise `BYTES`;
+  `tuhexedit` `OFFSET`/`ENCODING`; `tusize human` up to YiB;
+  `tustat modeOctal`.
+- Images: `tutablepng` keeps cell text (`4.80`); `tusvg` method `icon`
+  emits valid SVG, `icons` lists 149 names; `tupngdraw paste` composites
+  alpha; `tupng` honours `tRNS` for RGB and checks CRCs; `tuico` reads
+  counts unsigned; `tumonthpng -title` for quarter/year; `tudhash` checks
+  dimensions.
+- Application: `tuterm names reset`; `tupagespec` decimal on 8.6;
+  `tulayout pageSize` checks; `tuzipfs rcopy` copies dot files;
+  `tudeploy addModulePaths` skips refused roots; `tulog`, `tunumany`,
+  `tuexe` reject options without value; `tunumfmt` reads `KiB` as IEC;
+  `tuopen` exports all commands.
+- Data and calendars: `tunotesdb fromStore` keeps children, allows child
+  before parent; `tubookmark` escapes attributes, one bookmark per `<A>`;
+  `tusparql` endpoint with `?`, one `Accept`, all variables; `tupatch`
+  checks booleans; `tucal` titles centred.
+- Diagrams: `tuclass` one-line blocks and cardinalities; `tuer` quoted
+  labels; `tugantt` unique axis ticks.
+- Tests run directly under a non-UTF-8 system encoding (Tcl 8.6 on
+  Windows): non-ASCII characters in `tupdftext`, `tucmp`, `tucode`,
+  `tuhexdump`, `tuhexedit`, `tuod`, `tustrings`, `tuwc` tests written as
+  `\uXXXX`; `cli-1.6` expects the file size on disk (CRLF files).
+- `tutask-2.8w`, `4.4w` (Windows): read `ping` with `-encoding iso8859-1`;
+  German `ping` writes cp850, which fails the strict cp1252 read on Tcl 9.
+  `docs/tutask.md` explains `-encoding cp850` for console programs.
+- Docs and man pages updated for all changed modules; `docs/tukanban.md`
+  and other diagram docs: SVG `-scale` corrected.
+
+### Text that looks like a number
+
+`expr {c ? a : b}` returns a number-like branch in canonical form (`010` ->
+`8`/`10`, `5.10` -> `5.1`, `1e3` -> `1000.0`, `0x1F` -> `31`); where a branch
+is text, the choice is now made with `if`, which keeps the value unchanged.
+
+- `tuagrep` 0.2: `file -fileswithmatches` file name.
+- `tuarchitecture` 0.1 -> 0.2: node and group label falling back to the id.
+- `tudiagram` 0.5: title (layout, render), `-fontfile`, group chains in
+  the cluster layout.
+- `tufile` 0.1 -> 0.2: `type`, `mime`.
+- `tufind` 0.1 -> 0.2: `-tails` name.
+- `tugit` 0.1 -> 0.2: commit id as label, label falling back to the id.
+- `tugrep` 0.1.2 -> 0.1.3: `file -fileswithmatches` file name.
+- `tummdb` 0.1 -> 0.2: IPv6 groups next to `::` (`1e3`, `0010`). Also
+  `::` was split at every `:`, so `2001:db8::1` and `::1` expanded wrong
+  and IPv6 lookups hit the wrong address.
+- `tumonthpng` 0.5: `-title` of `render`.
+- `tupacket` 0.1 -> 0.2: field label.
+- `tupagespec` 0.2: single pages in `compact`.
+- `tupng` 0.5: `tRNS` bytes of `encodeIndexed`.
+- `tuprovider` 0.1 -> 0.2: `head` content of the local provider.
+- `tuprovider::sftp` 0.1 -> 0.2: host in the sftp target, `TMPDIR`.
+- `turadar` 0.2: curve label falling back to the id.
+- `tusequence` 0.2: participant label falling back to the id, title.
+- `tusparql` 0.2: head vars (a single variable such as `010`).
+- `tutdbc` 0.1 -> 0.2: column values in `rows` (`01234`, `5.10`).
+
+### Manual
+
+- `man/man1`: pages for the wrappers `tuawk`, `tucal`, `tucode`, `tufile`,
+  `tupngpad`; every `.TH` says 0.68.0; `tuzipfs.1` had an empty NAME
+  section (the line started with a dot). `man/mann/tummdb.man` (doctools)
+  says 0.2 / `tubin` 0.3. `docs/tudiagram.md` lists all non-graph kinds.
+- `tests/cli.test`: the fixture directory is `cli-<pid>`, so two suites
+  running in the same tree no longer remove each other's files.
+- `docs/handbook/de/Tclutils-de.pdf` and `docs/handbook/en/Tclutils-en.pdf`:
+  the tclutils manual in German and English (built with bookkit from the
+  book sources, 0.68.0); listed in `README.md` and
+  `docs/guide/guide-tclutils.md`.
 
 ## 0.67.0 - 2026-10-21
 

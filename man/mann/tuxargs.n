@@ -12,6 +12,12 @@ package require tclutils::tuxargs 0.1
 ::tclutils::tuxargs::apply items commandPrefix ?-n count? ?-collect bool? ?-skipempty bool?
 ::tclutils::tuxargs::command items commandPrefix ?options?
 .CE
+.SS Options
+.CS
+-n count         at most count items per batch (default 100)
+-skipempty bool  drop empty items first (default 1)
+-collect bool    apply/command: collect the results (default 1)
+.CE
 .SS Example
 .CS
 set batches [::tclutils::tuxargs::batches $files -n 20]

@@ -1,4 +1,4 @@
-.TH tuldif n 0.1 tclutils
+.TH tuldif n 0.2 tclutils
 .SH tclutils::tuldif
 .PP
 LDIF (RFC 2849) reader/writer. An entry is an ordered list of {attribute value} pairs (the dn is the "dn" attribute); multi\-valued attributes are repeated pairs. Base64 values (\fBattr:: ...\fR) are decoded via tclutils::tubase64 and re\-encoded on output when a value is not LDIF\-safe.
@@ -12,7 +12,19 @@ tuldif::attributes entry           ;# -> attribute names (first-seen order)
 tuldif::toDict     entry           ;# -> dict attr -> list of values
 .CE
 .PP
-Continuation lines (a leading space) are unfolded automatically. Error code: \fB{TCLUTILS TULDIF SYNTAX}\fR.
+Continuation lines (a leading space) are unfolded automatically.
+.PP
+Values are text. RFC 2849 values are UTF\-8, so a base64 value (\fBattr:: ...\fR) is decoded from UTF\-8 after the base64 step, and \fBtoLdif\fR encodes a value to UTF\-8 before base64 (\fBHällo\fR \-> \fBSMOkbGxv\fR). Base64 bytes that are not valid UTF\-8 (a binary attribute such as \fBjpegPhoto\fR) come back unchanged, one character per byte; written back through \fBtoLdif\fR such a value is encoded as UTF\-8 again and is therefore not byte\-exact.
+.PP
+\fBtoLdif\fR writes a value as base64 when it is not a SAFE\-STRING: it starts with a space, \fB:\fR or \fB<\fR, ends with a space, or contains a character outside 32..126 (control characters, non\-ASCII).
+.PP
+Only content records are read. A change record (\fBchangetype: add|modify|...\fR) raises \fB{TCLUTILS TULDIF CHANGETYPE}\fR.
+.TS
+l l.
+Error code	When
+\fB{TCLUTILS TULDIF SYNTAX}\fR	a line without \fB:\fR
+\fB{TCLUTILS TULDIF CHANGETYPE}\fR	a change record
+.TE
 .SS "Additional exported commands"
 .PP
 Documented for completeness (same module, also covered by the test suite):

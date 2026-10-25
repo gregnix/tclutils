@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tunumfmt 0.1
+package require tclutils::tunumfmt 0.2
 
 test tunumfmt-1.1 {si below scale stays integer} { ::tclutils::tunumfmt::toHuman 999 } 999
 test tunumfmt-1.2 {si kilo} { ::tclutils::tunumfmt::toHuman 1500 } 1.5K
@@ -31,4 +31,9 @@ test tunumfmt-1.16 {unknown suffix rejected} {
 test tunumfmt-1.17 {bad precision rejected} {
     catch {::tclutils::tunumfmt::toHuman 5 -precision -1} m o; dict get $o -errorcode
 } {TCLUTILS TUNUMFMT PRECISION}
+test tunumfmt-2.1 {KiB/MiB with byte sign are IEC} {
+    list [::tclutils::tunumfmt::fromHuman 2KiB] [::tclutils::tunumfmt::fromHuman 1MiB] \
+         [::tclutils::tunumfmt::fromHuman 2KB]
+} {2048 1048576 2000}
+
 cleanupTests

@@ -10,7 +10,7 @@ a node-edge graph, so it does **not** go through `tudiagram`.
 ## Package
 
 ```tcl
-package require tclutils::tutreemap 0.1
+package require tclutils::tutreemap 0.2
 ```
 
 ## Commands
@@ -25,7 +25,7 @@ package require tclutils::tutreemap 0.1
 
 `parse` returns the root node `{name "" value <total> children {...}}`; each child
 is the same shape. A branch's `value` is the sum of its children; a leaf's is the
-number it was given.
+number it was given. Nodes with a value of 0 or less are not in the tree.
 
 ## Supported syntax (Mermaid subset)
 
@@ -58,7 +58,9 @@ the hierarchy reads at a glance; nested branches get their own darker header bar
 - Styling (`:::class`, `classDef`, theme, `valueFormat`) is ignored.
 - Labels are clipped to their cell, not wrapped or shrunk; very small cells show
   no label.
-- Negative values are dropped (a treemap needs non-negative areas).
+- A leaf with a value of 0 or less is dropped from the model (a treemap needs
+  positive areas); a branch left without leaves is dropped too. Sums and areas
+  come from the remaining leaves only.
 - A node given a value *and* children is treated as a branch (the children's sum
   wins over the explicit value).
 
@@ -66,8 +68,9 @@ the hierarchy reads at a glance; nested branches get their own darker header bar
 
 `-width` (default 640), `-height` (default 400), `-fontfile` (a TTF for real-font
 labels via `Glyphs`; PNG only -- otherwise the built-in 6x8 bitmap font with
-German umlauts via real codepoints), `-scale` (positive integer; enlarges the PNG
-canvas, SVG ignores it).
+German umlauts via real codepoints), `-scale` (positive integer; on PNG the canvas is `-width`×`-scale` by
+`-height`×`-scale`; on SVG the canvas keeps `-width` × `-height` and text, lines
+and spacing grow by the factor).
 
 ## Usage
 

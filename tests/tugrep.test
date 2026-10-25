@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tugrep 0.1
+package require tclutils::tugrep 0.1.3
 
 set grepFile [makeFile "one\nERROR first\nwarn\nerror second\n" tugrep-input.txt]
 
@@ -93,5 +93,18 @@ test tugrep-3.8 {max keeps trailing context of the last match} -body {
 test tugrep-3.9 {word combines with invert} -body {
     ::tclutils::tugrep::search "foo\nfoobar" foo -word 1 -invert 1
 } -result {foobar}
+
+
+# --- unreleased: -fileswithmatches returns the file name unchanged ----------
+test tugrep-4.1 {file -fileswithmatches keeps a numeric-looking name} -setup {
+    set old [pwd]
+    makeFile "ERROR here\n" 010
+    cd [temporaryDirectory]
+} -body {
+    ::tclutils::tugrep::file 010 ERROR -fileswithmatches 1
+} -cleanup {
+    cd $old
+    removeFile 010
+} -result {010}
 
 cleanupTests

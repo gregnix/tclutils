@@ -53,4 +53,37 @@ test tutablepng-3.1 {write creates a PNG file} -setup {
     file delete $f
 } -result {1 png}
 
+test tutablepng-4.1 {number-like cells keep their text (width check)} -body {
+    set a [::tclutils::tutablepng::render {{4.80 1e3 0x1F 010 " 5"}} -header 0]
+    set b [::tclutils::tutablepng::render {{abcd abc abcd abc xx}} -header 0]
+    expr {[::tclutils::tuimage::dimensions $a] eq [::tclutils::tuimage::dimensions $b]}
+} -result 1
+
+test tutablepng-4.2 {number-like cell renders like its literal text} -body {
+    # 4.80 must not be drawn as 4.8 (a 3-char cell gives other pixels)
+    set a [::tclutils::tutablepng::render {{4.80}} -header 0]
+    set b [::tclutils::tutablepng::render {{4.8}} -header 0]
+    expr {$a ne $b}
+} -result 1
+
+test tutablepng-4.3 {-padding negative -> PADDING} -body {
+    catch {::tclutils::tutablepng::render $rows -padding -1} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTABLEPNG PADDING}
+
+test tutablepng-4.4 {-spacing not an integer -> SPACING} -body {
+    catch {::tclutils::tutablepng::render $rows -spacing x} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTABLEPNG SPACING}
+
+test tutablepng-4.5 {-padding 0 and -spacing 0 are allowed} -body {
+    ::tclutils::tuimage::dimensions \
+        [::tclutils::tutablepng::render {{ab}} -padding 0 -spacing 0]
+} -result {12 8}
+
+test tutablepng-4.6 {-padding with leading zero is decimal} -body {
+    ::tclutils::tuimage::dimensions \
+        [::tclutils::tutablepng::render {{ab}} -padding 010 -spacing 0]
+} -result {32 28}
+
 cleanupTests

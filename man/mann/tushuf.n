@@ -1,4 +1,4 @@
-.TH tushuf n 0.1 tclutils
+.TH tushuf n 0.2 tclutils
 .SH tclutils::tushuf
 .PP
 \fBshuf\fR\-like line shuffling in pure Tcl. Uses a small self\-contained PRNG so a given \fB\-seed\fR yields the same permutation on every platform and Tcl version.
@@ -9,7 +9,17 @@
 ::tclutils::tushuf::file  path     ?-seed N? ?-count N?
 .CE
 .PP
-\fB\-seed N\fR makes output reproducible (default: time\-based). \fB\-count N\fR outputs at most N lines.
+\fB\-seed N\fR makes output reproducible (default: time\-based). \fB\-count N\fR outputs at most N lines; a negative count means all lines.
+.PP
+The seed is an integer of any size, also beyond 32 bits under Tcl 8.6. The generator uses its low 31 bits, so the order for a given seed is the same on Tcl 8.6 and 9.0.
+.SS Errors
+.TS
+l l.
+Case	\fB\-errorcode\fR
+\fB\-seed\fR not an integer	\fB{TCLUTILS TUSHUF SEED}\fR
+\fB\-count\fR not an integer	\fB{TCLUTILS TUSHUF COUNT}\fR
+unknown option	\fB{TCLUTILS COMMON OPTION \-name}\fR
+.TE
 .SS CLI
 .CS
 tclsh bin/tushuf.tcl -seed 42 file.txt

@@ -20,7 +20,9 @@ tclutils::tupngpad::batch $files /out -margin 4 -background white
 
 `tupngpad::batch files outdir ?options?` — read each PNG in `files`, optionally
 trim it to its content, then pad every image to one common size and write the
-result into `outdir` (same base name). Returns the list of written paths.
+result into `outdir` (same base name). Returns a dict
+`{size {tw th} files {in1 out1 in2 out2 ...}}`: the common output size and the
+input/output paths in pairs. All options are checked before any file is read.
 
 Options:
 
@@ -29,10 +31,11 @@ Options:
   (default `white`; same colour forms as `tupngdraw`).
 - `-trim BOOL` — crop each input to its content bounding box first (default `1`).
 - `-align A` — placement of the content in the padded canvas: `center`
-  (default), `nw`, `n`, `ne`, `w`, `e`, `sw`, `s`, `se`.
+  (default), `nw`, `n`, `ne`, `w`, `e`, `sw`, `s`, `se`. Any other value is an
+  error (`{TCLUTILS COMMON VALUE -align}`, the message lists the allowed ones).
 - `-square BOOL` — force a square output (default `0`).
-- `-size {W H}` — force the inner content area; default is the maximum content
-  size found across all inputs.
+- `-size {W H}` — force the inner content area (positive integers); default is
+  the maximum content size found across all inputs.
 
 ### Pixel-level primitives
 
@@ -43,8 +46,26 @@ produced/consumed by the `tupng` layer:
   (the non-transparent extent).
 - `tupngpad::trim rgba w h` — crop the buffer to its bounding box.
 - `tupngpad::padTo rgba w h tw th ?options?` — centre/place the content inside a
-  `tw`×`th` canvas. Options: `-background COLOR` (default `white`), `-align A`
-  (as above), `-filter {}`.
+  `tw`×`th` canvas and return PNG bytes. Options: `-background COLOR` (default
+  `white`), `-align A` (as above), `-filter {}` (empty = `up`).
+
+Semi-transparent pixels are composited source-over onto the background
+(`tupngdraw paste`): on an opaque background they become opaque blends, on a
+transparent background (`-background transparent`) they keep their colour and
+alpha.
+
+## Errors
+
+| Error code | Cause |
+|---|---|
+| `{TCLUTILS TUPNGPAD MARGIN}` | `-margin` not an integer >= 0 |
+| `{TCLUTILS TUPNGPAD TRIM}` | `-trim` not a boolean |
+| `{TCLUTILS TUPNGPAD SQUARE}` | `-square` not a boolean |
+| `{TCLUTILS TUPNGPAD SIZE}` | `-size` not empty or `{W H}` with integers >= 1 |
+| `{TCLUTILS COMMON VALUE -align}` | unknown `-align` |
+
+Errors from reading and decoding the files (`open`, `tupng::decode`) pass
+through unchanged.
 
 ## Notes
 

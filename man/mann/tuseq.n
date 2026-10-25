@@ -1,4 +1,4 @@
-.TH tuseq n 0.1 tclutils
+.TH tuseq n 0.2 tclutils
 .SH tclutils::tuseq
 .PP
 \fBseq\fR\-like numeric sequence generation in pure Tcl.
@@ -9,6 +9,24 @@
 .CE
 .PP
 Positional forms: \fBlast\fR, \fBfirst last\fR, or \fBfirst incr last\fR (negative steps allowed). Options: \fB\-separator S\fR (text only, default newline), \fB\-format F\fR (printf format), \fB\-equalwidth 0|1\fR (pad numbers with leading zeros to equal width).
+.PP
+Options may stand before, between or after the values. An argument that starts with \fB\-\fR and is not a number starts an option; negative numbers are values. \fBrange\fR rejects \fB\-separator\fR as an unknown option.
+.PP
+When all three values are integers (of any size, also 64\-bit values under Tcl 8.6), the sequence is computed with integers; otherwise with doubles, formatted with \fB%g\fR.
+.CS
+::tclutils::tuseq::text 3 -separator ,          ;# -> 1,2,3
+::tclutils::tuseq::range 5000000000 5000000001  ;# -> 5000000000 5000000001
+.CE
+.SS Errors
+.TS
+l l.
+Case	\fB\-errorcode\fR
+no value or more than three	\fB{TCLUTILS TUSEQ ARGS}\fR
+value is not a number	\fB{TCLUTILS TUSEQ VALUE}\fR
+increment 0	\fB{TCLUTILS TUSEQ INCREMENT}\fR
+option without value	\fB{TCLUTILS TUSEQ OPTION}\fR
+unknown option (also \fB\-separator\fR for \fBrange\fR)	\fB{TCLUTILS COMMON OPTION \-name}\fR
+.TE
 .SS CLI
 .CS
 tclsh bin/tuseq.tcl 1 2 10

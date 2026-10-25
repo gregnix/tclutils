@@ -1,10 +1,10 @@
-.TH tuer n 0.2 tclutils
+.TH tuer n 0.3 tclutils
 .SH tclutils::tuer
 .PP
 Parses a Mermaid \fBerDiagram\fR (entity\-relationship) block into a \fBtclutils::tudiagram\fR model so it renders natively (SVG or PNG) through the pure\-Tcl engine. One of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR.
 .SS Package
 .CS
-package require tclutils::tuer 0.2
+package require tclutils::tuer 0.3
 .CE
 .PP
 Depends on \fBtclutils::tudiagram 0.3\fR (the crow's\-foot end\-marks).
@@ -19,7 +19,7 @@ A <cardinality> B : label        -> a connector A--B labelled <label>, with
                                     crow's-foot cardinality marks at both ends
 .CE
 .PP
-Keys (PK / FK) are appended in parentheses on the attribute line. A \fB..\fR (non\-identifying) relationship is drawn dashed, \fB\-\-\fR (identifying) solid.
+Keys (PK / FK) are appended in parentheses on the attribute line. A label in double quotes (\fB: "places order"\fR) loses the quotes. A \fB..\fR (non\-identifying) relationship is drawn dashed, \fB\-\-\fR (identifying) solid.
 .SS "Cardinality marks"
 .PP
 The cardinality on each side of the connector becomes a \fBtudiagram\fR end\-mark (\fB\-startMark\fR on the \fBA\fR end, \fB\-endMark\fR on the \fBB\fR end). The mapping is side\-independent — \fB{\fR/\fB}\fR mean "many", \fBo\fR means "zero (optional)":

@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tusize 0.1
+package require tclutils::tusize 0.2
 
 proc writeBytes {path s} {
     set ch [open $path wb]; fconfigure $ch -translation binary
@@ -55,5 +55,27 @@ test tusize-entries-2 {not a directory} -body {
     catch {::tclutils::tusize::entries [info script]} e
     string match {not a directory:*} $e
 } -result 1
+
+testConstraint symlink [expr {$tcl_platform(platform) eq "unix"}]
+
+test tusize-link-1 {link counted with its own size, not the target} -constraints symlink -setup {
+    set tmp [makeDirectory tusz4]
+    writeBytes [file join $tmp big.bin] [string repeat x 5000]
+    file delete -force [file join $tmp l]
+    file link -symbolic [file join $tmp l] big.bin
+} -body {
+    set link [::tclutils::tusize::bytes [file join $tmp l]]
+    file lstat [file join $tmp l] st
+    list [expr {$link == $st(size)}] [expr {$link < 5000}] \
+        [::tclutils::tusize::bytes $tmp]
+} -result [list 1 1 [expr {5000 + 7}]]
+
+test tusize-human-6 {units beyond PiB} -body {
+    list [::tclutils::tusize::human [expr {2**60}]] \
+        [::tclutils::tusize::human [expr {2**70}]] \
+        [::tclutils::tusize::human [expr {2**80}]] \
+        [::tclutils::tusize::human [expr {10**21}] -si 1] \
+        [::tclutils::tusize::human [expr {10**24}] -si 1]
+} -result {{1.0 EiB} {1.0 ZiB} {1.0 YiB} {1.0 ZB} {1.0 YB}}
 
 cleanupTests

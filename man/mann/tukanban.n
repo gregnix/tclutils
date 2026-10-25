@@ -43,7 +43,7 @@ Long card text is clipped to the column width, not wrapped or shrunk.
 Cards exceeding the lane height are dropped (the lane does not scroll).
 .SS Options
 .PP
-\fB\-width\fR (default \fB0\fR = auto from column count), \fB\-height\fR (default \fB0\fR = auto from the tallest stack), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in 6x8 bitmap font with German umlauts via real codepoints), \fB\-scale\fR (positive integer; enlarges the PNG canvas, SVG ignores it).
+\fB\-width\fR (default \fB0\fR = auto from column count), \fB\-height\fR (default \fB0\fR = auto from the tallest stack), \fB\-fontfile\fR (a TTF for real\-font labels via \fBGlyphs\fR; PNG only \-\- otherwise the built\-in 6x8 bitmap font with German umlauts via real codepoints), \fB\-scale\fR (positive integer; on PNG the canvas is \fB\-width\fR×\fB\-scale\fR by \fB\-height\fR×\fB\-scale\fR; on SVG the canvas keeps \fB\-width\fR × \fB\-height\fR and text, lines and spacing grow by the factor).
 .SS Usage
 .CS
 package require tclutils::tukanban

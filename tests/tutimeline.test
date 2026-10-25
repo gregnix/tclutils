@@ -95,4 +95,19 @@ test tutimeline-5.3 {integer -scale multiplies the raster dimensions} -body {
     list $w1 $h1 $w3 $h3
 } -result {200 200 600 600}
 
+# --- fixes 0.2: separator is ": ", times like 12:30 stay whole ----------------
+
+test tutimeline-5.1 {12:30 stays one period} -body {
+    dict get [::tclutils::tutimeline::parse "timeline\n12:30 : Mittag : Kaffee\n"] periods
+} -result {{12:30 {Mittag Kaffee} {}}}
+test tutimeline-5.2 {an event may contain a colon without space} -body {
+    dict get [::tclutils::tutimeline::parse "timeline\n2024 : Start 08:00\n     : Ende 17:00\n"] periods
+} -result {{2024 {{Start 08:00} {Ende 17:00}} {}}}
+test tutimeline-5.3 {a trailing colon is a separator} -body {
+    dict get [::tclutils::tutimeline::parse "timeline\n2024 :\n"] periods
+} -result {{2024 {} {}}}
+test tutimeline-5.4 {colon without space after the period does not split} -body {
+    lindex [dict get [::tclutils::tutimeline::parse "timeline\n2024:Start\n"] periods] 0 0
+} -result 2024:Start
+
 cleanupTests

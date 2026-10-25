@@ -19,7 +19,7 @@ across the top.
 ## Package
 
 ```tcl
-package require tclutils::tutimeline 0.1
+package require tclutils::tutimeline 0.2
 ```
 
 ## Commands
@@ -45,9 +45,10 @@ Render options (all optional):
 -fontfile F    real TTF/OTF for labels (raster)    (default: 6x8 bitmap font)
 ```
 
-The SVG backend ignores `-scale` and `-fontfile` (it uses a fixed `monospace`
-viewer font locked to the 6x8 metric). On the raster backend `-scale N`
-multiplies the pixel dimensions and the font scale by `N`.
+The SVG backend ignores `-fontfile` (it uses a fixed `monospace` viewer font
+locked to the 6x8 metric). On SVG `-scale N` keeps the canvas at `-width` ×
+`-height` and multiplies text, lines and spacing by `N`. On the raster backend
+`-scale N` multiplies the pixel dimensions and the font scale by `N`.
 
 ## Input grammar (Mermaid `timeline` subset)
 
@@ -61,7 +62,10 @@ section <name>                     %% starts a section
 %% ...                             %% comment, ignored
 ```
 
-At least one time period is required. Periods listed before any `section` keep
+The separator is a colon followed by white space or the end of the line
+(`" : "`, `": "`). A colon inside a word does not split, so `12:30 : Lunch` is
+the period `12:30` with the event `Lunch`, and `2020:Start` is one period
+without events. At least one time period is required. Periods listed before any `section` keep
 an empty section.
 
 ## Usage

@@ -507,4 +507,40 @@ test tupngdraw-13.4 {-ry defaults to -rx (corner cut in both axes)} -body {
     set r
 } -result {255 255 255 255}
 
+# --- 0.13: paste composites source-over like setpixel ---------------------
+test tupngdraw-14.1 {paste half-transparent onto transparent keeps alpha} -body {
+    set p [::tclutils::tupngdraw::new -width 2 -height 1 -background transparent]
+    $p paste 0 0 [binary format cu* {255 0 0 128}] 1 1
+    $p setpixel 1 0 -color {255 0 0 128}
+    set r [list [$p pixel 0 0] [$p pixel 1 0]]
+    $p destroy
+    set r
+} -result {{255 0 0 128} {255 0 0 128}}
+
+test tupngdraw-14.2 {paste onto opaque white blends as before} -body {
+    set p [::tclutils::tupngdraw::new -width 1 -height 1]
+    $p paste 0 0 [binary format cu* {255 0 0 128}] 1 1
+    set r [$p pixel 0 0]
+    $p destroy
+    set r
+} -result {255 127 127 255}
+
+test tupngdraw-14.3 {paste and setpixel agree over a half-transparent base} -body {
+    set p [::tclutils::tupngdraw::new -width 2 -height 1 \
+        -background {0 0 255 100}]
+    $p paste 0 0 [binary format cu* {255 0 0 128}] 1 1
+    $p setpixel 1 0 -color {255 0 0 128}
+    set r [expr {[$p pixel 0 0] eq [$p pixel 1 0]}]
+    $p destroy
+    set r
+} -result 1
+
+test tupngdraw-14.4 {paste: alpha 0 leaves, alpha 255 replaces} -body {
+    set p [::tclutils::tupngdraw::new -width 2 -height 1 -background transparent]
+    $p paste 0 0 [binary format cu* {9 9 9 0 1 2 3 255}] 2 1
+    set r [list [$p pixel 0 0] [$p pixel 1 0]]
+    $p destroy
+    set r
+} -result {{0 0 0 0} {1 2 3 255}}
+
 cleanupTests

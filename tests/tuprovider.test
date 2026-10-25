@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuprovider 0.1
+package require tclutils::tuprovider 0.2
 
 # a scratch tree for the local provider
 set ::d [makeDirectory tuprov]
@@ -98,5 +98,17 @@ test tuprovider-1.10 {base head default truncates get output} -setup {
 } -cleanup {
     HeadProv destroy
 } -result {0123 0123456789}
+
+
+# --- unreleased: head returns the bytes unchanged ---------------------------
+test tuprovider-2.1 {local head keeps content that looks like a number} -setup {
+    set f [file join [tcltest::temporaryDirectory] head_num.txt]
+    set fh [open $f wb]; puts -nonewline $fh 010; close $fh
+    set p [::tclutils::tuprovider open local]
+} -body {
+    list [$p head $f 0] [$p head $f 3]
+} -cleanup {
+    file delete $f
+} -result {010 010}
 
 cleanupTests

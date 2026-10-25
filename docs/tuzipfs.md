@@ -35,7 +35,9 @@ package require tclutils::tuzipfs
 ```
 
 - `rcopy` — recursive byte-exact copy. Works from a mounted `zipfs` source,
-  where a plain `file copy` is unreliable.
+  where a plain `file copy` is unreliable. Entries whose name starts with a
+  dot (`.htaccess`, `.config/`) are copied too, so `copyStdlib` and VFS
+  copies are complete.
 - `copyStdlib` — copy `tcl_library` (and, with `-tk 1`, `tk_library`) into
   `destDir`. `-from running` uses the current interpreter's `[info library]` /
   `$::tk_library`; `-from DIR` reads them from `DIR/tcl_library` (and

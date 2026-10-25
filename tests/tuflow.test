@@ -216,4 +216,37 @@ test tuflow-sg-1.8 {subgraphs render through the facade as a valid PNG} -body {
     set sig
 } -result 89504e47
 
+# --- fixes 0.3 ------------------------------------------------------------------
+
+proc edgePairs {m} {
+    lmap e [dict get $m edges] {list [dict get $e from] [dict get $e to]}
+}
+
+test tuflow-fix-1.1 {bare `sankey` is rejected like sankey-beta, not a node} -body {
+    catch {M::parse "sankey\nA,B,1\n"} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUFLOW UNSUPPORTED}
+test tuflow-fix-1.2 {sankey-beta is still rejected by parse} -body {
+    catch {M::parse "sankey-beta\nA,B,1\n"} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUFLOW UNSUPPORTED}
+test tuflow-fix-2.1 {header keyword and direction ignore case} -body {
+    set m [M::parse "FLOWCHART TD\nA --> B\n"]
+    list [dict get $m meta direction] [lmap n [dict get $m nodes] {dict get $n id}]
+} -result {TB {A B}}
+test tuflow-fix-2.2 {`Graph rl` header} -body {
+    dict get [M::parse "Graph rl\nA --> B\n"] meta direction
+} -result RL
+test tuflow-fix-3.1 {A & B --> C & D gives every pair} -body {
+    edgePairs [M::parse "flowchart LR\nA & B --> C & D\n"]
+} -result {{A C} {A D} {B C} {B D}}
+test tuflow-fix-3.2 {& in a chain, label kept on each edge} -body {
+    set m [M::parse "flowchart LR\nA -->|x| B & C --> D\n"]
+    list [edgePairs $m] [lsort -unique [lmap e [dict get $m edges] {dict get $e label}]]
+} -result {{{A B} {A C} {B D} {C D}} {{} x}}
+test tuflow-fix-3.3 {A & B alone declares both nodes, no edge} -body {
+    set m [M::parse "flowchart LR\nA\[a\] & B\n"]
+    list [lmap n [dict get $m nodes] {dict get $n id}] [llength [dict get $m edges]]
+} -result {{A B} 0}
+
 cleanupTests

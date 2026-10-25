@@ -1,4 +1,4 @@
-.TH tuprovider n 0.1 tclutils
+.TH tuprovider n 0.2 tclutils
 .SH tclutils::tuprovider
 .PP
 A storage\-provider interface: one small abstraction over every storage back end (local filesystem, ZIP, WebDAV, ...). For a consumer \-\- a directory tree, a file list \-\- everything is just a path with children; where the bytes actually live does not matter.

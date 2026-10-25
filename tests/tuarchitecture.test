@@ -179,4 +179,11 @@ test tuarchitecture-6.2 {the official nested-group example parses with nesting} 
     list [lsort [dict get [grp $m cloud] members]] [dict get [grp $m fe] members]
 } -result {{db ui} ui}
 
+
+# --- unreleased: an id that looks like a number is the label, unchanged -----
+test tuarchitecture-7.1 {service and junction ids like 010 / 1e3 keep their text} -body {
+    set m [M::parse "architecture-beta\n  service 010(server)\n  junction 1e3"]
+    list [dict get [nodeById $m 010] label] [dict get [nodeById $m 1e3] label]
+} -result {010 1e3}
+
 cleanupTests

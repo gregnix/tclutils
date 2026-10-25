@@ -1,4 +1,4 @@
-.TH tutdbc n 0.1 tclutils
+.TH tutdbc n 0.2 tclutils
 .SH tclutils::tutdbc
 .PP
 Small, NULL\-safe helpers over an existing \fBTDBC\fR connection object — the tdbc analogue of \fBtclutils::tusqlite\fR. The module does \fBnot\fR \fBpackage require\fR any tdbc driver itself — you pass it a connection you opened — so it loads anywhere, and only the calls that actually touch the database need a driver present.

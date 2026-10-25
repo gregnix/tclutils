@@ -9,8 +9,8 @@ builds on `tclutils::tubin` for all binary primitives.
 ## Package
 
 ```tcl
-package require tclutils::tubin 0.2
-package require tclutils::tummdb 0.1
+package require tclutils::tubin 0.3-
+package require tclutils::tummdb 0.2
 ```
 
 ## Open and close

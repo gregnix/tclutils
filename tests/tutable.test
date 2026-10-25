@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tutable 0.1
+package require tclutils::tutable 0.2
 
 test tutable-md-1 {markdown default} -body {
     ::tclutils::tutable::render {Name Age} {{Alice 30} {Bob 7}}
@@ -29,9 +29,9 @@ test tutable-box-1 {ascii box style} -body {
 
 test tutable-ragged-1 {missing cells render empty} -body {
     ::tclutils::tutable::render {A B C} {{1 2}}
-} -result {| A | B | C |
+} -result {| A   | B   | C   |
 | :-- | :-- | :-- |
-| 1 | 2 |   |}
+| 1   | 2   |     |}
 
 test tutable-opt-1 {bad style errors} -body {
     catch {::tclutils::tutable::render {A} {{1}} -style fancy} e o
@@ -41,5 +41,20 @@ test tutable-opt-2 {bad alignment errors} -body {
     catch {::tclutils::tutable::render {A} {{1}} -align {x}} e o
     dict get $o -errorcode
 } -result {TCLUTILS TUTABLE OPT}
+
+test tutable-cols-1 {more cells than headers is an error} -body {
+    catch {::tclutils::tutable::render {A B} {{1 2} {1 2 3}}} e o
+    list [dict get $o -errorcode] $e
+} -result {{TCLUTILS TUTABLE COLUMNS} {row 2 has 3 cells, but there are 2 headers}}
+test tutable-head-1 {empty headers is an error} -body {
+    catch {::tclutils::tutable::render {} {{1}}} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUTABLE HEADERS}
+test tutable-md-3 {markdown columns at least 3 wide} -body {
+    ::tclutils::tutable::render {a b} {{1 2}} -align {l c}
+} -result "| a   |  b  |\n| :-- | :-: |\n| 1   |  2  |"
+test tutable-box-2 {box columns keep their natural width} -body {
+    ::tclutils::tutable::render {a} {{1}} -style box
+} -result "+---+\n| a |\n+---+\n| 1 |\n+---+"
 
 cleanupTests

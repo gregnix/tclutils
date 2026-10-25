@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tutsort 0.1
+package require tclutils::tutsort 0.2
 
 test tutsort-1.1 {simple chain} { ::tclutils::tutsort::pairs {a b b c} } {a b c}
 test tutsort-1.2 {diamond} { ::tclutils::tutsort::pairs {a b a c b d c d} } {a b c d}
@@ -22,4 +22,17 @@ test tutsort-1.7 {empty input} { ::tclutils::tutsort::pairs {} } {}
 test tutsort-1.8 {result is a permutation of all nodes} {
     lsort [::tclutils::tutsort::pairs {a b a c b d c d}]
 } {a b c d}
+test tutsort-2.1 {cycle message names only nodes on the cycle} {
+    catch {::tclutils::tutsort::pairs {a b b a b c}} m; set m
+} {input contains a cycle involving: a b}
+test tutsort-2.2 {node before the cycle is not named} {
+    catch {::tclutils::tutsort::pairs {x y y z z y}} m; set m
+} {input contains a cycle involving: y z}
+test tutsort-2.3 {node between two cycles is not named} {
+    catch {::tclutils::tutsort::pairs {a b b a b d d e e f f e}} m; set m
+} {input contains a cycle involving: a b e f}
+test tutsort-2.4 {self-loop via longer cycle and tail} {
+    catch {::tclutils::tutsort::pairs {p q q r r p r s s t}} m o
+    list $m [dict get $o -errorcode]
+} {{input contains a cycle involving: p q r} {TCLUTILS TUTSORT CYCLE}}
 cleanupTests

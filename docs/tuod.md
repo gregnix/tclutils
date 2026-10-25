@@ -28,3 +28,19 @@ puts [::tclutils::tuod::data $bytes -format hex -width 16]
 ```
 
 `bytes` returns unsigned byte values. This avoids Tcl's signed-byte pitfall when using `binary scan` with `c`.
+
+`data` and `file` check `-format` and `-address` before the first byte,
+so a wrong value is reported also for empty data. The data must be bytes
+(every character 0..255).
+
+## Errors
+
+```text
+{TCLUTILS TUOD FORMAT value}    unknown -format
+{TCLUTILS TUOD ADDRESS value}   unknown -address
+{TCLUTILS TUOD WIDTH}           -width not a positive integer
+{TCLUTILS TUOD OFFSET}          -offset negative or not an integer
+{TCLUTILS TUOD LENGTH}          -length not an integer
+{TCLUTILS TUOD BYTES}           data contains a character above 255
+{TCLUTILS COMMON OPTION -name}  unknown option, option without value
+```

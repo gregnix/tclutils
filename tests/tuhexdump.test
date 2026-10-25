@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuhexdump 0.1
+package require tclutils::tuhexdump 0.2
 
 test tuhexdump-1.1 {dump small data} -body {
     ::tclutils::tuhexdump::data "ABC" -width 8
@@ -14,5 +14,38 @@ set hexFile [makeFile "PDF" tuhexdump-input.bin]
 test tuhexdump-1.2 {dump file} -body {
     ::tclutils::tuhexdump::file $hexFile -width 4
 } -result {00000000  50 44 46 0a  |PDF.|}
+
+test tuhexdump-2.1 {unknown option has an error code} -body {
+    catch {::tclutils::tuhexdump::data ABC -wdth 4} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON OPTION -wdth}
+
+test tuhexdump-2.2 {option without value} -body {
+    catch {::tclutils::tuhexdump::data ABC -width} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS COMMON OPTION -width}
+
+test tuhexdump-2.3 {-width checked} -body {
+    set out {}
+    foreach w {x 0 -1} {
+        catch {::tclutils::tuhexdump::data ABC -width $w} msg opts
+        lappend out [dict get $opts -errorcode]
+    }
+    set out
+} -result {{TCLUTILS COMMON INTEGER -width} {TCLUTILS COMMON INTEGER -width} {TCLUTILS COMMON INTEGER -width}}
+
+test tuhexdump-2.4 {-offset and -length checked} -body {
+    set out {}
+    foreach o {{-offset -1} {-offset x} {-length x}} {
+        catch {::tclutils::tuhexdump::data ABC {*}$o} msg opts
+        lappend out [dict get $opts -errorcode]
+    }
+    set out
+} -result {{TCLUTILS TUHEXDUMP OFFSET} {TCLUTILS TUHEXDUMP OFFSET} {TCLUTILS TUHEXDUMP LENGTH}}
+
+test tuhexdump-2.5 {characters above 255 are rejected} -body {
+    catch {::tclutils::tuhexdump::data "a\u20ac"} msg opts
+    dict get $opts -errorcode
+} -result {TCLUTILS TUHEXDUMP BYTES}
 
 cleanupTests

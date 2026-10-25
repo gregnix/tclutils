@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tufold 0.1
+package require tclutils::tufold 0.2
 
 set tmp [makeDirectory tufold]
 set f [makeFile "abcdefghi\nword wrap here\n" [file join $tmp input.txt]]
@@ -29,5 +29,15 @@ test tufold-1.5 {width must be positive} -body {
     catch {::tclutils::tufold::text abc -width 0} msg opts
     dict get $opts -errorcode
 } -result {TCLUTILS COMMON INTEGER -width}
+
+test tufold-2.1 {word fold drops trailing blanks at the break} -body {
+    ::tclutils::tufold::foldLine "ab   cd" -width 3 -words 1
+} -result {ab cd}
+test tufold-2.2 {word fold: blank at width+1} -body {
+    ::tclutils::tufold::foldLine "eins zwei drei vier" -width 9 -words 1
+} -result {{eins zwei} {drei vier}}
+test tufold-2.3 {word fold: line of blanks before a long word} -body {
+    ::tclutils::tufold::foldLine "   abcdef" -width 3 -words 1
+} -result {abc def}
 
 cleanupTests

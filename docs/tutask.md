@@ -88,7 +88,11 @@ sleep ms
   (`kill` on Unix, `taskkill /T /F` on Windows). On Unix only the processes
   of the pipeline itself: what they start in the background (`sh -c "x &"`)
   keeps running (measured 2026-10-20; `setsid` is planned, see the
-  roadmap). `-profile` is Tcl 9 only.
+  roadmap). `-profile` is Tcl 9 only. Windows console programs write in
+  the console code page (`cp850` on German Windows), not in the system
+  encoding (`cp1252`); under Tcl 9 a byte that the channel encoding lacks
+  (`ü` = 0x81 in cp850) fails the read with `{POSIX EILSEQ}`. Pass
+  `-encoding cp850` (or `-profile replace`) for such programs.
 
 ## Groups
 
