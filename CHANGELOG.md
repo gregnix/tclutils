@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `tools/check-modules.md`: example output without a personal path.
+
 ## 0.68.0 - 2026-10-24
 
 Fixes found while writing and checking the tclutils book. 76 modules get a

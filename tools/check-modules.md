@@ -71,7 +71,7 @@ Example:
 ```
 $ tclsh tools/check-modules.tcl ../tkutils -require test,doc,man
 Module hygiene check: tkutils
-Root:     /home/greg/lib/tcltk/tkutils
+Root:     /home/user/lib/tcltk/tkutils
 Umbrella: tkutils-0.42.tm (37 modules listed)
 Required: test doc man
 
