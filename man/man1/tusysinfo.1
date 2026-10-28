@@ -1,0 +1,14 @@
+'" Copyright (c) 2026 Gregor Ebbing
+'" SPDX-License-Identifier: MIT
+.TH tusysinfo 1 0.69.0 tclutils "User Commands"
+.SH NAME
+tusysinfo \- print operating system and hardware information.
+.SH SYNOPSIS
+.nf
+tclsh bin/tusysinfo.tcl ?--json? ?--serials? ?--anonymize? ?--sections {os cpu memory machine disks displays}? ?--timeout ms?
+.fi
+.SH DESCRIPTION
+.PP
+Prints operating system, CPU, memory, computer model, disks and monitors of this computer, as text or with \fB--json\fR as JSON. Serial numbers only with \fB--serials\fR. \fB--anonymize\fR hides the host name (and serials in the text). Exit code 1 on a bad option value, 2 on a usage error.
+.SH SEE ALSO
+tusysinfo(n), tuedid(n), tuappinfo(n)

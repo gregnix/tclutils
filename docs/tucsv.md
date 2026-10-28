@@ -72,7 +72,26 @@ set dictRows [::tclutils::tucsv::dicts $rows]
 ```tcl
 set rows [::tclutils::tucsv::file data.csv -delimiter {;}]
 ::tclutils::tucsv::writeFile out.csv $rows
+::tclutils::tucsv::writeFile out.csv $rows -profile excel-de
 ```
+
+`file` and `writeFile` take `-encoding` (default `utf-8`). `writeFile` writes
+the line ends given by `-newline` unchanged; without it the platform default
+applies.
+
+## Profiles
+
+`-profile` works with `text`, `file` and `writeFile`. Options given after it
+override its values.
+
+| Profile    | Sets                                      |
+|------------|-------------------------------------------|
+| `excel-de` | `-delimiter ;`, `-newline \r\n`, `-bom 1` |
+| `rfc4180`  | `-delimiter ,`, `-newline \r\n`           |
+
+`-bom 1` puts a UTF-8 byte order mark in front of the text, so Excel opens
+the file as UTF-8. An unknown profile raises
+`{TCLUTILS TUCSV PROFILE <name>}`.
 
 ## Options (0.37.0)
 
@@ -86,5 +105,5 @@ set rows [::tclutils::tucsv::file data.csv -delimiter {;}]
 Documented for completeness (same module, also covered by the test suite):
 
 ```tcl
-tucsv::text rows args                          ;# format ROWS (a list of field lists) as CSV text; -delimiter -quote -alwaysQuote -newline
+tucsv::text rows args                          ;# format ROWS (a list of field lists) as CSV text; -delimiter -quote -alwaysQuote -newline -bom -profile
 ```

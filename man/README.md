@@ -1,6 +1,6 @@
 # tclutils manpages
 
-Nroff manual pages for **tclutils 0.68.0**.
+Nroff manual pages for **tclutils 0.69.0**.
 
 `man/mann/*.n` is generated from `docs/*.md`. From the tclutils directory:
 

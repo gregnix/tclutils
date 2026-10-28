@@ -1,7 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.69.0 - 2026-10-28
 
+Recommended pairing: tclutils 0.69.0 + tkutils 0.49.0 + ctrlutils 0.4.
+
+Module versions: `tucsv` 0.2, `tusqlite` 0.2; new `tusysinfo`, `tuedid`
+0.1. When copying over an older tree, delete `tclutils-0.68.0.tm`,
+`tucsv-0.1.tm`, `tusqlite-0.1.tm`.
+
+- `tucsv`: `-profile excel-de|rfc4180` for `text`, `file`, `writeFile`;
+  `text -bom 1`; `file` and `writeFile` take `-encoding` (default utf-8);
+  `writeFile` keeps the line ends of `-newline`. Tests `tucsv-3.1`–`3.6`.
+- `tusqlite`: `rows` and `value` take a parameter dict (`:name`); caller
+  variables no longer reach the query. New `update`, `delete` (refuse an
+  empty WHERE dict). Tests `tusqlite-5.1`–`5.10`.
+- New `tusysinfo`: OS, CPU, memory, model, disks and monitors on Linux,
+  macOS and Windows; text report and JSON; serial numbers only on request.
+  CLI `bin/tusysinfo.tcl`. In the umbrella.
+- New `tuedid`: parse a monitor's EDID block. In the umbrella.
 - `tools/check-modules.md`: example output without a personal path.
 
 ## 0.68.0 - 2026-10-24

@@ -1,0 +1,70 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set tmDir [file normalize [file join $here .. lib tm]]
+catch {tcl::tm::path add $tmDir}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tuedid 0.1
+set ns ::tclutils::tuedid
+
+# A Dell-like 27" monitor: DEL, product A0F1, serial 12345, week 10/2022,
+# EDID 1.4, 60x34 cm, preferred 1920x1080 at 60 Hz, name and serial string.
+proc descText {tag text} {
+    set t [string range $text 0 12]
+    if {[string length $t] < 13} { append t \n }
+    while {[string length $t] < 13} { append t " " }
+    set out [list 0 0 0 $tag 0]
+    foreach ch [split $t ""] { lappend out [scan $ch %c] }
+    return $out
+}
+proc mkEdid {{fixSum 1}} {
+    set b {0 255 255 255 255 255 255 0}
+    lappend b 0x10 0xAC 0xF1 0xA0 0x39 0x30 0 0 10 32 1 4 0xA5 60 34
+    while {[llength $b] < 54} { lappend b 0 }
+    lappend b 0x02 0x3A 0x80 0x18 0x71 0x38 0x2D 0x40 0 0 0 0 0x58 0x54 0x21 0 0 0x1E
+    lappend b {*}[descText 0xFF ABC123]
+    lappend b {*}[descText 0xFC "DELL P2722H"]
+    lappend b 0 0 0 0xFD 0 {*}[lrepeat 13 0]
+    lappend b 0
+    set sum 0; foreach v $b { incr sum [expr {$v}] }
+    lappend b [expr {$fixSum ? (256 - $sum % 256) % 256 : 7}]
+    return [binary format c* $b]
+}
+
+test tuedid-1.1 {parse a complete block} -body {
+    set d [${ns}::parse [mkEdid]]
+    lmap k {valid version manufacturer vendor productCode serial serialText name
+            week year digital widthCm heightCm diagonal preferred extensions} {dict get $d $k}
+} -result {1 1.4 DEL Dell A0F1 12345 ABC123 {DELL P2722H} 10 2022 1 60 34 27.2 {width 1920 height 1080 refresh 60.0} 0}
+
+test tuedid-1.2 {wrong checksum: still parsed, valid 0} -body {
+    dict get [${ns}::parse [mkEdid 0]] valid
+} -result 0
+
+test tuedid-1.3 {parseHex accepts xrandr-style lines} -body {
+    binary scan [mkEdid] H* hex
+    set lines {}
+    foreach chunk [regexp -all -inline {.{1,32}} $hex] { append lines "\t\t$chunk\n" }
+    dict get [${ns}::parseHex $lines] name
+} -result {DELL P2722H}
+
+test tuedid-1.4 {errors: short, header, hex} -body {
+    list [catch {${ns}::parse abc} e1] [lindex $::errorCode 2] \
+         [catch {${ns}::parse [string repeat \x01 128]} e2] [lindex $::errorCode 2] \
+         [catch {${ns}::parseHex xyz} e3] [lindex $::errorCode 2]
+} -result {1 SHORT 1 HEADER 1 HEX}
+
+test tuedid-1.5 {vendor lookup} -body {
+    list [${ns}::vendor GSM] [${ns}::vendor ZZZ]
+} -result {LG {}}
+
+test tuedid-1.6 {unknown size gives diagonal 0, no detailed timing gives empty preferred} -body {
+    set b [mkEdid]
+    set b [string replace $b 21 22 \x00\x00]
+    set b [string replace $b 54 55 \x00\x00]
+    set d [${ns}::parse $b]
+    list [dict get $d diagonal] [dict get $d preferred] [dict get $d valid]
+} -result {0 {} 0}
+
+cleanupTests

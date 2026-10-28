@@ -1,6 +1,6 @@
 # CLI wrappers
 
-tclutils 0.68.0 ships 34 thin CLI wrapper scripts in `bin/` (`_bootstrap.tcl`
+tclutils 0.69.0 ships 35 thin CLI wrapper scripts in `bin/` (`_bootstrap.tcl`
 is the path helper, not a wrapper). They call the
 package APIs directly, so the library stays usable from normal Tcl code
 while also offering convenient command-line entry points. Each wrapper
@@ -36,6 +36,7 @@ Diagram demos are scripts under `examples/`, not wrappers:
 - `turev.tcl`
 - `tuseq.tcl`
 - `tushuf.tcl`
+- `tusysinfo.tcl`
 - `tusort.tcl`
 - `tutac.tcl`
 - `tutablepng.tcl`

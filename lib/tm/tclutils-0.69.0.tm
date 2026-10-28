@@ -26,7 +26,7 @@ package require tclutils::tuzipfs 0.3
 package require tclutils::tuico 0.2
 package require tclutils::tujson 0.1
 package require tclutils::tuxml 0.1
-package require tclutils::tucsv 0.1
+package require tclutils::tucsv 0.2
 package require tclutils::tuod 0.2
 package require tclutils::tuiconv 0.1
 package require tclutils::tucmp 0.2
@@ -104,6 +104,8 @@ package require tclutils::tudeploy 0.2
 # Introspection / diagnostics
 package require tclutils::tupkgfinder 0.2
 package require tclutils::tuappinfo 0.2
+package require tclutils::tuedid 0.1
+package require tclutils::tusysinfo 0.1
 package require tclutils::tusettings 0.1
 package require tclutils::tustr 0.2
 package require tclutils::tuvalidate 0.2
@@ -114,7 +116,7 @@ package require tclutils::tutable 0.2
 # HTTP / SPARQL / SQLite helpers (optional, not dependency-free)
 package require tclutils::tuhttps 0.1
 package require tclutils::tufetch 0.4
-package require tclutils::tusqlite 0.1
+package require tclutils::tusqlite 0.2
 package require tclutils::tusparql 0.2
 # MaxMind DB reader
 package require tclutils::tummdb 0.2
@@ -128,4 +130,4 @@ package require tclutils::tuprovider::zip 0.1
 package require tclutils::tuprovider::dav 0.1
 package require tclutils::tuprovider::ftp 0.2
 
-package provide tclutils 0.68.0
+package provide tclutils 0.69.0

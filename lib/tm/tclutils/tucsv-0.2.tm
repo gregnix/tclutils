@@ -2,6 +2,10 @@
 # Description: small CSV helpers
 # Category: Data · structures & formats
 # Tcl 8.6+, pure Tcl
+#
+# Files are read and written as UTF-8 unless -encoding says otherwise.
+# -profile excel-de selects what Excel with German settings expects: ";" as
+# delimiter, CRLF line ends and (writeFile) a UTF-8 byte order mark.
 
 package require Tcl 8.6-
 package require tclutils::common 0.1
@@ -13,6 +17,37 @@ namespace eval ::tclutils::tucsv {
 
 proc ::tclutils::tucsv::_parseOptions {defaults args} {
     return [::tclutils::common::parseOptions $defaults {*}$args]
+}
+
+# Expand -profile NAME into the options it stands for; explicit options given
+# after the profile win.
+proc ::tclutils::tucsv::_profile {args} {
+    set out {}
+    foreach {k v} $args {
+        if {$k eq "-profile"} {
+            switch -- $v {
+                excel-de { lappend out -delimiter {;} -newline \r\n -bom 1 }
+                rfc4180  { lappend out -delimiter , -newline \r\n }
+                default  {
+                    return -code error -errorcode [list TCLUTILS TUCSV PROFILE $v] \
+                        "unknown profile \"$v\": must be excel-de or rfc4180"
+                }
+            }
+        } else {
+            lappend out $k $v
+        }
+    }
+    return $out
+}
+
+# Remove the given options from an option list; returns {rest picked}.
+proc ::tclutils::tucsv::_take {argList names defaults} {
+    set rest {}
+    set picked $defaults
+    foreach {k v} $argList {
+        if {$k in $names} { dict set picked $k $v } else { lappend rest $k $v }
+    }
+    return [list $rest $picked]
 }
 
 proc ::tclutils::tucsv::_oneChar {value optionName} {
@@ -161,16 +196,20 @@ proc ::tclutils::tucsv::parse {data args} {
 }
 
 proc ::tclutils::tucsv::text {rows args} {
+    lassign [_take [_profile {*}$args] {-bom} {-bom 0}] args bomOpt
     set opts [_parseOptions [dict create -delimiter , -quote \" -alwaysQuote 0 -newline \n] {*}$args]
     set out {}
     foreach row $rows {
         lappend out [joinLine $row -delimiter [dict get $opts -delimiter] -quote [dict get $opts -quote] -alwaysQuote [dict get $opts -alwaysQuote]]
     }
-    return [join $out [dict get $opts -newline]]
+    set bom [expr {[dict get $bomOpt -bom] ? "\uFEFF" : ""}]
+    return $bom[join $out [dict get $opts -newline]]
 }
 
 proc ::tclutils::tucsv::file {path args} {
-    return [parse [::tclutils::common::readFile $path] {*}$args]
+    lassign [_take [_profile {*}$args] {-encoding -newline -bom} {-encoding utf-8}] args fo
+    return [parse [::tclutils::common::readFile $path \
+        -encoding [dict get $fo -encoding]] {*}$args]
 }
 
 proc ::tclutils::tucsv::dicts {rows args} {
@@ -193,8 +232,18 @@ proc ::tclutils::tucsv::dicts {rows args} {
 }
 
 proc ::tclutils::tucsv::writeFile {path rows args} {
-    ::tclutils::common::writeFile $path [text $rows {*}$args]
+    lassign [_take [_profile {*}$args] {-encoding} {-encoding utf-8}] args fo
+    set fh [open $path w]
+    try {
+        # with an explicit -newline the text carries its own line ends;
+        # otherwise the platform convention applies, as before
+        set tr [expr {[dict exists $args -newline] ? "lf" : "auto"}]
+        fconfigure $fh -translation $tr -encoding [dict get $fo -encoding]
+        puts -nonewline $fh [text $rows {*}$args]
+    } finally {
+        close $fh
+    }
     return $path
 }
 
-package provide tclutils::tucsv 0.1
+package provide tclutils::tucsv 0.2

@@ -1,0 +1,287 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set tmDir [file normalize [file join $here .. lib tm]]
+catch {tcl::tm::path add $tmDir}
+if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
+package require tclutils::tusysinfo 0.1
+package require tclutils::tujson
+set ns ::tclutils::tusysinfo
+testConstraint unix [expr {$::tcl_platform(platform) eq "unix"}]
+
+# --- a fake Linux root ---------------------------------------------------
+proc edidBytes {} {
+    set b {0 255 255 255 255 255 255 0}
+    lappend b 0x10 0xAC 0xF1 0xA0 0x39 0x30 0 0 10 32 1 4 0xA5 60 34
+    while {[llength $b] < 54} { lappend b 0 }
+    lappend b 0x02 0x3A 0x80 0x18 0x71 0x38 0x2D 0x40 0 0 0 0 0x58 0x54 0x21 0 0 0x1E
+    foreach {tag txt} {0xFF "ABC123\n      " 0xFC "DELL P2722H\n "} {
+        lappend b 0 0 0 $tag 0
+        foreach ch [split $txt ""] { lappend b [scan $ch %c] }
+    }
+    lappend b 0 0 0 0xFD 0 {*}[lrepeat 13 0] 0
+    set sum 0; foreach v $b { incr sum [expr {$v}] }
+    lappend b [expr {(256 - $sum % 256) % 256}]
+    return [binary format c* $b]
+}
+proc put {root path data {binary 0}} {
+    set f [file join $root $path]
+    file mkdir [file dirname $f]
+    set fh [open $f w]
+    if {$binary} { fconfigure $fh -translation binary } else { fconfigure $fh -encoding utf-8 }
+    puts -nonewline $fh $data
+    close $fh
+}
+set root [makeDirectory sysroot]
+put $root etc/os-release "NAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nID=debian\nPRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\n"
+put $root proc/sys/kernel/osrelease "6.12.48-amd64\n"
+put $root proc/meminfo "MemTotal:       16303428 kB\nMemFree:  1 kB\n"
+put $root proc/cpuinfo [join {
+    "processor\t: 0" "model name\t: AMD Ryzen 5 5600G" "physical id\t: 0" "core id\t\t: 0" ""
+    "processor\t: 1" "model name\t: AMD Ryzen 5 5600G" "physical id\t: 0" "core id\t\t: 0" ""
+    "processor\t: 2" "model name\t: AMD Ryzen 5 5600G" "physical id\t: 0" "core id\t\t: 1" ""
+} \n]
+foreach {f v} {sys_vendor ASUS product_name {Mini PC X1} product_version {Default string} board_vendor {ASUSTeK COMPUTER INC.}
+               board_name {PRIME B550M-A} bios_version 3402 bios_date 04/12/2023 product_serial SN-42} {
+    put $root sys/class/dmi/id/$f "$v\n"
+}
+put $root sys/block/sda/size "1953525168\n"
+put $root sys/block/sda/removable "0\n"
+put $root sys/block/sda/queue/rotational "0\n"
+put $root sys/block/sda/device/vendor "ATA     \n"
+put $root sys/block/sda/device/model "Samsung SSD 870\n"
+put $root sys/block/sda/device/serial "S6PNNS0T\n"
+put $root sys/block/loop0/size "100\n"
+put $root sys/block/sdb/size "0\n"
+put $root sys/class/drm/card0-DP-1/status "connected\n"
+put $root sys/class/drm/card0-DP-1/edid [edidBytes] 1
+put $root sys/class/drm/card0-HDMI-A-1/status "disconnected\n"
+put $root sys/class/drm/card0-HDMI-A-1/edid [edidBytes] 1
+
+test tusysinfo-1.1 {linux: os, cpu, memory from the files} -body {
+    set i [${ns}::collect -platform linux -root $root]
+    list [dict get $i os name] [dict get $i os version] [dict get $i os kernel] \
+         [dict get $i cpu] [dict get $i memory total] [dict get $i host]
+} -result {{Debian GNU/Linux 13 (trixie)} 13 6.12.48-amd64 {model {AMD Ryzen 5 5600G} logical 3 cores 2} 16694710272 {}}
+
+test tusysinfo-1.2 {linux: machine without serial unless -serials 1} -body {
+    set a [${ns}::collect -platform linux -root $root -sections machine]
+    set b [${ns}::collect -platform linux -root $root -sections machine -serials 1]
+    list [dict get $a machine model] [dict get $a machine version] \
+         [dict exists $a machine serial] [dict get $b machine serial]
+} -result {{Mini PC X1} {} 0 SN-42}
+
+test tusysinfo-1.3 {linux: disks skip loop and empty devices} -body {
+    set i [${ns}::collect -platform linux -root $root -sections disks]
+    dict get $i disks
+} -result {{name sda model {ATA Samsung SSD 870} size 1000204886016 type ssd removable 0}}
+
+test tusysinfo-1.4 {linux: connected monitors from EDID} -body {
+    set i [${ns}::collect -platform linux -root $root -sections displays]
+    set d [lindex [dict get $i displays] 0]
+    list [llength [dict get $i displays]] [dict get $d connector] [dict get $d vendor] \
+         [dict get $d name] [dict get $d diagonal] [dict get $d preferred] [dict exists $d serialText] \
+         [dict get $d present]
+} -result {1 DP-1 Dell {DELL P2722H} 27.2 {width 1920 height 1080 refresh 60.0} 0 1}
+
+test tusysinfo-1.5 {only the requested sections} -body {
+    lsort [dict keys [${ns}::collect -platform linux -root $root -sections {os memory}]]
+} -result {host memory os platform}
+
+test tusysinfo-2.1 {sw_vers and sysctl} -body {
+    set os [${ns}::_parseSwVers "ProductName:\t\tmacOS\nProductVersion:\t\t15.1\nBuildVersion:\t\t24B83\n"]
+    set s [${ns}::_parseSysctl "machdep.cpu.brand_string: Apple M4\nhw.ncpu: 10\nhw.memsize: 17179869184\n"]
+    list $os [dict get $s machdep.cpu.brand_string] [dict get $s hw.memsize]
+} -result {{name {macOS 15.1} id macos version 15.1 build 24B83} {Apple M4} 17179869184}
+
+test tusysinfo-2.2 {Windows 11 reports ProductName "Windows 10"} -body {
+    ${ns}::_parseWinVersion {ProductName {Windows 10 Pro} DisplayVersion 24H2 CurrentBuildNumber 26100 UBR 2314
+        CurrentMajorVersionNumber 10 CurrentMinorVersionNumber 0}
+} -result {name {Windows 11 Pro} id windows version 24H2 build 26100.2314 kernel 10.0.26100}
+
+test tusysinfo-2.3 {PowerShell JSON: single disk object, active monitors} -body {
+    set json {{"memory":34272317440,"cores":8,"disks":{"DeviceID":"\\\\.\\PHYSICALDRIVE0","Model":"Samsung SSD 980 PRO 1TB","Size":1000202273280,"MediaType":"Fixed hard disk media","SerialNumber":"0025_38B1"},"monitors":[{"InstanceName":"DISPLAY\\DEL41A2\\5&2b0d6b1c&0&UID4352_0"}]}}
+    set c [${ns}::_parseWinCim $json 0]
+    list [dict get $c memory] [dict get $c cores] [dict get $c disks] [dict get $c active]
+} -result {34272317440 8 {{name {\\.\PHYSICALDRIVE0} model {Samsung SSD 980 PRO 1TB} size 1000202273280 type ssd removable 0}} {{DISPLAY\DEL41A2\5&2B0D6B1C&0&UID4352}}}
+
+test tusysinfo-2.4 {system_profiler JSON} -body {
+    set json {{"SPHardwareDataType":[{"machine_name":"Mac mini","machine_model":"Mac16,10","model_number":"MU9D3D/A","chip_type":"Apple M4","physical_memory":"16 GB","serial_number":"XYZ"}],
+               "SPStorageDataType":[{"_name":"Macintosh HD","size_in_bytes":494384795648,"mount_point":"/","physical_drive":{"device_name":"APPLE SSD AP0512Z","medium_type":"ssd","is_internal_disk":"yes"}}],
+               "SPDisplaysDataType":[{"sppci_model":"Apple M4","spdisplays_ndrvs":[{"_name":"DELL P2722H","_spdisplays_resolution":"1920 x 1080 @ 60.00Hz"}]}]}}
+    set p [${ns}::_parseProfiler $json 0]
+    list [dict get $p machine model] [dict exists $p machine serial] [dict get $p disks] \
+         [dict get [lindex [dict get $p displays] 0] name] [dict get [lindex [dict get $p displays] 0] preferred]
+} -result {{Mac mini} 0 {{name {Macintosh HD} model {APPLE SSD AP0512Z} size 494384795648 type ssd removable 0 mount /}} {DELL P2722H} {width 1920 height 1080 refresh 60.0}}
+
+test tusysinfo-3.1 {report: sections, units, anonymized host} -body {
+    set i [${ns}::collect -platform linux -root $root]
+    dict set i host decoder
+    set r [${ns}::report $i -anonymize 1]
+    list [string match *Host:\ <host>* $r] [string match {*Total: 15.5 GiB*} $r] \
+         [string match {*DP-1 *Dell DELL P2722H  27.2"  1920x1080 @ 60.0 Hz  2022*} $r] \
+         [string match *decoder* $r]
+} -result {1 1 1 0}
+
+test tusysinfo-3.2 {toJson is valid JSON with numbers} -body {
+    set j [${ns}::toJson [${ns}::collect -platform linux -root $root]]
+    set p [::tclutils::tujson::parse $j]
+    list [::tclutils::tujson::validate $j] [string match {*"total": 16694710272*} $j] \
+         [dict get [lindex [dict get $p displays] 0] productCode]
+} -result {1 1 A0F1}
+
+test tusysinfo-4.1 {option errors} -body {
+    list [catch {${ns}::collect -x 1} e1] [lindex $::errorCode 2] \
+         [catch {${ns}::collect -sections {os gpu}} e2] $e2 \
+         [catch {${ns}::collect -platform beos} e3] [lindex $::errorCode 2]
+} -result {1 OPTION 1 {unknown section "gpu": must be os, cpu, memory, machine, disks, displays} 1 PLATFORM}
+
+test tusysinfo-4.2 {macos without programs gives no sections} -body {
+    lsort [dict keys [${ns}::collect -platform macos -commands 0]]
+} -result {host platform}
+
+test tusysinfo-5.1 {_run: output, missing program, time limit} -constraints unix -body {
+    set t [clock milliseconds]
+    lassign [${ns}::_run {echo hallo} 2000] ok out
+    set r [list $ok [string trim $out] [${ns}::_run {no-such-program-x} 2000] \
+               [lindex [${ns}::_run {sleep 5} 300] 0]]
+    lappend r [expr {[clock milliseconds] - $t < 3000}]
+} -result {1 hallo {0 {}} 0 1}
+
+test tusysinfo-5.2 {this computer: collect runs and reports} -body {
+    set i [${ns}::collect -timeout 5000]
+    list [dict exists $i os name] [string match "==== *" [${ns}::report $i]]
+} -result {1 1}
+
+# Windows path with a fake registry and a fake PowerShell answer.
+test tusysinfo-2.5 {windows: registry and CIM put together (fake registry)} -setup {
+    set hadReg [llength [info commands ::registry]]
+    if {$hadReg} { rename ::registry ::_realRegistry }
+    set ::fakeReg [dict create \
+        {HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion} \
+            {ProductName {Windows 10 Pro} DisplayVersion 24H2 CurrentBuildNumber 26100 UBR 2314} \
+        {HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0} \
+            {ProcessorNameString {Intel(R) Core(TM) i5-12400   }} \
+        {HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\BIOS} \
+            {SystemManufacturer {Dell Inc.} SystemProductName {OptiPlex 7000} BIOSVersion 1.20.0} \
+        {HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\DISPLAY\DEL41A2\5&2b0d6b1c&0&UID4352\Device Parameters} \
+            [list EDID [edidBytes]] \
+        {HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\DISPLAY\DEL41A2\old&1&UID1\Device Parameters} \
+            [list EDID [edidBytes]]]
+    proc ::registry {cmd key args} {
+        switch -- $cmd {
+            values { if {![dict exists $::fakeReg $key]} { error "no key" }; return [dict keys [dict get $::fakeReg $key]] }
+            get    { set v [dict get $::fakeReg $key]; set n [lindex $args 0]
+                     if {![dict exists $v $n]} { error "no value" }; return [dict get $v $n] }
+            keys   {
+                set out {}
+                foreach k [dict keys $::fakeReg] {
+                    if {[string first "$key\\" $k] == 0} {
+                        set rest [string range $k [string length $key\\] end]
+                        set first [lindex [split $rest \\] 0]
+                        if {$first ni $out} { lappend out $first }
+                    }
+                }
+                if {![llength $out]} { error "no key" }
+                return $out
+            }
+        }
+    }
+    package provide registry 1.3
+    rename ${ns}::_winPowerShell ${ns}::_realPS
+    proc ${ns}::_winPowerShell {timeout} {
+        return {{"memory":17179869184,"disks":[{"DeviceID":"D0","Model":"KINGSTON SNV2S500G","Size":500105249280,"MediaType":"Fixed hard disk media"}],"monitors":{"InstanceName":"DISPLAY\\DEL41A2\\5&2b0d6b1c&0&UID4352_0"}}}
+    }
+} -body {
+    set i [${ns}::collect -platform windows]
+    list [dict get $i os name] [dict get $i os build] [dict get $i cpu model] [dict get $i cpu logical] \
+         [dict get $i memory total] [dict get $i machine model] \
+         [llength [dict get $i disks]] [llength [dict get $i displays]] \
+         [dict get [lindex [dict get $i displays] 0] connector] \
+         [dict get [lindex [dict get $i displays] 0] present]
+} -cleanup {
+    rename ::registry {}
+    if {$hadReg} { rename ::_realRegistry ::registry }
+    rename ${ns}::_winPowerShell {}
+    rename ${ns}::_realPS ${ns}::_winPowerShell
+} -result {{Windows 11 Pro} 26100.2314 {Intel(R) Core(TM) i5-12400} 1 17179869184 {OptiPlex 7000} 1 1 DEL41A2 1}
+
+test tusysinfo-2.6 {macos: programs put together (fake _run)} -setup {
+    rename ${ns}::_run ${ns}::_realRun
+    proc ${ns}::_run {cmd timeout} {
+        switch -- [lindex $cmd 0] {
+            sw_vers { return [list 1 "ProductName:\tmacOS\nProductVersion:\t15.1\nBuildVersion:\t24B83\n"] }
+            uname   { return [list 1 "24.1.0\n"] }
+            sysctl  { return [list 1 "machdep.cpu.brand_string: Apple M4\nhw.ncpu: 10\nhw.physicalcpu: 10\nhw.memsize: 17179869184\n"] }
+            system_profiler {
+                return [list 1 {{"SPHardwareDataType":[{"machine_name":"Mac mini","machine_model":"Mac16,10"}],"SPStorageDataType":[],"SPDisplaysDataType":[]}}]
+            }
+        }
+        return [list 0 ""]
+    }
+} -body {
+    set i [${ns}::collect -platform macos]
+    list [dict get $i os name] [dict get $i os kernel] [dict get $i cpu] [dict get $i memory total] \
+         [dict get $i machine model] [dict get $i disks] [dict get $i displays]
+} -cleanup {
+    rename ${ns}::_run {}
+    rename ${ns}::_realRun ${ns}::_run
+} -result {{macOS 15.1} 24.1.0 {model {Apple M4} logical 10 cores 10} 17179869184 {Mac mini} {} {}}
+
+# The case from a real Windows 11 PC (GEEKOM AE8 MAX): one monitor under
+# three registry instances, no WmiMonitorID answer, NVMe disk reported as
+# "Fixed hard disk media", firmware placeholders.
+test tusysinfo-2.7 {windows: duplicate EDIDs, NVMe as ssd, placeholders (fake registry)} -setup {
+    set hadReg [llength [info commands ::registry]]
+    if {$hadReg} { rename ::registry ::_realRegistry }
+    set base {HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\DISPLAY\ACI27F6}
+    set ::fakeReg [dict create \
+        {HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion} \
+            {ProductName {Windows 10 Pro} DisplayVersion 26H2 CurrentBuildNumber 26300 UBR 9711
+             CurrentMajorVersionNumber 10 CurrentMinorVersionNumber 0} \
+        {HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0} \
+            {ProcessorNameString {AMD Ryzen 7 8745HS w/ Radeon 780M Graphics}} \
+        {HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\BIOS} \
+            {SystemManufacturer GEEKOM SystemProductName {AE8 MAX} SystemVersion {Default string}
+             BaseBoardManufacturer {Default string} BaseBoardProduct {AE8 MAX}} \
+        "$base\\1&a&UID1\\Device Parameters" [list EDID [edidBytes]] \
+        "$base\\2&b&UID2\\Device Parameters" [list EDID [edidBytes]] \
+        "$base\\3&c&UID3\\Device Parameters" [list EDID [edidBytes]]]
+    proc ::registry {cmd key args} {
+        switch -- $cmd {
+            values { if {![dict exists $::fakeReg $key]} { error "no key" }; return [dict keys [dict get $::fakeReg $key]] }
+            get    { set v [dict get $::fakeReg $key]; set n [lindex $args 0]
+                     if {![dict exists $v $n]} { error "no value" }; return [dict get $v $n] }
+            keys   {
+                set out {}
+                foreach k [dict keys $::fakeReg] {
+                    if {[string first "$key\\" $k] == 0} {
+                        set first [lindex [split [string range $k [string length $key\\] end] \\] 0]
+                        if {$first ni $out} { lappend out $first }
+                    }
+                }
+                if {![llength $out]} { error "no key" }
+                return $out
+            }
+        }
+    }
+    package provide registry 1.3
+    rename ${ns}::_winPowerShell ${ns}::_realPS
+    proc ${ns}::_winPowerShell {timeout} {
+        return {{"memory":29832380416,"cores":8,"disks":[{"DeviceID":"\\\\.\\PHYSICALDRIVE0","Model":"KINGSTON OM8PGP41024N-A0","Size":1024203640320,"MediaType":"Fixed hard disk media"}],"physical":[{"DeviceId":"0","MediaType":"Unspecified","BusType":"NVMe"}],"monitors":[{"InstanceName":"DISPLAY\\DEFAULT_MONITOR\\1&28A6823A&4&UID256","Status":"Unknown"},{"InstanceName":"DISPLAY\\ACI27F6\\1&a&UID1","Status":"Unknown"},{"InstanceName":"DISPLAY\\ACI27F6\\2&b&UID2","Status":"Unknown"},{"InstanceName":"DISPLAY\\ACI27F6\\3&c&UID3","Status":"Unknown"}]}}
+    }
+} -body {
+    set i [${ns}::collect -platform windows]
+    list [dict get $i os kernel] [dict get $i cpu cores] [dict get $i machine version] \
+         [dict get $i machine boardVendor] [dict get [lindex [dict get $i disks] 0] type] \
+         [llength [dict get $i displays]] [dict get [lindex [dict get $i displays] 0] present] \
+         [string match {*(not connected)*} [${ns}::report $i]]
+} -cleanup {
+    rename ::registry {}
+    if {$hadReg} { rename ::_realRegistry ::registry }
+    rename ${ns}::_winPowerShell {}
+    rename ${ns}::_realPS ${ns}::_winPowerShell
+} -result {10.0.26300 8 {} {} ssd 1 0 1}
+
+cleanupTests

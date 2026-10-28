@@ -1,4 +1,4 @@
-.TH tucsv n 0.1 tclutils
+.TH tucsv n 0.2 tclutils
 .SH tclutils::tucsv
 .PP
 Small CSV helpers written in pure Tcl.
@@ -62,7 +62,21 @@ set dictRows [::tclutils::tucsv::dicts $rows]
 .CS
 set rows [::tclutils::tucsv::file data.csv -delimiter {;}]
 ::tclutils::tucsv::writeFile out.csv $rows
+::tclutils::tucsv::writeFile out.csv $rows -profile excel-de
 .CE
+.PP
+\fBfile\fR and \fBwriteFile\fR take \fB\-encoding\fR (default \fButf\-8\fR). \fBwriteFile\fR writes the line ends given by \fB\-newline\fR unchanged; without it the platform default applies.
+.SS Profiles
+.PP
+\fB\-profile\fR works with \fBtext\fR, \fBfile\fR and \fBwriteFile\fR. Options given after it override its values.
+.TS
+l l.
+Profile	Sets
+\fBexcel\-de\fR	\fB\-delimiter ;\fR, \fB\-newline \er\en\fR, \fB\-bom 1\fR
+\fBrfc4180\fR	\fB\-delimiter ,\fR, \fB\-newline \er\en\fR
+.TE
+.PP
+\fB\-bom 1\fR puts a UTF\-8 byte order mark in front of the text, so Excel opens the file as UTF\-8. An unknown profile raises \fB{TCLUTILS TUCSV PROFILE <name>}\fR.
 .SS "Options (0.37.0)"
 .IP \(bu
 A leading UTF\-8 BOM is stripped automatically on \fBparse\fR.
@@ -72,5 +86,5 @@ A leading UTF\-8 BOM is stripped automatically on \fBparse\fR.
 .PP
 Documented for completeness (same module, also covered by the test suite):
 .CS
-tucsv::text rows args                          ;# format ROWS (a list of field lists) as CSV text; -delimiter -quote -alwaysQuote -newline
+tucsv::text rows args                          ;# format ROWS (a list of field lists) as CSV text; -delimiter -quote -alwaysQuote -newline -bom -profile
 .CE

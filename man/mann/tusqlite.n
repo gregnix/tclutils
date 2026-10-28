@@ -1,4 +1,4 @@
-.TH tusqlite n 0.1 tclutils
+.TH tusqlite n 0.2 tclutils
 .SH tclutils::tusqlite
 .PP
 Small, NULL\-safe helpers over an existing \fBsqlite3\fR database handle. The module does \fBnot\fR \fBpackage require sqlite3\fR itself — you pass it a handle you opened — so it loads anywhere, and only the calls that actually touch the database need the package present.
@@ -21,12 +21,23 @@ Commands:
 .IP \(bu
 \fBinsert db table dict\fR — INSERT a row from a column→value dict; returns the new rowid. A missing key, or a value equal to \fB[null]\fR, is stored as SQL \fBNULL\fR; an empty string stays \fB''\fR. Identifiers are quoted, so reserved words and spaces in column names work.
 .IP \(bu
-\fBrows db sql\fR — run a query, return a list of column→value dicts (empty list if there are no rows).
+\fBrows db sql ?params?\fR — run a query, return a list of column→value dicts (empty list if there are no rows).
 .IP \(bu
-\fBvalue db sql ?default?\fR — the first column of the first row, or \fBdefault\fR (default empty string) if the result is empty.
+\fBvalue db sql ?default? ?params?\fR — the first column of the first row, or \fBdefault\fR (default empty string) if the result is empty.
+.IP \(bu
+\fBupdate db table set where\fR — UPDATE the rows matching every key/value of \fBwhere\fR with the columns in \fBset\fR; returns the number of changed rows.
+.IP \(bu
+\fBdelete db table where\fR — DELETE the matching rows; returns their number.
+.PP
+\fBparams\fR is a dict that binds \fB:name\fR placeholders; caller variables are not visible to the query. A value equal to \fB[null]\fR binds SQL \fBNULL\fR. In \fBwhere\fR, \fB[null]\fR becomes \fBIS NULL\fR. An empty \fBwhere\fR is refused, so a typo cannot change or delete every row.
+.CS
+set r [::tclutils::tusqlite::rows db {SELECT * FROM people WHERE age > :a} {a 20}]
+::tclutils::tusqlite::update db people {age 31} {name Alice}
+::tclutils::tusqlite::delete db people {name Bob}
+.CE
 .IP \(bu
 \fBquoteId name\fR — quote an SQL identifier (wrap in double quotes, doubling any embedded ones).
 .IP \(bu
 \fBnull\fR — the sentinel value that \fBinsert\fR maps to SQL \fBNULL\fR.
 .PP
-Errors: an empty insert dict → \fB{TCLUTILS TUSQLITE EMPTY}\fR. Verified on Tcl 8.6 (sqlite3 3.45); loads on 9.x (the database\-backed calls need an sqlite3 build for that version).
+Errors: an empty insert or set dict → \fB{TCLUTILS TUSQLITE EMPTY}\fR; an empty where dict → \fB{TCLUTILS TUSQLITE WHERE}\fR; a bad parameter name → \fB{TCLUTILS TUSQLITE PARAM <name>}\fR. Verified on Tcl 8.6 (sqlite3 3.45); loads on 9.x (the database\-backed calls need an sqlite3 build for that version).

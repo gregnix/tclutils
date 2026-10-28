@@ -4,9 +4,9 @@ For the per-module scope status see [`module-status.md`](module-status.md);
 the wishlist/backlog detail lives with the reviews. This file is the
 high-level history and forward view.
 
-_As of 2026-10-24: 144 module files under `lib/tm/tclutils/` (140 flat
-modules and four provider classes), plus the umbrella `tclutils` 0.68.0.
-Recommended pairing: tclutils 0.68.0 + tkutils 0.47.0 + ctrlutils 0.4.
+_As of 2026-10-28: 146 module files under `lib/tm/tclutils/` (140 flat
+modules and four provider classes), plus the umbrella `tclutils` 0.69.0.
+Recommended pairing: tclutils 0.69.0 + tkutils 0.49.0 + ctrlutils 0.4.
 Each module has `docs/<module>.md` and a man page under `man/mann/`._
 
 _Done since 2026-07-19 and not repeated in the backlog: the storage

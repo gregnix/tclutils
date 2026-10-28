@@ -1,0 +1,58 @@
+.TH tuedid n 0.1 tclutils
+.SH tclutils::tuedid
+.PP
+Read the EDID block of a monitor. A monitor describes itself in 128 bytes (EDID 1.x): vendor, product code, serial number, week and year of manufacture, physical size and its preferred video mode; text descriptors carry the model name and a serial string. Pure Tcl, no Tk.
+.PP
+Where the bytes come from:
+.TS
+l l.
+System	Source
+Linux	\fB/sys/class/drm/card*\-*/edid\fR (readable without root), \fBxrandr \-\-verbose\fR (hex)
+Windows	registry \fBHKLM\eSYSTEM\eCurrentControlSet\eEnum\eDISPLAY\e<id>\e<instance>\eDevice Parameters\fR, value \fBEDID\fR
+macOS	\fBioreg \-l \-w0 \-r \-c IODisplayConnect\fR (\fBIODisplayEDID\fR, hex)
+.TE
+.PP
+\fBtclutils::tusysinfo\fR reads them for you; use \fBtuedid\fR directly for a single block.
+.SS Load
+.CS
+package require tclutils::tuedid 0.1
+.CE
+.SS API
+.CS
+::tclutils::tuedid::parse    bytes   ;# -> dict
+::tclutils::tuedid::parseHex text    ;# hex digits; spaces, newlines, ":" ignored
+::tclutils::tuedid::vendor   code    ;# "DEL" -> "Dell", unknown -> ""
+.CE
+.PP
+Only the first 128 bytes are read; extension blocks (CEA\-861, DisplayID) are counted in \fBextensions\fR, not decoded.
+.SS Result
+.TS
+l l.
+Key	Meaning
+\fBvalid\fR	1 when the checksum is right; a block with a wrong checksum is still parsed
+\fBversion\fR	EDID version, e.g. \fB1.4\fR
+\fBmanufacturer\fR	three\-letter PNP id, e.g. \fBDEL\fR
+\fBvendor\fR	name for common ids, else empty
+\fBproductCode\fR	product code, four hex digits
+\fBserial\fR	numeric serial number (often 0)
+\fBserialText\fR	serial string from a descriptor, else empty
+\fBname\fR	model name from a descriptor, else empty
+\fBtext\fR	other text descriptors
+\fBweek\fR, \fByear\fR	week and year of manufacture (0 when unknown)
+\fBdigital\fR	1 for a digital input
+\fBwidthCm\fR, \fBheightCm\fR	physical size; 0 when unknown (projectors)
+\fBdiagonal\fR	diagonal in inches, one decimal; 0 when the size is unknown
+\fBpreferred\fR	\fBwidth\fR, \fBheight\fR, \fBrefresh\fR (Hz) of the first detailed timing, or empty
+\fBextensions\fR	number of extension blocks
+.TE
+.SS Example
+.CS
+set fh [open /sys/class/drm/card0-DP-1/edid rb]
+set d [::tclutils::tuedid::parse [read $fh]]
+close $fh
+puts "[dict get $d vendor] [dict get $d name], [dict get $d diagonal]\""
+# -> Dell DELL P2722H, 27.2"
+.CE
+.SS Errors
+.PP
+\fB{TCLUTILS TUEDID SHORT}\fR fewer than 128 bytes, \fB{TCLUTILS TUEDID HEADER}\fR no EDID header, \fB{TCLUTILS TUEDID HEX}\fR text that is not hex.

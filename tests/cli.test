@@ -240,4 +240,12 @@ test cli-1.30 {tunumfmt command formats numbers} -body {
     runcli tunumfmt.tcl [makeFile "1500\n1048576\n" [file join $tmp nums.txt]]
 } -result "1.5K\n1.0M"
 
+test cli-1.31 {tusysinfo command: text and JSON} -body {
+    set txt [runcli tusysinfo.tcl --sections {os memory} --anonymize]
+    set js [runcli tusysinfo.tcl --json --sections os]
+    list [string match "==== System Information ====*Operating System*" $txt] \
+         [string match *Host:\ <host>* $txt] [string match {*"os": \{*} $js] \
+         [lindex [runcliStatus tusysinfo.tcl --bogus] 0]
+} -result {1 1 1 1}
+
 cleanupTests

@@ -1,6 +1,6 @@
 # tclutils — overview
 
-Pure-Tcl utility library (Tk-free), umbrella `tclutils` 0.68.0. Each module
+Pure-Tcl utility library (Tk-free), umbrella `tclutils` 0.69.0. Each module
 ships as a `.tm` under `lib/tm/tclutils/` in the `tclutils::<module>` namespace.
 Four provider classes live in `lib/tm/tclutils/tuprovider/`. Thin CLI
 front-ends live in `bin/`.
