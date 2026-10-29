@@ -25,6 +25,22 @@ package require tclutils::tudiff
 {insert line}
 ```
 
+## Line ends: `-eol`
+
+`text`, `files`, `unifiedText`, `unified`, `contextText` and `context` take
+`-eol ignore|strict` (0.2):
+
+| value | effect |
+|---|---|
+| `ignore` (default) | CRLF, CR and LF count as the same, a missing final newline does not count |
+| `strict` | lines are compared with their line end; `a\r\n` and `a\n` differ, so does a missing final newline |
+
+With `strict` the ops of `text` and `files` keep each line's end (`{equal a\n}`);
+`unified` and `context` show the line without `\n` (a `\r` stays) and add
+`\ No newline at end of file` as GNU diff does. `files`, `unified` and `context`
+also take `-encoding ENC` (default: the system encoding). `directory` compares
+bytes. An unknown `-eol` value is an error `{TCLUTILS TUDIFF OPTION EOL}`.
+
 ## Unified diff
 
 ```tcl

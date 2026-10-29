@@ -114,7 +114,9 @@ proc ::tclutils::tuvcard::toVcf {cards} {
     }
     set out {}
     foreach c $cards { _emitCard $c out }
-    return [join $out "\r\n"]
+    # every content line ends with CRLF, the last one too (0.2)
+    if {![llength $out]} { return "" }
+    return "[join $out "\r\n"]\r\n"
 }
 
 # --- accessors (operate on a single card) ---
@@ -272,4 +274,4 @@ proc ::tclutils::tuvcard::setPhotoUri {card url args} {
     return [addProperty $card PHOTO $url {}]
 }
 
-package provide tclutils::tuvcard 0.1
+package provide tclutils::tuvcard 0.2

@@ -1,11 +1,12 @@
-.TH tuholiday n 0.1 tclutils
+.TH tuholiday n 0.2 tclutils
 .SH tclutils::tuholiday
 .PP
-German public holidays from the Easter computus. Computes Easter Sunday (Gregorian, Meeus/Jones/Butcher algorithm) and derives the movable feasts, then returns the \fBnationwide\fR German statutory holidays for a year. Pure Tcl on top of \fBclock\fR.
+German public holidays from the Easter computus. Computes Easter Sunday (Gregorian, Meeus/Jones/Butcher algorithm) and derives the movable feasts, then returns the German holidays of a year: the nine statutory in all states, by default with Easter Sunday and Whit Sunday (\fB\-sundays 1\fR). Pure Tcl on top of \fBclock\fR.
 .SS API
 .CS
 ::tclutils::tuholiday::easter 2026             ;# -> 2026-04-05
-::tclutils::tuholiday::holidays 2026           ;# -> dict {ISO-date -> name}, sorted
+::tclutils::tuholiday::holidays 2026           ;# -> dict {ISO-date -> name}, sorted, 11 days
+::tclutils::tuholiday::holidays 2026 -sundays 0 ;# -> the 9 days statutory in all states
 ::tclutils::tuholiday::isHoliday 2026-01-01    ;# -> "Neujahr"  ("" if none)
 .CE
 .PP
@@ -13,10 +14,10 @@ Commands:
 .IP \(bu
 \fBeaster year\fR — Easter Sunday of \fByear\fR as an ISO date (\fBYYYY\-MM\-DD\fR).
 .IP \(bu
-\fBholidays year ?\-region de?\fR — the nationwide German holidays as a dict mapping ISO date → name, ordered by date (Neujahr, Karfreitag, Oster\-/Pfingst\-Tage, Christi Himmelfahrt, Tag der Arbeit, Tag der Deutschen Einheit, beide Weihnachtstage).
+\fBholidays year ?\-region de? ?\-sundays 0|1?\fR — the German holidays as a dict mapping ISO date → name, ordered by date (Neujahr, Karfreitag, Oster\-/Pfingst\-Tage, Christi Himmelfahrt, Tag der Arbeit, Tag der Deutschen Einheit, beide Weihnachtstage).
 .IP \(bu
-\fBisHoliday iso ?\-region de?\fR — the holiday name for an ISO date, or \fB""\fR if it is not a holiday.
+\fBisHoliday iso ?\-region de? ?\-sundays 0|1?\fR — the holiday name for an ISO date, or \fB""\fR if it is not a holiday.
 .PP
-Scope: only the nine/eleven days statutory in \fBall\fR German states. State\-specific days (Heilige Drei Könige, Fronleichnam, Allerheiligen, Reformationstag, …) are intentionally not in the base set; \fB\-region\fR currently accepts only \fBde\fR.
+Scope: eleven days by default: the nine statutory in \fBall\fR German states plus Easter Sunday and Whit Sunday (Sundays anyway; statutory in a few states only). \fB\-sundays 0\fR (since 0.2) leaves the two Sundays out; that is the list of \fBtical::holidays::de\fR without options. State\-specific days (Heilige Drei Könige, Fronleichnam, Allerheiligen, Reformationstag, …) are intentionally not in the base set; \fB\-region\fR currently accepts only \fBde\fR.
 .PP
-Errors: a non\-integer year → \fB{TCLUTILS TUHOLIDAY YEAR}\fR; an unknown region → \fB{TCLUTILS TUHOLIDAY REGION}\fR.
+Errors: a non\-integer year → \fB{TCLUTILS TUHOLIDAY YEAR}\fR; an unknown region → \fB{TCLUTILS TUHOLIDAY REGION}\fR; \fB\-sundays\fR not 0 or 1 → \fB{TCLUTILS TUHOLIDAY SUNDAYS}\fR.

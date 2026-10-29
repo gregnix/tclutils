@@ -1,4 +1,4 @@
-.TH tuzip n 0.1 tclutils
+.TH tuzip n 0.2 tclutils
 .SH tclutils::tuzip
 .PP
 Small ZIP helper written in pure Tcl.
@@ -19,6 +19,18 @@ package require tclutils::tuzip
 \fBtuzip\fR currently supports stored entries and deflated entries. This is enough for common ZIP files and for inspecting ODF files such as \fB.odt\fR, \fB.ods\fR, \fB.odg\fR and \fB.odp\fR, because those files are ZIP containers.
 .PP
 Binary files are always opened in binary mode.
+.PP
+Member names (0.2): written as UTF\-8. A name with non\-ASCII characters gets the UTF\-8 flag (general purpose bit 11), and the central directory says "made on Unix", so Info\-ZIP \fBunzip\fR, Python and Windows read \fBJörg.txt\fR as \fBJörg.txt\fR. Up to 0.1 names were written as Latin\-1 without the flag (other programs saw \fBJ÷rg.txt\fR, a \fB€\fR became \fB?\fR).
+.PP
+\fBentries\fR, \fBnames\fR, \fBreadMember\fR and \fBextract\fR take \fB\-encoding\fR:
+.TS
+l l.
+value	names without the UTF\-8 flag
+\fBauto\fR (default)	UTF\-8 when the bytes are valid UTF\-8, else CP437 (the ZIP default)
+any Tcl encoding	that encoding, e.g. \fBiso8859\-1\fR for archives written by tuzip 0.1
+.TE
+.PP
+Names with the flag are always UTF\-8. An unknown encoding is an error \fB{TCLUTILS TUZIP ENCODING}\fR.
 .SS "Additional exported commands"
 .PP
 Documented for completeness (same module, also covered by the test suite):

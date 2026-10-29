@@ -3,9 +3,17 @@
 # Category: Archive · filesystem
 # Tcl 8.6+
 #
-# Scope of 0.1:
+# Scope:
 #   names/extract/readMember/create ZIP files using stored or deflated entries.
 #   Good enough for ODT/ODS/ODG inspection and small generated archives.
+#
+# Member names (0.2): written as UTF-8; a name with non-ASCII characters
+# gets the UTF-8 flag (general purpose bit 11), as other programs expect.
+# Reading (entries, names, readMember, extract; option -encoding):
+#   auto (default)  flag set or the bytes are valid UTF-8 -> UTF-8,
+#                   else CP437 (the ZIP default)
+#   ENC             any Tcl encoding for names without the flag, e.g.
+#                   iso8859-1 for archives written by tuzip 0.1
 
 package require Tcl 8.6-
 # Tcl 8.6 provides zlib as a package. Tcl 9 provides zlib as a core command
@@ -20,7 +28,7 @@ package require tclutils::tubin 0.1
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tuzip {
     namespace export entries names readMember extract create createMembers
-    variable version 0.1
+    variable version 0.2
 }
 
 proc ::tclutils::tuzip::U16 {v} { expr {$v & 0xffff} }
@@ -62,7 +70,39 @@ proc ::tclutils::tuzip::FindEOCD {data} {
     return -code error -errorcode {TCLUTILS TUZIP EOCD} "not a ZIP file: end of central directory not found"
 }
 
-proc ::tclutils::tuzip::CentralEntries {data} {
+# Name bytes of an entry -> string (see the header: -encoding)
+proc ::tclutils::tuzip::DecodeName {bytes flags enc} {
+    if {$flags & 0x800} { return [encoding convertfrom utf-8 $bytes] }
+    if {[regexp {^[\x00-\x7f]*$} $bytes]} { return $bytes }
+    if {$enc eq "auto"} {
+        if {[_validUtf8 $bytes]} { return [encoding convertfrom utf-8 $bytes] }
+        set enc cp437
+    }
+    return [encoding convertfrom $enc $bytes]
+}
+
+# Valid UTF-8 byte sequence (Tcl 8.6 has no strict decoder)
+proc ::tclutils::tuzip::_validUtf8 {bytes} {
+    return [regexp {^(?:[\x00-\x7f]|[\xc2-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}|[\xf0-\xf4][\x80-\xbf]{3})*$} $bytes]
+}
+
+proc ::tclutils::tuzip::_encOpt {who args} {
+    set opts [::tclutils::common::parseOptions [dict create -encoding auto] {*}$args]
+    set enc [dict get $opts -encoding]
+    if {$enc ne "auto" && $enc ni [encoding names]} {
+        return -code error -errorcode {TCLUTILS TUZIP ENCODING} \
+            "$who: unknown encoding \"$enc\""
+    }
+    return $enc
+}
+
+# Name -> {bytes flags}: UTF-8, flag 0x800 when not plain ASCII
+proc ::tclutils::tuzip::EncodeName {name} {
+    set bytes [encoding convertto utf-8 $name]
+    return [::list $bytes [expr {$bytes eq $name ? 0 : 0x800}]]
+}
+
+proc ::tclutils::tuzip::CentralEntries {data {enc auto}} {
     set eocd [FindEOCD $data]
     if {[string length $data] < $eocd + 22} {
         return -code error -errorcode {TCLUTILS TUZIP EOCD SHORT} "truncated ZIP end record"
@@ -91,8 +131,7 @@ proc ::tclutils::tuzip::CentralEntries {data} {
         set lhoff   [Unpack32 [string range $data [expr {$pos + 42}] [expr {$pos + 45}]]]
         set nameStart [expr {$pos + 46}]
         set nameEnd [expr {$nameStart + $nlen - 1}]
-        set name [string range $data $nameStart $nameEnd]
-        # ZIP names are byte strings; for common UTF-8 names Tcl will keep them usable.
+        set name [DecodeName [string range $data $nameStart $nameEnd] $flags $enc]
         lappend out [dict create name $name method $method flags $flags crc $crc \
             compressedSize $csize uncompressedSize $usize localOffset $lhoff]
         set pos [expr {$pos + 46 + $nlen + $xlen + $clen}]
@@ -100,14 +139,15 @@ proc ::tclutils::tuzip::CentralEntries {data} {
     return $out
 }
 
-proc ::tclutils::tuzip::entries {zipfile} {
+proc ::tclutils::tuzip::entries {zipfile args} {
+    set enc [_encOpt entries {*}$args]
     set data [::tclutils::common::readBinaryFile $zipfile]
-    return [CentralEntries $data]
+    return [CentralEntries $data $enc]
 }
 
-proc ::tclutils::tuzip::names {zipfile} {
+proc ::tclutils::tuzip::names {zipfile args} {
     set names {}
-    foreach e [entries $zipfile] { lappend names [dict get $e name] }
+    foreach e [entries $zipfile {*}$args] { lappend names [dict get $e name] }
     return $names
 }
 
@@ -137,9 +177,10 @@ proc ::tclutils::tuzip::EntryData {zipData entry} {
     return $data
 }
 
-proc ::tclutils::tuzip::readMember {zipfile member} {
+proc ::tclutils::tuzip::readMember {zipfile member args} {
+    set enc [_encOpt readMember {*}$args]
     set data [::tclutils::common::readBinaryFile $zipfile]
-    foreach e [CentralEntries $data] {
+    foreach e [CentralEntries $data $enc] {
         if {[dict get $e name] eq $member} {
             return [EntryData $data $e]
         }
@@ -147,8 +188,8 @@ proc ::tclutils::tuzip::readMember {zipfile member} {
     return -code error -errorcode [::list TCLUTILS TUZIP MEMBER $member] "member not found: $member"
 }
 
-proc ::tclutils::tuzip::extract {zipfile member outfile} {
-    set data [::tclutils::tuzip::readMember $zipfile $member]
+proc ::tclutils::tuzip::extract {zipfile member outfile args} {
+    set data [::tclutils::tuzip::readMember $zipfile $member {*}$args]
     set dir [file dirname $outfile]
     if {$dir ne "." && ![file isdirectory $dir]} { file mkdir $dir }
     set fh [open $outfile wb]
@@ -182,19 +223,24 @@ proc ::tclutils::tuzip::RelativeName {base path} {
 }
 
 proc ::tclutils::tuzip::MakeLocalHeader {name method crc csize usize time date} {
+    lassign [EncodeName $name] nb flags
     set out "PK\x03\x04"
-    append out [Pack16 20] [Pack16 0] [Pack16 $method] [Pack16 $time] [Pack16 $date]
+    append out [Pack16 20] [Pack16 $flags] [Pack16 $method] [Pack16 $time] [Pack16 $date]
     append out [Pack32 $crc] [Pack32 $csize] [Pack32 $usize]
-    append out [Pack16 [string length $name]] [Pack16 0] $name
+    append out [Pack16 [string length $nb]] [Pack16 0] $nb
     return $out
 }
 
 proc ::tclutils::tuzip::MakeCentralHeader {name method crc csize usize time date localOffset} {
+    lassign [EncodeName $name] nb flags
+    # version made by: Unix (3), 2.0 -- unzip then takes the name bytes as
+    # they are (UTF-8) instead of converting from a DOS code page; external
+    # attributes: regular file, mode 644
     set out "PK\x01\x02"
-    append out [Pack16 20] [Pack16 20] [Pack16 0] [Pack16 $method] [Pack16 $time] [Pack16 $date]
+    append out [Pack16 0x0314] [Pack16 20] [Pack16 $flags] [Pack16 $method] [Pack16 $time] [Pack16 $date]
     append out [Pack32 $crc] [Pack32 $csize] [Pack32 $usize]
-    append out [Pack16 [string length $name]] [Pack16 0] [Pack16 0]
-    append out [Pack16 0] [Pack16 0] [Pack32 0] [Pack32 $localOffset] $name
+    append out [Pack16 [string length $nb]] [Pack16 0] [Pack16 0]
+    append out [Pack16 0] [Pack16 0] [Pack32 [expr {0x81A4 << 16}]] [Pack32 $localOffset] $nb
     return $out
 }
 
@@ -245,10 +291,6 @@ proc ::tclutils::tuzip::create {zipfile files args} {
     }
     return $zipfile
 }
-
-# --- ADD TO lib/tm/tclutils/tuzip-0.1.tm ---
-# 1) namespace export: ... extract create  ->  ... extract create createMembers
-# 2) Insert the following proc just before the final 'package provide':
 
 # Create a ZIP from in-memory members with per-entry compression and explicit
 # order. `members` is a list of dicts, each with keys: name (archive path,
@@ -305,4 +347,4 @@ proc ::tclutils::tuzip::createMembers {zipfile members args} {
     return $zipfile
 }
 
-package provide tclutils::tuzip 0.1
+package provide tclutils::tuzip 0.2

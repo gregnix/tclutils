@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Müller;Jörg;;;
+FN:Jörg Müller
+TEL;TYPE=CELL:+491701234567
+TEL;TYPE=HOME:+49256112345
+EMAIL;TYPE=INTERNET;TYPE=WORK:joerg@example.test
+EMAIL;TYPE=INTERNET;TYPE=HOME:jm@example.test
+ADR;TYPE=HOME:;;Musterstraße 12;Musterstadt;;12345;Deutschland
+NOTE:Erste Zeile\nZweite Zeile\, mit Komma
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+N:Beispiel;Anna;;;
+FN:Anna Beispiel
+TEL;TYPE=CELL:+491709876543
+END:VCARD

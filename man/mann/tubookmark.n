@@ -1,7 +1,9 @@
-.TH tubookmark n 0.2 tclutils
+.TH tubookmark n 0.3 tclutils
 .SH tclutils::tubookmark
 .PP
-Read and write the \fBNetscape bookmark file format\fR — the HTML interchange format browsers use to import/export bookmarks. A bookmark is a dict \fB{title url folder tags adddate}\fR; \fBfolder\fR is a \fB/\fR\-joined path ("" = top level) and \fBtags\fR is a list. Entity (un)escaping reuses \fBtclutils::tuxml\fR.
+Read and write the \fBNetscape bookmark file format\fR — the HTML interchange format browsers use to import/export bookmarks. A bookmark is a dict \fB{title url folder folders tags adddate}\fR; \fBfolders\fR is the list of folder names from the top (\fB{}\fR = top level), \fBfolder\fR the same joined with \fB/\fR (for display; ambiguous when a name holds \fB/\fR), and \fBtags\fR is a list. Entity (un)escaping reuses \fBtclutils::tuxml\fR.
+.PP
+Two keys appear only when the file has them: \fBdescription\fR, the \fB<DD>\fR text after a link, and \fBtoolbar\fR, the \fBfolders\fR path of the folder marked \fBPERSONAL_TOOLBAR_FOLDER="true"\fR that holds the bookmark. \fBserialize\fR writes both back. Folder dates (\fBADD_DATE\fR, \fBLAST_MODIFIED\fR on \fB<H3>\fR) and a \fB<DD>\fR after a folder are not kept.
 .SS API
 .CS
 set bms [::tclutils::tubookmark::parse $html]          ;# -> list of dicts
@@ -14,6 +16,8 @@ Commands:
 .IP \(bu
 \fBserialize bookmarks ?\-title T?\fR → Netscape bookmark HTML, grouping bookmarks into nested folders by their \fBfolder\fR path.
 .PP
-\fBparse\fR reads the document tag by tag, so the standard export layout (one \fB<DT>\fR per line) and compact files (several links, or \fB<H3>\fR/\fB<DL>\fR and links, on one line) give the same result; every \fB<A>…</A>\fR is one bookmark. Entities in the title and in the \fBHREF\fR, \fBTAGS\fR and \fBADD_DATE\fR values are unescaped; \fBTAGS\fR is split at commas.
+\fBparse\fR reads the document tag by tag, so the standard export layout (one \fB<DT>\fR per line) and compact files (several links, or \fB<H3>\fR/\fB<DL>\fR and links, on one line) give the same result; every \fB<A>…</A>\fR is one bookmark. Entities in the title and in the \fBHREF\fR, \fBTAGS\fR and \fBADD_DATE\fR values are unescaped; \fBTAGS\fR is split at commas. Attribute values may stand in double or single quotes or unquoted (\fBHREF='…'\fR, \fBADD_DATE=1700000000\fR).
+.PP
+\fBserialize\fR keeps folders and links in the order of the list (a folder appears where its first bookmark is) and takes the folder path from \fBfolders\fR, else splits \fBfolder\fR at \fB/\fR; a folder name with \fB/\fR stays one folder. Up to 0.2 folders were sorted, written before the links, and a \fB/\fR in a name made two folders.
 .PP
 \fBserialize\fR escapes \fB&\fR, \fB<\fR, \fB>\fR in titles and folder names, and additionally \fB"\fR (as \fB&quot;\fR) in the \fBHREF\fR, \fBTAGS\fR and \fBADD_DATE\fR attribute values. Every header line starts at column 0.

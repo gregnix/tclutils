@@ -2,11 +2,12 @@
 
 vCard (RFC 6350 / 2426) reader/writer. parse returns a list of cards; a card is a
 list of property dicts `{name N value V params {k v ...}}`. toVcf serializes with
-75-char line folding. Values are kept raw for exact round-tripping.
+75-char line folding; every line ends with CRLF, the last one too (0.2; 0.1
+left it off). Values are kept raw for exact round-tripping.
 
 ```tcl
 tuvcard::parse vcfText          ;# -> list of cards
-tuvcard::toVcf card|cards        ;# -> vCard text (CRLF, folded)
+tuvcard::toVcf card|cards        ;# -> vCard text (CRLF, folded, ends with CRLF)
 tuvcard::property   card name    ;# first value ("")
 tuvcard::properties card ?name?  ;# property dicts
 tuvcard::get        card name    ;# list of values

@@ -300,22 +300,37 @@ proc ::tclutils::tusysinfo::_parseProfiler {json serials} {
         set hw [_plain [lindex [lindex [dict get $top SPHardwareDataType] 1] 0]]
         set machine [dict create vendor Apple \
             model [_get $hw machine_name] version [_get $hw machine_model] \
-            board [_get $hw model_number] bios [_get $hw boot_rom_version] \
+            modelNumber [_get $hw model_number] bios [_get $hw boot_rom_version] \
             chip [_get $hw chip_type [_get $hw cpu_type]] \
             memoryText [_get $hw physical_memory]]
         if {$serials} { dict set machine serial [_get $hw serial_number] }
     }
+    # SPStorageDataType lists volumes; APFS puts several volumes (Macintosh
+    # HD, Data, ...) in one container on one drive. One entry per
+    # container (disk3 from disk3s1s1), its volumes joined in `volumes`.
     set disks {}
+    set order {}
     if {[dict exists $top SPStorageDataType]} {
         foreach x [lindex [dict get $top SPStorageDataType] 1] {
             set s [_plain $x]
             set pd [_get $s physical_drive]
-            set disk [dict create name [_get $s _name] \
-                model [_get $pd device_name] size [_num [_get $s size_in_bytes]] \
-                type [string tolower [_get $pd medium_type]] \
-                removable [expr {[_get $pd is_internal_disk yes] eq "no"}] \
-                mount [_get $s mount_point]]
-            lappend disks $disk
+            set cont [_get $s bsd_name [_get $s _name]]
+            regexp {^(disk\d+)} $cont -> cont
+            if {![info exists byCont($cont)]} {
+                set byCont($cont) [dict create name $cont \
+                    model [_get $pd device_name] size [_num [_get $s size_in_bytes]] \
+                    type [string tolower [_get $pd medium_type]] \
+                    removable [expr {[_get $pd is_internal_disk yes] eq "no"}] \
+                    volumes {}]
+                lappend order $cont
+            }
+            set vols [dict get $byCont($cont) volumes]
+            lappend vols [_get $s _name]
+            dict set byCont($cont) volumes $vols
+        }
+        foreach c $order {
+            dict set byCont($c) volumes [join [lsort [dict get $byCont($c) volumes]] ", "]
+            lappend disks $byCont($c)
         }
     }
     set displays {}
@@ -328,11 +343,17 @@ proc ::tclutils::tusysinfo::_parseProfiler {json serials} {
                 if {[regexp {(\d+)\s*x\s*(\d+)(?:.*?@\s*([\d.]+))?} $res -> w h r]} {
                     set pref [dict create width $w height $h refresh [expr {$r eq "" ? 0 : $r}]]
                 }
+                # vendor id is the EDID manufacturer code in hex (469 = ACI)
+                set mf [_pnp [_get $dsp _spdisplays_display-vendor-id]]
+                set week [_get $dsp _spdisplays_display-week 0]
+                set year [_get $dsp _spdisplays_display-year 0]
                 set disp [dict create connector [_get $gpu sppci_model] \
-                    name [_get $dsp _name] vendor "" manufacturer "" \
-                    productCode [_get $dsp _spdisplays_display-product-id] \
-                    year [_get $dsp _spdisplays_display-year] \
-                    diagonal 0 widthCm 0 heightCm 0 preferred $pref present 1]
+                    manufacturer $mf vendor [::tclutils::tuedid::vendor $mf] \
+                    name [_get $dsp _name] \
+                    productCode [string toupper [_get $dsp _spdisplays_display-product-id]] \
+                    year [_num $year] week [_num $week] \
+                    widthCm 0 heightCm 0 diagonal 0 preferred $pref \
+                    present [expr {[_get $dsp spdisplays_online spdisplays_yes] eq "spdisplays_yes"}]]
                 if {$serials} {
                     dict set disp serialText [_get $dsp _spdisplays_display-serial-number]
                 }
@@ -341,6 +362,19 @@ proc ::tclutils::tusysinfo::_parseProfiler {json serials} {
         }
     }
     return [dict create machine $machine disks $disks displays $displays]
+}
+
+# Three-letter PNP id from the 16-bit EDID manufacturer code (hex text).
+proc ::tclutils::tusysinfo::_pnp {hex} {
+    if {![regexp {^[0-9A-Fa-f]{1,4}$} $hex]} { return "" }
+    scan $hex %x m
+    set code ""
+    foreach shift {10 5 0} {
+        set c [expr {($m >> $shift) & 0x1F}]
+        if {$c < 1 || $c > 26} { return "" }
+        append code [format %c [expr {64 + $c}]]
+    }
+    return $code
 }
 
 # One monitor from EDID bytes; serials only on request.
@@ -367,6 +401,16 @@ proc ::tclutils::tusysinfo::_linux {sections root serials} {
         set text [_read $root/etc/os-release]
         if {$text eq ""} { set text [_read $root/usr/lib/os-release] }
         set os [_parseOsRelease $text]
+        # Debian testing/sid has no VERSION_ID; /etc/debian_version says
+        # "forky/sid"
+        if {[dict get $os version] eq ""} {
+            set dv [_read $root/etc/debian_version]
+            if {$dv ne ""} {
+                dict set os version $dv
+            } else {
+                dict set os version [_get [_keyValues $text] VERSION_CODENAME]
+            }
+        }
         set kernel [_read $root/proc/sys/kernel/osrelease]
         if {$kernel eq "" && $root eq ""} { set kernel $::tcl_platform(osVersion) }
         dict set os kernel $kernel
@@ -393,6 +437,9 @@ proc ::tclutils::tusysinfo::_linux {sections root serials} {
         foreach dir [lsort [glob -nocomplain -directory $root/sys/block *]] {
             set name [file tail $dir]
             if {[regexp {^(loop|ram|zram|fd)} $name]} continue
+            # virtual devices (device mapper: LVM, LUKS) have no device
+            # link; RAID (md) stays
+            if {![file exists $dir/device] && ![string match md* $name]} continue
             set sectors [_read $dir/size]
             set size [expr {[string is entier -strict $sectors] ? $sectors * 512 : 0}]
             if {$size == 0} continue
@@ -619,7 +666,7 @@ proc ::tclutils::tusysinfo::report {info args} {
     set labels {
         os      {"Operating System" name Name version Version build Build kernel Kernel arch Architecture}
         cpu     {CPU model Model logical "Logical CPUs" cores Cores}
-        machine {Machine vendor Vendor model Model version Version chip Chip boardVendor "Board vendor" board Board bios BIOS biosDate "BIOS date" serial Serial}
+        machine {Machine vendor Vendor model Model version Version modelNumber "Model number" chip Chip boardVendor "Board vendor" board Board bios BIOS biosDate "BIOS date" serial Serial}
     }
     foreach sec {os cpu memory machine} {
         if {![dict exists $info $sec]} continue
@@ -645,6 +692,7 @@ proc ::tclutils::tusysinfo::report {info args} {
             set line [format "  %-10s %-30s %10s  %s" [_get $x name] [_get $x model] \
                 [_bytes [_get $x size]] [_get $x type]]
             if {[_get $x removable] eq "1"} { append line " removable" }
+            if {[_get $x volumes] ne ""} { append line "  ([_get $x volumes])" }
             lappend L [string trimright $line]
         }
         if {![llength [dict get $info disks]]} { lappend L "  (none found)" }

@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tubookmark 0.2
+package require tclutils::tubookmark 0.3
 
 set ::SAMPLE {<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <TITLE>Bookmarks</TITLE>
@@ -95,6 +95,38 @@ test tubookmark-4.3 {two links in one line are two bookmarks} -body {
 test tubookmark-4.4 {a title with markup stays inside its link} -body {
     set html {<DT><A HREF="http://a.test">a <b>x</b></A> <A HREF="http://b.test">B</A>}
     llength [::tclutils::tubookmark::parse $html]
+} -result 2
+
+test tubookmark-3.1 {order kept, folder name with a slash stays one folder (0.3)} -body {
+    set html {<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+<DT><A HREF="https://top.example/">Top</A>
+<DT><H3>Z Ordner</H3>
+<DL><p><DT><A HREF="https://z.example/">Z</A></DL><p>
+<DT><H3>A/B</H3>
+<DL><p><DT><A HREF="https://ab.example/">AB</A></DL><p>
+<DT><H3>A Ordner</H3>
+<DL><p><DT><A HREF="https://a.example/">A</A></DL><p>
+<DT><A HREF="https://last.example/">Last</A>
+</DL><p>}
+    set again [::tclutils::tubookmark::parse [::tclutils::tubookmark::serialize \
+        [::tclutils::tubookmark::parse $html]]]
+    list [lmap b $again {dict get $b title}] [lmap b $again {dict get $b folders}] \
+         [regexp -all {<H3>} [::tclutils::tubookmark::serialize $again]]
+} -result {{Top Z AB A Last} {{} {{Z Ordner}} A/B {{A Ordner}} {}} 3}
+
+test tubookmark-3.2 {HREF in single quotes and unquoted; serialize writes it back} -body {
+    set html {<DL><p>
+<DT><A HREF='https://single.example/' ADD_DATE=1700000000 TAGS='a, b'>S</A>
+</DL><p>}
+    set b [lindex [::tclutils::tubookmark::parse $html] 0]
+    list [dict get $b url] [dict get $b adddate] [dict get $b tags] \
+         [string match {*HREF="https://single.example/"*} [::tclutils::tubookmark::serialize [list $b]]]
+} -result {https://single.example/ 1700000000 {a b} 1}
+
+test tubookmark-3.3 {folder without folders key: split at / as before} -body {
+    set out [::tclutils::tubookmark::serialize [list [dict create title T url u folder X/Y]]]
+    regexp -all {<H3>} $out
 } -result 2
 
 cleanupTests

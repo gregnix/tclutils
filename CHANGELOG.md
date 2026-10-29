@@ -4,9 +4,12 @@
 
 Recommended pairing: tclutils 0.69.0 + tkutils 0.49.0 + ctrlutils 0.4.
 
-Module versions: `tucsv` 0.2, `tusqlite` 0.2; new `tusysinfo`, `tuedid`
-0.1. When copying over an older tree, delete `tclutils-0.68.0.tm`,
-`tucsv-0.1.tm`, `tusqlite-0.1.tm`.
+Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
+`tudiff` 0.2, `tubookmark` 0.3, `tuical` 0.2, `tuvcard` 0.2; new
+`tusysinfo`, `tuedid` 0.1. When copying over an older tree, delete
+`tclutils-0.68.0.tm`, `tucsv-0.1.tm`, `tusqlite-0.1.tm`, `tuholiday-0.1.tm`,
+`tuzip-0.1.tm`, `tudiff-0.1.tm`, `tubookmark-0.2.tm`, `tuical-0.1.tm`,
+`tuvcard-0.1.tm`.
 
 - `tucsv`: `-profile excel-de|rfc4180` for `text`, `file`, `writeFile`;
   `text -bom 1`; `file` and `writeFile` take `-encoding` (default utf-8);
@@ -18,6 +21,29 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2; new `tusysinfo`, `tuedid`
   macOS and Windows; text report and JSON; serial numbers only on request.
   CLI `bin/tusysinfo.tcl`. In the umbrella.
 - New `tuedid`: parse a monitor's EDID block. In the umbrella.
+- `tuholiday`: `-sundays 0|1` for `holidays` and `isHoliday` (default 1:
+  eleven days as before; 0: the nine statutory in all states). Doc no
+  longer calls the eleven "nationwide". Tests `tuholiday-3.1`, `3.2`.
+- `tusysinfo` doc: monitors describe the device (EDID), not the running
+  mode, position or primary output.
+- `tuzip`: member names written as UTF-8 with the UTF-8 flag (were Latin-1
+  without flag; other programs misread them, `€` became `?`); reading
+  takes `-encoding auto|ENC` (auto: UTF-8 if valid, else CP437; archives of
+  0.1 with non-ASCII names: `-encoding iso8859-1`). Tests `tuzip-3.1`, `3.2`.
+- `tubookmark`: `serialize` keeps the order of folders and links (sorted
+  them, folders first); new key `folders` (list), so a folder name with `/`
+  stays one folder; attribute values in single quotes or unquoted are read
+  (`HREF='…'` gave an empty URL). Tests `tubookmark-3.1`–`3.3`.
+- `tubookmark`: `<DD>` descriptions (key `description`) and the toolbar
+  folder (`PERSONAL_TOOLBAR_FOLDER`, key `toolbar`) are read and written
+  back. Tests `roundtrip-html-*`.
+- `tuical`, `tuvcard`: `toIcs` and `toVcf` end the last line with CRLF too
+  (RFC 5545/6350; was missing). Tests `roundtrip-ics-crlf`.
+- New `tests/roundtrip.test` with files in `tests/data/roundtrip`
+  (calendar, contacts, bookmarks): read, write, read again, compare.
+- `tudiff`: `-eol ignore|strict` (default ignore; `text` now also ignores
+  CR in strings, as `files` did) and `-encoding` for the file commands;
+  strict shows a missing final newline as GNU diff. Tests `tudiff-3.1`–`3.4`.
 - `tools/check-modules.md`: example output without a personal path.
 
 ## 0.68.0 - 2026-10-24

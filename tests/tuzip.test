@@ -5,7 +5,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuzip 0.1
+package require tclutils::tuzip 0.2
 
 # Keep all generated ZIP test scratch under tests/.tmp, never in the project root.
 set tuzipTmpRoot [file normalize [file join $here .tmp]]
@@ -76,6 +76,42 @@ test tuzip-1.7 {ODT-style smoke test: mimetype and content.xml readable} -body {
     ::tclutils::tuzip::create $odt [list $mimetype $content] -base $odtdir -compress 0
     list [lrange [::tclutils::tuzip::names $odt] 0 1]         [::tclutils::tuzip::readMember $odt mimetype]         [string match {*office:document-content*} [::tclutils::tuzip::readMember $odt content.xml]]
 } -result {{mimetype content.xml} application/vnd.oasis.opendocument.text 1}
+
+proc _zbytes {f} { set ch [open $f rb]; set b [read $ch]; close $ch; return $b }
+
+test tuzip-3.1 {non-ASCII names: UTF-8 with flag 0x800, read back (0.2)} -body {
+    set z [file join $tmp utf8.zip]
+    ::tclutils::tuzip::createMembers $z [list \
+        [dict create name "J\u00f6rg.txt" content "x" method stored] \
+        [dict create name "a\u20acb.txt" content "y" method stored] \
+        [dict create name plain.txt content "z" method stored]]
+    set b [_zbytes $z]
+    list [::tclutils::tuzip::names $z] \
+         [lmap e [::tclutils::tuzip::entries $z] {expr {[dict get $e flags] & 0x800}}] \
+         [expr {[string first [encoding convertto utf-8 "J\u00f6rg.txt"] $b] >= 0}] \
+         [::tclutils::tuzip::readMember $z "a\u20acb.txt"]
+} -result [list [list "J\u00f6rg.txt" "a\u20acb.txt" plain.txt] {2048 2048 0} 1 y]
+
+proc _zipWithName {f nameBytes flags} {
+    # one stored member "x" with the given raw name bytes and flags
+    set crc [expr {[zlib crc32 x] & 0xffffffff}]
+    set n [string length $nameBytes]
+    set lh "PK\x03\x04[binary format sssss 20 $flags 0 0 0][binary format iii $crc 1 1][binary format ss $n 0]$nameBytes"
+    set data "${lh}x"
+    set cd "PK\x01\x02[binary format ssssss 20 20 $flags 0 0 0][binary format iii $crc 1 1][binary format sssssii $n 0 0 0 0 0 0]$nameBytes"
+    set eocd "PK\x05\x06[binary format ssssiis 0 0 1 1 [string length $cd] [string length $data] 0]"
+    set ch [open $f wb]; puts -nonewline $ch "$data$cd$eocd"; close $ch
+}
+
+test tuzip-3.2 {names without flag: valid UTF-8, else CP437; -encoding for others} -body {
+    set a [file join $tmp a.zip]; set c [file join $tmp c.zip]
+    _zipWithName $a [encoding convertto utf-8 "J\u00f6rg"] 0
+    _zipWithName $c [encoding convertto iso8859-1 "J\u00f6rg"] 0
+    list [::tclutils::tuzip::names $a] [::tclutils::tuzip::names $c] \
+         [::tclutils::tuzip::names $c -encoding iso8859-1] \
+         [::tclutils::tuzip::readMember $c "J\u00f6rg" -encoding iso8859-1] \
+         [catch {::tclutils::tuzip::names $c -encoding nonsense} m o] [dict get $o -errorcode]
+} -result [list "J\u00f6rg" "J\u00f7rg" "J\u00f6rg" x 1 {TCLUTILS TUZIP ENCODING}]
 
 proc rmTree {path} {
     if {![file exists $path]} { return }

@@ -137,7 +137,9 @@ proc ::tclutils::tuical::toIcs {comps} {
     if {[_isComponent $comps]} { set comps [list $comps] }
     set out {}
     foreach c $comps { _emitComp $c out }
-    return [join $out "\r\n"]
+    # every content line ends with CRLF, the last one too (0.2)
+    if {![llength $out]} { return "" }
+    return "[join $out "\r\n"]\r\n"
 }
 
 # --- accessors ---
@@ -292,4 +294,4 @@ proc ::tclutils::tuical::newComponent {type {props {}}} {
     return $comp
 }
 
-package provide tclutils::tuical 0.1
+package provide tclutils::tuical 0.2

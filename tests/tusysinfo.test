@@ -52,6 +52,8 @@ put $root sys/block/sda/queue/rotational "0\n"
 put $root sys/block/sda/device/vendor "ATA     \n"
 put $root sys/block/sda/device/model "Samsung SSD 870\n"
 put $root sys/block/sda/device/serial "S6PNNS0T\n"
+put $root sys/block/dm-0/size "101888\n"
+put $root sys/block/dm-0/queue/rotational "0\n"
 put $root sys/block/loop0/size "100\n"
 put $root sys/block/sdb/size "0\n"
 put $root sys/class/drm/card0-DP-1/status "connected\n"
@@ -72,7 +74,7 @@ test tusysinfo-1.2 {linux: machine without serial unless -serials 1} -body {
          [dict exists $a machine serial] [dict get $b machine serial]
 } -result {{Mini PC X1} {} 0 SN-42}
 
-test tusysinfo-1.3 {linux: disks skip loop and empty devices} -body {
+test tusysinfo-1.3 {linux: disks skip loop, device mapper and empty devices} -body {
     set i [${ns}::collect -platform linux -root $root -sections disks]
     dict get $i disks
 } -result {{name sda model {ATA Samsung SSD 870} size 1000204886016 type ssd removable 0}}
@@ -84,6 +86,16 @@ test tusysinfo-1.4 {linux: connected monitors from EDID} -body {
          [dict get $d name] [dict get $d diagonal] [dict get $d preferred] [dict exists $d serialText] \
          [dict get $d present]
 } -result {1 DP-1 Dell {DELL P2722H} 27.2 {width 1920 height 1080 refresh 60.0} 0 1}
+
+test tusysinfo-1.4a {Debian sid: version from /etc/debian_version} -body {
+    set r2 [makeDirectory sysroot-sid]
+    put $r2 etc/os-release "PRETTY_NAME=\"Debian GNU/Linux forky/sid\"\nNAME=\"Debian GNU/Linux\"\nVERSION_CODENAME=forky\nID=debian\n"
+    put $r2 etc/debian_version "forky/sid\n"
+    set a [dict get [${ns}::collect -platform linux -root $r2 -sections os] os version]
+    file delete [file join $r2 etc debian_version]
+    set b [dict get [${ns}::collect -platform linux -root $r2 -sections os] os version]
+    list $a $b
+} -result {forky/sid forky}
 
 test tusysinfo-1.5 {only the requested sections} -body {
     lsort [dict keys [${ns}::collect -platform linux -root $root -sections {os memory}]]
@@ -106,14 +118,57 @@ test tusysinfo-2.3 {PowerShell JSON: single disk object, active monitors} -body 
     list [dict get $c memory] [dict get $c cores] [dict get $c disks] [dict get $c active]
 } -result {34272317440 8 {{name {\\.\PHYSICALDRIVE0} model {Samsung SSD 980 PRO 1TB} size 1000202273280 type ssd removable 0}} {{DISPLAY\DEL41A2\5&2B0D6B1C&0&UID4352}}}
 
-test tusysinfo-2.4 {system_profiler JSON} -body {
-    set json {{"SPHardwareDataType":[{"machine_name":"Mac mini","machine_model":"Mac16,10","model_number":"MU9D3D/A","chip_type":"Apple M4","physical_memory":"16 GB","serial_number":"XYZ"}],
-               "SPStorageDataType":[{"_name":"Macintosh HD","size_in_bytes":494384795648,"mount_point":"/","physical_drive":{"device_name":"APPLE SSD AP0512Z","medium_type":"ssd","is_internal_disk":"yes"}}],
-               "SPDisplaysDataType":[{"sppci_model":"Apple M4","spdisplays_ndrvs":[{"_name":"DELL P2722H","_spdisplays_resolution":"1920 x 1080 @ 60.00Hz"}]}]}}
-    set p [${ns}::_parseProfiler $json 0]
-    list [dict get $p machine model] [dict exists $p machine serial] [dict get $p disks] \
-         [dict get [lindex [dict get $p displays] 0] name] [dict get [lindex [dict get $p displays] 0] preferred]
-} -result {{Mac mini} 0 {{name {Macintosh HD} model {APPLE SSD AP0512Z} size 494384795648 type ssd removable 0 mount /}} {DELL P2722H} {width 1920 height 1080 refresh 60.0}}
+# system_profiler output of a real Mac mini (M6, macOS 27), serial numbers
+# and UUIDs replaced.
+set ::macJson {{
+  "SPDisplaysDataType" : [ {
+      "_name" : "Apple M6",
+      "spdisplays_ndrvs" : [ {
+          "_name" : "ASUS VE278",
+          "_spdisplays_display-product-id" : "27f6",
+          "_spdisplays_display-serial-number" : "12345",
+          "_spdisplays_display-vendor-id" : "469",
+          "_spdisplays_display-week" : "22",
+          "_spdisplays_display-year" : "2013",
+          "_spdisplays_pixels" : "1920 x 1080",
+          "_spdisplays_resolution" : "1920 x 1080 @ 60.00Hz",
+          "spdisplays_main" : "spdisplays_yes",
+          "spdisplays_online" : "spdisplays_yes",
+          "spdisplays_resolution" : "1920 x 1080 @ 60.00Hz" } ],
+      "sppci_cores" : "12",
+      "sppci_model" : "Apple M6" } ],
+  "SPHardwareDataType" : [ {
+      "_name" : "hardware_overview",
+      "boot_rom_version" : "20457.1.29",
+      "chip_type" : "Apple M6",
+      "machine_model" : "Mac18,5",
+      "machine_name" : "Mac mini",
+      "model_number" : "Z1UA000PKZD/A",
+      "number_processors" : "proc 12:2:4:6",
+      "physical_memory" : "24 GB",
+      "serial_number" : "XXXXXXXXXX" } ],
+  "SPStorageDataType" : [
+    { "_name" : "Data", "bsd_name" : "disk3s5", "file_system" : "APFS",
+      "mount_point" : "/System/Volumes/Data",
+      "physical_drive" : { "device_name" : "APPLE SSD AP1024Z", "is_internal_disk" : "yes", "medium_type" : "ssd" },
+      "size_in_bytes" : 994610155520 },
+    { "_name" : "Macintosh HD", "bsd_name" : "disk3s1s1", "file_system" : "APFS",
+      "mount_point" : "/",
+      "physical_drive" : { "device_name" : "APPLE SSD AP1024Z", "is_internal_disk" : "yes", "medium_type" : "ssd" },
+      "size_in_bytes" : 994610155520 } ]
+}}
+
+test tusysinfo-2.4 {system_profiler JSON of a real Mac mini} -body {
+    set p [${ns}::_parseProfiler $::macJson 0]
+    set d [lindex [dict get $p displays] 0]
+    list [dict get $p machine] [dict get $p disks] \
+         [lmap k {manufacturer vendor name productCode year week preferred present} {dict get $d $k}]
+} -result {{vendor Apple model {Mac mini} version Mac18,5 modelNumber Z1UA000PKZD/A bios 20457.1.29 chip {Apple M6} memoryText {24 GB}} {{name disk3 model {APPLE SSD AP1024Z} size 994610155520 type ssd removable 0 volumes {Data, Macintosh HD}}} {ACI ASUS {ASUS VE278} 27F6 2013 22 {width 1920 height 1080 refresh 60.0} 1}}
+
+test tusysinfo-2.4a {system_profiler: serials only with -serials 1} -body {
+    set p [${ns}::_parseProfiler $::macJson 1]
+    list [dict get $p machine serial] [dict get [lindex [dict get $p displays] 0] serialText]
+} -result {XXXXXXXXXX 12345}
 
 test tusysinfo-3.1 {report: sections, units, anonymized host} -body {
     set i [${ns}::collect -platform linux -root $root]

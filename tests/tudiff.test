@@ -6,7 +6,7 @@ set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
 
-package require tclutils::tudiff 0.1
+package require tclutils::tudiff 0.2
 
 set tmp [file join $here tmp_tudiff]
 proc rmrf {path} {
@@ -103,4 +103,31 @@ test tudiff-2.2 {directory diff reports equal different only-old only-new} -body
 } -result {{different changed.txt} {only-new new.txt} {only-old old.txt} {equal same.txt}}
 
 rmrf $tmp
+proc _dw {f b} { set ch [open $f wb]; puts -nonewline $ch [encoding convertto utf-8 $b]; close $ch; return $f }
+
+test tudiff-3.1 {-eol ignore (default): line ends and the final newline do not count} -body {
+    set d [makeDirectory tudiffeol]
+    set a [_dw [file join $d a] "J\u00f6rg\r\nZeile\r\n"]
+    set b [_dw [file join $d b] "J\u00f6rg\nZeile"]
+    list [::tclutils::tudiff::files $a $b -encoding utf-8] \
+         [::tclutils::tudiff::text "a\r\nb" "a\nb\n"]
+} -result [list [list [list equal "J\u00f6rg"] {equal Zeile}] {{equal a} {equal b}}]
+
+test tudiff-3.2 {-eol strict: CRLF against LF and a missing newline differ (0.2)} -body {
+    set d [makeDirectory tudiffeol2]
+    set a [_dw [file join $d a] "J\u00f6rg\r\nZeile\n"]
+    set b [_dw [file join $d b] "J\u00f6rg\nZeile"]
+    list [::tclutils::tudiff::files $a $b -eol strict -encoding utf-8] \
+         [::tclutils::tudiff::text "a\nb\n" "a\nb\n" -eol strict]
+} -result [list [list [list delete "J\u00f6rg\r\n"] [list delete "Zeile\n"] [list insert "J\u00f6rg\n"] {insert Zeile}] [list [list equal "a\n"] [list equal "b\n"]]]
+
+test tudiff-3.3 {-eol strict in unified output: GNU marker for a missing newline} -body {
+    ::tclutils::tudiff::unifiedText "a\nb\n" "a\nb" -eol strict
+} -result "--- old\n+++ new\n@@ -1,2 +1,2 @@\n a\n-b\n+b\n\\ No newline at end of file"
+
+test tudiff-3.4 {-eol checked} -body {
+    catch {::tclutils::tudiff::text a b -eol exact} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUDIFF OPTION EOL}
+
 cleanupTests

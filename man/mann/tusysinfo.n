@@ -49,7 +49,7 @@ displays {{connector DP-1 manufacturer DEL vendor Dell name {DELL P2722H} produc
            preferred {width 1920 height 1080 refresh 60.0} valid 1 present 1} ...}
 .CE
 .PP
-Sizes are bytes; \fBreport\fR shows disks in GB (as on the label) and memory in GiB. \fBtype\fR is \fBssd\fR, \fBhdd\fR, \fBoptical\fR or empty. On macOS \fBmachine\fR also has \fBchip\fR and \fBmemoryText\fR, \fBdisks\fR a \fBmount\fR. With \fB\-serials 1\fR \fBmachine\fR, \fBdisks\fR and \fBdisplays\fR get \fBserial\fR (monitors also \fBserialText\fR).
+Sizes are bytes; \fBreport\fR shows disks in GB (as on the label) and memory in GiB. \fBtype\fR is \fBssd\fR, \fBhdd\fR, \fBoptical\fR or empty. On macOS \fBmachine\fR also has \fBmodelNumber\fR, \fBchip\fR and \fBmemoryText\fR; \fBdisks\fR lists one entry per APFS container (\fBdisk3\fR) with its volumes in \fBvolumes\fR. With \fB\-serials 1\fR \fBmachine\fR, \fBdisks\fR and \fBdisplays\fR get \fBserial\fR (monitors also \fBserialText\fR).
 .SS Usage
 .CS
 set info [::tclutils::tusysinfo::collect]
@@ -68,11 +68,15 @@ Linux: the computer's serial number (\fBproduct_serial\fR) is readable by root o
 .IP \(bu
 Monitors carry \fBpresent\fR: 1 connected, 0 not connected, empty when unknown. Windows keeps every monitor that was ever connected, often the same one under several instances (other port, other driver); \fBtusysinfo\fR lists each EDID once and takes \fBpresent\fR from \fBGet\-PnpDevice \-Class Monitor\fR (status OK). In a remote desktop session the physical monitors count as not connected. \fBreport\fR marks them "(not connected)". (\fBWmiMonitorID\fR is not used: it reports "not supported" on some systems.) Windows 11 still reports \fBProductName\fR "Windows 10 …"; a build of 22000 or later is shown as Windows 11. SSD or HDD comes from \fBGet\-PhysicalDisk\fR (an NVMe disk counts as SSD).
 .IP \(bu
+Monitors describe the device, not the desktop: \fBpreferred\fR is the mode the monitor asks for (its EDID), not the mode it runs in; position and primary output are not collected, and \fBconnector\fR is the kernel's name (\fBDP\-2\fR), not the one xrandr shows (\fBDisplayPort\-1\fR). Which monitor a window is on cannot be told from this data.
+.IP \(bu
 Firmware placeholders such as "Default string" or "To be filled by O.E.M." are left empty.
 .IP \(bu
-macOS: \fBsystem_profiler\fR is slow (several seconds); \fB\-sections {os cpu memory}\fR avoids it.
+macOS: \fBsystem_profiler\fR is slow (several seconds); \fB\-sections {os cpu memory}\fR avoids it. It gives the monitor's maker, model, product code, week and year, but no size: \fBwidthCm\fR, \fBheightCm\fR and \fBdiagonal\fR stay 0. The disk size is the APFS container, a little below the drive's capacity.
 .IP \(bu
-The macOS and Windows parts are tested with constructed program output and a simulated registry, not yet on real Macs and Windows PCs.
+Linux: \fBdisks\fR lists physical devices; loop, RAM disks and device mapper volumes (LVM, LUKS) are left out, RAID (\fBmd*\fR) stays. Debian testing/sid has no \fBVERSION_ID\fR; \fBversion\fR then comes from \fB/etc/debian_version\fR (e.g. \fBforky/sid\fR).
+.IP \(bu
+Checked on a Linux PC with two monitors (Debian sid), a Windows 11 PC and a Mac mini (Apple Silicon, macOS 27). The tests replay recorded output of these machines.
 .IP \(bu
 Program calls run with \fBvwait\fR; in a Tk application the event loop runs while waiting.
 .SS Errors

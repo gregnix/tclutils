@@ -58,7 +58,8 @@ displays {{connector DP-1 manufacturer DEL vendor Dell name {DELL P2722H} produc
 
 Sizes are bytes; `report` shows disks in GB (as on the label) and memory
 in GiB. `type` is `ssd`, `hdd`, `optical` or empty. On macOS
-`machine` also has `chip` and `memoryText`, `disks` a `mount`. With
+`machine` also has `modelNumber`, `chip` and `memoryText`; `disks` lists
+one entry per APFS container (`disk3`) with its volumes in `volumes`. With
 `-serials 1` `machine`, `disks` and `displays` get `serial` (monitors also
 `serialText`).
 
@@ -95,12 +96,25 @@ Command line: `tclsh bin/tusysinfo.tcl ?--json? ?--serials? ?--anonymize?`
   `ProductName` "Windows 10 …"; a build of 22000 or later is shown as
   Windows 11. SSD or HDD comes from `Get-PhysicalDisk` (an NVMe disk counts
   as SSD).
+- Monitors describe the device, not the desktop: `preferred` is the mode
+  the monitor asks for (its EDID), not the mode it runs in; position and
+  primary output are not collected, and `connector` is the kernel's name
+  (`DP-2`), not the one xrandr shows (`DisplayPort-1`). Which monitor a
+  window is on cannot be told from this data.
 - Firmware placeholders such as "Default string" or "To be filled by
   O.E.M." are left empty.
 - macOS: `system_profiler` is slow (several seconds); `-sections {os cpu
-  memory}` avoids it.
-- The macOS and Windows parts are tested with constructed program output
-  and a simulated registry, not yet on real Macs and Windows PCs.
+  memory}` avoids it. It gives the monitor's maker, model, product code,
+  week and year, but no size: `widthCm`, `heightCm` and `diagonal` stay 0.
+  The disk size is the APFS container, a little below the drive's
+  capacity.
+- Linux: `disks` lists physical devices; loop, RAM disks and device
+  mapper volumes (LVM, LUKS) are left out, RAID (`md*`) stays. Debian
+  testing/sid has no `VERSION_ID`; `version` then comes from
+  `/etc/debian_version` (e.g. `forky/sid`).
+- Checked on a Linux PC with two monitors (Debian sid), a Windows 11 PC
+  and a Mac mini (Apple Silicon, macOS 27). The tests replay recorded
+  output of these machines.
 - Program calls run with `vwait`; in a Tk application the event loop runs
   while waiting.
 

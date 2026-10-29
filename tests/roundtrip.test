@@ -1,0 +1,150 @@
+# Round trips with the files in data/roundtrip: read, write, read again.
+# tuical, tuvcard, tubookmark.
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tuical 0.2
+package require tclutils::tuvcard 0.2
+package require tclutils::tubookmark 0.3
+
+set ::RT [file join [file dirname [file normalize [info script]]] data roundtrip]
+
+proc rtBytes {name} {
+    set ch [open [file join $::RT $name] rb]
+    set d [read $ch]
+    close $ch
+    return $d
+}
+proc rtText {name} { return [encoding convertfrom utf-8 [rtBytes $name]] }
+# the text without line folding (CRLF + space/tab)
+proc rtUnfold {s} { return [regsub -all {\r\n[ \t]} $s ""] }
+
+# --- iCalendar ---------------------------------------------------------------
+
+foreach f {google outlook thunderbird} {
+    test roundtrip-ics-$f.1 "$f.ics: parse, toIcs, parse gives the same" -body {
+        set a [::tclutils::tuical::parse [rtText $f.ics]]
+        set b [::tclutils::tuical::parse [::tclutils::tuical::toIcs $a]]
+        expr {$a eq $b}
+    } -result 1
+    test roundtrip-ics-$f.2 "$f.ics: toIcs gives the file back, up to folding" -body {
+        set t [rtText $f.ics]
+        string equal [rtUnfold [::tclutils::tuical::toIcs [::tclutils::tuical::parse $t]]] \
+            [rtUnfold $t]
+    } -result 1
+}
+
+test roundtrip-ics-google.3 {google.ics: event, rule, alarm, escapes} -body {
+    set c [::tclutils::tuical::parse [rtText google.ics]]
+    set ev [lindex [::tclutils::tuical::find $c VEVENT] 0]
+    set al [lindex [::tclutils::tuical::find $c VALARM] 0]
+    list [llength [::tclutils::tuical::find $c VEVENT]] \
+        [::tclutils::tuical::property $ev SUMMARY] \
+        [::tclutils::tuical::property $ev RRULE] \
+        [::tclutils::tuical::property $al TRIGGER] \
+        [::tclutils::tuical::unescapeText [::tclutils::tuical::property $ev DESCRIPTION]] \
+        [::tclutils::tuical::unescapeText [::tclutils::tuical::property $ev LOCATION]]
+} -result [list 1 Projektbesprechung {FREQ=WEEKLY;COUNT=3;BYDAY=TU} -PT15M \
+    "Zeile eins\nZeile zwei, mit Komma" {Büro; Raum 2}]
+
+test roundtrip-ics-outlook.3 {outlook.ics: TZID, attendee, organizer, X- property} -body {
+    set c [::tclutils::tuical::parse [rtText outlook.ics]]
+    set ev [lindex [::tclutils::tuical::find $c VEVENT] 0]
+    set st [lindex [::tclutils::tuical::properties $ev DTSTART] 0]
+    list [dict get $st params TZID] \
+        [llength [::tclutils::tuical::properties $ev ATTENDEE]] \
+        [llength [::tclutils::tuical::properties $ev ORGANIZER]] \
+        [::tclutils::tuical::property $ev X-MICROSOFT-CDO-BUSYSTATUS]
+} -result {Europe/Berlin 1 1 BUSY}
+
+test roundtrip-ics-thunderbird.3 {thunderbird.ics: event, to-do, EXDATE} -body {
+    set c [::tclutils::tuical::parse [rtText thunderbird.ics]]
+    set ev [lindex [::tclutils::tuical::find $c VEVENT] 0]
+    list [llength [::tclutils::tuical::find $c VEVENT]] \
+        [llength [::tclutils::tuical::find $c VTODO]] \
+        [::tclutils::tuical::property $ev RRULE] \
+        [::tclutils::tuical::property $ev EXDATE]
+} -result {1 1 {FREQ=MONTHLY;COUNT=3} 20261201}
+
+test roundtrip-ics-crlf {toIcs ends every line with CRLF, the last one too} -body {
+    set out [::tclutils::tuical::toIcs [::tclutils::tuical::parse [rtText google.ics]]]
+    list [string range $out end-14 end] [regexp {[^\r]\n} $out]
+} -result [list "END:VCALENDAR\r\n" 0]
+
+# --- vCard -------------------------------------------------------------------
+
+test roundtrip-vcf.1 {phone.vcf: toVcf gives the file back byte for byte} -body {
+    set t [rtText phone.vcf]
+    string equal [::tclutils::tuvcard::toVcf [::tclutils::tuvcard::parse $t]] $t
+} -result 1
+
+test roundtrip-vcf.2 {phone.vcf: cards, name, several numbers and mails} -body {
+    set cards [::tclutils::tuvcard::parse [rtText phone.vcf]]
+    set k [lindex $cards 0]
+    set mails [::tclutils::tuvcard::properties $k EMAIL]
+    list [llength $cards] [::tclutils::tuvcard::property $k FN] \
+        [llength [::tclutils::tuvcard::properties $k TEL]] [llength $mails] \
+        [dict get [lindex $mails 0] value] \
+        [::tclutils::tuvcard::property $k NOTE]
+} -result [list 2 "Jörg Müller" 2 2 joerg@example.test \
+    {Erste Zeile\nZweite Zeile\, mit Komma}]
+
+test roundtrip-vcf.3 {phone.vcf: card order and properties survive} -body {
+    set a [::tclutils::tuvcard::parse [rtText phone.vcf]]
+    set b [::tclutils::tuvcard::parse [::tclutils::tuvcard::toVcf $a]]
+    expr {$a eq $b}
+} -result 1
+
+# --- bookmarks ---------------------------------------------------------------
+
+foreach f {firefox chrome} {
+    test roundtrip-html-$f.1 "$f.html: parse, serialize, parse gives the same" -body {
+        set a [::tclutils::tubookmark::parse [rtText $f.html]]
+        set b [::tclutils::tubookmark::parse [::tclutils::tubookmark::serialize $a]]
+        expr {$a eq $b}
+    } -result 1
+}
+
+test roundtrip-html-firefox.2 {firefox.html: folders, tags, description, entities} -body {
+    set bs [::tclutils::tubookmark::parse [rtText firefox.html]]
+    set b0 [lindex $bs 0]
+    set b1 [lindex $bs 1]
+    list [llength $bs] [lsort -unique [lmap b $bs {dict get $b folder}]] \
+        [dict get $b0 title] [join [dict get $b0 tags] ,] [dict get $b0 description] \
+        [dict get $b1 url] [dict get $b1 title]
+} -result [list 2 {Entwicklung Entwicklung/Unterordner} {Tcl & Tk} tcl,docs \
+    {Dokumentation & Beispiele} https://example.org/?a=1&b=2 {Parameter & Umlaute äöü}]
+
+test roundtrip-html-chrome.2 {chrome.html: toolbar folder, sub folder, URL parameters} -body {
+    set bs [::tclutils::tubookmark::parse [rtText chrome.html]]
+    set b1 [lindex $bs 1]
+    list [llength $bs] [dict get $b1 folders] [dict get $b1 toolbar] \
+        [dict get $b1 url] [dict get $b1 adddate]
+} -result [list 2 {{Bookmarks bar} Recherche} {{Bookmarks bar}} \
+    https://example.net/search?q=tcl&lang=de 1721000004]
+
+test roundtrip-html-chrome.3 {serialize marks the toolbar folder, only that one} -body {
+    set out [::tclutils::tubookmark::serialize \
+        [::tclutils::tubookmark::parse [rtText chrome.html]]]
+    list [regexp -all {PERSONAL_TOOLBAR_FOLDER="true">Bookmarks bar<} $out] \
+        [regexp -all PERSONAL_TOOLBAR_FOLDER $out]
+} -result {1 1}
+
+test roundtrip-html-dd.1 {a <DD> after a folder belongs to no bookmark} -body {
+    set bs [::tclutils::tubookmark::parse {<DL><p>
+<DT><H3>F</H3>
+<DD>about F
+<DL><p>
+<DT><A HREF="https://a.test/">A</A>
+</DL><p>
+</DL><p>}]
+    dict exists [lindex $bs 0] description
+} -result 0
+
+test roundtrip-html-dd.2 {bookmarks without description or toolbar get no such key} -body {
+    set b [lindex [::tclutils::tubookmark::parse {<DL><p><DT><A HREF="https://a.test/">A</A></DL><p>}] 0]
+    lsort [dict keys $b]
+} -result {adddate folder folders tags title url}
+
+cleanupTests

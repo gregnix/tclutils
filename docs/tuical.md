@@ -4,11 +4,12 @@ iCalendar (RFC 5545) reader/writer. A component is a dict
 `{type T props {prop ...} components {component ...}}`; a property is
 `{name N value V params {k v ...}}`. parse returns the list of top-level
 components (usually one VCALENDAR); toIcs serializes with 75-char line folding.
+Every line ends with CRLF, the last one too (0.2; 0.1 left it off).
 
 ## Commands
 ```tcl
 tuical::parse icsText             ;# -> list of top-level components
-tuical::toIcs comp|comps           ;# -> iCalendar text (CRLF, folded)
+tuical::toIcs comp|comps           ;# -> iCalendar text (CRLF, folded, ends with CRLF)
 tuical::components comp ?type?     ;# direct children, optional type filter
 tuical::properties comp ?name?     ;# property dicts, optional name filter
 tuical::property   comp name       ;# first value of a property ("")

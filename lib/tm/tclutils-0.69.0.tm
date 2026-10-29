@@ -11,7 +11,7 @@ package require tclutils::tuhexdump 0.2
 package require tclutils::tubin 0.1
 package require tclutils::tuhexedit 0.2
 package require tclutils::tused 0.1
-package require tclutils::tudiff 0.1
+package require tclutils::tudiff 0.2
 package require tclutils::tupatch 0.2
 package require tclutils::tucat 0.1
 package require tclutils::tuhead 0.1
@@ -21,7 +21,7 @@ package require tclutils::tuuniq 0.1
 package require tclutils::tucut 0.1
 package require tclutils::tupaste 0.2
 package require tclutils::tujoin 0.1.2
-package require tclutils::tuzip 0.1
+package require tclutils::tuzip 0.2
 package require tclutils::tuzipfs 0.3
 package require tclutils::tuico 0.2
 package require tclutils::tujson 0.1
@@ -65,9 +65,9 @@ package require tclutils::tucolor 0.2
 package require tclutils::tunotes 0.1
 package require tclutils::tunotesdb 0.2
 package require tclutils::tuldif 0.2
-package require tclutils::tuical 0.1
+package require tclutils::tuical 0.2
 package require tclutils::tuini 0.1
-package require tclutils::tuvcard 0.1
+package require tclutils::tuvcard 0.2
 package require tclutils::tuhash 0.1
 package require tclutils::tuxxhash 0.2
 package require tclutils::tudhash 0.2
@@ -83,10 +83,10 @@ package require tclutils::tuevent 0.1
 package require tclutils::tutask 0.2
 package require tclutils::turegistry 0.1
 package require tclutils::tudav 0.2
-package require tclutils::tuholiday 0.1
+package require tclutils::tuholiday 0.2
 package require tclutils::turrule 0.2
 package require tclutils::tuopen 0.2
-package require tclutils::tubookmark 0.2
+package require tclutils::tubookmark 0.3
 package require tclutils::tulog 0.2
 package require tclutils::tuimage 0.1
 package require tclutils::tupng 0.5

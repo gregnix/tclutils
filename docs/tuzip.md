@@ -26,6 +26,22 @@ and `.odp`, because those files are ZIP containers.
 
 Binary files are always opened in binary mode.
 
+Member names (0.2): written as UTF-8. A name with non-ASCII characters gets the
+UTF-8 flag (general purpose bit 11), and the central directory says "made on
+Unix", so Info-ZIP `unzip`, Python and Windows read `Jörg.txt` as `Jörg.txt`.
+Up to 0.1 names were written as Latin-1 without the flag (other programs saw
+`J÷rg.txt`, a `€` became `?`).
+
+`entries`, `names`, `readMember` and `extract` take `-encoding`:
+
+| value | names without the UTF-8 flag |
+|---|---|
+| `auto` (default) | UTF-8 when the bytes are valid UTF-8, else CP437 (the ZIP default) |
+| any Tcl encoding | that encoding, e.g. `iso8859-1` for archives written by tuzip 0.1 |
+
+Names with the flag are always UTF-8. An unknown encoding is an error
+`{TCLUTILS TUZIP ENCODING}`.
+
 ## Additional exported commands
 
 Documented for completeness (same module, also covered by the test suite):

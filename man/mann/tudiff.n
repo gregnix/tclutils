@@ -1,4 +1,4 @@
-.TH tudiff n 0.1 tclutils
+.TH tudiff n 0.2 tclutils
 .SH tclutils::tudiff
 .PP
 \fBtclutils::tudiff\fR provides small, portable, line based diff tools in pure Tcl.
@@ -20,6 +20,17 @@ package require tclutils::tudiff
 {delete line}
 {insert line}
 .CE
+.SS "Line ends: \fB\-eol\fR"
+.PP
+\fBtext\fR, \fBfiles\fR, \fBunifiedText\fR, \fBunified\fR, \fBcontextText\fR and \fBcontext\fR take \fB\-eol ignore|strict\fR (0.2):
+.TS
+l l.
+value	effect
+\fBignore\fR (default)	CRLF, CR and LF count as the same, a missing final newline does not count
+\fBstrict\fR	lines are compared with their line end; \fBa\er\en\fR and \fBa\en\fR differ, so does a missing final newline
+.TE
+.PP
+With \fBstrict\fR the ops of \fBtext\fR and \fBfiles\fR keep each line's end (\fB{equal a\en}\fR); \fBunified\fR and \fBcontext\fR show the line without \fB\en\fR (a \fB\er\fR stays) and add \fB\e No newline at end of file\fR as GNU diff does. \fBfiles\fR, \fBunified\fR and \fBcontext\fR also take \fB\-encoding ENC\fR (default: the system encoding). \fBdirectory\fR compares bytes. An unknown \fB\-eol\fR value is an error \fB{TCLUTILS TUDIFF OPTION EOL}\fR.
 .SS "Unified diff"
 .CS
 puts [::tclutils::tudiff::unified old.txt new.txt]

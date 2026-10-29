@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuholiday 0.1
+package require tclutils::tuholiday 0.2
 
 test tuholiday-1.1 {easter dates} -body {
     list [::tclutils::tuholiday::easter 2024] [::tclutils::tuholiday::easter 2025] \
@@ -32,4 +32,14 @@ test tuholiday-2.3 {keys are date-sorted} -body {
     set k [dict keys [::tclutils::tuholiday::holidays 2025]]
     expr {$k eq [lsort $k]}
 } -result 1
+test tuholiday-3.1 {-sundays 0: the nine nationwide days (0.2)} -body {
+    set h [::tclutils::tuholiday::holidays 2026 -sundays 0]
+    list [dict size $h] [dict exists $h 2026-04-05] [dict exists $h 2026-05-24] \
+         [::tclutils::tuholiday::isHoliday 2026-04-05 -sundays 0] \
+         [::tclutils::tuholiday::isHoliday 2026-04-05]
+} -result {9 0 0 {} Ostersonntag}
+test tuholiday-3.2 {-sundays must be boolean} -body {
+    catch {::tclutils::tuholiday::holidays 2026 -sundays maybe} e o
+    dict get $o -errorcode
+} -result {TCLUTILS TUHOLIDAY SUNDAYS}
 cleanupTests

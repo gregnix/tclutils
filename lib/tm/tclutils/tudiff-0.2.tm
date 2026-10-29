@@ -2,26 +2,77 @@
 # Description: portable line based diff tools in pure Tcl
 # Category: Text · strings/coreutils
 # Tcl 8.6+
-
+#
+# Line ends (0.2): option -eol for text, files, unified, unifiedText,
+# context, contextText:
+#   ignore (default)  CRLF, CR and LF are the same, a missing newline at the
+#                     end does not count (as up to 0.1)
+#   strict            lines are compared with their line end: "a\r\n" and
+#                     "a\n" differ, so does a missing final newline. In the
+#                     ops of text/files a line keeps its end ("a\r\n");
+#                     unified/context show the line without "\n" (a "\r"
+#                     stays) and mark a missing final newline with
+#                     "\ No newline at end of file", as GNU diff.
+# files/unified/context also take -encoding ENC (default: system encoding).
+# directory compares bytes (already in 0.1).
 package require Tcl 8.6-
 package require tclutils::common 0.1
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tudiff {
     namespace export text files unified unifiedText context contextText directory
-    variable version 0.1
+    variable version 0.2
 }
 
 proc ::tclutils::tudiff::SplitLines {data} {
     return [::tclutils::common::splitLines $data]
 }
 
-proc ::tclutils::tudiff::ReadFile {filename} {
+# File text; -eol strict reads without line-end translation
+proc ::tclutils::tudiff::ReadFile {filename {eol ignore} {enc ""}} {
+    if {$eol eq "strict"} {
+        set fh [open $filename r]
+        try {
+            fconfigure $fh -translation binary
+            fconfigure $fh -encoding [expr {$enc eq "" ? [encoding system] : $enc}]
+            return [read $fh]
+        } finally {
+            close $fh
+        }
+    }
+    if {$enc ne ""} { return [::tclutils::common::readFile $filename -encoding $enc] }
     return [::tclutils::common::readFile $filename]
 }
 
+proc ::tclutils::tudiff::_eol {v} {
+    if {$v ni {ignore strict}} {
+        return -code error -errorcode {TCLUTILS TUDIFF OPTION EOL} \
+            "-eol must be ignore or strict, got \"$v\""
+    }
+    return $v
+}
+
+# Lines of a text; strict: each line keeps its "\n" (and a "\r" before it)
+proc ::tclutils::tudiff::_lines {text eol} {
+    if {$eol ne "strict"} {
+        regsub -all {\r\n?} $text "\n" text
+        return [SplitLines $text]
+    }
+    if {$text eq ""} { return {} }
+    return [regexp -all -inline {[^\n]*\n|[^\n]+$} $text]
+}
+
 proc ::tclutils::tudiff::_parseOptions {args} {
-    return [::tclutils::common::parseOptions [dict create -maxcells 2000000] {*}$args]
+    return [::tclutils::common::parseOptions [dict create -maxcells 2000000 -eol ignore] {*}$args]
+}
+
+# One op line for unified/context output: without its "\n"; a line without
+# one gets the GNU marker line
+proc ::tclutils::tudiff::_show {prefix line} {
+    if {[string index $line end] eq "\n"} {
+        return [list "$prefix[string range $line 0 end-1]"]
+    }
+    return [list "$prefix$line" "\\ No newline at end of file"]
 }
 
 proc ::tclutils::tudiff::_checkMaxCells {n m maxcells} {
@@ -37,8 +88,9 @@ proc ::tclutils::tudiff::_checkMaxCells {n m maxcells} {
 
 proc ::tclutils::tudiff::text {oldText newText args} {
     set opts [_parseOptions {*}$args]
-    set a [SplitLines $oldText]
-    set b [SplitLines $newText]
+    set eol [_eol [dict get $opts -eol]]
+    set a [_lines $oldText $eol]
+    set b [_lines $newText $eol]
     set n [llength $a]
     set m [llength $b]
 
@@ -100,16 +152,21 @@ proc ::tclutils::tudiff::text {oldText newText args} {
 }
 
 proc ::tclutils::tudiff::files {oldFile newFile args} {
-    return [text [ReadFile $oldFile] [ReadFile $newFile] {*}$args]
+    set opts [::tclutils::common::parseOptions \
+        [dict create -maxcells 2000000 -eol ignore -encoding ""] {*}$args]
+    set eol [_eol [dict get $opts -eol]]
+    set enc [dict get $opts -encoding]
+    return [text [ReadFile $oldFile $eol $enc] [ReadFile $newFile $eol $enc] \
+        -maxcells [dict get $opts -maxcells] -eol $eol]
 }
 
 proc ::tclutils::tudiff::unifiedText {oldText newText args} {
     set opts [::tclutils::common::parseOptions \
-        [dict create -fromlabel old -tolabel new -context -1 -maxcells 2000000] {*}$args]
-
-    set ops [text $oldText $newText -maxcells [dict get $opts -maxcells]]
-    set oldCount [llength [SplitLines $oldText]]
-    set newCount [llength [SplitLines $newText]]
+        [dict create -fromlabel old -tolabel new -context -1 -maxcells 2000000 -eol ignore] {*}$args]
+    set eol [_eol [dict get $opts -eol]]
+    set ops [text $oldText $newText -maxcells [dict get $opts -maxcells] -eol $eol]
+    set oldCount [llength [_lines $oldText $eol]]
+    set newCount [llength [_lines $newText $eol]]
 
     set out {}
     lappend out "--- [dict get $opts -fromlabel]"
@@ -118,10 +175,11 @@ proc ::tclutils::tudiff::unifiedText {oldText newText args} {
 
     foreach op $ops {
         lassign $op kind line
-        switch -- $kind {
-            equal  { lappend out " $line" }
-            delete { lappend out "-$line" }
-            insert { lappend out "+$line" }
+        set p [dict get {equal " " delete - insert +} $kind]
+        if {$eol eq "strict"} {
+            lappend out {*}[_show $p $line]
+        } else {
+            lappend out "$p$line"
         }
     }
     return [join $out \n]
@@ -129,25 +187,31 @@ proc ::tclutils::tudiff::unifiedText {oldText newText args} {
 
 proc ::tclutils::tudiff::unified {oldFile newFile args} {
     set opts [::tclutils::common::parseOptions \
-        [dict create -fromlabel $oldFile -tolabel $newFile -context -1 -maxcells 2000000] {*}$args]
-    return [unifiedText [ReadFile $oldFile] [ReadFile $newFile] {*}$opts]
+        [dict create -fromlabel $oldFile -tolabel $newFile -context -1 -maxcells 2000000 \
+         -eol ignore -encoding ""] {*}$args]
+    set eol [_eol [dict get $opts -eol]]
+    set enc [dict get $opts -encoding]
+    return [unifiedText [ReadFile $oldFile $eol $enc] [ReadFile $newFile $eol $enc] \
+        {*}[dict remove $opts -encoding]]
 }
 
 
 proc ::tclutils::tudiff::contextText {oldText newText args} {
     set opts [::tclutils::common::parseOptions \
-        [dict create -fromlabel old -tolabel new -context 3 -maxcells 2000000] {*}$args]
-    set ops [text $oldText $newText -maxcells [dict get $opts -maxcells]]
+        [dict create -fromlabel old -tolabel new -context 3 -maxcells 2000000 -eol ignore] {*}$args]
+    set eol [_eol [dict get $opts -eol]]
+    set ops [text $oldText $newText -maxcells [dict get $opts -maxcells] -eol $eol]
     set out {}
     lappend out "*** [dict get $opts -fromlabel]"
     lappend out "--- [dict get $opts -tolabel]"
     lappend out "***************"
     foreach op $ops {
         lassign $op kind line
-        switch -- $kind {
-            equal  { lappend out "  $line" }
-            delete { lappend out "- $line" }
-            insert { lappend out "+ $line" }
+        set p [dict get {equal "  " delete "- " insert "+ "} $kind]
+        if {$eol eq "strict"} {
+            lappend out {*}[_show $p $line]
+        } else {
+            lappend out "$p$line"
         }
     }
     return [join $out \n]
@@ -155,8 +219,12 @@ proc ::tclutils::tudiff::contextText {oldText newText args} {
 
 proc ::tclutils::tudiff::context {oldFile newFile args} {
     set opts [::tclutils::common::parseOptions \
-        [dict create -fromlabel $oldFile -tolabel $newFile -context 3 -maxcells 2000000] {*}$args]
-    return [contextText [ReadFile $oldFile] [ReadFile $newFile] {*}$opts]
+        [dict create -fromlabel $oldFile -tolabel $newFile -context 3 -maxcells 2000000 \
+         -eol ignore -encoding ""] {*}$args]
+    set eol [_eol [dict get $opts -eol]]
+    set enc [dict get $opts -encoding]
+    return [contextText [ReadFile $oldFile $eol $enc] [ReadFile $newFile $eol $enc] \
+        {*}[dict remove $opts -encoding]]
 }
 
 proc ::tclutils::tudiff::_relativeFiles {root recursive} {
@@ -216,4 +284,4 @@ proc ::tclutils::tudiff::directory {oldDir newDir args} {
 }
 
 
-package provide tclutils::tudiff 0.1
+package provide tclutils::tudiff 0.2
