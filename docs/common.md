@@ -11,6 +11,7 @@ consistent across modules.
 ::tclutils::common::readFile path
 ::tclutils::common::readBinaryFile path
 ::tclutils::common::writeFile path data ?mode?
+::tclutils::common::replaceFile path data ?-encoding utf-8? ?-translation lf?
 ::tclutils::common::splitLines text
 ::tclutils::common::splitDelimited line delimiter
 ::tclutils::common::parseOptions defaults ?option value ...?
@@ -23,6 +24,14 @@ again even if `read`, `write`, or later processing fails.
 
 `readBinaryFile` explicitly configures binary translation and uses `iso8859-1` as byte-preserving channel encoding.
 This avoids the removed Tcl 9 channel encoding name `binary` and still preserves byte values for modules such as `tustrings`, `tuhexdump`, `tubase64`, and `tuzip`.
+
+`replaceFile` (0.3) writes to `path.tmp<pid>` and renames that over
+`path`. If writing fails, also when the error only shows on `close` (a
+full disk), the old file stays as it was, the temporary file is removed
+and no channel stays open. `-encoding binary` writes bytes. An existing
+file keeps its permissions (Unix). On Linux the rename is atomic; on
+Windows `file rename -force` replaces the target in two steps, but the old
+content is untouched until the last one.
 
 ## Delimited text
 

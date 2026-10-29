@@ -8,7 +8,7 @@ through the pure-Tcl engine. A self-contained 2D renderer in the
 ## Package
 
 ```tcl
-package require tclutils::tusankey 0.1
+package require tclutils::tusankey 0.2
 ```
 
 ## Commands
@@ -21,6 +21,8 @@ package require tclutils::tusankey 0.1
 ::tclutils::tusankey::writePng model file ?...?
 ```
 
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
+
 ## Supported syntax (Mermaid subset)
 
 ```text
@@ -31,7 +33,10 @@ source,target,value      -> one flow per line (CSV, exactly 3 columns)
 - The header line is `sankey-beta` (or `sankey`); the data rows follow.
 - A node name containing a comma is wrapped in double quotes; a literal double
   quote inside is written as a pair (`""`).
-- Blank lines and `%%` comments are ignored. Values must be positive numbers.
+- Blank lines and `%%` comments are ignored. A row with fewer than three
+  columns, an empty name, or a value that is not a number or below 0 raises
+  `VALUE` (0.2; 0.1 skipped it). A row with the value 0 is skipped: it would
+  draw nothing, and a node that only occurs in such rows is not drawn.
 - Nodes appear in first-seen order.
 
 ## Layout (v1)
@@ -70,5 +75,5 @@ Electricity,Industry,35}
 
 ## Error codes
 
-`-errorcode {TCLUTILS TUSANKEY <REASON>}` -- `EMPTY` (no flows), `ARG` (bad
+`-errorcode {TCLUTILS TUSANKEY <REASON>}` -- `EMPTY` (no flows), `VALUE` (a bad row), `ARG` (bad
 `-scale`), `FONT` (font file not found).

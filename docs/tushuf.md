@@ -28,3 +28,9 @@ Tcl 8.6 and 9.0.
 ```bash
 tclsh bin/tushuf.tcl -seed 42 file.txt
 ```
+
+## Line ends
+
+`text` and `file` return text that ends with LF exactly when the input does:
+`"b\nJörg\n"` gives a result with final LF, `"b\nJörg"` one without, like
+`tuhead`, `tutail` and `tunl`. Versions before 0.3 dropped the final LF.

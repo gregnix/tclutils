@@ -1,4 +1,4 @@
-.TH tunotes n 0.1 tclutils
+.TH tunotes n 0.2 tclutils
 .SH tclutils::tunotes
 .PP
 A small hierarchical note store. A note is a dict with the fields \fBid parent_id title content created modified tags\fR. The whole collection ("store") is a dict mapping id \-> note, so it is just a value.
@@ -27,6 +27,8 @@ tunotes::fromJson json                      ;# -> store
 tunotes::load    path                       ;# missing file -> empty store
 tunotes::save    store path
 .CE
+.PP
+The file is UTF\-8 (0.2). \fBload\fR reads a file that is not valid UTF\-8 in the system encoding, as 0.1 wrote it.
 .SS "Error codes"
 .PP
 \fB{TCLUTILS TUNOTES NOTFOUND}\fR (unknown id / parent), \fB{TCLUTILS TUNOTES CYCLE}\fR (move under self or descendant).

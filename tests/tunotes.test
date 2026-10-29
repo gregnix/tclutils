@@ -5,7 +5,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tunotes 0.1
+package require tclutils::tunotes 0.2
 
 # Build a small tree. Returns {store idmap}. Ids are dynamic (clock-based) so
 # tests compare via titles, which are stable.
@@ -199,5 +199,41 @@ test tunotes-2.6 {subtree is re-rooted and complete} -body {
     list [dict size $sub] [dict get [dict get $sub $c1] parent_id] \
          [::tclutils::tunotes::exists $sub $g]
 } -result {2 {} 1}
+
+test tunotes-9.1 {save writes UTF-8 whatever the system encoding (0.2)} -setup {
+    set f [makeFile {} tunotes-9.1.json]
+    set old [encoding system]
+} -body {
+    set s {}
+    ::tclutils::tunotes::create s "Fr\u00fchst\u00fcck" "J\u00f6rg \u20ac" {B\u00fcro}
+    encoding system iso8859-1
+    ::tclutils::tunotes::save $s $f
+    set ch [open $f rb]; set bytes [read $ch]; close $ch
+    set back [::tclutils::tunotes::load $f]
+    encoding system $old
+    set n [lindex [dict values $back] 0]
+    list [string match "*Fr\xc3\xbchst\xc3\xbcck*" $bytes] [dict get $n title] [dict get $n content]
+} -cleanup {
+    encoding system $old
+    removeFile tunotes-9.1.json
+} -result [list 1 "Fr\u00fchst\u00fcck" "J\u00f6rg \u20ac"]
+
+test tunotes-9.2 {a file of 0.1 in the system encoding is still read} -setup {
+    set f [makeFile {} tunotes-9.2.json]
+    set old [encoding system]
+} -body {
+    set s {}
+    ::tclutils::tunotes::create s "J\u00f6rg" "B\u00fcro"
+    set ch [open $f wb]
+    puts -nonewline $ch [encoding convertto iso8859-1 [::tclutils::tunotes::toJson $s]]
+    close $ch
+    encoding system iso8859-1
+    set back [::tclutils::tunotes::load $f]
+    encoding system $old
+    dict get [lindex [dict values $back] 0] title
+} -cleanup {
+    encoding system $old
+    removeFile tunotes-9.2.json
+} -result "J\u00f6rg"
 
 cleanupTests

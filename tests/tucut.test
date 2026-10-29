@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tucut 0.1
+package require tclutils::tucut 0.2
 
 set tmp [file join [temporaryDirectory] tucut-[pid].txt]
 set f [open $tmp w]; puts $f "id;name;city\n1;Ada;Berlin\n2;Linus;Helsinki"; close $f
@@ -22,11 +22,11 @@ test tucut-1.3 {field range} {
 
 test tucut-1.4 {text cut} {
     ::tclutils::tucut::text "a;b;c\n1;2;3\n" -delimiter ";" -fields {1 3}
-} "a;c\n1;3"
+} "a;c\n1;3\n"
 
 test tucut-1.5 {file cut} {
     ::tclutils::tucut::file $tmp -delimiter ";" -fields {2}
-} "name\nAda\nLinus"
+} "name\nAda\nLinus\n"
 
 test tucut-1.6 {invalid field errors} {
     catch {::tclutils::tucut::fields "a;b" ";" {0}} msg
@@ -40,7 +40,7 @@ test tucut-2.1 {character list} {
 
 test tucut-2.2 {character closed range} {
     ::tclutils::tucut::text "abcdef\n123456\n" -chars {2-4}
-} "bcd\n234"
+} "bcd\n234\n"
 
 test tucut-2.3 {character open-ended from range} {
     ::tclutils::tucut::chars "abcdef" {4-}
@@ -56,4 +56,9 @@ test tucut-2.5 {fields and chars are mutually exclusive} {
 } 1
 
 file delete -force $tmp
+test tucut-9.1 {final LF kept exactly when the input has it} {
+    list [::tclutils::tucut::text "a;J\u00f6rg;b\n" -delimiter ";" -fields 2] \
+         [::tclutils::tucut::text "a;J\u00f6rg;b" -delimiter ";" -fields 2]
+} [list "J\u00f6rg\n" "J\u00f6rg"]
+
 cleanupTests

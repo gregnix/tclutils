@@ -9,7 +9,7 @@ this module directly.
 ## Package
 
 ```tcl
-package require tclutils::tumindmap 0.1
+package require tclutils::tumindmap 0.2
 ```
 
 ## Commands
@@ -35,6 +35,9 @@ node shapes:
     )text(    ))text((            -> rounded (cloud/bang, no native shape)
 id[text] etc.    -> a leading id token is dropped; the bracket text is the label
 ```
+
+The id may contain any letter or digit (`Büro[Text]` is the label `Text`,
+0.2; 0.1 knew only ASCII and kept the line as text).
 
 ## Usage
 

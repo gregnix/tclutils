@@ -18,7 +18,7 @@ backends, so the SVG and the raster output stay congruent.
 ## Package
 
 ```tcl
-package require tclutils::tuxychart 0.1
+package require tclutils::tuxychart 0.2
 ```
 
 ## Commands
@@ -30,6 +30,8 @@ package require tclutils::tuxychart 0.1
 ::tclutils::tuxychart::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
 ::tclutils::tuxychart::writePng model file ?-opt val ...?   ;# -> file (PNG)
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 `parse` turns Mermaid `xychart-beta` source into a model dict with keys `title`,
 `orientation` (`vertical`|`horizontal`), `xtitle`, `categories` (a list of axis
@@ -114,5 +116,6 @@ package require tclutils::tuflow
 ## Error codes
 
 `-errorcode {TCLUTILS TUXYCHART <REASON>}` — `EMPTY` (no series), `VALUE`
-(non-numeric value in a series), `ARG` (bad render option, e.g. non-integer
+(non-numeric value in a series), `COUNT` (with labels on the x-axis, a series
+with a different number of values; 0.2 -- 0.1 drew them anyway), `ARG` (bad render option, e.g. non-integer
 `-scale`), `FONT` (a `-fontfile` path that does not exist).

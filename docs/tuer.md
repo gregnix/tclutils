@@ -8,7 +8,7 @@ dispatches to; normally call `tuflow::toPng` / `tuflow::toSvg`.
 ## Package
 
 ```tcl
-package require tclutils::tuer 0.3
+package require tclutils::tuer 0.4
 ```
 
 Depends on `tclutils::tudiagram 0.3` (the crow's-foot end-marks).
@@ -76,4 +76,11 @@ set src {erDiagram
 
 ## Error codes
 
-`-errorcode {TCLUTILS TUER <REASON>}` — `EMPTY` (no entities found).
+`-errorcode {TCLUTILS TUER <REASON>}` — `EMPTY` (no entities found), `SYNTAX`
+(a line that is not a block, an entity or a relationship; 0.4).
+
+Entity names may hold letters of any script, digits, `_` and `-` (`Büro`). A
+line of three words is a relationship only when the middle one has `--` or
+`..`. `direction`, `title`, `accTitle` and `accDescr` lines are skipped. Up
+to 0.3 a block `Büro {` was not recognised, and its attribute line
+`string name PK` became an edge from `string` to `PK`.

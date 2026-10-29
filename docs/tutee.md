@@ -5,7 +5,7 @@
 ## Package
 
 ```tcl
-package require tclutils::tutee 0.2
+package require tclutils::tutee 0.3
 ```
 
 ## Commands
@@ -26,8 +26,10 @@ package require tclutils::tutee 0.2
 ```
 
 `write` writes `data` with `puts`, so a `\n` is appended unless
-`-nonewline 1`; it returns `data`. `writeFile` reads `inputFile` as text and
-writes the content unchanged, without an extra `\n`; it returns the content.
+`-nonewline 1` (unlike the shell `tee`, which adds nothing); it returns
+`data`. `writeFile` copies the bytes of `inputFile` unchanged, CR and
+encoding included, and returns the number of bytes (0.3; 0.2 read it as text,
+wrote LF in the system encoding and returned the text).
 `copyChannel` returns the number of characters copied (bytes for binary
 channels); the caller opens and closes the channels.
 

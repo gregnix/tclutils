@@ -6,10 +6,13 @@ responses are parsed into resource dicts (href, status, code, etag,
 contenttype, collection, displayname, and `data` for inline calendar/address data).
 
 Built on the Tcl core `http` package; **https uses the `tls` package**, loaded
-lazily on first https request. Basic auth uses `tclutils::tubase64`; entity
-text is decoded with `tclutils::tuxml`. The client does not parse resource
+lazily on first https request. Basic auth sends `user:pass` as UTF-8
+(RFC 7617, 0.3) via `tclutils::tubase64`; entity text is decoded with `tclutils::tuxml`. The client does not parse resource
 bodies — feed a fetched vCard to `tclutils::tuvcard` or an iCalendar to
 `tclutils::tuical`.
+
+A relative `href` is resolved against the base URL; `.` and `..` segments
+are removed (`../a.ics` from `https://h/k/` is `https://h/a.ics`, 0.3).
 
 ## API
 
@@ -36,7 +39,14 @@ Commands:
 - `listResources c ?-path p?` → non-collection entries `{href etag contenttype}`.
 - `get c path` → body (errors on non-2xx).
 - `put c path data ?-type ct? ?-etag e?` -> returns the new ETag (if the server
-  reports one); `delete c path ?-etag e?`.
+  reports one); `delete c path ?-etag e?`. A strong ETag is stored without
+  its quotes (`abc`), a weak one as sent (`W/"abc"`); `-etag` goes out in
+  `If-Match` with the quotes RFC 7232 asks for (0.3; `abc` was sent bare
+  and a weak tag lost its closing quote).
+- A response with several `propstat` blocks takes status, code and
+  properties from the first 2xx block (0.3: a leading 404 block gave the
+  found properties the code 404). `calendarQuery` refuses a day that does
+  not exist (`2026-02-29`) with `{TCLUTILS TUDAV DATE}` on Tcl 8.6 too.
 - `lastStatus c` → last HTTP status line ; `destroy c`.
 - `calendarQuery c path fromIso toIso` — CalDAV calendar-query REPORT for
   VEVENTs in a time range; each resource dict's `data` holds the inline iCal.

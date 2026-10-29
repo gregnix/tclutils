@@ -1,10 +1,10 @@
-.TH tutee n 0.2 tclutils
+.TH tutee n 0.3 tclutils
 .SH tclutils::tutee
 .PP
 \fBtutee\fR provides tee\-like helpers in pure Tcl.
 .SS Package
 .CS
-package require tclutils::tutee 0.2
+package require tclutils::tutee 0.3
 .CE
 .SS Commands
 .CS
@@ -20,7 +20,7 @@ package require tclutils::tutee 0.2
 -chunksize n      copyChannel only: characters per read (default 8192)
 .CE
 .PP
-\fBwrite\fR writes \fBdata\fR with \fBputs\fR, so a \fB\en\fR is appended unless \fB\-nonewline 1\fR; it returns \fBdata\fR. \fBwriteFile\fR reads \fBinputFile\fR as text and writes the content unchanged, without an extra \fB\en\fR; it returns the content. \fBcopyChannel\fR returns the number of characters copied (bytes for binary channels); the caller opens and closes the channels.
+\fBwrite\fR writes \fBdata\fR with \fBputs\fR, so a \fB\en\fR is appended unless \fB\-nonewline 1\fR (unlike the shell \fBtee\fR, which adds nothing); it returns \fBdata\fR. \fBwriteFile\fR copies the bytes of \fBinputFile\fR unchanged, CR and encoding included, and returns the number of bytes (0.3; 0.2 read it as text, wrote LF in the system encoding and returned the text). \fBcopyChannel\fR returns the number of characters copied (bytes for binary channels); the caller opens and closes the channels.
 .PP
 \fBwrite\fR (and \fBwriteFile\fR) open every target before anything is written, without truncating. Only when all targets are open are they emptied (unless \fB\-append 1\fR). If a target cannot be opened, the channels already opened are closed, files created by this call are removed again, existing files keep their content, and the error of \fBopen\fR is raised (e.g. \fBPOSIX ENOENT ...\fR).
 .PP

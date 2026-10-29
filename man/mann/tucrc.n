@@ -1,4 +1,4 @@
-.TH tucrc n 0.1 tclutils
+.TH tucrc n 0.2 tclutils
 .SH tclutils::tucrc
 .PP
 Checksum helpers using Tcl core \fBzlib\fR.
@@ -10,12 +10,17 @@ puts [::tclutils::tucrc::hex32 $crc]
 .PP
 Commands:
 .IP \(bu
-\fBcrc32 data ?initValue?\fR
+\fBcrc32 data ?initValue? ?\-encoding binary|utf\-8?\fR
 .IP \(bu
-\fBadler32 data ?initValue?\fR
+\fBadler32 data ?initValue? ?\-encoding binary|utf\-8?\fR
 .IP \(bu
 \fBcrc32File path\fR
 .IP \(bu
 \fBadler32File path\fR
 .IP \(bu
 \fBhex32 value\fR
+.SS "Bytes and text"
+.PP
+\fBcrc32\fR and \fBadler32\fR take bytes by default (\fB\-encoding binary\fR). A character above 255 is \fB{TCLUTILS TUCRC BYTES}\fR on Tcl 8.6 and 9.0 alike; Tcl 8.6 alone would keep only the low byte. With \fB\-encoding utf\-8\fR the text is converted first, and the checksum equals \fBcrc32File\fR of a UTF\-8 file with that text (0.2). See \fBtubase64\fR for why the digests in \fBtuhash\fR default to \fButf\-8\fR instead.
+.PP
+Errors: \fBBYTES\fR, \fBENCODING\fR, \fBOPTION\fR.

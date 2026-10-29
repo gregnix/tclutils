@@ -112,8 +112,8 @@ test tusysinfo-2.2 {Windows 11 reports ProductName "Windows 10"} -body {
         CurrentMajorVersionNumber 10 CurrentMinorVersionNumber 0}
 } -result {name {Windows 11 Pro} id windows version 24H2 build 26100.2314 kernel 10.0.26100}
 
-test tusysinfo-2.3 {PowerShell JSON: single disk object, active monitors} -body {
-    set json {{"memory":34272317440,"cores":8,"disks":{"DeviceID":"\\\\.\\PHYSICALDRIVE0","Model":"Samsung SSD 980 PRO 1TB","Size":1000202273280,"MediaType":"Fixed hard disk media","SerialNumber":"0025_38B1"},"monitors":[{"InstanceName":"DISPLAY\\DEL41A2\\5&2b0d6b1c&0&UID4352_0"}]}}
+test tusysinfo-2.3 {PowerShell JSON: single disk object, active monitors; no Status is not active} -body {
+    set json {{"memory":34272317440,"cores":8,"disks":{"DeviceID":"\\\\.\\PHYSICALDRIVE0","Model":"Samsung SSD 980 PRO 1TB","Size":1000202273280,"MediaType":"Fixed hard disk media","SerialNumber":"0025_38B1"},"monitors":[{"InstanceName":"DISPLAY\\DEL41A2\\5&2b0d6b1c&0&UID4352_0","Status":"OK"},{"InstanceName":"DISPLAY\\DEL41A2\\7&nostatus&0&UID9_0"}]}}
     set c [${ns}::_parseWinCim $json 0]
     list [dict get $c memory] [dict get $c cores] [dict get $c disks] [dict get $c active]
 } -result {34272317440 8 {{name {\\.\PHYSICALDRIVE0} model {Samsung SSD 980 PRO 1TB} size 1000202273280 type ssd removable 0}} {{DISPLAY\DEL41A2\5&2B0D6B1C&0&UID4352}}}
@@ -243,10 +243,12 @@ test tusysinfo-2.5 {windows: registry and CIM put together (fake registry)} -set
             }
         }
     }
-    package provide registry 1.3
+    # Windows has loaded the real package already (collect in 5.2): a second
+    # "package provide" with another version is an error. Only shim then.
+    if {[catch {package present registry}]} { package provide registry 1.3 }
     rename ${ns}::_winPowerShell ${ns}::_realPS
     proc ${ns}::_winPowerShell {timeout} {
-        return {{"memory":17179869184,"disks":[{"DeviceID":"D0","Model":"KINGSTON SNV2S500G","Size":500105249280,"MediaType":"Fixed hard disk media"}],"monitors":{"InstanceName":"DISPLAY\\DEL41A2\\5&2b0d6b1c&0&UID4352_0"}}}
+        return {{"memory":17179869184,"disks":[{"DeviceID":"D0","Model":"KINGSTON SNV2S500G","Size":500105249280,"MediaType":"Fixed hard disk media"}],"monitors":{"InstanceName":"DISPLAY\\DEL41A2\\5&2b0d6b1c&0&UID4352_0","Status":"OK"}}}
     }
 } -body {
     set i [${ns}::collect -platform windows]
@@ -256,10 +258,15 @@ test tusysinfo-2.5 {windows: registry and CIM put together (fake registry)} -set
          [dict get [lindex [dict get $i displays] 0] connector] \
          [dict get [lindex [dict get $i displays] 0] present]
 } -cleanup {
-    rename ::registry {}
-    if {$hadReg} { rename ::_realRegistry ::registry }
-    rename ${ns}::_winPowerShell {}
-    rename ${ns}::_realPS ${ns}::_winPowerShell
+    # undo only what the setup got to
+    catch {rename ::registry {}}
+    if {$hadReg && [llength [info commands ::_realRegistry]]} {
+        rename ::_realRegistry ::registry
+    }
+    if {[llength [info commands ${ns}::_realPS]]} {
+        catch {rename ${ns}::_winPowerShell {}}
+        rename ${ns}::_realPS ${ns}::_winPowerShell
+    }
 } -result {{Windows 11 Pro} 26100.2314 {Intel(R) Core(TM) i5-12400} 1 17179869184 {OptiPlex 7000} 1 1 DEL41A2 1}
 
 test tusysinfo-2.6 {macos: programs put together (fake _run)} -setup {
@@ -321,7 +328,9 @@ test tusysinfo-2.7 {windows: duplicate EDIDs, NVMe as ssd, placeholders (fake re
             }
         }
     }
-    package provide registry 1.3
+    # Windows has loaded the real package already (collect in 5.2): a second
+    # "package provide" with another version is an error. Only shim then.
+    if {[catch {package present registry}]} { package provide registry 1.3 }
     rename ${ns}::_winPowerShell ${ns}::_realPS
     proc ${ns}::_winPowerShell {timeout} {
         return {{"memory":29832380416,"cores":8,"disks":[{"DeviceID":"\\\\.\\PHYSICALDRIVE0","Model":"KINGSTON OM8PGP41024N-A0","Size":1024203640320,"MediaType":"Fixed hard disk media"}],"physical":[{"DeviceId":"0","MediaType":"Unspecified","BusType":"NVMe"}],"monitors":[{"InstanceName":"DISPLAY\\DEFAULT_MONITOR\\1&28A6823A&4&UID256","Status":"Unknown"},{"InstanceName":"DISPLAY\\ACI27F6\\1&a&UID1","Status":"Unknown"},{"InstanceName":"DISPLAY\\ACI27F6\\2&b&UID2","Status":"Unknown"},{"InstanceName":"DISPLAY\\ACI27F6\\3&c&UID3","Status":"Unknown"}]}}
@@ -333,10 +342,34 @@ test tusysinfo-2.7 {windows: duplicate EDIDs, NVMe as ssd, placeholders (fake re
          [llength [dict get $i displays]] [dict get [lindex [dict get $i displays] 0] present] \
          [string match {*(not connected)*} [${ns}::report $i]]
 } -cleanup {
-    rename ::registry {}
-    if {$hadReg} { rename ::_realRegistry ::registry }
-    rename ${ns}::_winPowerShell {}
-    rename ${ns}::_realPS ${ns}::_winPowerShell
+    # undo only what the setup got to
+    catch {rename ::registry {}}
+    if {$hadReg && [llength [info commands ::_realRegistry]]} {
+        rename ::_realRegistry ::registry
+    }
+    if {[llength [info commands ${ns}::_realPS]]} {
+        catch {rename ${ns}::_winPowerShell {}}
+        rename ${ns}::_realPS ${ns}::_winPowerShell
+    }
 } -result {10.0.26300 8 {} {} ssd 1 0 1}
+
+test tusysinfo-9.1 {an unreadable PowerShell answer is a warning, not empty data} -setup {
+    rename ${ns}::_winPowerShell ${ns}::_realPS
+    proc ${ns}::_winPowerShell {timeout} { return "\{kaputt" }
+    set hadReg [llength [info commands ::registry]]
+    if {$hadReg} { rename ::registry ::_realRegistry }
+    proc ::registry {args} { error "no key" }
+    if {[catch {package present registry}]} { package provide registry 1.3 }
+} -body {
+    set i [${ns}::collect -platform windows -sections {memory}]
+    list [llength [dict get $i warnings]] [string match "*--- Warnings ---*" [${ns}::report $i]]
+} -cleanup {
+    catch {rename ::registry {}}
+    if {$hadReg && [llength [info commands ::_realRegistry]]} { rename ::_realRegistry ::registry }
+    if {[llength [info commands ${ns}::_realPS]]} {
+        catch {rename ${ns}::_winPowerShell {}}
+        rename ${ns}::_realPS ${ns}::_winPowerShell
+    }
+} -result {1 1}
 
 cleanupTests

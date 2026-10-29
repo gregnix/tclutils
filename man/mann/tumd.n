@@ -1,4 +1,4 @@
-.TH tumd n 0.1 tclutils
+.TH tumd n 0.2 tclutils
 .SH tclutils::tumd
 .PP
 Small dependency\-free Markdown helpers for Tcl.
@@ -6,7 +6,7 @@ Small dependency\-free Markdown helpers for Tcl.
 \fBtumd\fR is intentionally not a full Markdown system. It provides a practical CommonMark subset for scripts and CI: Markdown\-to\-HTML fragments, ATX heading extraction, table\-of\-contents generation, and YAML front matter splitting.
 .SS Package
 .CS
-package require tclutils::tumd 0.1
+package require tclutils::tumd 0.2
 .CE
 .SS API
 .CS
@@ -52,6 +52,9 @@ links and images
 autolinks
 .IP \(bu
 hard line breaks with two trailing spaces
+.SS "Heading anchors"
+.PP
+\fBtoHtml\fR gives each heading an \fBid\fR, \fBtoc\fR links to it. The anchor is made as on GitHub: lower case, \fB*\fR and backticks removed, everything but letters, digits, \fB_\fR, \fB\-\fR and blanks removed, blanks become \fB\-\fR. Letters of every script stay (\fBJörg\fR \-> \fBjörg\fR, \fBÜber\fR \-> \fBüber\fR). A repeated anchor gets \fB\-1\fR, \fB\-2\fR, ... (0.2; 0.1 kept only \fBa\-z\fR and \fB0\-9\fR, so \fBJörg\fR and \fBJrg\fR both became \fBjrg\fR).
 .SS Limits
 .PP
 \fBtumd\fR does not implement nested lists, Setext headings, GFM tables, reference\-style links, raw HTML passthrough, or a full Markdown AST. For larger Markdown workflows, use the mdstack/docir toolchain.

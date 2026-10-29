@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tupatch 0.2
+package require tclutils::tupatch 0.3
 package require tclutils::tudiff 0.1
 
 set old "alpha\nbeta\ngamma\ndelta\n"
@@ -13,7 +13,7 @@ set new "alpha\nBETA\ngamma\ndelta\nepsilon\n"
 test tupatch-1.1 {apply tudiff unified output reproduces new text} -body {
     set patch [::tclutils::tudiff::unifiedText $old $new]
     ::tclutils::tupatch::text $old $patch
-} -result "alpha\nBETA\ngamma\ndelta\nepsilon"
+} -result "alpha\nBETA\ngamma\ndelta\nepsilon\n"
 
 test tupatch-1.2 {empty patch leaves source unchanged} -body {
     ::tclutils::tupatch::text $old ""
@@ -23,7 +23,7 @@ test tupatch-1.3 {reverse undoes the patch} -body {
     set patch [::tclutils::tudiff::unifiedText $old $new]
     ::tclutils::tupatch::text \
         [::tclutils::tupatch::text $old $patch] $patch -reverse 1
-} -result "alpha\nbeta\ngamma\ndelta"
+} -result "alpha\nbeta\ngamma\ndelta\n"
 
 test tupatch-1.4 {context mismatch is reported, not silently applied} -body {
     set patch [::tclutils::tudiff::unifiedText $old $new]
@@ -36,7 +36,7 @@ test tupatch-1.5 {strict 0 ignores context mismatch and follows the patch} -body
     # source has same length so positional application stays in range
     set src "one\ntwo\nthree\nfour\n"
     ::tclutils::tupatch::text $src $patch -strict 0
-} -result "one\nBETA\nthree\nfour\nepsilon"
+} -result "one\nBETA\nthree\nfour\nepsilon\n"
 
 # Hand-written multi-hunk patch (git/diff -u style, line numbers matter).
 set base "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\n"
@@ -54,7 +54,7 @@ set multi "--- a
 
 test tupatch-2.1 {multi-hunk patch applies at correct line offsets} -body {
     ::tclutils::tupatch::text $base $multi
-} -result "l1\nL2\nl3\nl4\nl5\nl6\nL7\nl8"
+} -result "l1\nL2\nl3\nl4\nl5\nl6\nL7\nl8\n"
 
 test tupatch-2.2 {parse extracts the expected number of hunks} -body {
     llength [::tclutils::tupatch::parse $multi]
@@ -64,12 +64,12 @@ test tupatch-2.2 {parse extracts the expected number of hunks} -body {
 test tupatch-3.1 {insertion only} -body {
     set p "@@ -1,1 +1,3 @@\n a\n+b\n+c"
     ::tclutils::tupatch::text "a\n" $p
-} -result "a\nb\nc"
+} -result "a\nb\nc\n"
 
 test tupatch-3.2 {deletion only} -body {
     set p "@@ -1,3 +1,1 @@\n a\n-b\n-c"
     ::tclutils::tupatch::text "a\nb\nc\n" $p
-} -result a
+} -result "a\n"
 
 test tupatch-3.3 {unknown option rejected} -body {
     catch {::tclutils::tupatch::text $old "" -bogus 1} err opts
@@ -82,7 +82,7 @@ set srcFile [makeFile $old [file join $tmp src.txt]]
 test tupatch-4.1 {fromFile reads source and applies patch} -body {
     set patch [::tclutils::tudiff::unifiedText $old $new]
     ::tclutils::tupatch::fromFile $srcFile $patch
-} -result "alpha\nBETA\ngamma\ndelta\nepsilon"
+} -result "alpha\nBETA\ngamma\ndelta\nepsilon\n"
 
 test tupatch-5.1 {-reverse and -strict must be booleans} -body {
     set out {}
@@ -97,6 +97,42 @@ test tupatch-5.2 {boolean words are accepted} -body {
     set p "@@ -1,1 +1,2 @@\n a\n+b"
     list [::tclutils::tupatch::text "a\n" $p -strict yes] \
         [::tclutils::tupatch::text "a\nb\n" $p -reverse true -strict off]
-} -result [list "a\nb" a]
+} -result [list "a\nb\n" "a\n"]
+
+# --- 0.3: the line end at the end ------------------------------------------
+
+test tupatch-6.1 {diff of two LF files applied gives the target exactly} -setup {
+    package require tclutils::tudiff
+} -body {
+    set a "eins\nJörg\ndrei\n"
+    set b "eins\nJörg Müller\ndrei\n"
+    set r [::tclutils::tupatch::text $a [::tclutils::tudiff::unifiedText $a $b]]
+    list [expr {$r eq $b}] [string index $r end]
+} -result [list 1 "\n"]
+
+test tupatch-6.2 {one line: nur\n -> nurX\n} -body {
+    ::tclutils::tupatch::text "nur\n" "@@ -1 +1 @@\n-nur\n+nurX\n"
+} -result "nurX\n"
+
+test tupatch-6.3 {source without final LF stays without} -body {
+    ::tclutils::tupatch::text "a\nb" "@@ -1,2 +1,2 @@\n-a\n+A\n b\n"
+} -result "A\nb"
+
+test tupatch-6.4 {marker after + : result without final LF} -body {
+    ::tclutils::tupatch::text "a\nb\n" "@@ -1,2 +1,2 @@\n a\n-b\n+B\n\\ No newline at end of file\n"
+} -result "a\nB"
+
+test tupatch-6.5 {marker after - : the LF is added} -body {
+    ::tclutils::tupatch::text "a\nb" "@@ -1,2 +1,2 @@\n a\n-b\n\\ No newline at end of file\n+B\n"
+} -result "a\nB\n"
+
+test tupatch-6.6 {-reverse undoes 4.4 including the LF} -body {
+    ::tclutils::tupatch::text "a\nB" "@@ -1,2 +1,2 @@\n a\n-b\n+B\n\\ No newline at end of file\n" -reverse 1
+} -result "a\nb\n"
+
+test tupatch-6.7 {parse reports the markers} -body {
+    set h [lindex [::tclutils::tupatch::parse "@@ -1 +1 @@\n-x\n+y\n\\ No newline at end of file\n"] 0]
+    list [dict get $h oldNoNl] [dict get $h newNoNl]
+} -result {0 1}
 
 cleanupTests

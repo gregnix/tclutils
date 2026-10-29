@@ -17,4 +17,6 @@ Commands:
 - `encode str ?-plus bool?` — percent-encode. `-plus 1`: space becomes `+`.
 - `decode str ?-plus bool?` — percent-decode. `-plus 1`: `+` becomes space.
 - `buildQuery dict ?-plus bool?` — `k=v&k2=v2` (default `-plus 1`).
-- `parseQuery str ?-plus bool?` — parse into a dict (default `-plus 1`).
+- `parseQuery str ?-plus bool?` — parse into a dict (default `-plus 1`). A key
+  that occurs more than once (`a=1&a=2`, e.g. checkboxes) keeps only its last
+  value; split the string yourself at `&` when every value counts.

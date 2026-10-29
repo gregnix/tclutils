@@ -49,6 +49,10 @@ Inplace mit Backup:
 ::tclutils::tused::processFile in.txt ignored $rules -inplace 1 -backup .bak
 ```
 
+Die Ausgabe geht über eine temporäre Datei (`common::replaceFile`, 0.2):
+Scheitert das Schreiben, bleibt die Zieldatei unverändert, und kein Kanal
+bleibt offen. Mit `-inplace` gilt das auch für die Eingabedatei.
+
 ## Einfaches Scriptformat
 
 ```tcl

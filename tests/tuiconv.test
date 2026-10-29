@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuiconv 0.1
+package require tclutils::tuiconv 0.2
 
 proc writeBinaryTestFile {path bytes} {
     set fh [open $path wb]
@@ -53,4 +53,29 @@ test tuiconv-1.5 {convert file} -body {
 } -result "\u00e4\u00f6\u00fc"
 
 foreach f [list $encFile [file join [temporaryDirectory] tuiconv-out.txt] [file join [temporaryDirectory] tuiconv-utf8.txt]] { catch {file delete -force $f} }
+# --- 0.2: strict on Tcl 8.6 and 9 --------------------------------------------
+
+test tuiconv-3.1 {a character the target cannot hold is an error} -body {
+    list [catch {::tclutils::tuiconv::convert [encoding convertto utf-8 "Jörg €"] utf-8 iso8859-1} m] \
+        $::errorCode $m
+} -result {1 {TCLUTILS TUICONV UNMAPPABLE iso8859-1} {character U+20AC at index 5 cannot be written in iso8859-1}}
+
+test tuiconv-3.2 {-replace 1 writes ?} -body {
+    binary encode hex [::tclutils::tuiconv::convert [encoding convertto utf-8 "Jörg €"] utf-8 iso8859-1 -replace 1]
+} -result 4af67267203f
+
+test tuiconv-3.3 {invalid source bytes are an error} -body {
+    list [catch {::tclutils::tuiconv::convert "a\xFFb" utf-8 cp1252} m] $::errorCode
+} -result {1 {TCLUTILS TUICONV INVALID utf-8}}
+
+test tuiconv-3.4 {writeFile: on an error the file stays} -body {
+    set f [makeFile alt tuiconv34.txt]
+    catch {::tclutils::tuiconv::writeFile $f "€" iso8859-1}
+    string trim [::tclutils::tuiconv::readFile $f utf-8]
+} -result alt
+
+test tuiconv-3.5 {valid text passes unchanged} -body {
+    ::tclutils::tuiconv::convert [::tclutils::tuiconv::convert [encoding convertto utf-8 "Jörg"] utf-8 cp1252] cp1252 utf-8
+} -result [encoding convertto utf-8 "Jörg"]
+
 cleanupTests

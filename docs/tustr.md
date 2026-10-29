@@ -14,13 +14,20 @@ tustr::splitTrim $s ?sep?               ;# split, trim, drop empties
 tustr::toCamel "my-cool_var"            ;# -> myCoolVar
 tustr::toSnake "myCoolVar"              ;# -> my_cool_var
 tustr::slugify "Hello, World!"          ;# -> hello-world (ASCII)
+tustr::slugify "Jörg Müller"            ;# -> joerg-mueller
 tustr::capitalize $s
 tustr::count $s $sub                    ;# non-overlapping occurrences
 ```
 
 `padLeft`/`padRight`/`center`/`truncate` take a non-negative integer width/length
 (`{TCLUTILS TUSTR ARG}` otherwise). `char` should be a single character.
-`slugify`/`toSnake`/`toCamel` operate on the ASCII alphanumerics in the input.
+`toCamel` and `toSnake` treat letters of every script as letters
+(`Jörg Müller` -> `jörgMüller`, `JörgMüller` -> `jörg_müller`). `slugify`
+returns ASCII for file names and URLs: Latin letters are spelled in ASCII
+first (`ä` -> `ae`, `ö` -> `oe`, `ü` -> `ue`, `ß` -> `ss`, accents dropped:
+`é` -> `e`, `ł` -> `l`), then every run of other characters becomes one
+`-`; what has no ASCII form (`日本`) is dropped (0.3; 0.2 dropped every
+non-ASCII letter, `Jörg` gave `j-rg`, and `toCamel` gave `jRgMLler`).
 
 ## Additional exported commands
 

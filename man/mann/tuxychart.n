@@ -1,4 +1,4 @@
-.TH tuxychart n 0.1 tclutils
+.TH tuxychart n 0.2 tclutils
 .SH tclutils::tuxychart
 .PP
 A Mermaid\-style \fBxy chart\fR (bar / line) renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBxychart\-beta\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
@@ -8,7 +8,7 @@ An xy chart is not a node\-edge graph, so \fBtuxychart\fR does \fBnot\fR go thro
 Axes, gridlines, bars and line segments are drawn with the same routine on both backends, so the SVG and the raster output stay congruent.
 .SS Package
 .CS
-package require tclutils::tuxychart 0.1
+package require tclutils::tuxychart 0.2
 .CE
 .SS Commands
 .CS
@@ -18,6 +18,8 @@ package require tclutils::tuxychart 0.1
 ::tclutils::tuxychart::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
 ::tclutils::tuxychart::writePng model file ?-opt val ...?   ;# -> file (PNG)
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .PP
 \fBparse\fR turns Mermaid \fBxychart\-beta\fR source into a model dict with keys \fBtitle\fR, \fBorientation\fR (\fBvertical\fR|\fBhorizontal\fR), \fBxtitle\fR, \fBcategories\fR (a list of axis labels), \fBxnumeric\fR/\fBxmin\fR/\fBxmax\fR (for a numeric x\-axis), \fBytitle\fR, \fByauto\fR (\fB0\fR|\fB1\fR), \fBymin\fR/\fBymax\fR, and \fBseries\fR (a list of \fB{type bar|line values {...}}\fR dicts). The render commands take that model.
 .PP
@@ -79,4 +81,4 @@ Labels use the \fBtupngdraw\fR 6x8 bitmap font by default. With \fB\-fontfile\fR
 Companion modules: \fBtclutils::tupngdraw\fR and \fBtclutils::tusvg\fR (backends), \fBtclutils::tuflow\fR (facade / dispatch), \fBtclutils::tudiagram\fR (the node\-edge graph renderer for the other Mermaid types).
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUXYCHART <REASON>}\fR — \fBEMPTY\fR (no series), \fBVALUE\fR (non\-numeric value in a series), \fBARG\fR (bad render option, e.g. non\-integer \fB\-scale\fR), \fBFONT\fR (a \fB\-fontfile\fR path that does not exist).
+\fB\-errorcode {TCLUTILS TUXYCHART <REASON>}\fR — \fBEMPTY\fR (no series), \fBVALUE\fR (non\-numeric value in a series), \fBCOUNT\fR (with labels on the x\-axis, a series with a different number of values; 0.2 \-\- 0.1 drew them anyway), \fBARG\fR (bad render option, e.g. non\-integer \fB\-scale\fR), \fBFONT\fR (a \fB\-fontfile\fR path that does not exist).

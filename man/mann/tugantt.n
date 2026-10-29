@@ -1,10 +1,10 @@
-.TH tugantt n 0.2 tclutils
+.TH tugantt n 0.3 tclutils
 .SH tclutils::tugantt
 .PP
 Parses a Mermaid \fBgantt\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtusankey\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here.
 .SS Package
 .CS
-package require tclutils::tugantt 0.2
+package require tclutils::tugantt 0.3
 .CE
 .SS Commands
 .CS
@@ -14,6 +14,8 @@ package require tclutils::tugantt 0.2
 ::tclutils::tugantt::writeSvg model file ?...?
 ::tclutils::tugantt::writePng model file ?...?
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .SS "Supported syntax (Mermaid subset)"
 .CS
 gantt
@@ -30,7 +32,9 @@ gantt
 .IP \(bu
 \fBDates\fR must exist: the parsed date is formatted back with the same format and compared with the input (leading zeros do not matter, \fB2026\-3\-2\fR is fine). \fB2026\-13\-45\fR or \fB2026\-02\-30\fR raise \fBDATE\fR on Tcl 8.6 and 9.0 alike.
 .IP \(bu
-\fBEnd\fR: an explicit date, or a duration \fB5d\fR / \fB2w\fR / \fB8h\fR / \fB30m\fR.
+\fBEnd\fR: an explicit date, or a duration \fB5d\fR / \fB2w\fR / \fB8h\fR / \fB30m\fR / \fB10s\fR / \fB500ms\fR. Another unit (\fB5x\fR) raises \fBDURATION\fR (0.3; 0.2 made it a task of length 0).
+.IP \(bu
+\fBIds\fR may hold letters of any script (\fBbüro\fR; 0.2 took such an id for the start date and failed on the whole chart).
 .IP \(bu
 \fBdateFormat\fR / \fBaxisFormat\fR accept the usual tokens \fBYYYY MM DD HH mm ss\fR (mapped to \fBclock\fR format); \fBX\fR means a Unix timestamp.
 .IP \(bu
@@ -67,4 +71,4 @@ Companion: \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (canvas), \fBtcluti
 Bars use rect primitives and milestones a polygon, so SVG and PNG stay congruent. Bar colours: normal blue, \fBactive\fR light blue, \fBdone\fR grey, \fBcrit\fR red, \fBmilestone\fR amber.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUGANTT <REASON>}\fR \-\- \fBEMPTY\fR (no tasks), \fBARG\fR (bad \fB\-scale\fR), \fBDATE\fR (a date that does not match \fBdateFormat\fR or does not exist, or a first task without a start date \-\- raised when drawing, not by \fBparse\fR), \fBFONT\fR (font file not found).
+\fB\-errorcode {TCLUTILS TUGANTT <REASON>}\fR \-\- \fBEMPTY\fR (no tasks), \fBARG\fR (bad \fB\-scale\fR), \fBDATE\fR (a date that does not match \fBdateFormat\fR or does not exist, or a first task without a start date \-\- raised when drawing, not by \fBparse\fR), \fBDURATION\fR (a duration with an unknown unit, also raised when drawing), \fBFONT\fR (font file not found).

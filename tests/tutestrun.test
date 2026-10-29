@@ -2,8 +2,8 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tutestrun 0.1
-set module [lindex [package ifneeded tclutils::tutestrun 0.1] end]
+package require tclutils::tutestrun 0.2
+set module [lindex [package ifneeded tclutils::tutestrun 0.2] end]
 
 # A fake suite: <tmp>/proj/tests/*.test, run by tutestrun in a child process.
 set proj [file join [temporaryDirectory] tutestrun-[pid] proj]
@@ -97,6 +97,28 @@ test tutestrun-1.8 {bytes invalid in the system encoding do not stall the run} -
     unset -nocomplain ::env(LC_ALL)
     array set ::env $savedLc
 } -result {0 1 1}
+
+test tutestrun-1.9 {test files are read as UTF-8 whatever the system encoding (0.2)} -body {
+    file delete -force [file dirname $proj]
+    file mkdir [file join $proj tests] [file join $proj lib tm]
+    set h [open [file join $proj tests utf.test] w]
+    fconfigure $h -encoding utf-8
+    puts $h "package require tcltest\nnamespace import ::tcltest::*"
+    puts $h "test u-1 {length of J\u00f6rg} {string length \"J\u00f6rg\"} 4"
+    puts $h "test u-2 {code of \u00f6} {scan \"\u00f6\" %c} 246"
+    puts $h "cleanupTests"
+    close $h
+    set savedLc [array get ::env LC_ALL]
+    set savedLang [array get ::env LANG]
+    set ::env(LC_ALL) C
+    unset -nocomplain ::env(LANG)
+    lassign [runSuite -limit 30] code out
+    list $code [regexp {Total\t2\tPassed\t2} $out]
+} -cleanup {
+    unset -nocomplain ::env(LC_ALL)
+    array set ::env $savedLc
+    array set ::env $savedLang
+} -result {0 1}
 
 test tutestrun-1.7 {unknown option} -body {
     catch {::tclutils::tutestrun::run . {} -limt 3} e o

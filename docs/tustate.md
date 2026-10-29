@@ -9,7 +9,7 @@ the `tclutils::tuflow` facade dispatches to; you normally call `tuflow::toPng` /
 ## Package
 
 ```tcl
-package require tclutils::tustate 0.1
+package require tclutils::tustate 0.2
 ```
 
 ## Commands
@@ -49,6 +49,10 @@ set m [::tclutils::tustate::parse $src]
 ```
 
 ## Notes
+
+- State ids are letters, digits and `_`, Unicode letters included:
+  `Büro : Jörg` sets the description of `Büro` (0.2; was ASCII only, and
+  the line gave an empty graph).
 
 - v1 limitations (honest): composite states `state X { ... }` are flattened
   (inner transitions kept, the boundary box is not drawn); notes are ignored;

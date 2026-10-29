@@ -1,4 +1,4 @@
-.TH tucolumn n 0.1 tclutils
+.TH tucolumn n 0.2 tclutils
 .SH tclutils::tucolumn
 .PP
 \fBcolumn\fR\-like columnation in pure Tcl.
@@ -26,3 +26,6 @@ unknown option	\fB{TCLUTILS COMMON OPTION \-name}\fR
 tclsh bin/tucolumn.tcl table file.txt
 tclsh bin/tucolumn.tcl fill -width 60 words.txt
 .CE
+.SS "Line ends"
+.PP
+\fBtable\fR, \fBtext\fR and \fBfile \-mode table\fR return text that ends with LF exactly when the input does: \fB"b\enJörg\en"\fR gives a result with final LF, \fB"b\enJörg"\fR one without, like \fBtuhead\fR, \fBtutail\fR and \fBtunl\fR. Versions before 0.2 dropped the final LF.

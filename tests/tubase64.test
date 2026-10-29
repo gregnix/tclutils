@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tubase64 0.1
+package require tclutils::tubase64 0.2
 
 set tmp [makeDirectory tubase64]
 set f [makeFile "hello" [file join $tmp hello.txt]]
@@ -23,5 +23,22 @@ test tubase64-1.3 {file encode} -body {
 test tubase64-1.4 {roundtrip with newline wrapping} -body {
     ::tclutils::tubase64::decode [::tclutils::tubase64::encode "abcdef" -maxlen 4]
 } -result abcdef
+
+test tubase64-2.1 {text with -encoding utf-8, back with -encoding utf-8} -body {
+    set b [::tclutils::tubase64::encode "J\u00f6rg \u20ac" -encoding utf-8]
+    list $b [::tclutils::tubase64::decode $b -encoding utf-8]
+} -result [list SsO2cmcg4oKs "J\u00f6rg \u20ac"]
+test tubase64-2.2 {bytes by default: a character above 255 is an error} -body {
+    catch {::tclutils::tubase64::encode "\u20ac"} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUBASE64 BYTES}
+test tubase64-2.3 {bytes 00 FF C3 BC stay} -body {
+    set b [::tclutils::tubase64::encode [binary format H* 00ffc3bc]]
+    list $b [binary encode hex [::tclutils::tubase64::decode $b]]
+} -result {AP/DvA== 00ffc3bc}
+test tubase64-2.4 {unknown -encoding} -body {
+    catch {::tclutils::tubase64::encode x -encoding latin1} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUBASE64 ENCODING}
 
 cleanupTests

@@ -1,4 +1,4 @@
-.TH tudate n 0.2 tclutils
+.TH tudate n 0.3 tclutils
 .SH tclutils::tudate
 .PP
 Flexible date helpers built on the Tcl \fBclock\fR command: parse common formats, render ISO, do calendar arithmetic, day differences and human relative phrases. Works in local time.
@@ -10,7 +10,9 @@ set t [::tclutils::tudate::parse "15.03.2024"]    ;# epoch seconds
 .PP
 Commands:
 .IP \(bu
-\fBparse str ?\-format fmt?\fR — epoch seconds. Without \fB\-format\fR, common formats are tried (ISO, ISO date\-time, \fBd.m.Y\fR, \fBd/m/Y\fR, \fBY/m/d\fR) then a free\-form scan; errors \fB{TCLUTILS TUDATE PARSE}\fR.
+\fBparse str ?\-format fmt?\fR — epoch seconds. Without \fB\-format\fR, common formats are tried in this order: ISO date and date\-time (also without seconds and as \fBYYYYMMDD\fR), \fBd.m.Y\fR (with optional time), \fBd/m/Y\fR, \fBY/m/d\fR, \fBm/d/Y\fR, \fBH:M:S\fR, \fBH:M\fR, \fBd Mon Y\fR, \fBMon d Y\fR, \fBMon d, Y\fR (English month names). \fB02/03/2026\fR is 2 March; \fBm/d/Y\fR only applies when \fBd/m/Y\fR gives no date, so \fB10/29/2026\fR is 29 October. Then a free\-form \fBclock scan\fR, but not for a string of digits and separators only. Errors \fB{TCLUTILS TUDATE PARSE}\fR.
+.IP \(bu
+A day or month that does not exist is an error, with or without \fB\-format\fR, on Tcl 8.6 and 9.0 alike: \fB2026\-02\-29\fR, \fB31.04.2026\fR, \fB29/02/2026\fR, \fBFeb 30 2026\fR. Tcl 8.6's \fBclock scan\fR alone would roll these over (\fB2026\-03\-01\fR, \fB2026\-05\-01\fR, \fB2028\-05\-02\fR); \fBparse\fR formats each match back and rejects it when the numbers differ (0.3).
 .IP \(bu
 \fBiso seconds ?\-time bool?\fR — \fByyyy\-mm\-dd\fR (or \fB...THH:MM:SS\fR).
 .IP \(bu

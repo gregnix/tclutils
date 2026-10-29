@@ -18,4 +18,6 @@ tusize::human   1500 -si 1         ;# 1.5 kB
 tusize::entries ./project          ;# {4096 ./project/docs} {2048 ./project/src} ...
 .CE
 .PP
+The unit always names its base: \fBKiB\fR is 1024, \fBkB\fR is 1000. 1500 and 1536 bytes are both \fB1.5 KiB\fR because one decimal is shown; \fBtunumfmt::toHuman\fR writes the bare \fBK\fR for 1000 (\fB1.5K\fR), like \fBnumfmt\fR.
+.PP
 Errors use \fB{TCLUTILS TUSIZE ...}\fR (\fBNOTFOUND\fR, \fBNOTDIR\fR, \fBVALUE\fR).

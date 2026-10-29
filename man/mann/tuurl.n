@@ -17,4 +17,4 @@ Commands:
 .IP \(bu
 \fBbuildQuery dict ?\-plus bool?\fR — \fBk=v&k2=v2\fR (default \fB\-plus 1\fR).
 .IP \(bu
-\fBparseQuery str ?\-plus bool?\fR — parse into a dict (default \fB\-plus 1\fR).
+\fBparseQuery str ?\-plus bool?\fR — parse into a dict (default \fB\-plus 1\fR). A key that occurs more than once (\fBa=1&a=2\fR, e.g. checkboxes) keeps only its last value; split the string yourself at \fB&\fR when every value counts.

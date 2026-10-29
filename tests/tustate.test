@@ -5,7 +5,7 @@ namespace import ::tcltest::*
 set root [file normalize [file join [file dirname [info script]] ..]]
 catch {tcl::tm::path add [file join $root lib tm]}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
-package require tclutils::tustate
+package require tclutils::tustate 0.2
 
 namespace eval M { namespace import ::tclutils::tustate::* }
 
@@ -113,5 +113,10 @@ test tustate-6.1 {empty diagram raises TUSTATE EMPTY} -body {
     catch {M::parse "stateDiagram-v2"} e o
     list [lindex [dict get $o -errorcode] 1] [lindex [dict get $o -errorcode] 2]
 } -result {TUSTATE EMPTY}
+
+test tustate-9.1 {a state description with umlauts} -body {
+    set s [::tclutils::tustate::parse "stateDiagram-v2\nB\u00fcro : J\u00f6rg"]
+    lmap n [dict get $s nodes] {list [dict get $n id] [dict get $n label]}
+} -result [list [list B\u00fcro J\u00f6rg]]
 
 cleanupTests

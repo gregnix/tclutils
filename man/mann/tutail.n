@@ -1,4 +1,4 @@
-.TH tutail n 0.1 tclutils
+.TH tutail n 0.2 tclutils
 .SH tclutils::tutail
 .PP
 Tail\-like helpers.
@@ -9,6 +9,8 @@ puts [::tclutils::tutail::file logfile.txt 50]
 .PP
 Commands:
 .IP \(bu
-\fBtext text ?count?\fR
+\fBtext text ?count?\fR \-\- the last \fBcount\fR lines (default 10)
 .IP \(bu
-\fBfile path ?count?\fR
+\fBfile path ?count? ?\-encoding enc?\fR \-\- the same for a file (default utf\-8)
+.PP
+As with \fBtail \-n\fR, the result keeps the line ends: every line ends with \fB\en\fR, except the last line of the input when it has none. \fBtext\fR and \fBfile\fR give the same result (0.2; 0.1 \fBtext\fR took the empty rest after a final \fB\en\fR as a line, \fBfile\fR dropped every line end). A count that is not an integer >= 0 raises \fBTCLUTILS TUTAIL COUNT\fR. Print with \fBputs \-nonewline\fR.

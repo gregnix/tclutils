@@ -1,4 +1,4 @@
-.TH tucat n 0.1 tclutils
+.TH tucat n 0.2 tclutils
 .SH tclutils::tucat
 .PP
 Small \fBcat\fR\-like helpers.
@@ -21,3 +21,5 @@ Options:
 \fB\-number 1\fR number all lines
 .IP \(bu
 \fB\-nonblank 1\fR number only non\-empty lines
+.PP
+As with \fBcat \-n\fR, the end of the text after the last \fB\en\fR is not a line and gets no number, and \fBfiles\fR numbers the joined files in one run. Files are joined as they are: a file without a final \fB\en\fR runs into the next one. Unknown options raise \fBTCLUTILS COMMON OPTION \-name\fR (0.2; 0.1 numbered an empty last line, started at 1 for every file and ignored unknown options).

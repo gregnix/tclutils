@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tucsplit 0.1
+package require tclutils::tucsplit 0.2
 package require tclutils::common 0.1
 
 proc readText {path} { ::tclutils::common::readFile $path }
@@ -14,15 +14,13 @@ test tucsplit-1.1 {split text by regexp keeping matching line} -body {
     set text "Intro\n# One\na\n# Two\nb"
     set files [::tclutils::tucsplit::splitText $text {^# } -outdir $out -prefix ch -suffix .md]
     list [llength $files] [readText [lindex $files 1]] [readText [lindex $files 2]]
-} -result {3 {# One
-a} {# Two
-b}}
+} -result [list 3 "# One\na\n" "# Two\nb"]
 
 test tucsplit-1.2 {drop matching delimiter line} -body {
     set out [makeDirectory drop]
     set files [::tclutils::tucsplit::splitText "a\n--\nb\n--\nc" {^--$} -keepmatch 0 -outdir $out]
     list [llength $files] [readText [lindex $files 0]] [readText [lindex $files 1]] [readText [lindex $files 2]]
-} -result {3 a b c}
+} -result [list 3 "a\n" "b\n" c]
 
 test tucsplit-1.3 {glob matching mode} -body {
     set out [makeDirectory glob]
@@ -44,5 +42,26 @@ test tucsplit-1.5 {no match produces one file} -body {
     list [llength $files] [readText [lindex $files 0]]
 } -result {1 {a
 b}}
+
+# --- 0.2: parts keep their line ends ------------------------------------------
+test tucsplit-2.1 {parts put together give the text again} -body {
+    set d [makeDirectory cs21]
+    set t "eins\nJörg\n---\ndrei\n"
+    set files [::tclutils::tucsplit::splitText $t {^---$} -outdir $d]
+    set all ""
+    foreach f $files { set c [open $f rb]; append all [read $c]; close $c }
+    list [llength $files] [expr {$all eq [encoding convertto utf-8 $t]}]
+} -result {2 1}
+test tucsplit-2.2 {file keeps CRLF; pattern sees the line without it} -body {
+    set d [makeDirectory cs22]
+    set in [file join $d in.txt]
+    set c [open $in wb]; puts -nonewline $c "a\r\n---\r\nb\r\n"; close $c
+    set files [::tclutils::tucsplit::file $in {^---$} -outdir [file join $d p]]
+    lmap f $files { set c [open $f rb]; set x [read $c]; close $c; set x }
+} -result [list "a\r\n" "---\r\nb\r\n"]
+test tucsplit-2.3 {unknown encoding} -body {
+    catch {::tclutils::tucsplit::splitText a x -encoding nix -outdir [makeDirectory cs23]}
+    set ::errorCode
+} -result {TCLUTILS TUCSPLIT ENCODING nix}
 
 cleanupTests

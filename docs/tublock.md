@@ -9,7 +9,7 @@ than this module directly.
 ## Package
 
 ```tcl
-package require tclutils::tublock 0.1
+package require tclutils::tublock 0.2
 ```
 
 ## Commands
@@ -59,6 +59,10 @@ set m [::tclutils::tublock::parse $src]
 ```
 
 ## Notes
+
+- Ids are letters, digits and `_`, Unicode letters included:
+  `Büro[Jörg]` is the block `Büro` with the label `Jörg` (0.2; it was one
+  token used as id and label).
 
 - v1 limitations (honest): the grid geometry of block-beta (columns, widths,
   `:N` spans, explicit placement) is NOT reproduced — `tudiagram` lays the

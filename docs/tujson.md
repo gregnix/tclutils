@@ -18,7 +18,9 @@ package require tclutils::tujson
 
 `parse` maps JSON objects to Tcl dictionaries and JSON arrays to Tcl lists.
 Strings are returned as Tcl strings, numbers as their original numeric text,
-`true` as `1`, `false` as `0`, and `null` as the empty string.
+`true` as `1`, `false` as `0`, and `null` as the empty string. When an
+object holds a key twice, the last value wins, as in JavaScript (RFC 8259
+says names should be unique).
 
 ## Example
 

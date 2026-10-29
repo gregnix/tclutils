@@ -17,6 +17,10 @@ package require tclutils::tugrep
 ::tclutils::tugrep::match line pattern ?options?
 ```
 
+Lines are split at `\n`; the empty rest after a final `\n` is not a line, so
+`.*` matches two lines in `"eins\nJörg\n"` (0.2; 0.1.3 counted three, and
+`file` trimmed empty lines at the end of the file).
+
 ## Options
 
 ```text

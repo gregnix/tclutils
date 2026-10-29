@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuprovider 0.2
+package require tclutils::tuprovider 0.3
 
 # a scratch tree for the local provider
 set ::d [makeDirectory tuprov]
@@ -110,5 +110,24 @@ test tuprovider-2.1 {local head keeps content that looks like a number} -setup {
 } -cleanup {
     file delete $f
 } -result {010 010}
+
+test tuprovider-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tuprovider-9.1.bin]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {[::tclutils::tuprovider open local] put $f NEW}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tuprovider-9.1.bin
+} -result {1 PRECIOUS 0 0}
 
 cleanupTests

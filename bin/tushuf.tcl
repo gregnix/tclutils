@@ -1,6 +1,6 @@
 #!/usr/bin/env tclsh
 source [file join [file dirname [info script]] _bootstrap.tcl]
-package require tclutils::tushuf 0.1
+package require tclutils::tushuf 0.3
 set opts {}; set files {}; set i 0
 while {$i < [llength $argv]} {
     set a [lindex $argv $i]

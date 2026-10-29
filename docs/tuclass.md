@@ -8,7 +8,7 @@ parsers the `tclutils::tuflow` facade dispatches to; normally call
 ## Package
 
 ```tcl
-package require tclutils::tuclass 0.2
+package require tclutils::tuclass 0.3
 ```
 
 ## Commands
@@ -25,6 +25,7 @@ class X {                   -> box with three compartments
     +m()                       dashed line; members with "()" are methods)
 }
 class X { +int a; +m() }    -> the same block on one line, ";" between members
+                               (a ";" inside double quotes stays in the member, 0.3)
 class X { }                 -> a class without members (the block is closed)
 X : +int a                  -> member added outside a block
 X : +m()

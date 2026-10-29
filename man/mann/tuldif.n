@@ -1,11 +1,11 @@
-.TH tuldif n 0.2 tclutils
+.TH tuldif n 0.3 tclutils
 .SH tclutils::tuldif
 .PP
 LDIF (RFC 2849) reader/writer. An entry is an ordered list of {attribute value} pairs (the dn is the "dn" attribute); multi\-valued attributes are repeated pairs. Base64 values (\fBattr:: ...\fR) are decoded via tclutils::tubase64 and re\-encoded on output when a value is not LDIF\-safe.
 .SS Commands
 .CS
-tuldif::parse  ldifText            ;# -> list of entries
-tuldif::toLdif entries             ;# -> LDIF text
+tuldif::parse  ldifText ?-binary attrs?   ;# -> list of entries
+tuldif::toLdif entries ?-binary attrs?    ;# -> LDIF text
 tuldif::dn         entry           ;# -> dn ("" if none)
 tuldif::get        entry attr      ;# -> list of values (nocase)
 tuldif::attributes entry           ;# -> attribute names (first-seen order)
@@ -14,7 +14,11 @@ tuldif::toDict     entry           ;# -> dict attr -> list of values
 .PP
 Continuation lines (a leading space) are unfolded automatically.
 .PP
-Values are text. RFC 2849 values are UTF\-8, so a base64 value (\fBattr:: ...\fR) is decoded from UTF\-8 after the base64 step, and \fBtoLdif\fR encodes a value to UTF\-8 before base64 (\fBHällo\fR \-> \fBSMOkbGxv\fR). Base64 bytes that are not valid UTF\-8 (a binary attribute such as \fBjpegPhoto\fR) come back unchanged, one character per byte; written back through \fBtoLdif\fR such a value is encoded as UTF\-8 again and is therefore not byte\-exact.
+Values are text. RFC 2849 values are UTF\-8, so a base64 value (\fBattr:: ...\fR) is decoded from UTF\-8 after the base64 step, and \fBtoLdif\fR encodes a value to UTF\-8 before base64 (\fBHällo\fR \-> \fBSMOkbGxv\fR). Base64 bytes that are not valid UTF\-8 come back unchanged, one character per byte.
+.PP
+Binary attributes (0.3): their values are byte strings, one character per byte. \fBparse\fR keeps the decoded bytes (also when they happen to be valid UTF\-8), \fBtoLdif\fR writes them as base64 unchanged; up to 0.2 \fBtoLdif\fR encoded them as UTF\-8 first, so the base64 held other bytes. Binary are \fBjpegPhoto\fR, \fBphoto\fR, \fBaudio\fR, \fBthumbnailPhoto\fR, \fBthumbnailLogo\fR, \fBuserCertificate\fR, \fBcACertificate\fR, \fBcrossCertificatePair\fR, \fBcertificateRevocationList\fR, \fBauthorityRevocationList\fR, \fBdeltaRevocationList\fR, \fBuserSMIMECertificate\fR, \fBuserPKCS12\fR, \fBobjectGUID\fR, \fBobjectSid\fR, \fBmsExchMailboxGuid\fR, every attribute with the option \fB;binary\fR (\fBuserCertificate;binary\fR), and the names given with \fB\-binary\fR. A binary value with a character above \fB\exFF\fR raises \fB{TCLUTILS TULDIF BINARY}\fR.
+.PP
+Comment lines (\fB#\fR) are not kept.
 .PP
 \fBtoLdif\fR writes a value as base64 when it is not a SAFE\-STRING: it starts with a space, \fB:\fR or \fB<\fR, ends with a space, or contains a character outside 32..126 (control characters, non\-ASCII).
 .PP
@@ -24,6 +28,8 @@ l l.
 Error code	When
 \fB{TCLUTILS TULDIF SYNTAX}\fR	a line without \fB:\fR
 \fB{TCLUTILS TULDIF CHANGETYPE}\fR	a change record
+\fB{TCLUTILS TULDIF BINARY}\fR	\fBtoLdif\fR: a binary value that is not bytes
+\fB{TCLUTILS TULDIF OPTION}\fR	an option other than \fB\-binary\fR
 .TE
 .SS "Additional exported commands"
 .PP

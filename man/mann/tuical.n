@@ -1,7 +1,7 @@
 .TH tuical n 0.2 tclutils
 .SH tclutils::tuical
 .PP
-iCalendar (RFC 5545) reader/writer. A component is a dict \fB{type T props {prop ...} components {component ...}}\fR; a property is \fB{name N value V params {k v ...}}\fR. parse returns the list of top\-level components (usually one VCALENDAR); toIcs serializes with 75\-char line folding. Every line ends with CRLF, the last one too (0.2; 0.1 left it off).
+iCalendar (RFC 5545) reader/writer. A component is a dict \fB{type T props {prop ...} components {component ...}}\fR; a property is \fB{name N value V params {k v ...}}\fR. parse returns the list of top\-level components (usually one VCALENDAR); toIcs folds lines at 75 octets, never inside a UTF\-8 character (0.2; 0.1 counted 75 characters, so a line of umlauts became 142 bytes). Every line ends with CRLF, the last one too (0.2; 0.1 left it off).
 .SS Commands
 .CS
 tuical::parse icsText             ;# -> list of top-level components
@@ -14,7 +14,7 @@ tuical::events comp|comps          ;# all VEVENT components
 tuical::escapeText / unescapeText  ;# RFC 5545 TEXT escaping
 .CE
 .PP
-Folded lines (continuation starting with space/tab) are unfolded automatically. Property values are kept raw for exact round\-tripping. Error code: \fB{TCLUTILS TUICAL SYNTAX}\fR.
+Folded lines (continuation starting with space/tab) are unfolded automatically. Property values are kept raw for exact round\-tripping. \fBBEGIN\fR and \fBEND\fR are matched without regard to case (\fBbegin:VCALENDAR\fR was not read). A parameter value in double quotes may hold \fB;\fR and \fB:\fR (\fBALTREP="http://x"\fR, \fBP="a;b"\fR); the quotes are removed on parse and written again where the value needs them (0.2). \fBsetProperty\fR and \fBaddProperty\fR refuse a value with a line break (\fB{TCLUTILS TUICAL VALUE}\fR): the raw value would end the content line; pass TEXT through \fBescapeText\fR. Error codes: \fB{TCLUTILS TUICAL SYNTAX}\fR, \fB{TCLUTILS TUICAL VALUE}\fR.
 .SS "VTODO / VJOURNAL accessors"
 .CS
 set comps [tuical::parse $ics]

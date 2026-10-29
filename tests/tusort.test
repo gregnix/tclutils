@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tusort 0.1
+package require tclutils::tusort 0.2
 
 set tmp [file join [temporaryDirectory] tusort-[pid].txt]
 set f [open $tmp w]; puts $f "banana\napple\ncherry"; close $f
@@ -26,7 +26,7 @@ test tusort-1.4 {sort unique} {
 
 test tusort-1.5 {sort file} {
     ::tclutils::tusort::file $tmp
-} "apple\nbanana\ncherry"
+} "apple\nbanana\ncherry\n"
 
 test tusort-1.6 {unknown option errors} {
     catch {::tclutils::tusort::sortList {a b} -bad 1} msg
@@ -34,4 +34,8 @@ test tusort-1.6 {unknown option errors} {
 } 1
 
 file delete -force $tmp
+test tusort-9.1 {final LF kept exactly when the input has it} {
+    list [::tclutils::tusort::text "b\nJ\u00f6rg\n"] [::tclutils::tusort::text "b\nJ\u00f6rg"]
+} [list "J\u00f6rg\nb\n" "J\u00f6rg\nb"]
+
 cleanupTests

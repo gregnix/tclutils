@@ -152,4 +152,37 @@ test tugantt-6.9 {few tasks keep the 400 pixel minimum; -height wins} -body {
     list $h $h2
 } -result {400 150}
 
+# --- 0.3 -------------------------------------------------------------------------
+test tugantt-9.1 {an unknown duration unit is an error} -body {
+    catch {rtask [M::parse "gantt\nPause : 2026-10-02, 5x"] 0}
+    set ::errorCode
+} -result {TCLUTILS TUGANTT DURATION}
+test tugantt-9.2 {an id with umlauts is an id} -body {
+    set m [M::parse "gantt\nZeile : büro, 2026-10-03, 1d\nNach : after büro, 1d"]
+    set t0 [rtask $m 0]; set t1 [rtask $m 1]
+    list [dict get [lindex [dict get $m tasks] 0] id] [gday [dict get $t0 start]] [gday [dict get $t1 start]]
+} -result {büro 2026-10-03 2026-10-04}
+test tugantt-9.3 {ms is a unit} -body {
+    gdays [rtask [M::parse "gantt\nA : 2026-10-01, 86400000ms"] 0]
+} -result 1.0
+
+test tugantt-10.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tugantt-10.1.svg]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tugantt::writeSvg [M::parse "gantt\nA :a1, 2014-01-01, 1d"] $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tugantt-10.1.svg
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

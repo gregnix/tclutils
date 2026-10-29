@@ -1,10 +1,10 @@
-.TH tusplit n 0.2 tclutils
+.TH tusplit n 0.3 tclutils
 .SH tclutils::tusplit
 .PP
 Split files or strings into smaller parts.
 .SS Load
 .CS
-package require tclutils::tusplit 0.2
+package require tclutils::tusplit 0.3
 .CE
 .SS "Line splitting"
 .CS
@@ -34,9 +34,10 @@ set files [::tclutils::tusplit::file input.bin -bytes 1048576 -outdir parts -pre
 -suffix s    end of the file name (default empty)
 -digits n    digits of the running number, from 0 (default 2)
 -outdir d    target directory, created if missing (default .)
+-encoding e  splitLines: encoding of the parts (default utf-8)
 .CE
 .PP
-Without \fB\-lines\fR and \fB\-bytes\fR, \fBfile\fR splits by 1000 lines. Parts are named \fBx00\fR, \fBx01\fR, ... Parts from \fBsplitLines\fR end without \fB\en\fR.
+Without \fB\-lines\fR and \fB\-bytes\fR, \fBfile\fR splits by 1000 lines. Parts are named \fBx00\fR, \fBx01\fR, ... Every line keeps its line end, so the parts put together give the input again, as with \fBsplit \-l\fR (0.3; up to 0.2 each part ended without \fB\en\fR). \fBfile \-lines\fR works on the bytes of the file: CRLF and the encoding stay as they are. \fBsplitLines\fR writes the text in \fB\-encoding\fR; an unknown encoding raises \fBTCLUTILS TUSPLIT ENCODING name\fR.
 .PP
 \fBsplitBytes\fR expects a byte string: every character must be in \fB\ex00\fR..\fB\exFF\fR. Convert text first, e.g. \fBencoding convertto utf\-8 $text\fR. A character above \fB\exFF\fR raises \fBTCLUTILS TUSPLIT BYTES\fR before any file is written (same under Tcl 8.6 and 9).
 .SS Errors

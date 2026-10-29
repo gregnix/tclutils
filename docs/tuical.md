@@ -3,8 +3,10 @@
 iCalendar (RFC 5545) reader/writer. A component is a dict
 `{type T props {prop ...} components {component ...}}`; a property is
 `{name N value V params {k v ...}}`. parse returns the list of top-level
-components (usually one VCALENDAR); toIcs serializes with 75-char line folding.
-Every line ends with CRLF, the last one too (0.2; 0.1 left it off).
+components (usually one VCALENDAR); toIcs folds lines at 75 octets, never
+inside a UTF-8 character (0.2; 0.1 counted 75 characters, so a line of
+umlauts became 142 bytes). Every line ends with CRLF, the last one too
+(0.2; 0.1 left it off).
 
 ## Commands
 ```tcl
@@ -18,8 +20,14 @@ tuical::events comp|comps          ;# all VEVENT components
 tuical::escapeText / unescapeText  ;# RFC 5545 TEXT escaping
 ```
 Folded lines (continuation starting with space/tab) are unfolded automatically.
-Property values are kept raw for exact round-tripping.
-Error code: `{TCLUTILS TUICAL SYNTAX}`.
+Property values are kept raw for exact round-tripping. `BEGIN` and `END`
+are matched without regard to case (`begin:VCALENDAR` was not read). A
+parameter value in double quotes may hold `;` and `:` (`ALTREP="http://x"`,
+`P="a;b"`); the quotes are removed on parse and written again where the
+value needs them (0.2). `setProperty` and `addProperty` refuse a value
+with a line break (`{TCLUTILS TUICAL VALUE}`): the raw value would end
+the content line; pass TEXT through `escapeText`.
+Error codes: `{TCLUTILS TUICAL SYNTAX}`, `{TCLUTILS TUICAL VALUE}`.
 
 ## VTODO / VJOURNAL accessors
 

@@ -1,4 +1,4 @@
-.TH tunumany n 0.2 tclutils
+.TH tunumany n 0.3 tclutils
 .SH tclutils::tunumany
 .PP
 A single entry point for "string → number" that \fBroutes\fR to the right backend instead of merging them. The two specialised parsers do not overlap:
@@ -10,7 +10,7 @@ SI/IEC unit notation (\fB1.5K\fR, \fB2Mi\fR, \fB3G\fR) → \fBtclutils::tunumfmt
 \fBtunumany\fR recognises both notations and dispatches, so callers that may receive either kind of input have one function to call.
 .SS Package
 .CS
-package require tclutils::tunumany 0.2
+package require tclutils::tunumany 0.3
 .CE
 .PP
 Soft\-depends on \fBtclutils::tunum\fR and \fBtclutils::tunumfmt\fR (each loaded on demand; a missing backend simply means that notation is not parsed).
@@ -29,6 +29,7 @@ With \fB\-prefer auto\fR (the default): a plain number followed by an SI/IEC uni
 ::tclutils::tunumany::parse "1,234.56"   ;# -> 1234.56   (locale US)
 ::tclutils::tunumany::parse "12 €"       ;# -> 12.0      (currency)
 ::tclutils::tunumany::parse "1.5K"       ;# -> 1500      (SI)
+::tclutils::tunumany::parse "1,5K"       ;# -> 1500      (SI, decimal comma)
 ::tclutils::tunumany::parse "2Mi"        ;# -> 2097152   (IEC)
 ::tclutils::tunumany::parse "2KiB"       ;# -> 2048      (IEC with byte sign)
 ::tclutils::tunumany::parse "x" -default 0   ;# -> 0
@@ -37,7 +38,11 @@ With \fB\-prefer auto\fR (the default): a plain number followed by an SI/IEC uni
 .IP \(bu
 This is the deliberate alternative to merging \fBtunum\fR and \fBtunumfmt\fR: it keeps each parser focused while giving one dispatch point.
 .IP \(bu
-Lower\-case unit letters mean the same units: \fB1.5m\fR is 1.5 \fBmega\fR (1500000), not milli. A decimal comma before the unit (\fB1,5K\fR) is not recognised.
+Lower\-case unit letters mean the same units: \fB1.5m\fR is 1.5 \fBmega\fR (1500000), not milli.
+.IP \(bu
+A decimal comma before the unit counts: \fB1,5K\fR is 1500 (0.3). With exactly three digits after the comma (\fB1,500K\fR) the comma could also group thousands; that form does not parse and gives the default.
+.IP \(bu
+The default \fB""\fR is also what an unparsable string gives. Pass \fB\-default\fR with a value that cannot be a number (or check with \fBstring is double\fR) to tell the two apart.
 .IP \(bu
 Output is always a Tcl number (or the default); format for display separately.
 .SS "Error codes"

@@ -5,7 +5,7 @@ namespace import ::tcltest::*
 set root [file normalize [file join [file dirname [info script]] ..]]
 catch {tcl::tm::path add [file join $root lib tm]}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
-package require tclutils::tugit
+package require tclutils::tugit 0.3
 
 namespace eval M { namespace import ::tclutils::tugit::* }
 
@@ -107,5 +107,17 @@ test tugit-5.1 {commit id 0123 is the label, unchanged} -body {
     set m [M::parse "gitGraph\n  commit id: \"0123\""]
     dict get [nodeById $m 0123] label
 } -result {0123}
+
+test tugit-9.1 {a commit id used twice is DUPID} -body {
+    catch {M::parse "gitGraph\n  commit id: \"Jörg\" tag: \"Frühstück\"\n  commit id: \"Jörg\" tag: \"Zweite\""} m o
+    list [dict get $o -errorcode] $m
+} -result {{TCLUTILS TUGIT DUPID} {commit id "Jörg" is used twice}}
+test tugit-9.2 {a merge id that is taken is DUPID} -body {
+    catch {M::parse "gitGraph\n  commit id: \"A\"\n  branch dev\n  commit\n  checkout main\n  merge dev id: \"A\""} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUGIT DUPID}
+test tugit-9.3 {generated ids skip ids the source uses} -body {
+    ids [M::parse "gitGraph\n  commit id: \"c2\"\n  commit\n  commit"]
+} -result {c2 c1 c3}
 
 cleanupTests

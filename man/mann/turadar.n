@@ -1,10 +1,10 @@
-.TH turadar n 0.2 tclutils
+.TH turadar n 0.3 tclutils
 .SH tclutils::turadar
 .PP
 Parses a Mermaid \fBradar\-beta\fR block and renders it as a \fBradar / spider chart\fR natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtukanban\fR / \fBtupacket\fR / \fBtutreemap\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here. A radar chart is a polar plot, not a node\-edge graph, so it does \fBnot\fR go through \fBtudiagram\fR.
 .SS Package
 .CS
-package require tclutils::turadar 0.2
+package require tclutils::turadar 0.3
 .CE
 .SS Commands
 .CS
@@ -14,6 +14,8 @@ package require tclutils::turadar 0.2
 ::tclutils::turadar::writeSvg model file ?...?
 ::tclutils::turadar::writePng model file ?...?
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .SS "Supported syntax (Mermaid subset)"
 .CS
 radar-beta
@@ -32,7 +34,7 @@ The header is \fBradar\-beta\fR (or bare \fBradar\fR).
 .IP \(bu
 \fBaxis\fR lines accumulate; each axis is a bare id or \fBid["Label"]\fR.
 .IP \(bu
-A \fBcurve\fR's values are positional (axis order) or key\-value (\fBaxisId: value\fR); missing axes default to 0, extra values are ignored.
+A \fBcurve\fR's values are positional (axis order) or key\-value (\fBaxisId: value\fR). Each curve needs exactly one value per axis (0.3): a positional curve with fewer or more values is \fBCOUNT\fR, a key\-value curve that leaves out an axis or names one that does not exist is \fBAXIS\fR. 0.2 set a missing value to 0 and dropped extra or misspelled ones.
 .IP \(bu
 \fBmin\fR/\fBmax\fR set the scale; \fBmax\fR defaults to the largest data value, \fBmin\fR to 0.
 .IP \(bu
@@ -78,4 +80,4 @@ Spokes, rings, curves and dots use only line/polygon/circle primitives, so SVG a
 \fBtuflow::parse\fR rejects \fBradar\-beta\fR with \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR (it is not a node\-edge graph); the facade \fBtoSvg\fR/\fBtoPng\fR is the render path, exactly as for \fBpie\fR / \fBkanban\fR / \fBpacket\fR / \fBtreemap\fR.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TURADAR <REASON>}\fR \-\- \fBEMPTY\fR (no header / no curves), \fBAXES\fR (fewer than 3 axes), \fBVALUE\fR (non\-numeric value), \fBARG\fR (bad \fB\-scale\fR), \fBFONT\fR (font file not found).
+\fB\-errorcode {TCLUTILS TURADAR <REASON>}\fR \-\- \fBEMPTY\fR (no header / no curves), \fBAXES\fR (fewer than 3 axes), \fBAXIS\fR (a key\-value curve misses an axis or names an unknown one), \fBCOUNT\fR (positional values do not match the axes), \fBVALUE\fR (non\-numeric value, or key\-value and positional mixed), \fBARG\fR (bad \fB\-scale\fR), \fBFONT\fR (font file not found).

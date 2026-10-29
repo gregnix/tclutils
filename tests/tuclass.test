@@ -104,4 +104,9 @@ test tuclass-4.5 {cardinality touching the operator, reltype label kept} -body {
     list [epairs $m] [dict get [edge0 $m] label]
 } -result {{{A B}} composition}
 
+test tuclass-9.1 {";" inside quotes does not split a member (0.3)} -body {
+    set m [M::parse "classDiagram\nclass B\u00fcro \{\n  +note \"h\u00e4lt;fest\"()\n  +a; +b\n\}"]
+    dict get [lindex [dict get $m nodes] 0] label
+} -result "B\u00fcro\n----------\n+a\n+b\n----------\n+note \"h\u00e4lt;fest\"()"
+
 cleanupTests

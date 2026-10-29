@@ -250,11 +250,12 @@ proc ::tclutils::tusysinfo::_parseWinCim {json serials} {
     }
     # Get-PnpDevice -Class Monitor: every monitor Windows knows; Status OK
     # = connected now, Unknown = not connected (also in a remote session).
+    # A missing Status is not "connected".
     set known {}; set active {}
     foreach m [_asList [_get $d monitors]] {
         set id [string toupper [regsub {_\d+$} [_get $m InstanceName] ""]]
         lappend known $id
-        if {[_get $m Status OK] eq "OK"} { lappend active $id }
+        if {[_get $m Status] eq "OK"} { lappend active $id }
     }
     return [dict create memory [_num $mem] disks $disks active $active \
         known $known cores [_num [_get $d cores 0]]]
@@ -541,7 +542,13 @@ proc ::tclutils::tusysinfo::_windows {sections serials commands timeout} {
     set cim ""
     if {$commands && ("memory" in $sections || "disks" in $sections || "displays" in $sections)} {
         set json [_winPowerShell $timeout]
-        if {$json ne ""} { catch {set cim [_parseWinCim $json $serials]} }
+        # no answer or an unreadable one: say so in "warnings" instead of
+        # showing empty memory, disks and monitors as if there were none
+        if {$json eq ""} {
+            dict lappend r warnings "PowerShell gave no answer: memory, disks and monitor state missing"
+        } elseif {[catch {set cim [_parseWinCim $json $serials]} err]} {
+            dict lappend r warnings "PowerShell answer not readable ($err): memory, disks and monitor state missing"
+        }
     }
     if {"os" in $sections} {
         set os [_parseWinVersion [_regValues {HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion}]]
@@ -714,6 +721,10 @@ proc ::tclutils::tusysinfo::report {info args} {
             lappend L [string trimright $line]
         }
         if {![llength [dict get $info displays]]} { lappend L "  (none found)" }
+    }
+    if {[dict exists $info warnings] && [llength [dict get $info warnings]]} {
+        lappend L "" "--- Warnings ---"
+        foreach w [dict get $info warnings] { lappend L "  $w" }
     }
     return [join $L \n]
 }

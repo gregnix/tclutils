@@ -101,9 +101,35 @@ proc ::tclutils::tusqlite::rows {db sql {params {}}} {
     return [_query $db $sql $params]
 }
 
-# value db sql ?default? ?params? -- first column of the first row, or default
-# if the query returns no row.
-proc ::tclutils::tusqlite::value {db sql {default ""} {params {}}} {
+# value db sql ?-default d? ?-params dict? -- first column of the first row,
+# or the default if the query returns no row. The positional forms
+# "value db sql default" and "value db sql default params" still work;
+# with the options a parameter dict can no longer be taken for the default
+# ("value db $sql {id 1}" returned the dict when no row matched).
+proc ::tclutils::tusqlite::value {db sql args} {
+    set default ""
+    set params {}
+    if {[llength $args] && [lindex $args 0] in {-default -params}} {
+        if {[llength $args] % 2} {
+            return -code error -errorcode {TCLUTILS TUSQLITE OPTION} \
+                "option \"[lindex $args end]\" requires a value"
+        }
+        foreach {k v} $args {
+            switch -- $k {
+                -default { set default $v }
+                -params  { set params $v }
+                default {
+                    return -code error -errorcode {TCLUTILS TUSQLITE OPTION} \
+                        "unknown option \"$k\": must be -default or -params"
+                }
+            }
+        }
+    } elseif {[llength $args] > 2} {
+        return -code error -errorcode {TCLUTILS TUSQLITE OPTION} \
+            "wrong # args: should be \"value db sql ?-default d? ?-params dict?\""
+    } else {
+        lassign $args default params
+    }
     set rs [_query $db $sql $params]
     if {[llength $rs] == 0} { return $default }
     return [lindex [dict values [lindex $rs 0]] 0]

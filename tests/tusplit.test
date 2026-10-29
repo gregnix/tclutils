@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tusplit 0.2
+package require tclutils::tusplit 0.3
 package require tclutils::common 0.1
 
 set tmp [makeDirectory tusplit]
@@ -16,15 +16,14 @@ test tusplit-1.1 {split text by line count} -body {
     set out [makeDirectory lines]
     set files [::tclutils::tusplit::splitLines "a\nb\nc\nd\ne" -lines 2 -outdir $out -prefix part -suffix .txt]
     list [llength $files] [readText [lindex $files 0]] [readText [lindex $files 2]]
-} -result {3 {a
-b} e}
+} -result [list 3 "a\nb\n" e]
 
 test tusplit-1.2 {file split by line count} -body {
     set in [makeFile "1\n2\n3\n4" input.txt]
     set out [makeDirectory filelines]
     set files [::tclutils::tusplit::file $in -lines 3 -outdir $out -prefix x]
     list [file tail [lindex $files 0]] [readText [lindex $files 1]]
-} -result {x00 4}
+} -result [list x00 "4\n"]
 
 test tusplit-1.3 {split binary by byte count} -body {
     set out [makeDirectory bytes]
@@ -82,5 +81,38 @@ test tusplit-2.4 {file: missing value of a passed-on option} -body {
     catch {::tclutils::tusplit::file $in -prefix} err opts
     dict get $opts -errorcode
 } -result {TCLUTILS COMMON OPTION -prefix}
+
+# --- 0.3: line ends kept, parts put together give the input ------------------
+
+test tusplit-3.1 {splitLines: parts joined give the text again} -body {
+    set out [makeDirectory sl31]
+    set t "eins\nJörg\ndrei\n"
+    set files [::tclutils::tusplit::splitLines $t -lines 2 -outdir $out]
+    set all ""
+    foreach f $files { append all [readBin $f] }
+    list [llength $files] [expr {$all eq [encoding convertto utf-8 $t]}]
+} -result {2 1}
+
+test tusplit-3.2 {splitLines: no final LF stays without} -body {
+    set out [makeDirectory sl32]
+    set files [::tclutils::tusplit::splitLines "a\nb\nc" -lines 2 -outdir $out]
+    list [readBin [lindex $files 0]] [readBin [lindex $files 1]]
+} -result [list "a\nb\n" c]
+
+test tusplit-3.3 {file -lines: bytes, CRLF and Latin-1 stay} -body {
+    set out [makeDirectory sl33]
+    set in [file join $out in.bin]
+    set data "J\xF6rg\r\nzwei\r\ndrei"
+    set fh [open $in wb]; puts -nonewline $fh $data; close $fh
+    set files [::tclutils::tusplit::file $in -lines 1 -outdir [file join $out p]]
+    set all ""
+    foreach f $files { append all [readBin $f] }
+    list [llength $files] [expr {$all eq $data}] [readBin [lindex $files 0]]
+} -result [list 3 1 "J\xF6rg\r\n"]
+
+test tusplit-3.4 {splitLines: unknown -encoding} -body {
+    catch {::tclutils::tusplit::splitLines a -encoding nix -outdir [makeDirectory sl34]}
+    set ::errorCode
+} -result {TCLUTILS TUSPLIT ENCODING nix}
 
 cleanupTests

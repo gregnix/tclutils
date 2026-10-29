@@ -14,7 +14,7 @@ their own module. No Tk, no browser, no external rasteriser.
 ## Package
 
 ```tcl
-package require tclutils::tuflow 0.3
+package require tclutils::tuflow 0.4
 ```
 
 ## Commands
@@ -101,6 +101,8 @@ legend column.
 - Header `graph` or `flowchart` with an optional direction `LR`, `RL`, `TB`,
   `TD` (= `TB`) or `BT`; keyword and direction are case-insensitive
   (`FLOWCHART td`, `Graph LR`). Without a direction the graph is `LR`.
+- Node ids are letters, digits and `_`, Unicode letters included
+  (`Büro[Amt]` is the node `Büro`; 0.4).
 - Nodes `A`, `A[box]`, `A(rounded)`, `A([stadium])`, `A((circle))`,
   `A{diamond}`, `A{{hexagon}}`, `A[(cylinder)]`, `A[[subroutine]]` (box).
 - Edges `-->`, `---`, `-.->`, `-.-`, `==>`, `===`, `--o`, `--x`, with a label
@@ -111,7 +113,8 @@ legend column.
 - `subgraph id [label]` ... `end` becomes a `tudiagram` group (nesting
   allowed); an edge to or from the subgraph id is dropped.
 - `style`, `classDef`, `class`, `click`, `linkStyle` are skipped; `%%` starts
-  a comment; `;` separates statements.
+  a comment; `;` separates statements, but not inside a label in brackets,
+  an edge label `|..|` or quotes (`A[Jörg;Büro]` is one node).
 
 ## Supported diagram types
 
@@ -187,7 +190,7 @@ model by hand. Both add `lib/tm` themselves.
 
 `-errorcode {TCLUTILS TUFLOW <REASON>}` — `UNSUPPORTED` (a diagram type with no
 renderer), `EMPTY` (no nodes in a flowchart), `BADID` (a node id is not
-`[A-Za-z0-9_]+`: a hyphen after an id is leftover junk, not an edge — e.g.
+letters, digits and `_`: a hyphen after an id is leftover junk, not an edge — e.g.
 `Nwifi-3["SSID"]`). Errors from the dispatched family propagate with their own
 code (`{TCLUTILS TUDIAGRAM ...}`, `{TCLUTILS TUPIE ...}`, and the same shape
 for the other families). A `-scale` that is not a positive integer is that

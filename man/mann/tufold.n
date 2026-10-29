@@ -1,4 +1,4 @@
-.TH tufold n 0.2 tclutils
+.TH tufold n 0.3 tclutils
 .SH tclutils::tufold
 .PP
 \fBtufold\fR folds long lines to a fixed width, similar to Unix \fBfold\fR.
@@ -27,3 +27,6 @@ Difference from Unix \fBfold \-s\fR: \fBfold \-s\fR keeps the blanks, breaks aft
 .SS Errors
 .PP
 \fB\-width\fR not a positive integer raises \fB{TCLUTILS COMMON INTEGER \-width}\fR, \fB\-words\fR not a boolean \fB{TCLUTILS COMMON BOOLEAN \-words}\fR, an unknown option \fB{TCLUTILS COMMON OPTION \-name}\fR.
+.SS "Line ends"
+.PP
+\fBtext\fR and \fBfile\fR return text that ends with LF exactly when the input does: \fB"b\enJörg\en"\fR gives a result with final LF, \fB"b\enJörg"\fR one without, like \fBtuhead\fR, \fBtutail\fR and \fBtunl\fR. Versions before 0.3 dropped the final LF.

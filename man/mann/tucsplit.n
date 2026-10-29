@@ -1,4 +1,4 @@
-.TH tucsplit n 0.1 tclutils
+.TH tucsplit n 0.2 tclutils
 .SH tclutils::tucsplit
 .PP
 Split text files by content markers, similar in spirit to \fBcsplit\fR.
@@ -18,7 +18,7 @@ By default, a matching line starts the next part and is kept in that part.
 .IP \(bu
 \fBfile path pattern ?options?\fR
 .PP
-Options include \fB\-regexp\fR, \fB\-keepmatch\fR, \fB\-prefix\fR, \fB\-suffix\fR, \fB\-outdir\fR, \fB\-digits\fR, and \fB\-empty\fR.
+Options include \fB\-regexp\fR, \fB\-keepmatch\fR, \fB\-prefix\fR, \fB\-suffix\fR, \fB\-outdir\fR, \fB\-digits\fR, \fB\-empty\fR and \fB\-encoding\fR.
 .PP
 Defaults:
 .CS
@@ -29,4 +29,7 @@ Defaults:
 -suffix ""     no suffix
 -digits 2      digits of the running number
 -outdir .      target directory, created if missing
+-encoding utf-8  encoding of the parts; file reads in it too
 .CE
+.PP
+Every line keeps its line end, so the parts put together give the input again, as with \fBcsplit\fR (0.2; 0.1 ended each part without \fB\en\fR). With \fB\-keepmatch 0\fR the matching lines are left out. \fBfile\fR reads the bytes in \fB\-encoding\fR and keeps CRLF; a pattern is matched against the line without its line end. An unknown encoding raises \fBTCLUTILS TUCSPLIT ENCODING name\fR.

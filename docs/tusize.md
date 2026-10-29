@@ -20,4 +20,8 @@ tusize::human   1500 -si 1         ;# 1.5 kB
 tusize::entries ./project          ;# {4096 ./project/docs} {2048 ./project/src} ...
 ```
 
+The unit always names its base: `KiB` is 1024, `kB` is 1000. 1500 and 1536
+bytes are both `1.5 KiB` because one decimal is shown; `tunumfmt::toHuman`
+writes the bare `K` for 1000 (`1.5K`), like `numfmt`.
+
 Errors use `{TCLUTILS TUSIZE ...}` (`NOTFOUND`, `NOTDIR`, `VALUE`).

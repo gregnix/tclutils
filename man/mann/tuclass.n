@@ -1,10 +1,10 @@
-.TH tuclass n 0.2 tclutils
+.TH tuclass n 0.3 tclutils
 .SH tclutils::tuclass
 .PP
 Parses a Mermaid \fBclassDiagram\fR block into a \fBtclutils::tudiagram\fR model so it renders natively (SVG or PNG) through the pure\-Tcl engine. One of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR.
 .SS Package
 .CS
-package require tclutils::tuclass 0.2
+package require tclutils::tuclass 0.3
 .CE
 .SS Commands
 .CS
@@ -17,6 +17,7 @@ class X {                   -> box with three compartments
     +m()                       dashed line; members with "()" are methods)
 }
 class X { +int a; +m() }    -> the same block on one line, ";" between members
+                               (a ";" inside double quotes stays in the member, 0.3)
 class X { }                 -> a class without members (the block is closed)
 X : +int a                  -> member added outside a block
 X : +m()

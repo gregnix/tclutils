@@ -1,4 +1,4 @@
-.TH tushuf n 0.2 tclutils
+.TH tushuf n 0.3 tclutils
 .SH tclutils::tushuf
 .PP
 \fBshuf\fR\-like line shuffling in pure Tcl. Uses a small self\-contained PRNG so a given \fB\-seed\fR yields the same permutation on every platform and Tcl version.
@@ -24,3 +24,6 @@ unknown option	\fB{TCLUTILS COMMON OPTION \-name}\fR
 .CS
 tclsh bin/tushuf.tcl -seed 42 file.txt
 .CE
+.SS "Line ends"
+.PP
+\fBtext\fR and \fBfile\fR return text that ends with LF exactly when the input does: \fB"b\enJörg\en"\fR gives a result with final LF, \fB"b\enJörg"\fR one without, like \fBtuhead\fR, \fBtutail\fR and \fBtunl\fR. Versions before 0.3 dropped the final LF.

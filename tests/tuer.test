@@ -123,4 +123,17 @@ test tuer-6.3 {a lone quote is not stripped} -body {
     dict get [edge0 $m] label
 } -result {5"}
 
+# --- 0.4 -------------------------------------------------------------------------
+test tuer-9.1 {an entity block named Büro} -body {
+    set m [M::parse "erDiagram\n  Büro {\n    string name PK\n  }\n  Büro ||--o\{ Person : \"gibt auf\""]
+    list [ids $m] [epairs $m] [string match "Büro\n*" [dict get [nodeById $m Büro] label]]
+} -result {{Büro Person} {{Büro Person}} 1}
+test tuer-9.2 {a line that is neither block, entity nor relationship} -body {
+    list [catch {M::parse "erDiagram\n  A ||--|| B : x\n  das ist kein ER"} msg] $::errorCode
+} -result {1 {TCLUTILS TUER SYNTAX}}
+test tuer-9.3 {three words without -- or .. are no relationship} -body {
+    catch {M::parse "erDiagram\n  string name PK"}
+    set ::errorCode
+} -result {TCLUTILS TUER SYNTAX}
+
 cleanupTests

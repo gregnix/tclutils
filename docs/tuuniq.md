@@ -7,7 +7,7 @@ Important: `uniq` removes only adjacent duplicate lines. Sort first if you want 
 ## Package
 
 ```tcl
-package require tclutils::tuuniq 0.1
+package require tclutils::tuuniq 0.2
 ```
 
 ## Commands
@@ -34,3 +34,9 @@ set unique [::tclutils::tuuniq::uniqList {a a b a}]
 
 set counts [::tclutils::tuuniq::countFile names.txt]
 ```
+
+## Line ends
+
+`text` and `file` return text that ends with LF exactly when the input does:
+`"b\nJörg\n"` gives a result with final LF, `"b\nJörg"` one without, like
+`tuhead`, `tutail` and `tunl`. Versions before 0.2 dropped the final LF.

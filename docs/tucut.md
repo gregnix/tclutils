@@ -36,3 +36,9 @@ Documented for completeness (same module, also covered by the test suite):
 ```tcl
 tucut::line line args                          ;# extract fields or characters from a single LINE; -fields/-chars -delimiter -joiner
 ```
+
+## Line ends
+
+`text` and `file` return text that ends with LF exactly when the input does:
+`"b\nJörg\n"` gives a result with final LF, `"b\nJörg"` one without, like
+`tuhead`, `tutail` and `tunl`. Versions before 0.2 dropped the final LF.

@@ -31,6 +31,9 @@ tunotes::load    path                       ;# missing file -> empty store
 tunotes::save    store path
 ```
 
+The file is UTF-8 (0.2). `load` reads a file that is not valid UTF-8 in
+the system encoding, as 0.1 wrote it.
+
 ## Error codes
 `{TCLUTILS TUNOTES NOTFOUND}` (unknown id / parent), `{TCLUTILS TUNOTES CYCLE}`
 (move under self or descendant).

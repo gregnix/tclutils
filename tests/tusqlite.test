@@ -165,4 +165,15 @@ test tusqlite-5.10 {where with [null] means IS NULL} -constraints sqlite3 -body 
 } -result 1
 catch {pdb close}
 
+test tusqlite-5.11 {value with -params and -default options} -constraints sqlite3 -body {
+    mkdb
+    list [::tclutils::tusqlite::value pdb {SELECT name FROM firm WHERE id = :id} -params {id 1}] \
+         [::tclutils::tusqlite::value pdb {SELECT name FROM firm WHERE id = :id} -params {id 99}] \
+         [::tclutils::tusqlite::value pdb {SELECT name FROM firm WHERE id = :id} -params {id 99} -default -]
+} -result [list "T\u00e4mo GmbH" {} -]
+test tusqlite-5.12 {value: unknown option} -body {
+    catch {::tclutils::tusqlite::value nodb {SELECT 1} -params} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUSQLITE OPTION}
+
 cleanupTests

@@ -1,4 +1,4 @@
-.TH tutestrun n 0.1 tclutils
+.TH tutestrun n 0.2 tclutils
 .SH tclutils::tutestrun
 .PP
 The shared \fBtests/all.tcl\fR of tclutils, tkutils and ctrlutils: run every \fB*.test\fR of a directory in its own process and report what went wrong. Pure Tcl, no Tk, Tcl 8.6+ / 9.x.
@@ -22,7 +22,7 @@ Source the module file from the tree under test (own \fBlib/tm\fR, \fB$env(TCLUT
 .IP [2]
 \fBBanner.\fR Where each of \fIlibs\fR resolves (found without loading anything), other versions beside it, and which module\-path variables are set.
 .IP [3]
-\fBEach file in its own process\fR with \fI\-argv\fR (tcltest options such as \fB\-match\fR), under a wall\-clock limit: \fB\-limit\fR seconds, or the value of the environment variable named by \fB\-limitvar\fR. A hung file is killed.
+\fBEach file in its own process\fR with \fI\-argv\fR (tcltest options such as \fB\-match\fR), started as \fBtclsh \-encoding utf\-8 file\fR (0.2): Tcl 8.6 would read the file in the system encoding (cp1252 on Windows) and break every expected value with an umlaut. Under a wall\-clock limit: \fB\-limit\fR seconds, or the value of the environment variable named by \fB\-limitvar\fR. A hung file is killed.
 .IP [4]
 \fBSummary.\fR A file with failed tests, without tcltest summary line, with a non\-zero exit or a hang is listed under "Files with problems". tcltest ends a file with exit code 0 even when tests failed, so the summary line is what counts.
 .PP

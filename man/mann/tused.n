@@ -1,4 +1,4 @@
-.TH tused n 0.1.3 tclutils
+.TH tused n 0.2 tclutils
 .SH tclutils::tused
 .PP
 \fBtused\fR ist ein kleines sed\-aehnliches Modul fuer portable Text\-Ersetzungen und Zeilenfilter in reinem Tcl.
@@ -40,6 +40,8 @@ Inplace mit Backup:
 .CS
 ::tclutils::tused::processFile in.txt ignored $rules -inplace 1 -backup .bak
 .CE
+.PP
+Die Ausgabe geht über eine temporäre Datei (\fBcommon::replaceFile\fR, 0.2): Scheitert das Schreiben, bleibt die Zieldatei unverändert, und kein Kanal bleibt offen. Mit \fB\-inplace\fR gilt das auch für die Eingabedatei.
 .SS "Einfaches Scriptformat"
 .CS
 set out [::tclutils::tused::script $text {

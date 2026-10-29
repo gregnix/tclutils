@@ -9,7 +9,7 @@ normally call `tuflow::toPng` / `tuflow::toSvg` rather than this module directly
 ## Package
 
 ```tcl
-package require tclutils::tuc4 0.1
+package require tclutils::tuc4 0.2
 ```
 
 ## Commands
@@ -36,7 +36,8 @@ UpdateElementStyle / UpdateRelStyle / Update…  -> ignored
 ```
 
 An element's display label is its `"name"` (the first quoted argument); the
-leading id token becomes the node id.
+leading id token becomes the node id: letters, digits and `_`, Unicode letters
+included (`Person(größe, "Weg")` has the id `größe`; 0.1 cut it to `gr`).
 
 ## Usage
 

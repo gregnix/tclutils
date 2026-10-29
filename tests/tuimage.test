@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuimage 0.1
+package require tclutils::tuimage 0.2
 package require tclutils::tupng 0.1
 
 # --- synthesize minimal valid headers ---
@@ -57,5 +57,10 @@ test tuimage-real-2 {dimensions of real RGBA/gray/indexed PNGs} -body {
         [::tclutils::tuimage::dimensions [::tclutils::tupng::encodeGray {{0 128 255}}]] \
         [::tclutils::tuimage::dimensions [::tclutils::tupng::encodeIndexed {FF0000 00FF00} {{0 1 0 1}}]]
 } -result {{2 1} {3 1} {4 1}}
+
+test tuimage-9.1 {";base64" inside a quoted parameter is not the base64 flag (0.2)} -body {
+    list [dict get [::tclutils::tuimage::fromDataUri {data:text/plain;charset="utf-8;base64",QQ==}] bytes] \
+         [dict get [::tclutils::tuimage::fromDataUri {data:text/plain;charset="a;b";base64,QQ==}] bytes]
+} -result {QQ== A}
 
 cleanupTests

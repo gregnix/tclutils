@@ -1,0 +1,203 @@
+package require tcltest
+namespace import ::tcltest::*
+set root [file dirname [file dirname [file normalize [info script]]]]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tulint 0.1
+
+namespace eval L { namespace import ::tclutils::tulint::* }
+
+# findings as {line rule} pairs
+proc hits {text file {rules all}} {
+    lmap f [L::checkText $text -file $file -rules $rules] {
+        list [dict get $f line] [dict get $f rule]
+    }
+}
+# writes a file below the temporary directory; returns its path. put
+# writes TEXT as UTF-8, putRaw writes BYTES as they are.
+proc putRaw {name bytes} {
+    set f [file join [temporaryDirectory] tulint-[pid] $name]
+    file mkdir [file dirname $f]
+    set h [open $f wb]; puts -nonewline $h $bytes; close $h
+    return $f
+}
+proc put {name text} { putRaw $name [encoding convertto utf-8 $text] }
+proc cleanTmp {} { file delete -force [file join [temporaryDirectory] tulint-[pid]] }
+
+# --- registry -----------------------------------------------------------------
+
+test tulint-1.1 {built-in rules, sorted, with severity} -body {
+    lmap r [L::rules] {list [dict get $r name] [dict get $r severity]}
+} -result {{ENC-1 warning} {ENC-2 error} {ENC-3 warning} {TST-3 error}}
+
+test tulint-1.2 {register and unregister a rule} -body {
+    proc ::noFoo {file text} {
+        set n 0; set out {}
+        foreach l [split $text \n] { incr n; if {[string match *foo* $l]} { lappend out [list $n "foo"] } }
+        return $out
+    }
+    L::register X-1 info "no foo" ::noFoo
+    set a [hits "set a 1\nset foo 2\n" x.tcl X-1]
+    L::unregister X-1
+    list $a [llength [L::rules]]
+} -result {{{2 X-1}} 4}
+
+test tulint-1.3 {bad severity, bad name, unknown rule} -body {
+    set r {}
+    foreach cmd {
+        {L::register Y-1 fatal d ::list}
+        {L::register {two words} info d ::list}
+        {L::unregister NOPE}
+        {L::checkText "" -rules NOPE}
+    } {
+        catch $cmd m o
+        lappend r [lindex [dict get $o -errorcode] 2]
+    }
+    set r
+} -result {SEVERITY RULE RULE RULE}
+
+test tulint-1.4 {unknown option and missing value are errors} -body {
+    set r {}
+    foreach cmd {
+        {L::checkText "" -fiel x.tcl}
+        {L::checkText "" -file}
+        {L::check . -rule ENC-2}
+        {L::format {} -format xml}
+    } {
+        catch $cmd m o
+        lappend r [lindex [dict get $o -errorcode] 2]
+    }
+    set r
+} -result {OPTION OPTION OPTION OPTION}
+
+# --- ENC-1 / ENC-3 --------------------------------------------------------------
+
+test tulint-2.1 {ENC-1: non-ASCII in a test file, not in comments} -body {
+    hits "# J\u00f6rg in a comment\ntest a {x} -result J\u00f6rg\nset x 1 ;# B\u00fcro\n" x.test
+} -result {{2 ENC-1}}
+
+test tulint-2.2 {ENC-1 only for *.test, ENC-3 only for scripts} -body {
+    set t "puts \"J\u00f6rg\"\n"
+    list [hits $t a.test] [hits $t a.tcl] [hits $t a.tm] [hits $t tests/all.tcl] [hits $t pkgIndex.tcl]
+} -result {{{1 ENC-1}} {{1 ENC-3}} {} {{1 ENC-3}} {}}
+
+test tulint-2.3 {ENC-3: ASCII and \u escapes are fine} -body {
+    hits "puts \"J\\u00f6rg\"\n# \u00e4\n" app.tcl
+} -result {}
+
+# --- ENC-2 ----------------------------------------------------------------------
+
+test tulint-3.1 {ENC-2: source without -encoding in pkgIndex.tcl} -body {
+    hits {package ifneeded a 1.0 [list source [file join $dir a.tcl]]
+package ifneeded b 1.0 \
+    [list source -encoding utf-8 [file join $dir b.tcl]]
+package ifneeded c 1.0 "source [file join $dir c.tcl]"
+# source in a comment
+} pkgIndex.tcl
+} -result {{1 ENC-2} {3 ENC-2}}
+
+test tulint-3.2 {ENC-2 only in pkgIndex.tcl} -body {
+    hits {source [file join $dir a.tcl]} other.tcl ENC-2
+} -result {}
+
+test tulint-3.3 {ENC-2: the line of a source inside a continued command} -body {
+    hits "package ifneeded a 1.0 \\\n    \[list source \[file join \$dir a.tcl\]\]\n" pkgIndex.tcl
+} -result {{2 ENC-2}}
+
+# --- TST-3 ----------------------------------------------------------------------
+
+test tulint-4.1 {TST-3: the same name twice} -body {
+    hits {test a-1.1 {x} -body {} -result {}
+test a-1.2 {y} -body {} -result {}
+test a-1.1 {z} -body {} -result {}
+} x.test TST-3
+} -result {{3 TST-3}}
+
+test tulint-4.2 {TST-3: two branches of an if or a switch are alternatives} -body {
+    hits {if {$tk} {
+    test a-1.1 {x} -body {} -result {}
+} else {
+    test a-1.1 {x} -body {} -result {}
+}
+switch -- $v {
+    a { test b-1.1 {} -result {} }
+    b { test b-1.1 {} -result {} }
+}
+} x.test TST-3
+} -result {}
+
+test tulint-4.3 {TST-3: inside a namespace eval and after the if} -body {
+    hits {if {$tk} {
+    test a-1.1 {x} -body {} -result {}
+}
+namespace eval n {
+    tcltest::test a-1.1 {again} -body {
+        set x 1
+    } -result 1
+}
+} x.test TST-3
+} -result {{5 TST-3}}
+
+test tulint-4.4 {TST-3: a test body with braces in strings does not confuse it} -body {
+    hits {test a-1.1 {x} -body {
+    set s "\{"
+    string length $s
+} -result 1
+test a-1.2 {y} -result {}
+} x.test TST-3
+} -result {}
+
+# --- suppression, files, output -----------------------------------------------
+
+test tulint-5.1 {ignore comment: next line, same line, only the named rule} -body {
+    hits "# tulint: ignore ENC-3\nputs \"\u00e4\"\nputs \"\u00f6\" ;# tulint: ignore ENC-3\nputs \"\u00fc\" ;# tulint: ignore TST-3\n" app.tcl
+} -result {{4 ENC-3}}
+
+test tulint-5.2 {check walks a tree, skips .git, nogit and -exclude} -setup {
+    put proj/pkgIndex.tcl {package ifneeded a 1 [list source [file join $dir a.tcl]]}
+    put proj/.git/x.tcl "puts \"\u00e4\""
+    put proj/nogit/y.tcl "puts \"\u00e4\""
+    put proj/skip/z.tcl "puts \"\u00e4\""
+    put proj/app.tcl "puts \"\u00e4\"\n"
+    put proj/notes.txt "\u00e4"
+} -body {
+    set dir [file join [temporaryDirectory] tulint-[pid] proj]
+    lmap f [L::check [list $dir] -exclude [list */skip]] {
+        list [file tail [dict get $f file]] [dict get $f rule]
+    }
+} -cleanup cleanTmp -result {{app.tcl ENC-3} {pkgIndex.tcl ENC-2}}
+
+test tulint-5.3 {a file that is not UTF-8 is FILE, its rules are not run} -setup {
+    set f [putRaw bad.tcl "puts \"J\xf6rg\"\n"]
+} -body {
+    set r [L::checkFile $f]
+    list [llength $r] [dict get [lindex $r 0] rule] [dict get [lindex $r 0] severity]
+} -cleanup cleanTmp -result {1 FILE error}
+
+test tulint-5.4 {summary counts by severity} -body {
+    L::summary [L::checkText "test a {} -result {}\ntest a {} -result {}\nputs \u00e4\n" -file x.test]
+} -result {error 1 warning 1 info 0}
+
+test tulint-5.5 {json output escapes quotes and backslashes} -body {
+    L::format [list [dict create file {C:\a "b".tcl} line 3 rule R severity error message {say "x"}]] -format json
+} -result {[{"file":"C:\\a \"b\".tcl","line":3,"rule":"R","severity":"error","message":"say \"x\""}]}
+
+test tulint-5.6 {text output, one line per finding} -body {
+    L::format [L::checkText "test a {} -result {}\ntest a {} -result {}\n" -file x.test]
+} -result {x.test:2: error TST-3: test name "a" already used in line 1}
+
+# --- bin/tulint.tcl -------------------------------------------------------------
+
+test tulint-6.1 {CLI: exit 1 on an error even when --severity hides it} -setup {
+    put cli/x.test "test a {} -result {}\ntest a {} -result {}\nputs \"\u00e4\"\n"
+} -body {
+    set dir [file join [temporaryDirectory] tulint-[pid] cli]
+    set cli [file join $root bin tulint.tcl]
+    set r {}
+    foreach args [list [list $dir] [list --severity warning $dir] [list --rules ENC-1 $dir] [list --bogus $dir]] {
+        set rc [catch {exec [info nameofexecutable] $cli {*}$args 2>@1} out o]
+        lappend r [expr {$rc ? [lindex [dict get $o -errorcode] 2] : 0}]
+    }
+    set r
+} -cleanup cleanTmp -result {1 1 0 2}
+
+cleanupTests

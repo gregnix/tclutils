@@ -105,4 +105,23 @@ test tused-2.11 {step address 0~3 behaves as 3~3} -body {
     ::tclutils::tused::script "a\nb\nc\nd\ne\nf" {0~3s/.*/X/}
 } -result "a\nb\nX\nd\ne\nX"
 
+test tused-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tused-9.1.txt]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tused::processFile $f $f [list [::tclutils::tused::MakeRule s a b]]}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tused-9.1.txt
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

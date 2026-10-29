@@ -1,10 +1,10 @@
-.TH tugit n 0.2 tclutils
+.TH tugit n 0.3 tclutils
 .SH tclutils::tugit
 .PP
 Parses a Mermaid \fBgitGraph\fR into a \fBtclutils::tudiagram\fR model (best\-effort), so it can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
 .SS Package
 .CS
-package require tclutils::tugit 0.2
+package require tclutils::tugit 0.3
 .CE
 .SS Commands
 .CS
@@ -24,6 +24,8 @@ cherry-pick id: "X"       -> a commit node on the current branch
 .CE
 .PP
 Commits become nodes; an edge runs from each parent commit to its child. The default branch is \fBmain\fR; the direction is \fBLR\fR unless the header says \fBgitGraph TB:\fR.
+.PP
+A commit id may appear once, as in Mermaid: a second \fBcommit id: "X"\fR or a \fBmerge ... id: "X"\fR with a taken id is \fBDUPID\fR (0.3; before, the second commit was dropped and an edge ran from \fBX\fR to itself). Generated ids (\fBc1\fR, \fBc2\fR, ...) skip ids the source already uses.
 .SS Usage
 .CS
 package require tclutils::tugit
@@ -48,4 +50,4 @@ v1 limitations (honest): the characteristic branch lanes / swimlanes of a git gr
 Companion: \fBtclutils::tudiagram\fR (renderer), \fBtclutils::tuflow\fR (dispatch).
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUGIT <REASON>}\fR — \fBEMPTY\fR (no commits found).
+\fB\-errorcode {TCLUTILS TUGIT <REASON>}\fR — \fBEMPTY\fR (no commits found), \fBDUPID\fR (a commit id used twice).

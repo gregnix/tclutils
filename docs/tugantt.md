@@ -8,7 +8,7 @@ which dispatch here.
 ## Package
 
 ```tcl
-package require tclutils::tugantt 0.2
+package require tclutils::tugantt 0.3
 ```
 
 ## Commands
@@ -20,6 +20,8 @@ package require tclutils::tugantt 0.2
 ::tclutils::tugantt::writeSvg model file ?...?
 ::tclutils::tugantt::writePng model file ?...?
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 ## Supported syntax (Mermaid subset)
 
@@ -42,7 +44,11 @@ gantt
 - **Dates** must exist: the parsed date is formatted back with the same format
   and compared with the input (leading zeros do not matter, `2026-3-2` is
   fine). `2026-13-45` or `2026-02-30` raise `DATE` on Tcl 8.6 and 9.0 alike.
-- **End**: an explicit date, or a duration `5d` / `2w` / `8h` / `30m`.
+- **End**: an explicit date, or a duration `5d` / `2w` / `8h` / `30m` /
+  `10s` / `500ms`. Another unit (`5x`) raises `DURATION` (0.3; 0.2 made it
+  a task of length 0).
+- **Ids** may hold letters of any script (`büro`; 0.2 took such an id for the
+  start date and failed on the whole chart).
 - `dateFormat` / `axisFormat` accept the usual tokens `YYYY MM DD HH mm ss`
   (mapped to `clock` format); `X` means a Unix timestamp.
 - **Axis**: about six ticks, snapped to whole units of the axis format (seconds
@@ -101,4 +107,5 @@ set src {gantt
 `-errorcode {TCLUTILS TUGANTT <REASON>}` -- `EMPTY` (no tasks), `ARG` (bad
 `-scale`), `DATE` (a date that does not match `dateFormat` or does not exist,
 or a first task without a start date -- raised when drawing, not by `parse`),
+`DURATION` (a duration with an unknown unit, also raised when drawing),
 `FONT` (font file not found).

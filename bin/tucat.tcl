@@ -1,6 +1,6 @@
 #!/usr/bin/env tclsh
 source [file join [file dirname [info script]] _bootstrap.tcl]
-package require tclutils::tucat 0.1
+package require tclutils::tucat 0.2
 proc usage {} { puts stderr "usage: tucat ?-number 0|1? file ?file ...?"; exit 2 }
 set opts {}
 set files {}

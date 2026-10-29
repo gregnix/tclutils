@@ -9,7 +9,7 @@ directly.
 ## Package
 
 ```tcl
-package require tclutils::tugit 0.2
+package require tclutils::tugit 0.3
 ```
 
 ## Commands
@@ -36,6 +36,11 @@ cherry-pick id: "X"       -> a commit node on the current branch
 Commits become nodes; an edge runs from each parent commit to its child. The
 default branch is `main`; the direction is `LR` unless the header says
 `gitGraph TB:`.
+
+A commit id may appear once, as in Mermaid: a second `commit id: "X"` or a
+`merge ... id: "X"` with a taken id is `DUPID` (0.3; before, the second commit
+was dropped and an edge ran from `X` to itself). Generated ids (`c1`, `c2`,
+...) skip ids the source already uses.
 
 ## Usage
 
@@ -67,4 +72,4 @@ set m [::tclutils::tugit::parse $src]
 
 ## Error codes
 
-`-errorcode {TCLUTILS TUGIT <REASON>}` — `EMPTY` (no commits found).
+`-errorcode {TCLUTILS TUGIT <REASON>}` — `EMPTY` (no commits found), `DUPID` (a commit id used twice).

@@ -1,4 +1,4 @@
-.TH tugrep n 0.1.3 tclutils
+.TH tugrep n 0.2 tclutils
 .SH tclutils::tugrep
 .PP
 Portable grep\-like routines in pure Tcl.
@@ -13,6 +13,8 @@ package require tclutils::tugrep
 ::tclutils::tugrep::files fileList pattern ?options?
 ::tclutils::tugrep::match line pattern ?options?
 .CE
+.PP
+Lines are split at \fB\en\fR; the empty rest after a final \fB\en\fR is not a line, so \fB.*\fR matches two lines in \fB"eins\enJörg\en"\fR (0.2; 0.1.3 counted three, and \fBfile\fR trimmed empty lines at the end of the file).
 .SS Options
 .CS
 -nocase 0|1             case-insensitive search

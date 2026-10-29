@@ -1,10 +1,10 @@
-.TH tuer n 0.3 tclutils
+.TH tuer n 0.4 tclutils
 .SH tclutils::tuer
 .PP
 Parses a Mermaid \fBerDiagram\fR (entity\-relationship) block into a \fBtclutils::tudiagram\fR model so it renders natively (SVG or PNG) through the pure\-Tcl engine. One of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR.
 .SS Package
 .CS
-package require tclutils::tuer 0.3
+package require tclutils::tuer 0.4
 .CE
 .PP
 Depends on \fBtclutils::tudiagram 0.3\fR (the crow's\-foot end\-marks).
@@ -58,4 +58,6 @@ Crow's\-foot cardinality is drawn via \fBtudiagram\fR's \fB\-startMark\fR / \fB\
 Companion: \fBtclutils::tudiagram\fR (renderer), \fBtclutils::tuflow\fR (dispatch).
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUER <REASON>}\fR — \fBEMPTY\fR (no entities found).
+\fB\-errorcode {TCLUTILS TUER <REASON>}\fR — \fBEMPTY\fR (no entities found), \fBSYNTAX\fR (a line that is not a block, an entity or a relationship; 0.4).
+.PP
+Entity names may hold letters of any script, digits, \fB_\fR and \fB\-\fR (\fBBüro\fR). A line of three words is a relationship only when the middle one has \fB\-\-\fR or \fB..\fR. \fBdirection\fR, \fBtitle\fR, \fBaccTitle\fR and \fBaccDescr\fR lines are skipped. Up to 0.3 a block \fBBüro {\fR was not recognised, and its attribute line \fBstring name PK\fR became an edge from \fBstring\fR to \fBPK\fR.

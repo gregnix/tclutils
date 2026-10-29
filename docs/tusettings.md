@@ -50,7 +50,8 @@ so new keys in a later app version get their default. A missing file gives
 the defaults.
 
 `save` writes to a temporary file next to the target and renames it, so a
-crash never leaves a half-written file. Comments a user put into the file
+crash never leaves a half-written file. If writing fails, the temporary
+file is removed and no channel stays open (0.2). Comments a user put into the file
 are not kept. INI cannot hold everything: a value with a line break or
 leading/trailing blanks, a key with `=` or a key starting with `;`, `#` or
 `[` raise `{TCLUTILS TUSETTINGS VALUE}` and the file stays as it was.

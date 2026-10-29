@@ -1,4 +1,4 @@
-.TH tucut n 0.1 tclutils
+.TH tucut n 0.2 tclutils
 .SH tclutils::tucut
 .PP
 \fBtclutils::tucut\fR provides small cut\-like helpers for simple delimited text. It is not a full CSV parser. For quoted CSV data use a CSV package.
@@ -29,3 +29,6 @@ Documented for completeness (same module, also covered by the test suite):
 .CS
 tucut::line line args                          ;# extract fields or characters from a single LINE; -fields/-chars -delimiter -joiner
 .CE
+.SS "Line ends"
+.PP
+\fBtext\fR and \fBfile\fR return text that ends with LF exactly when the input does: \fB"b\enJörg\en"\fR gives a result with final LF, \fB"b\enJörg"\fR one without, like \fBtuhead\fR, \fBtutail\fR and \fBtunl\fR. Versions before 0.2 dropped the final LF.

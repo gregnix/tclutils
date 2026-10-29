@@ -18,3 +18,9 @@ Commands:
 
 A tab in the leading indent counts as one column. The width must be a positive
 integer (`{TCLUTILS COMMON INTEGER -width}` otherwise).
+
+## Line ends
+
+`reflow` and `reflowFile` return text that ends with LF exactly when the input does:
+`"b\nJörg\n"` gives a result with final LF, `"b\nJörg"` one without, like
+`tuhead`, `tutail` and `tunl`. Versions before 0.2 dropped the final LF.

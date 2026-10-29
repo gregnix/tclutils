@@ -36,27 +36,67 @@ proc ::tclutils::tuical::_unfold {ics} {
     return $out
 }
 
+# Split a content line into name, value and params. ";" and ":" inside a
+# quoted parameter value (TYPE="work;cell", ALTREP="http://x") do not
+# split; the quotes are removed from the value and put back by the writer
+# where the value needs them (0.2).
 proc ::tclutils::tuical::_parseProp {line} {
-    set ci [string first ":" $line]
+    set n [string length $line]
+    set q 0
+    set parts {}
+    set cur ""
+    set ci -1
+    for {set i 0} {$i < $n} {incr i} {
+        set c [string index $line $i]
+        if {$c eq "\""} {
+            set q [expr {!$q}]
+        } elseif {!$q && $c eq ";"} {
+            lappend parts $cur
+            set cur ""
+            continue
+        } elseif {!$q && $c eq ":"} {
+            set ci $i
+            break
+        }
+        append cur $c
+    }
     if {$ci < 0} {
         return -code error -errorcode {TCLUTILS TUICAL SYNTAX} \
             "iCalendar line without ':' -> $line"
     }
-    set namepart [string range $line 0 [expr {$ci - 1}]]
+    lappend parts $cur
     set value [string range $line [expr {$ci + 1}] end]
-    set parts [split $namepart ";"]
     set name [lindex $parts 0]
     set params {}
     foreach p [lrange $parts 1 end] {
         set eq [string first "=" $p]
         if {$eq >= 0} {
-            lappend params [string range $p 0 [expr {$eq - 1}]] \
-                [string range $p [expr {$eq + 1}] end]
+            set v [string range $p [expr {$eq + 1}] end]
+            if {[string length $v] >= 2 && [string index $v 0] eq "\""
+                    && [string index $v end] eq "\""} {
+                set v [string range $v 1 end-1]
+            }
+            lappend params [string range $p 0 [expr {$eq - 1}]] $v
         } else {
             lappend params $p ""
         }
     }
     return [list $name $value $params]
+}
+
+# A parameter value with ";" or ":" goes out in double quotes.
+proc ::tclutils::tuical::_quoteParam {v} {
+    if {[regexp {[;:]} $v] && ![string match {"*"} $v]} { return "\"$v\"" }
+    return $v
+}
+
+# Values are raw content-line text: a line break in one would end the
+# line and break the file. Escape TEXT with escapeText first.
+proc ::tclutils::tuical::_checkValue {name value} {
+    if {[regexp {[\r\n]} $value]} {
+        return -code error -errorcode {TCLUTILS TUICAL VALUE} \
+            "value of $name holds a line break; escape it (escapeText) first"
+    }
 }
 
 # Parse iCalendar text. Returns a list of top-level components.
@@ -66,9 +106,9 @@ proc ::tclutils::tuical::parse {ics} {
     foreach line [_unfold $ics] {
         if {$line eq ""} continue
         lassign [_parseProp $line] name value params
-        if {$name eq "BEGIN"} {
+        if {[string equal -nocase $name BEGIN]} {
             lappend stack [dict create type $value props {} components {}]
-        } elseif {$name eq "END"} {
+        } elseif {[string equal -nocase $name END]} {
             if {![llength $stack]} {
                 return -code error -errorcode {TCLUTILS TUICAL SYNTAX} \
                     "END:$value without matching BEGIN"
@@ -103,15 +143,24 @@ proc ::tclutils::tuical::_isComponent {x} {
     expr {[catch {dict get $x type}] == 0 && [catch {dict get $x props}] == 0}
 }
 
-# Fold a single content line to <=75 chars using CRLF + space continuations.
+# Fold a content line to at most 75 octets (RFC 5545 3.1, RFC 6350 3.2),
+# never inside a UTF-8 sequence; continuation lines start with a space
+# (0.2: was 75 characters, a line of umlauts became 142 bytes).
 proc ::tclutils::tuical::_fold {line} {
-    if {[string length $line] <= 75} { return $line }
-    set res [string range $line 0 74]
-    set i 75
-    set n [string length $line]
-    while {$i < $n} {
-        append res "\r\n " [string range $line $i [expr {$i + 73}]]
-        incr i 74
+    if {[string length [encoding convertto utf-8 $line]] <= 75} { return $line }
+    set res ""
+    set len 0
+    set max 75
+    foreach c [split $line ""] {
+        scan $c %c cp
+        set w [expr {$cp < 0x80 ? 1 : $cp < 0x800 ? 2 : $cp < 0x10000 ? 3 : 4}]
+        if {$len + $w > $max} {
+            append res "\r\n "
+            set len 1
+            set max 75
+        }
+        append res $c
+        incr len $w
     }
     return $res
 }
@@ -123,7 +172,7 @@ proc ::tclutils::tuical::_emitComp {comp outVar} {
         set line [dict get $p name]
         foreach {k v} [dict get $p params] {
             append line ";" $k
-            if {$v ne ""} { append line "=" $v }
+            if {$v ne ""} { append line "=" [_quoteParam $v] }
         }
         append line ":" [dict get $p value]
         lappend out [_fold $line]
@@ -203,6 +252,7 @@ proc ::tclutils::tuical::unescapeText {s} {
 # Return a copy of a component with the first property named NAME replaced
 # (or a new property appended if none exists).
 proc ::tclutils::tuical::setProperty {comp name value {params {}}} {
+    _checkValue $name $value
     set out {}
     set done 0
     foreach p [dict get $comp props] {
@@ -222,6 +272,7 @@ proc ::tclutils::tuical::setProperty {comp name value {params {}}} {
 
 # Return a copy of a component with a property appended.
 proc ::tclutils::tuical::addProperty {comp name value {params {}}} {
+    _checkValue $name $value
     set props [dict get $comp props]
     lappend props [dict create name $name value $value params $params]
     dict set comp props $props

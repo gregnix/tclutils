@@ -1,10 +1,10 @@
-.TH tumindmap n 0.1 tclutils
+.TH tumindmap n 0.2 tclutils
 .SH tclutils::tumindmap
 .PP
 Parses a Mermaid \fBmindmap\fR block into a \fBtclutils::tudiagram\fR model, so a mindmap can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
 .SS Package
 .CS
-package require tclutils::tumindmap 0.1
+package require tclutils::tumindmap 0.2
 .CE
 .SS Commands
 .CS
@@ -25,6 +25,8 @@ node shapes:
     )text(    ))text((            -> rounded (cloud/bang, no native shape)
 id[text] etc.    -> a leading id token is dropped; the bracket text is the label
 .CE
+.PP
+The id may contain any letter or digit (\fBBüro[Text]\fR is the label \fBText\fR, 0.2; 0.1 knew only ASCII and kept the line as text).
 .SS Usage
 .CS
 package require tclutils::tumindmap

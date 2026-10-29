@@ -6,7 +6,7 @@ Apply unified diffs in pure Tcl. This module is the counterpart to
 ## Package
 
 ```tcl
-package require tclutils::tupatch 0.2
+package require tclutils::tupatch 0.3
 ```
 
 ## API
@@ -49,5 +49,9 @@ set result [::tclutils::tupatch::text $old $patch]
 ## Notes
 
 `tupatch` uses the same line model as `tudiff`: lines are split and re-joined
-with `\n`. The special unified-diff marker `\\ No newline at end of file` is
-accepted as metadata but final-newline details are not modeled separately.
+with `\n`. The line end at the end of the text is kept: a source ending with
+`\n` gives a result ending with `\n`. The marker `\\ No newline at end of file`
+works as in `diff -u`: after a `+` line the result ends without `\n`, after a
+`-` line (and none after `+`) it gets one; `-reverse` swaps both. `parse`
+reports the markers as `oldNoNl` and `newNoNl` in each hunk (0.3; 0.2 always
+dropped the final `\n`).

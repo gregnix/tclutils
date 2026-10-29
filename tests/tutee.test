@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tutee 0.2
+package require tclutils::tutee 0.3
 package require tclutils::common 0.1
 
 set tmp [makeDirectory tutee]
@@ -82,5 +82,27 @@ test tutee-2.5 {overwrite still empties a longer existing file} -body {
     ::tclutils::tutee::write new [list $a]
     ::tclutils::common::readFile $a
 } -result "new\n"
+
+# --- 0.3: writeFile copies bytes ---------------------------------------------
+
+test tutee-3.1 {writeFile keeps CRLF and the bytes, returns the byte count} -body {
+    set d [makeDirectory tee31]
+    set in [file join $d in]; set out [file join $d out]
+    set data "J\xC3\xB6rg\r\nZeile\r\n\xFF"
+    set fh [open $in wb]; puts -nonewline $fh $data; close $fh
+    set n [::tclutils::tutee::writeFile $in [list $out]]
+    set fh [open $out rb]; set got [read $fh]; close $fh
+    list $n [expr {$got eq $data}]
+} -result {15 1}
+
+test tutee-3.2 {writeFile -append adds the bytes} -body {
+    set d [makeDirectory tee32]
+    set in [file join $d in]; set out [file join $d out]
+    set fh [open $in wb]; puts -nonewline $fh "x\r\n"; close $fh
+    ::tclutils::tutee::writeFile $in [list $out]
+    ::tclutils::tutee::writeFile $in [list $out] -append 1
+    set fh [open $out rb]; set got [read $fh]; close $fh
+    set got
+} -result "x\r\nx\r\n"
 
 cleanupTests

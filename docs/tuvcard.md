@@ -1,9 +1,17 @@
 # tclutils::tuvcard
 
 vCard (RFC 6350 / 2426) reader/writer. parse returns a list of cards; a card is a
-list of property dicts `{name N value V params {k v ...}}`. toVcf serializes with
-75-char line folding; every line ends with CRLF, the last one too (0.2; 0.1
-left it off). Values are kept raw for exact round-tripping.
+list of property dicts `{name N value V params {k v ...}}`. toVcf folds lines
+at 75 octets, never inside a UTF-8 character (0.2; 0.1 counted characters);
+every line ends with CRLF, the last one too (0.2; 0.1 left it off). Values
+are kept raw for exact round-tripping.
+
+Since 0.2: `BEGIN`/`END` in any case; a quoted parameter value may hold
+`;` and `:` (`TYPE="work;cell"` is one value `work;cell`, written back in
+quotes); a group prefix counts for the name (`item1.FN` is found by
+`property`, `properties`, `get` and `fullName`, and stays `item1.FN` on
+write); `addProperty` and `setProperty` refuse a value with a line break
+(`{TCLUTILS TUVCARD VALUE}`).
 
 ```tcl
 tuvcard::parse vcfText          ;# -> list of cards

@@ -3,7 +3,7 @@ package require tcltest
 namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 tcl::tm::path add [file join [file dirname $here] lib tm]
-package require tclutils::tuini 0.1
+package require tclutils::tuini 0.2
 
 set ini "global1 = g1\n; a comment\n# another\n\[server\]\nhost = localhost\nport = 8080\n\n\[db\]\nname=test\n"
 
@@ -59,5 +59,46 @@ test tuini-2.2 {removeKey} -body {
     set d [::tclutils::tuini::removeKey $d a x]
     ::tclutils::tuini::keys $d a
 } -result y
+
+# --- 0.2: refuse what INI cannot hold ---------------------------------------
+
+test tuini-3.1 {setValue refuses a line break in the value} -body {
+    list [catch {::tclutils::tuini::setValue {} S k "Zeile1\nZeile2"} m] \
+        $::errorCode $m
+} -result {1 {TCLUTILS TUINI VALUE} {value of S.k: no line breaks in INI}}
+
+test tuini-3.2 {toIni refuses a line break in a hand-built dict} -body {
+    set d [dict create S [dict create k "a\rb"]]
+    list [catch {::tclutils::tuini::toIni $d} m] $::errorCode
+} -result {1 {TCLUTILS TUINI VALUE}}
+
+test tuini-3.3 {keys that would read back differently are refused} -body {
+    lmap k {a=b {;x} #x {[x} { x} {x }} {
+        catch {::tclutils::tuini::setValue {} S $k v}
+    }
+} -result {1 1 1 1 1 1}
+
+test tuini-3.4 {section names that would read back differently are refused} -body {
+    lmap s {a\]b " a" "a " "a\nb"} {
+        list [catch {::tclutils::tuini::addSection {} $s}] \
+            [catch {::tclutils::tuini::setValue {} $s k v}]
+    }
+} -result {{1 1} {1 1} {1 1} {1 1}}
+
+test tuini-3.5 {what parse returns, toIni writes back unchanged} -body {
+    set t "g = 1\n\[Büro\]\nname = Jörg \nname = Zweite\nort=München\n\[leer\]\n"
+    set a [::tclutils::tuini::parse $t]
+    expr {[::tclutils::tuini::parse [::tclutils::tuini::toIni $a]] eq $a}
+} -result 1
+
+test tuini-3.6 {a key twice: the last value wins; outer blanks dropped} -body {
+    set d [::tclutils::tuini::parse "\[S\]\nname = Jörg \nname = Zweite\nx =  a b  \n"]
+    list [::tclutils::tuini::get $d S name] [::tclutils::tuini::get $d S x]
+} -result {Zweite {a b}}
+
+test tuini-3.7 {ordinary keys and values still pass} -body {
+    set d [::tclutils::tuini::setValue {} "" "Pfad.Ä-1" "a = b; #c \[d\]"]
+    ::tclutils::tuini::get [::tclutils::tuini::parse [::tclutils::tuini::toIni $d]] "" "Pfad.Ä-1"
+} -result {a = b; #c [d]}
 
 cleanupTests

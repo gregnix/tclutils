@@ -5,7 +5,7 @@ namespace import ::tcltest::*
 set root [file normalize [file join [file dirname [info script]] ..]]
 catch {tcl::tm::path add [file join $root lib tm]}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
-package require tclutils::turadar
+package require tclutils::turadar 0.3
 
 namespace eval M { namespace import ::tclutils::turadar::* }
 
@@ -59,9 +59,14 @@ test turadar-1.8 {key-value curve values map by axis id, in axis order} -body {
     lindex [curve $m 0] 1
 } -result {10.0 20.0 30.0}
 
-test turadar-1.9 {fewer values than axes pad with 0} -body {
-    lindex [curve [M::parse "radar-beta\naxis a,b,c,d\ncurve x{5,6}"] 0] 1
-} -result {5.0 6.0 0.0 0.0}
+test turadar-1.9 {fewer or more values than axes are COUNT} -body {
+    set r {}
+    foreach c {{5,6} {1,2,3,4,5}} {
+        catch {M::parse "radar-beta\naxis a,b,c,d\ncurve x\{$c\}"} m o
+        lappend r [dict get $o -errorcode]
+    }
+    set r
+} -result {{TCLUTILS TURADAR COUNT} {TCLUTILS TURADAR COUNT}}
 
 test turadar-1.10 {showLegend defaults on when curves are labelled} -body {
     dict get [M::parse $grades] showLegend
@@ -104,6 +109,21 @@ test turadar-2.5 {a non-integer scale is an ARG error} -body {
     catch {M::toSvg [M::parse $grades] -scale x} e o
     dict get $o -errorcode
 } -result {TCLUTILS TURADAR ARG}
+
+test turadar-2.6 {a key-value curve without an axis is AXIS} -body {
+    catch {M::parse "radar-beta\naxis a, b, c\ncurve x{ b: 20, a: 10 }"} m o
+    list [dict get $o -errorcode] $m
+} -result {{TCLUTILS TURADAR AXIS} {curve "x" has no value for axis "c"}}
+
+test turadar-2.7 {a key that names no axis is AXIS} -body {
+    catch {M::parse "radar-beta\naxis a, b, c\ncurve x{ a: 1, b: 2, c: 3, ab: 4 }"} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TURADAR AXIS}
+
+test turadar-2.8 {Unicode axes and labels stay} -body {
+    set m [M::parse "radar-beta\ntitle Frühstück\naxis jörg\[\"Jörg\"\], büro, amt\ncurve m\[\"Müller\"\]{ büro: 2, jörg: 1, amt: 3 }"]
+    list [dict get $m title] [dict get $m axes] [curve $m 0]
+} -result {Frühstück {Jörg büro amt} {Müller {1.0 2.0 3.0}}}
 
 # --- render ------------------------------------------------------------------
 
@@ -153,5 +173,24 @@ test turadar-5.4 {showLegend true forces the legend without labels} -body {
 test turadar-6.1 {a bare curve id like 010 is the label, unchanged} -body {
     lindex [curve [M::parse "radar-beta\naxis A, B, C\ncurve 010{1,2,3}"] 0] 0
 } -result {010}
+
+test turadar-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS turadar-9.1.svg]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::turadar::writeSvg $gm $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile turadar-9.1.svg
+} -result {1 PRECIOUS 0 0}
 
 cleanupTests

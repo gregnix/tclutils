@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tusettings 0.1
+package require tclutils::tusettings 0.2
 set ns ::tclutils::tusettings
 
 # Every test works below a private directory: XDG_CONFIG_HOME etc. point there.
@@ -151,4 +151,23 @@ test tusettings-4.5 {recent: -max must be positive} -setup fresh -body {
 
 file delete -force $base
 set ::tclutils::tusettings::platform ""
+test tusettings-9.1 {a failed save keeps the file, removes the temp file, closes the channel (0.2)} -setup {
+    fresh
+    ${ns}::save demo {a {b alt}}
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {${ns}::save demo {a {b neu}}}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    list $rc [${ns}::load demo] [expr {[llength [chan names file*]] - $before}] \
+        [lsort [glob -nocomplain -tails -directory [${ns}::dir config demo] *]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    file delete -force $base
+} -result {1 {a {b alt}} 0 settings.ini}
+
 cleanupTests

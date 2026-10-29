@@ -28,3 +28,9 @@ columns fitting `-width` (default 80).
 tclsh bin/tucolumn.tcl table file.txt
 tclsh bin/tucolumn.tcl fill -width 60 words.txt
 ```
+
+## Line ends
+
+`table`, `text` and `file -mode table` return text that ends with LF exactly when the input does:
+`"b\nJörg\n"` gives a result with final LF, `"b\nJörg"` one without, like
+`tuhead`, `tutail` and `tunl`. Versions before 0.2 dropped the final LF.

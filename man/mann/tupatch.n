@@ -1,10 +1,10 @@
-.TH tupatch n 0.2 tclutils
+.TH tupatch n 0.3 tclutils
 .SH tclutils::tupatch
 .PP
 Apply unified diffs in pure Tcl. This module is the counterpart to \fBtclutils::tudiff\fR.
 .SS Package
 .CS
-package require tclutils::tupatch 0.2
+package require tclutils::tupatch 0.3
 .CE
 .SS API
 .CS
@@ -41,4 +41,4 @@ set result [::tclutils::tupatch::text $old $patch]
 \fB{TCLUTILS COMMON BOOLEAN \-reverse}\fR, \fB{TCLUTILS COMMON BOOLEAN \-strict}\fR: the option value is not a boolean.
 .SS Notes
 .PP
-\fBtupatch\fR uses the same line model as \fBtudiff\fR: lines are split and re\-joined with \fB\en\fR. The special unified\-diff marker \fB\e\e No newline at end of file\fR is accepted as metadata but final\-newline details are not modeled separately.
+\fBtupatch\fR uses the same line model as \fBtudiff\fR: lines are split and re\-joined with \fB\en\fR. The line end at the end of the text is kept: a source ending with \fB\en\fR gives a result ending with \fB\en\fR. The marker \fB\e\e No newline at end of file\fR works as in \fBdiff \-u\fR: after a \fB+\fR line the result ends without \fB\en\fR, after a \fB\-\fR line (and none after \fB+\fR) it gets one; \fB\-reverse\fR swaps both. \fBparse\fR reports the markers as \fBoldNoNl\fR and \fBnewNoNl\fR in each hunk (0.3; 0.2 always dropped the final \fB\en\fR).

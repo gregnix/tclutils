@@ -6,7 +6,7 @@
 ## Load
 
 ```tcl
-package require tclutils::tupaste 0.2
+package require tclutils::tupaste 0.3
 ```
 
 ## Examples
@@ -21,7 +21,7 @@ package require tclutils::tupaste 0.2
 
 `-delimiter` (default: tab) goes between the columns; it may be several
 characters or empty. If one input is shorter than the others, empty fields are
-used. The result has no trailing newline.
+used.
 
 An unknown option or an option without value raises
 `TCLUTILS COMMON OPTION -name`.
@@ -33,3 +33,9 @@ Documented for completeness (same module, also covered by the test suite):
 ```tcl
 tupaste::lines lineLists args                  ;# merge several column lists row-by-row into delimited lines (like paste); -delimiter
 ```
+
+## Line ends
+
+`texts` and `files` end the result with LF when one of the inputs ends with
+LF, and without LF otherwise. Versions before 0.3 never wrote the final LF.
+`lines` returns the lines without a final LF.

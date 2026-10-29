@@ -5,7 +5,7 @@ Split files or strings into smaller parts.
 ## Load
 
 ```tcl
-package require tclutils::tusplit 0.2
+package require tclutils::tusplit 0.3
 ```
 
 ## Line splitting
@@ -38,10 +38,15 @@ set files [::tclutils::tusplit::file input.bin -bytes 1048576 -outdir parts -pre
 -suffix s    end of the file name (default empty)
 -digits n    digits of the running number, from 0 (default 2)
 -outdir d    target directory, created if missing (default .)
+-encoding e  splitLines: encoding of the parts (default utf-8)
 ```
 
 Without `-lines` and `-bytes`, `file` splits by 1000 lines. Parts are named
-`x00`, `x01`, ... Parts from `splitLines` end without `\n`.
+`x00`, `x01`, ... Every line keeps its line end, so the parts put together
+give the input again, as with `split -l` (0.3; up to 0.2 each part ended
+without `\n`). `file -lines` works on the bytes of the file: CRLF and the
+encoding stay as they are. `splitLines` writes the text in `-encoding`; an
+unknown encoding raises `TCLUTILS TUSPLIT ENCODING name`.
 
 `splitBytes` expects a byte string: every character must be in `\x00`..`\xFF`.
 Convert text first, e.g. `encoding convertto utf-8 $text`. A character above

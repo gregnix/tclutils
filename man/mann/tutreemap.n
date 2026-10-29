@@ -1,10 +1,10 @@
-.TH tutreemap n 0.2 tclutils
+.TH tutreemap n 0.3 tclutils
 .SH tclutils::tutreemap
 .PP
 Parses a Mermaid \fBtreemap\-beta\fR block and renders it as a \fBsquarified treemap\fR \-\- area\-proportional nested rectangles \-\- natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtukanban\fR / \fBtupacket\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here. A treemap is a hierarchical area chart, not a node\-edge graph, so it does \fBnot\fR go through \fBtudiagram\fR.
 .SS Package
 .CS
-package require tclutils::tutreemap 0.2
+package require tclutils::tutreemap 0.3
 .CE
 .SS Commands
 .CS
@@ -14,6 +14,8 @@ package require tclutils::tutreemap 0.2
 ::tclutils::tutreemap::writeSvg model file ?...?
 ::tclutils::tutreemap::writePng model file ?...?
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .PP
 \fBparse\fR returns the root node \fB{name "" value <total> children {...}}\fR; each child is the same shape. A branch's \fBvalue\fR is the sum of its children; a leaf's is the number it was given. Nodes with a value of 0 or less are not in the tree.
 .SS "Supported syntax (Mermaid subset)"
@@ -28,7 +30,7 @@ The header is \fBtreemap\-beta\fR (or bare \fBtreemap\fR).
 .IP \(bu
 Indentation defines the hierarchy; a node with a value and no deeper\-indented lines is a leaf, otherwise a branch.
 .IP \(bu
-A \fB:::class\fR styling tag and \fBclassDef\fR / \fBstyle\fR lines are parsed off and \fBignored\fR (v1). Blank lines and \fB%%\fR comments are ignored.
+A \fB:::class\fR styling tag and \fBclassDef\fR / \fBstyle\fR lines are parsed off and \fBignored\fR (v1). The class name may hold any letter (0.3; 0.2 cut \fB:::Büro\fR after the \fBB\fR). Blank lines and \fB%%\fR comments are ignored.
 .IP \(bu
 Quotes around names are recommended (Mermaid style); a bare \fBName: value\fR / \fBName\fR is tolerated.
 .SS Layout

@@ -10,7 +10,7 @@ a node-edge graph, so it does **not** go through `tudiagram`.
 ## Package
 
 ```tcl
-package require tclutils::tutreemap 0.2
+package require tclutils::tutreemap 0.3
 ```
 
 ## Commands
@@ -22,6 +22,8 @@ package require tclutils::tutreemap 0.2
 ::tclutils::tutreemap::writeSvg model file ?...?
 ::tclutils::tutreemap::writePng model file ?...?
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 `parse` returns the root node `{name "" value <total> children {...}}`; each child
 is the same shape. A branch's `value` is the sum of its children; a leaf's is the
@@ -40,7 +42,8 @@ treemap-beta
 - Indentation defines the hierarchy; a node with a value and no deeper-indented
   lines is a leaf, otherwise a branch.
 - A `:::class` styling tag and `classDef` / `style` lines are parsed off and
-  **ignored** (v1). Blank lines and `%%` comments are ignored.
+  **ignored** (v1). The class name may hold any letter (0.3; 0.2 cut
+  `:::Büro` after the `B`). Blank lines and `%%` comments are ignored.
 - Quotes around names are recommended (Mermaid style); a bare `Name: value` /
   `Name` is tolerated.
 

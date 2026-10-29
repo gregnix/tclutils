@@ -3,7 +3,7 @@ package require tcltest
 namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 tcl::tm::path add [file normalize [file join $here .. lib tm]]
-package require tclutils::tunumany
+package require tclutils::tunumany 0.3
 
 test tunumany-1.1 {locale EU}    -body {::tclutils::tunumany::parse "1.234,56"} -result 1234.56
 test tunumany-1.2 {locale US}    -body {::tclutils::tunumany::parse "1,234.56"} -result 1234.56
@@ -22,5 +22,13 @@ test tunumany-4.1 {option without value -> OPTION} -body {
     list $m [dict get $o -errorcode]
 } -result {{option "-default" requires a value} {TCLUTILS TUNUMANY OPTION}}
 test tunumany-4.2 {KiB is IEC} -body {::tclutils::tunumany::parse 2KiB} -result 2048
+
+test tunumany-4.1 {decimal comma before the unit} -body {
+    list [::tclutils::tunumany::parse "1,5K"] [::tclutils::tunumany::parse "2,25 Mi"] \
+         [::tclutils::tunumany::parse "-1,5k"]
+} -result {1500 2359296 -1500}
+test tunumany-4.2 {three digits after the comma do not parse} -body {
+    ::tclutils::tunumany::parse "1,500K" -default none
+} -result none
 
 cleanupTests

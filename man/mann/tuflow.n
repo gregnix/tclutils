@@ -1,4 +1,4 @@
-.TH tuflow n 0.3 tclutils
+.TH tuflow n 0.4 tclutils
 .SH tclutils::tuflow
 .PP
 The front end of the \fBtuflow\fR diagram family: it parses a Mermaid / flowchart source block and renders it to SVG or PNG. It is the single entry point a consumer (e.g. a documentation renderer) calls; it detects the diagram kind and dispatches to the right family module, so the caller never has to know whether a block is a graph, a class diagram or a pie chart.
@@ -6,7 +6,7 @@ The front end of the \fBtuflow\fR diagram family: it parses a Mermaid / flowchar
 Everything is pure Tcl: graphs go through \fBtclutils::tudiagram\fR (a node\-edge layout over the \fBtclutils::tupngdraw\fR / \fBtclutils::tusvg\fR backends). Pie charts, xy charts, sequences, gantt charts and the other non\-graph families each have their own module. No Tk, no browser, no external rasteriser.
 .SS Package
 .CS
-package require tclutils::tuflow 0.3
+package require tclutils::tuflow 0.4
 .CE
 .SS Commands
 .CS
@@ -66,6 +66,8 @@ kanban            -width 0    -height 0     0 = size from columns and cards
 .IP \(bu
 Header \fBgraph\fR or \fBflowchart\fR with an optional direction \fBLR\fR, \fBRL\fR, \fBTB\fR, \fBTD\fR (= \fBTB\fR) or \fBBT\fR; keyword and direction are case\-insensitive (\fBFLOWCHART td\fR, \fBGraph LR\fR). Without a direction the graph is \fBLR\fR.
 .IP \(bu
+Node ids are letters, digits and \fB_\fR, Unicode letters included (\fBBüro[Amt]\fR is the node \fBBüro\fR; 0.4).
+.IP \(bu
 Nodes \fBA\fR, \fBA[box]\fR, \fBA(rounded)\fR, \fBA([stadium])\fR, \fBA((circle))\fR, \fBA{diamond}\fR, \fBA{{hexagon}}\fR, \fBA[(cylinder)]\fR, \fBA[[subroutine]]\fR (box).
 .IP \(bu
 Edges \fB\-\->\fR, \fB\-\-\-\fR, \fB\-.\->\fR, \fB\-.\-\fR, \fB==>\fR, \fB===\fR, \fB\-\-o\fR, \fB\-\-x\fR, with a label as \fB\-\->|text|\fR, \fB\-\- text \-\->\fR, \fB\-. text .\->\fR or \fB== text ==>\fR; chains \fBA \-\-> B \-\-> C\fR.
@@ -74,7 +76,7 @@ Edges \fB\-\->\fR, \fB\-\-\-\fR, \fB\-.\->\fR, \fB\-.\-\fR, \fB==>\fR, \fB===\fR
 .IP \(bu
 \fBsubgraph id [label]\fR ... \fBend\fR becomes a \fBtudiagram\fR group (nesting allowed); an edge to or from the subgraph id is dropped.
 .IP \(bu
-\fBstyle\fR, \fBclassDef\fR, \fBclass\fR, \fBclick\fR, \fBlinkStyle\fR are skipped; \fB%%\fR starts a comment; \fB;\fR separates statements.
+\fBstyle\fR, \fBclassDef\fR, \fBclass\fR, \fBclick\fR, \fBlinkStyle\fR are skipped; \fB%%\fR starts a comment; \fB;\fR separates statements, but not inside a label in brackets, an edge label \fB|..|\fR or quotes (\fBA[Jörg;Büro]\fR is one node).
 .SS "Supported diagram types"
 .PP
 Graph\-like types go through \fBparse\fR and then \fBtudiagram\fR. They take the graph options above:
@@ -125,4 +127,4 @@ New non\-graph families are added in one place (a dispatch branch here plus a \f
 Family modules for graphs: \fBtclutils::tudiagram\fR, \fBtclutils::tustate\fR, \fBtclutils::turequirement\fR, \fBtclutils::tuer\fR, \fBtclutils::tuclass\fR, \fBtclutils::tumindmap\fR, \fBtclutils::tuc4\fR, \fBtclutils::tublock\fR, \fBtclutils::tugit\fR, \fBtclutils::tuarchitecture\fR. Non\-graph renderers: \fBtclutils::tupie\fR, \fBtclutils::tuxychart\fR, \fBtclutils::tuquadrant\fR, \fBtclutils::tujourney\fR, \fBtclutils::tutimeline\fR, \fBtclutils::tusankey\fR, \fBtclutils::tugantt\fR, \fBtclutils::tusequence\fR, \fBtclutils::turadar\fR, \fBtclutils::tutreemap\fR, \fBtclutils::tupacket\fR, \fBtclutils::tukanban\fR. Backends: \fBtclutils::tupngdraw\fR, \fBtclutils::tusvg\fR.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUFLOW <REASON>}\fR — \fBUNSUPPORTED\fR (a diagram type with no renderer), \fBEMPTY\fR (no nodes in a flowchart), \fBBADID\fR (a node id is not \fB[A\-Za\-z0\-9_]+\fR: a hyphen after an id is leftover junk, not an edge — e.g. \fBNwifi\-3["SSID"]\fR). Errors from the dispatched family propagate with their own code (\fB{TCLUTILS TUDIAGRAM ...}\fR, \fB{TCLUTILS TUPIE ...}\fR, and the same shape for the other families). A \fB\-scale\fR that is not a positive integer is that family's \fBARG\fR error. A \fB\-fontfile\fR that names a missing file is its \fBFONT\fR error.
+\fB\-errorcode {TCLUTILS TUFLOW <REASON>}\fR — \fBUNSUPPORTED\fR (a diagram type with no renderer), \fBEMPTY\fR (no nodes in a flowchart), \fBBADID\fR (a node id is not letters, digits and \fB_\fR: a hyphen after an id is leftover junk, not an edge — e.g. \fBNwifi\-3["SSID"]\fR). Errors from the dispatched family propagate with their own code (\fB{TCLUTILS TUDIAGRAM ...}\fR, \fB{TCLUTILS TUPIE ...}\fR, and the same shape for the other families). A \fB\-scale\fR that is not a positive integer is that family's \fBARG\fR error. A \fB\-fontfile\fR that names a missing file is its \fBFONT\fR error.

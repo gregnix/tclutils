@@ -6,7 +6,7 @@ set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
 
-package require tclutils::common 0.2
+package require tclutils::common 0.3
 
 set tmp [file join $here tmp_common]
 file delete -force $tmp
@@ -106,5 +106,42 @@ test common-4.3 {ensureOneOf matches exactly: case and prefix are not enough} -b
     list [catch {::tclutils::common::ensureOneOf Photo {photo} kind}] \
          [catch {::tclutils::common::ensureOneOf pho {photo} kind}]
 } -result {1 1}
+
+test common-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS common-9.1.txt]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::common::replaceFile $f NEW}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile common-9.1.txt
+} -result {1 PRECIOUS 0 0}
+
+test common-9.2 {replaceFile writes text, bytes and keeps permissions} -setup {
+    set f [makeFile {} common-9.2.txt]
+    set g [makeFile {} common-9.2.bin]
+    if {$::tcl_platform(platform) eq "unix"} { file attributes $f -permissions 0750 }
+} -body {
+    ::tclutils::common::replaceFile $f "J\u00f6rg\n"
+    ::tclutils::common::replaceFile $g "\x00\xff" -encoding binary
+    set ch [open $f rb]; set a [read $ch]; close $ch
+    set ch [open $g rb]; set b [read $ch]; close $ch
+    set p [expr {$::tcl_platform(platform) eq "unix"
+        ? [string trimleft [file attributes $f -permissions] 0o] : "750"}]
+    list [string equal $a [encoding convertto utf-8 "J\u00f6rg\n"]] [string length $b] $p \
+        [llength [glob -nocomplain $f.tmp* $g.tmp*]]
+} -cleanup {
+    removeFile common-9.2.txt
+    removeFile common-9.2.bin
+} -result {1 2 750 0}
 
 cleanupTests

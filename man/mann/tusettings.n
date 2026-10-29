@@ -1,4 +1,4 @@
-.TH tusettings n 0.1 tclutils
+.TH tusettings n 0.2 tclutils
 .SH tclutils::tusettings
 .PP
 Per\-user settings in the platform's config directory, the standard directories (config, cache, data, temp) and a recent\-files list. Settings are stored as INI through \fBtuini\fR, so they can be read and edited by hand. Pure Tcl, no Tk, Tcl 8.6+ / 9.x.
@@ -39,7 +39,7 @@ The app name is appended. \fBdir\fR does not create anything unless \fB\-create 
 .PP
 A settings dict is section \-> (dict key \-> value); keys before any \fB[section]\fR live in section \fB""\fR. \fBload\fR merges the file over \fB\-defaults\fR, so new keys in a later app version get their default. A missing file gives the defaults.
 .PP
-\fBsave\fR writes to a temporary file next to the target and renames it, so a crash never leaves a half\-written file. Comments a user put into the file are not kept. INI cannot hold everything: a value with a line break or leading/trailing blanks, a key with \fB=\fR or a key starting with \fB;\fR, \fB#\fR or \fB[\fR raise \fB{TCLUTILS TUSETTINGS VALUE}\fR and the file stays as it was.
+\fBsave\fR writes to a temporary file next to the target and renames it, so a crash never leaves a half\-written file. If writing fails, the temporary file is removed and no channel stays open (0.2). Comments a user put into the file are not kept. INI cannot hold everything: a value with a line break or leading/trailing blanks, a key with \fB=\fR or a key starting with \fB;\fR, \fB#\fR or \fB[\fR raise \fB{TCLUTILS TUSETTINGS VALUE}\fR and the file stays as it was.
 .PP
 A file that does not parse (hand\-edited, broken line) raises \fB{TCLUTILS TUSETTINGS SYNTAX}\fR with the file name; the caller decides whether to fall back to the defaults.
 .SS "Recent files"

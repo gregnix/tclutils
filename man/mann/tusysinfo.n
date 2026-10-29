@@ -66,9 +66,11 @@ Serial numbers, host names and MAC addresses identify a computer and, on an offi
 .IP \(bu
 Linux: the computer's serial number (\fBproduct_serial\fR) is readable by root only; it stays empty otherwise. Virtual machines often have no DMI data and no monitor.
 .IP \(bu
-Monitors carry \fBpresent\fR: 1 connected, 0 not connected, empty when unknown. Windows keeps every monitor that was ever connected, often the same one under several instances (other port, other driver); \fBtusysinfo\fR lists each EDID once and takes \fBpresent\fR from \fBGet\-PnpDevice \-Class Monitor\fR (status OK). In a remote desktop session the physical monitors count as not connected. \fBreport\fR marks them "(not connected)". (\fBWmiMonitorID\fR is not used: it reports "not supported" on some systems.) Windows 11 still reports \fBProductName\fR "Windows 10 …"; a build of 22000 or later is shown as Windows 11. SSD or HDD comes from \fBGet\-PhysicalDisk\fR (an NVMe disk counts as SSD).
+Monitors carry \fBpresent\fR: 1 connected, 0 not connected, empty when unknown. Windows keeps every monitor that was ever connected, often the same one under several instances (other port, other driver); \fBtusysinfo\fR lists each EDID once and takes \fBpresent\fR from \fBGet\-PnpDevice \-Class Monitor\fR (status OK; a missing status is not connected). In a remote desktop session the physical monitors count as not connected. \fBreport\fR marks them "(not connected)". (\fBWmiMonitorID\fR is not used: it reports "not supported" on some systems.) Windows 11 still reports \fBProductName\fR "Windows 10 …"; a build of 22000 or later is shown as Windows 11. SSD or HDD comes from \fBGet\-PhysicalDisk\fR (an NVMe disk counts as SSD).
 .IP \(bu
 Monitors describe the device, not the desktop: \fBpreferred\fR is the mode the monitor asks for (its EDID), not the mode it runs in; position and primary output are not collected, and \fBconnector\fR is the kernel's name (\fBDP\-2\fR), not the one xrandr shows (\fBDisplayPort\-1\fR). Which monitor a window is on cannot be told from this data.
+.IP \(bu
+Windows: when PowerShell gives no answer or one that cannot be read, the result has a list \fBwarnings\fR and \fBreport\fR prints a section "Warnings"; memory, disks and the monitor state are then missing, not empty.
 .IP \(bu
 Firmware placeholders such as "Default string" or "To be filled by O.E.M." are left empty.
 .IP \(bu

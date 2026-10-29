@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tucolumn 0.1
+package require tclutils::tucolumn 0.2
 
 test tucolumn-1.1 {table aligns whitespace columns, no trailing space} {
     ::tclutils::tucolumn::table "name age\nAda 36\nGrace 85"
@@ -29,4 +29,8 @@ test tucolumn-1.8 {invalid mode rejected} {
     set f [makeFile "x\n" tucolumn-mode.txt]
     catch {::tclutils::tucolumn::file $f -mode bogus} m o; dict get $o -errorcode
 } {TCLUTILS TUCOLUMN MODE}
+test tucolumn-9.1 {final LF kept exactly when the input has it} -body {
+    list [::tclutils::tucolumn::table "J\u00f6rg 1\nB\u00fcro 22\n"] [::tclutils::tucolumn::table "J\u00f6rg 1\nB\u00fcro 22"]
+} -result [list "J\u00f6rg  1\nB\u00fcro  22\n" "J\u00f6rg  1\nB\u00fcro  22"]
+
 cleanupTests

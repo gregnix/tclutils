@@ -1,10 +1,10 @@
-.TH tublock n 0.1 tclutils
+.TH tublock n 0.2 tclutils
 .SH tclutils::tublock
 .PP
 Parses a Mermaid \fBblock\-beta\fR diagram into a \fBtclutils::tudiagram\fR model (best\-effort), so it can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
 .SS Package
 .CS
-package require tclutils::tublock 0.1
+package require tclutils::tublock 0.2
 .CE
 .SS Commands
 .CS
@@ -46,6 +46,8 @@ set m [::tclutils::tublock::parse $src]
 ::tclutils::tudiagram::writePng $m block.png -scale 3
 .CE
 .SS Notes
+.IP \(bu
+Ids are letters, digits and \fB_\fR, Unicode letters included: \fBBüro[Jörg]\fR is the block \fBBüro\fR with the label \fBJörg\fR (0.2; it was one token used as id and label).
 .IP \(bu
 v1 limitations (honest): the grid geometry of block\-beta (columns, widths, \fB:N\fR spans, explicit placement) is NOT reproduced — \fBtudiagram\fR lays the blocks out as a top\-down graph. Group boundaries are flattened. Node shapes map to \fBtudiagram\fR \fBbox\fR/\fBrounded\fR/\fBcircle\fR/\fBdiamond\fR/\fBhexagon\fR/\fBstadium\fR/ \fBcylinder\fR (subroutine \fB[[..]]\fR \-> \fBbox\fR). Edge endpoints not declared as blocks are created on first use.
 .IP \(bu

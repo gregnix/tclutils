@@ -1,10 +1,10 @@
-.TH tusort n 0.1 tclutils
+.TH tusort n 0.2 tclutils
 .SH tclutils::tusort
 .PP
 Sort helpers similar to Unix \fBsort\fR, implemented in pure Tcl.
 .SS Package
 .CS
-package require tclutils::tusort 0.1
+package require tclutils::tusort 0.2
 .CE
 .SS Commands
 .CS
@@ -33,3 +33,6 @@ set sorted [::tclutils::tusort::sortList {banana apple cherry}]
 set sorted [::tclutils::tusort::file names.txt -dictionary 1 -nocase 1]
 set sorted [::tclutils::tusort::file numbers.txt -numeric 1 -reverse 1]
 .CE
+.SS "Line ends"
+.PP
+\fBtext\fR and \fBfile\fR return text that ends with LF exactly when the input does: \fB"b\enJörg\en"\fR gives a result with final LF, \fB"b\enJörg"\fR one without, like \fBtuhead\fR, \fBtutail\fR and \fBtunl\fR. Versions before 0.2 dropped the final LF.

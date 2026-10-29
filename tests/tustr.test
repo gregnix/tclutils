@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tustr 0.2
+package require tclutils::tustr 0.3
 namespace import ::tclutils::tustr::*
 
 test tustr-empty-1 {isEmpty} -body { list [isEmpty ""] [isEmpty x] } -result {1 0}
@@ -77,5 +77,16 @@ test tustr-print-2 {a character beyond U+FFFF counts as one} -body {
 test tustr-print-3 {more than one character is an error} -body {
     catch {isPrintable ab} e o; dict get $o -errorcode
 } -result {TCLUTILS TUSTR ARG}
+
+# --- 0.3 -------------------------------------------------------------------------
+test tustr-9.1 {slugify spells Latin letters in ASCII} -body {
+    lmap s {"Jörg Müller" Größe "Ça va? Ærø" Łódź "éx" "日本 ok"} { ::tclutils::tustr::slugify $s }
+} -result {joerg-mueller groesse ca-va-aero lodz ex ok}
+test tustr-9.2 {toCamel keeps letters of every script} -body {
+    list [::tclutils::tustr::toCamel "Jörg Müller"] [::tclutils::tustr::toCamel my-cool_var]
+} -result {jörgMüller myCoolVar}
+test tustr-9.3 {toSnake splits at upper case umlauts too} -body {
+    list [::tclutils::tustr::toSnake JörgMüller] [::tclutils::tustr::toSnake ÜberÄrger]
+} -result {jörg_müller über_ärger}
 
 cleanupTests

@@ -10,7 +10,7 @@ through `tudiagram`.
 ## Package
 
 ```tcl
-package require tclutils::turadar 0.2
+package require tclutils::turadar 0.3
 ```
 
 ## Commands
@@ -22,6 +22,8 @@ package require tclutils::turadar 0.2
 ::tclutils::turadar::writeSvg model file ?...?
 ::tclutils::turadar::writePng model file ?...?
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 ## Supported syntax (Mermaid subset)
 
@@ -40,8 +42,11 @@ showLegend true|false            -> legend toggle (default: on if labelled)
 
 - The header is `radar-beta` (or bare `radar`).
 - `axis` lines accumulate; each axis is a bare id or `id["Label"]`.
-- A `curve`'s values are positional (axis order) or key-value (`axisId: value`);
-  missing axes default to 0, extra values are ignored.
+- A `curve`'s values are positional (axis order) or key-value (`axisId: value`).
+  Each curve needs exactly one value per axis (0.3): a positional curve with
+  fewer or more values is `COUNT`, a key-value curve that leaves out an axis
+  or names one that does not exist is `AXIS`. 0.2 set a missing value to 0
+  and dropped extra or misspelled ones.
 - `min`/`max` set the scale; `max` defaults to the largest data value, `min` to 0.
 - A curve without `["Label"]` is named by its id. The legend is on by default
   only when at least one curve has an explicit `["Label"]`; `showLegend true`
@@ -107,5 +112,7 @@ raster sinks render it through `tuflow::toPng`; no docir change is needed.
 ## Error codes
 
 `-errorcode {TCLUTILS TURADAR <REASON>}` -- `EMPTY` (no header / no curves),
-`AXES` (fewer than 3 axes), `VALUE` (non-numeric value), `ARG` (bad `-scale`),
+`AXES` (fewer than 3 axes), `AXIS` (a key-value curve misses an axis or
+names an unknown one), `COUNT` (positional values do not match the axes),
+`VALUE` (non-numeric value, or key-value and positional mixed), `ARG` (bad `-scale`),
 `FONT` (font file not found).

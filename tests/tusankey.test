@@ -38,10 +38,16 @@ test tusankey-1.5 {a doubled quote inside a quoted name is one quote} -body {
     lindex [nodes [M::parse $src]] 0
 } -result {say "hi"}
 
-test tusankey-1.6 {rows with a non-numeric or non-positive value are skipped} -body {
-    set src "sankey-beta\nA,B,x\nC,D,0\nE,F,4"
+test tusankey-1.6 {a row with the value 0 is skipped} -body {
+    set src "sankey-beta\nC,D,0\nE,F,4"
     nlinks [M::parse $src]
 } -result 1
+
+test tusankey-1.8 {bad rows are an error (0.1 skipped them)} -body {
+    lmap src [list "sankey-beta\nA,B,x" "sankey-beta\nA,B,-1" "sankey-beta\nA,B" "sankey-beta\n,B,1"] {
+        catch {M::parse $src}; lindex $::errorCode 2
+    }
+} -result {VALUE VALUE VALUE VALUE}
 
 test tusankey-1.7 {the bare sankey header is also accepted} -body {
     nlinks [M::parse "sankey\nA,B,7"]
@@ -81,5 +87,24 @@ test tusankey-3.3 {-scale enlarges the PNG canvas} -body {
     binary scan $p3 @16I w3
     expr {$w3 == 3*$w1}
 } -result 1
+
+test tusankey-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tusankey-9.1.svg]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tusankey::writeSvg [M::parse "sankey-beta\nA,B,5"] $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tusankey-9.1.svg
+} -result {1 PRECIOUS 0 0}
 
 cleanupTests

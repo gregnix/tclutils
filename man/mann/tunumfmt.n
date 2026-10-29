@@ -11,6 +11,8 @@
 .CE
 .PP
 \fBtoHuman\fR scales a number to a unit suffix (SI uses 1000, IEC 1024), e.g. \fB1500\fR becomes \fB1.5K\fR and \fB1536 \-to iec\fR becomes \fB1.5Ki\fR. \fBfromHuman\fR parses such strings back; \fB\-from auto\fR treats an \fBi\fR right after the unit letter as IEC, so \fB2Ki\fR and \fB2KiB\fR are 2048 while \fB2K\fR and \fB2KB\fR are 2000. Default precision is 1 decimal; values below the first unit are emitted as integers.
+.PP
+\fBK\fR without \fBi\fR always means 1000, as in GNU \fBnumfmt \-\-to=si\fR: 1500 and 1536 both become \fB1.5K\fR at precision 1, and \fB1.5K\fR reads back as 1500. For byte counts use \fB\-to iec\fR (\fB1536\fR → \fB1.5Ki\fR) or \fBtusize::human\fR, which writes \fB1.5 KiB\fR for 1024\-based and \fB1.5 kB\fR (with \fB\-si 1\fR) for 1000\-based values. Raise \fB\-precision\fR when 1500 and 1536 must look different (\fB1.50K\fR, \fB1.54K\fR).
 .SS CLI
 .CS
 printf '1500\n1048576\n' | tclsh bin/tunumfmt.tcl

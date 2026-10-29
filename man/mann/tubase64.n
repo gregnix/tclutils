@@ -1,4 +1,4 @@
-.TH tubase64 n 0.1 tclutils
+.TH tubase64 n 0.2 tclutils
 .SH tclutils::tubase64
 .PP
 Base64 helpers using Tcl core \fBbinary encode base64\fR and \fBbinary decode base64\fR.
@@ -10,10 +10,22 @@ set data [::tclutils::tubase64::decode $b64]
 .PP
 Commands:
 .IP \(bu
-\fBencode data ?\-maxlen n?\fR
+\fBencode data ?\-maxlen n? ?\-encoding binary|utf\-8?\fR
 .IP \(bu
-\fBdecode text\fR
+\fBdecode text ?\-encoding binary|utf\-8?\fR
 .IP \(bu
 \fBencodeFile path ?\-maxlen n?\fR
 .IP \(bu
 \fBdecodeFile path\fR
+.SS "Bytes and text"
+.PP
+\fBencode\fR takes bytes by default (\fB\-encoding binary\fR): each character is one byte. A character above 255 is \fB{TCLUTILS TUBASE64 BYTES}\fR on Tcl 8.6 and 9.0 alike; Tcl 8.6 alone would keep only the low byte. For text pass \fB\-encoding utf\-8\fR; \fBdecode \-encoding utf\-8\fR turns the bytes back into text (0.2).
+.CS
+::tclutils::tubase64::encode "Jörg €" -encoding utf-8   ;# SsO2cmcg4oKs
+::tclutils::tubase64::decode SsO2cmcg4oKs -encoding utf-8 ;# Jörg €
+::tclutils::tubase64::encode "Jörg"                      ;# SvZyZw== (ö as byte f6)
+.CE
+.PP
+\fBtuhash\fR and \fBtuxxhash\fR default to \fButf\-8\fR instead, because they are mostly used on text; \fBtubase64\fR, \fBtubase32\fR and \fBtucrc\fR default to bytes, because their input is mostly file or image data.
+.PP
+Errors: \fBMAXLEN\fR, \fBBYTES\fR, \fBENCODING\fR.

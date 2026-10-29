@@ -1,10 +1,10 @@
-.TH tupaste n 0.2 tclutils
+.TH tupaste n 0.3 tclutils
 .SH tclutils::tupaste
 .PP
 \fBtclutils::tupaste\fR combines line streams side by side, similar to Unix \fBpaste\fR.
 .SS Load
 .CS
-package require tclutils::tupaste 0.2
+package require tclutils::tupaste 0.3
 .CE
 .SS Examples
 .CS
@@ -15,7 +15,7 @@ package require tclutils::tupaste 0.2
 ::tclutils::tupaste::files [list names.txt cities.txt] -delimiter ";"
 .CE
 .PP
-\fB\-delimiter\fR (default: tab) goes between the columns; it may be several characters or empty. If one input is shorter than the others, empty fields are used. The result has no trailing newline.
+\fB\-delimiter\fR (default: tab) goes between the columns; it may be several characters or empty. If one input is shorter than the others, empty fields are used.
 .PP
 An unknown option or an option without value raises \fBTCLUTILS COMMON OPTION \-name\fR.
 .SS "Additional exported commands"
@@ -24,3 +24,6 @@ Documented for completeness (same module, also covered by the test suite):
 .CS
 tupaste::lines lineLists args                  ;# merge several column lists row-by-row into delimited lines (like paste); -delimiter
 .CE
+.SS "Line ends"
+.PP
+\fBtexts\fR and \fBfiles\fR end the result with LF when one of the inputs ends with LF, and without LF otherwise. Versions before 0.3 never wrote the final LF. \fBlines\fR returns the lines without a final LF.

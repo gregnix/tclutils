@@ -3,7 +3,7 @@ package require tcltest
 namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 tcl::tm::path add [file join [file dirname $here] lib tm]
-package require tclutils::tuldif 0.2
+package require tclutils::tuldif 0.3
 
 set ldif "dn: cn=Alice,dc=ex\ncn: Alice\nsn: Smith\nmail: alice@ex.com\nmail: a@ex.com\n\ndn: cn=Bob,dc=ex\ncn: Bob\n"
 
@@ -96,5 +96,38 @@ test tuldif-3.6 {a change record is refused with its own code} -body {
     catch {::tclutils::tuldif::parse $text} m o
     list [dict get $o -errorcode] $m
 } -result {{TCLUTILS TULDIF CHANGETYPE} {LDIF change records are not supported (changetype: modify)}}
+
+# --- 0.3: binary attributes ---------------------------------------------------
+
+test tuldif-4.1 {jpegPhoto bytes are written back as the same base64} -body {
+    set e [::tclutils::tuldif::parse "dn: cn=x\njpegPhoto:: AP/DvA==\n"]
+    list [binary encode hex [lindex [::tclutils::tuldif::get [lindex $e 0] jpegPhoto] 0]] \
+        [::tclutils::tuldif::toLdif $e]
+} -result [list 00ffc3bc "dn: cn=x\njpegPhoto:: AP/DvA==\n"]
+
+test tuldif-4.2 {a binary value that is valid UTF-8 stays bytes} -body {
+    set e [::tclutils::tuldif::parse "dn: cn=x\nphoto:: w7Y=\n"]
+    set v [lindex [::tclutils::tuldif::get [lindex $e 0] photo] 0]
+    list [string length $v] [::tclutils::tuldif::toLdif $e]
+} -result [list 2 "dn: cn=x\nphoto:: w7Y=\n"]
+
+test tuldif-4.3 {;binary and -binary mark attributes} -body {
+    set t "dn: cn=x\nuserCertificate;binary:: w7Y=\nblob:: w7Y=\n"
+    set e [lindex [::tclutils::tuldif::parse $t -binary blob] 0]
+    lmap p $e { string length [lindex $p 1] }
+} -result {4 2 2}
+
+test tuldif-4.4 {text stays UTF-8: cn Jörg} -body {
+    ::tclutils::tuldif::toLdif [list [list {dn cn=x} {cn Jörg}]]
+} -result "dn: cn=x\ncn:: SsO2cmc=\n"
+
+test tuldif-4.5 {a binary attribute with characters above \xFF is an error} -body {
+    list [catch {::tclutils::tuldif::toLdif [list [list {dn cn=x} {jpegPhoto Jörg€}]]}] $::errorCode
+} -result {1 {TCLUTILS TULDIF BINARY}}
+
+test tuldif-4.6 {wrong option} -body {
+    catch {::tclutils::tuldif::parse "dn: x\n" -bin a}
+    set ::errorCode
+} -result {TCLUTILS TULDIF OPTION}
 
 cleanupTests

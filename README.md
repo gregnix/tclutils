@@ -51,7 +51,7 @@ the Unix-tool mapping is in [`docs/guide/coreutils-mapping.md`](docs/guide/coreu
 | Icons | `tuico` |
 | Deployment / packaging | `tudeploy` |
 | Diagrams (Mermaid-compatible) | `tuflow` `tudiagram` `tustate` `tuer` `tuclass` `turequirement` `tumindmap` `tuc4` `tublock` `tugit` `tuarchitecture` `tupie` `tuxychart` `tuquadrant` `tujourney` `tutimeline` `tusankey` `tugantt` `tusequence` `tukanban` `tupacket` `tutreemap` `turadar` |
-| Introspection / diagnostics | `tuappinfo` `tusysinfo` `tuedid` `tupkgfinder` `tutestrun` |
+| Introspection / diagnostics | `tuappinfo` `tusysinfo` `tuedid` `tupkgfinder` `tutestrun` `tulint` |
 | Settings / user directories | `tusettings` |
 | Core | `common` |
 

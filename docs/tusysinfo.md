@@ -89,7 +89,8 @@ Command line: `tclsh bin/tusysinfo.tcl ?--json? ?--serials? ?--anonymize?`
   unknown. Windows keeps every monitor that was ever connected, often the
   same one under several instances (other port, other driver);
   `tusysinfo` lists each EDID once and takes `present` from
-  `Get-PnpDevice -Class Monitor` (status OK). In a remote desktop session
+  `Get-PnpDevice -Class Monitor` (status OK; a missing status is not
+  connected). In a remote desktop session
   the physical monitors count as not connected. `report` marks them
   "(not connected)". (`WmiMonitorID` is not used: it reports "not
   supported" on some systems.) Windows 11 still reports
@@ -101,6 +102,10 @@ Command line: `tclsh bin/tusysinfo.tcl ?--json? ?--serials? ?--anonymize?`
   primary output are not collected, and `connector` is the kernel's name
   (`DP-2`), not the one xrandr shows (`DisplayPort-1`). Which monitor a
   window is on cannot be told from this data.
+- Windows: when PowerShell gives no answer or one that cannot be read,
+  the result has a list `warnings` and `report` prints a section
+  "Warnings"; memory, disks and the monitor state are then missing, not
+  empty.
 - Firmware placeholders such as "Default string" or "To be filled by
   O.E.M." are left empty.
 - macOS: `system_profiler` is slow (several seconds); `-sections {os cpu

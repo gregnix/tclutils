@@ -36,7 +36,7 @@ consumer) and returns entry dicts or bytes:
 | `list`   | `list $path`        | list of entry dicts, one level, on demand |
 | `stat`   | `stat $path`        | one entry dict, or error if absent |
 | `get`    | `get $path`         | file contents as **raw bytes** |
-| `put`    | `put $path $data`   | write contents |
+| `put`    | `put $path $data`   | write contents (local: through a temporary file; a failed write leaves the old file, 0.3) |
 | `delete` | `delete $path`      | remove |
 | `mkdir`  | `mkdir $path`       | create a directory/collection |
 | `move`   | `move $from $to`    | rename/move within the provider |

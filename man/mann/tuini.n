@@ -1,7 +1,17 @@
-.TH tuini n 0.1 tclutils
+.TH tuini n 0.2 tclutils
 .SH tclutils::tuini
 .PP
-INI reader/writer. Parses into a dict section \-> (dict key \-> value); keys before any \fB[section]\fR live in the global section "". Order is preserved. Comments (\fB;\fR or \fB#\fR) are dropped.
+INI reader/writer. Parses into a dict section \-> (dict key \-> value); keys before any \fB[section]\fR live in the global section "". Order is preserved. Comments (\fB;\fR or \fB#\fR) are dropped. A key that occurs twice in a section keeps the last value (the Windows profile API takes the first). Blanks around keys and values are dropped, so a value cannot end in a blank.
+.PP
+\fBsetValue\fR, \fBaddSection\fR and \fBtoIni\fR refuse what INI cannot hold, so \fBtoIni\fR never writes text that \fBparse\fR cannot read back (0.2; 0.1 wrote it):
+.IP \(bu
+a value with a line break;
+.IP \(bu
+a key with \fB=\fR or a line break, a key starting with \fB;\fR, \fB#\fR or \fB[\fR, a key with blanks at either end;
+.IP \(bu
+a section name with \fB]\fR or a line break, or blanks at either end.
+.PP
+Error code \fB{TCLUTILS TUINI VALUE}\fR.
 .CS
 tuini::parse iniText            ;# -> data dict
 tuini::toIni data               ;# -> INI text
@@ -12,7 +22,7 @@ tuini::has  data section key
 tuini::setValue data section key value   ;# -> new data dict
 .CE
 .PP
-Error code: \fB{TCLUTILS TUINI SYNTAX}\fR.
+Error codes: \fB{TCLUTILS TUINI SYNTAX}\fR (parse), \fB{TCLUTILS TUINI VALUE}\fR (see above).
 .SS "Additional exported commands"
 .PP
 Documented for completeness (same module, also covered by the test suite):

@@ -1,10 +1,10 @@
-.TH tusankey n 0.1 tclutils
+.TH tusankey n 0.2 tclutils
 .SH tclutils::tusankey
 .PP
 Parses a Mermaid \fBsankey\-beta\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtuxychart\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here.
 .SS Package
 .CS
-package require tclutils::tusankey 0.1
+package require tclutils::tusankey 0.2
 .CE
 .SS Commands
 .CS
@@ -14,6 +14,8 @@ package require tclutils::tusankey 0.1
 ::tclutils::tusankey::writeSvg model file ?...?
 ::tclutils::tusankey::writePng model file ?...?
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .SS "Supported syntax (Mermaid subset)"
 .CS
 sankey-beta
@@ -24,7 +26,7 @@ The header line is \fBsankey\-beta\fR (or \fBsankey\fR); the data rows follow.
 .IP \(bu
 A node name containing a comma is wrapped in double quotes; a literal double quote inside is written as a pair (\fB""\fR).
 .IP \(bu
-Blank lines and \fB%%\fR comments are ignored. Values must be positive numbers.
+Blank lines and \fB%%\fR comments are ignored. A row with fewer than three columns, an empty name, or a value that is not a number or below 0 raises \fBVALUE\fR (0.2; 0.1 skipped it). A row with the value 0 is skipped: it would draw nothing, and a node that only occurs in such rows is not drawn.
 .IP \(bu
 Nodes appear in first\-seen order.
 .SS "Layout (v1)"
@@ -50,4 +52,4 @@ Companion: \fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR (canvas), \fBtcluti
 Bands and nodes use only rect/polygon primitives, so SVG and PNG stay congruent.
 .SS "Error codes"
 .PP
-\fB\-errorcode {TCLUTILS TUSANKEY <REASON>}\fR \-\- \fBEMPTY\fR (no flows), \fBARG\fR (bad \fB\-scale\fR), \fBFONT\fR (font file not found).
+\fB\-errorcode {TCLUTILS TUSANKEY <REASON>}\fR \-\- \fBEMPTY\fR (no flows), \fBVALUE\fR (a bad row), \fBARG\fR (bad \fB\-scale\fR), \fBFONT\fR (font file not found).

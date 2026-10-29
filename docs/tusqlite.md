@@ -33,8 +33,11 @@ Commands:
   in column names work.
 - `rows db sql ?params?` — run a query, return a list of column→value dicts
   (empty list if there are no rows).
-- `value db sql ?default? ?params?` — the first column of the first row, or
-  `default` (default empty string) if the result is empty.
+- `value db sql ?-default d? ?-params dict?` — the first column of the first
+  row, or the default (`""`) when there is no row. The options keep a
+  parameter dict apart from the default; the positional forms
+  `value db sql default` and `value db sql default params` still work
+  (0.2). Errors `{TCLUTILS TUSQLITE OPTION}`.
 - `update db table set where` — UPDATE the rows matching every key/value of
   `where` with the columns in `set`; returns the number of changed rows.
 - `delete db table where` — DELETE the matching rows; returns their number.

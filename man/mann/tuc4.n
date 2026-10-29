@@ -1,10 +1,10 @@
-.TH tuc4 n 0.1 tclutils
+.TH tuc4 n 0.2 tclutils
 .SH tclutils::tuc4
 .PP
 Parses a Mermaid C4 diagram (\fBC4Context\fR, \fBC4Container\fR, \fBC4Component\fR, \fBC4Dynamic\fR, \fBC4Deployment\fR) into a \fBtclutils::tudiagram\fR model, so a C4 diagram can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
 .SS Package
 .CS
-package require tclutils::tuc4 0.1
+package require tclutils::tuc4 0.2
 .CE
 .SS Commands
 .CS
@@ -25,7 +25,7 @@ title <text>                                   -> diagram title
 UpdateElementStyle / UpdateRelStyle / Update…  -> ignored
 .CE
 .PP
-An element's display label is its \fB"name"\fR (the first quoted argument); the leading id token becomes the node id.
+An element's display label is its \fB"name"\fR (the first quoted argument); the leading id token becomes the node id: letters, digits and \fB_\fR, Unicode letters included (\fBPerson(größe, "Weg")\fR has the id \fBgröße\fR; 0.1 cut it to \fBgr\fR).
 .SS Usage
 .CS
 package require tclutils::tuc4

@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuuniq 0.1
+package require tclutils::tuuniq 0.2
 
 set tmp [file join [temporaryDirectory] tuuniq-[pid].txt]
 set f [open $tmp w]; puts $f "a\na\nb\na"; close $f
@@ -26,7 +26,7 @@ test tuuniq-1.4 {global counts} {
 
 test tuuniq-1.5 {file unique} {
     ::tclutils::tuuniq::file $tmp
-} "a\nb\na"
+} "a\nb\na\n"
 
 test tuuniq-1.6 {count file} {
     dict get [::tclutils::tuuniq::countFile $tmp] a
@@ -38,4 +38,8 @@ test tuuniq-1.7 {unknown option errors} {
 } 1
 
 file delete -force $tmp
+test tuuniq-9.1 {final LF kept exactly when the input has it} {
+    list [::tclutils::tuuniq::text "J\u00f6rg\nJ\u00f6rg\n"] [::tclutils::tuuniq::text "J\u00f6rg\nJ\u00f6rg"]
+} [list "J\u00f6rg\n" "J\u00f6rg"]
+
 cleanupTests

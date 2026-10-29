@@ -5,7 +5,7 @@ namespace import ::tcltest::*
 set root [file normalize [file join [file dirname [info script]] ..]]
 catch {tcl::tm::path add [file join $root lib tm]}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
-package require tclutils::tuarchitecture
+package require tclutils::tuarchitecture 0.3
 package require tclutils::tudiagram
 
 namespace eval M { namespace import ::tclutils::tuarchitecture::* }
@@ -185,5 +185,10 @@ test tuarchitecture-7.1 {service and junction ids like 010 / 1e3 keep their text
     set m [M::parse "architecture-beta\n  service 010(server)\n  junction 1e3"]
     list [dict get [nodeById $m 010] label] [dict get [nodeById $m 1e3] label]
 } -result {010 1e3}
+
+test tuarchitecture-9.1 {ids with umlauts} -body {
+    set a [::tclutils::tuarchitecture::parse "architecture-beta\nservice b\u00fcro(disk)\[Amt\]\nservice amt(disk)\[J\u00f6rg\]\nb\u00fcro:R --> L:amt"]
+    list [lmap n [dict get $a nodes] {dict get $n id}] [lmap e [dict get $a edges] {list [dict get $e from] [dict get $e to]}]
+} -result [list [list b\u00fcro amt] [list [list b\u00fcro amt]]]
 
 cleanupTests

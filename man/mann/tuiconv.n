@@ -1,4 +1,4 @@
-.TH tuiconv n 0.1 tclutils
+.TH tuiconv n 0.2 tclutils
 .SH tclutils::tuiconv
 .PP
 \fBtuiconv\fR provides small encoding conversion helpers in pure Tcl.
@@ -11,10 +11,21 @@ set text [::tclutils::tuiconv::readFile data-cp1252.txt cp1252]
 .SS Commands
 .CS
 ::tclutils::tuiconv::encodings
-::tclutils::tuiconv::convert data fromEncoding toEncoding
-::tclutils::tuiconv::readFile filename encoding
-::tclutils::tuiconv::writeFile filename text encoding
-::tclutils::tuiconv::convertFile infile outfile fromEncoding toEncoding
+::tclutils::tuiconv::convert data fromEncoding toEncoding ?-replace 0|1?
+::tclutils::tuiconv::readFile filename encoding ?-replace 0|1?
+::tclutils::tuiconv::writeFile filename text encoding ?-replace 0|1?
+::tclutils::tuiconv::convertFile infile outfile fromEncoding toEncoding ?-replace 0|1?
 .CE
 .PP
 All file operations use binary channels internally and perform encoding conversion explicitly.
+.PP
+Conversion is strict, the same under Tcl 8.6 and 9 (0.2):
+.TS
+l l.
+Case	Error code
+a character the target encoding cannot hold (\fB€\fR in \fBiso8859\-1\fR)	\fBTCLUTILS TUICONV UNMAPPABLE enc\fR
+bytes that are not valid in the source encoding	\fBTCLUTILS TUICONV INVALID enc\fR
+unknown encoding	\fBTCLUTILS TUICONV ENCODING enc\fR
+.TE
+.PP
+\fB\-replace 1\fR substitutes instead: \fB?\fR when writing, a replacement character when reading. \fBwriteFile\fR converts before it opens the file, so on an error the file keeps its content. Up to 0.1 Tcl 8.6 wrote \fB?\fR without a word and Tcl 9.0 raised a plain Tcl error.

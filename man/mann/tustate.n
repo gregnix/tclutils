@@ -1,10 +1,10 @@
-.TH tustate n 0.1 tclutils
+.TH tustate n 0.2 tclutils
 .SH tclutils::tustate
 .PP
 Parses a Mermaid \fBstateDiagram\fR / \fBstateDiagram\-v2\fR block into a \fBtclutils::tudiagram\fR model, so a state diagram can render natively (SVG or PNG) through the pure\-Tcl engine — no browser. It is one of the graph\-type parsers the \fBtclutils::tuflow\fR facade dispatches to; you normally call \fBtuflow::toPng\fR / \fBtuflow::toSvg\fR rather than this module directly.
 .SS Package
 .CS
-package require tclutils::tustate 0.1
+package require tclutils::tustate 0.2
 .CE
 .SS Commands
 .CS
@@ -36,6 +36,8 @@ set m [::tclutils::tustate::parse $src]
 ::tclutils::tudiagram::writePng $m state.png -scale 3
 .CE
 .SS Notes
+.IP \(bu
+State ids are letters, digits and \fB_\fR, Unicode letters included: \fBBüro : Jörg\fR sets the description of \fBBüro\fR (0.2; was ASCII only, and the line gave an empty graph).
 .IP \(bu
 v1 limitations (honest): composite states \fBstate X { ... }\fR are flattened (inner transitions kept, the boundary box is not drawn); notes are ignored; fork/join render as boxes, not bars; self\-loops are not drawn.
 .IP \(bu

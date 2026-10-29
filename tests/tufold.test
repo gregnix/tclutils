@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tufold 0.2
+package require tclutils::tufold 0.3
 
 set tmp [makeDirectory tufold]
 set f [makeFile "abcdefghi\nword wrap here\n" [file join $tmp input.txt]]
@@ -39,5 +39,9 @@ test tufold-2.2 {word fold: blank at width+1} -body {
 test tufold-2.3 {word fold: line of blanks before a long word} -body {
     ::tclutils::tufold::foldLine "   abcdef" -width 3 -words 1
 } -result {abc def}
+
+test tufold-9.1 {final LF kept exactly when the input has it} -body {
+    list [::tclutils::tufold::text "J\u00f6rg M\u00fcller\n" -width 5 -words 1] [::tclutils::tufold::text "J\u00f6rg M\u00fcller" -width 5 -words 1]
+} -result [list "J\u00f6rg\nM\u00fclle\nr\n" "J\u00f6rg\nM\u00fclle\nr"]
 
 cleanupTests

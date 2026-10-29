@@ -12,7 +12,7 @@ either kind of input have one function to call.
 ## Package
 
 ```tcl
-package require tclutils::tunumany 0.2
+package require tclutils::tunumany 0.3
 ```
 
 Soft-depends on `tclutils::tunum` and `tclutils::tunumfmt` (each loaded on demand;
@@ -41,6 +41,7 @@ route.
 ::tclutils::tunumany::parse "1,234.56"   ;# -> 1234.56   (locale US)
 ::tclutils::tunumany::parse "12 €"       ;# -> 12.0      (currency)
 ::tclutils::tunumany::parse "1.5K"       ;# -> 1500      (SI)
+::tclutils::tunumany::parse "1,5K"       ;# -> 1500      (SI, decimal comma)
 ::tclutils::tunumany::parse "2Mi"        ;# -> 2097152   (IEC)
 ::tclutils::tunumany::parse "2KiB"       ;# -> 2048      (IEC with byte sign)
 ::tclutils::tunumany::parse "x" -default 0   ;# -> 0
@@ -51,8 +52,13 @@ route.
 - This is the deliberate alternative to merging `tunum` and `tunumfmt`: it keeps
   each parser focused while giving one dispatch point.
 - Lower-case unit letters mean the same units: `1.5m` is 1.5 **mega**
-  (1500000), not milli. A decimal comma before the unit (`1,5K`) is not
-  recognised.
+  (1500000), not milli.
+- A decimal comma before the unit counts: `1,5K` is 1500 (0.3). With exactly
+  three digits after the comma (`1,500K`) the comma could also group
+  thousands; that form does not parse and gives the default.
+- The default `""` is also what an unparsable string gives. Pass
+  `-default` with a value that cannot be a number (or check with
+  `string is double`) to tell the two apart.
 - Output is always a Tcl number (or the default); format for display separately.
 
 ## Error codes

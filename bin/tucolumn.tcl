@@ -1,6 +1,6 @@
 #!/usr/bin/env tclsh
 source [file join [file dirname [info script]] _bootstrap.tcl]
-package require tclutils::tucolumn 0.1
+package require tclutils::tucolumn 0.2
 proc usage {} { puts stderr "usage: tucolumn ?table|fill? ?-separator S? ?-output S? ?-right 0|1? ?-width N? ?-gap N? ?file?"; exit 2 }
 set mode table; set opts {}; set files {}
 set args $argv

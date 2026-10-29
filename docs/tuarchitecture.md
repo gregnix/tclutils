@@ -10,7 +10,7 @@ header, parse here, and lay the graph out.
 ## Package
 
 ```tcl
-package require tclutils::tuarchitecture 0.2
+package require tclutils::tuarchitecture 0.3
 ```
 
 ## Commands
@@ -40,6 +40,8 @@ architecture-beta
 ```
 
 - The header is `architecture-beta` (bare `architecture` is also accepted).
+- Ids are letters, digits and `_`, Unicode letters included (`service
+  büro(disk)[Amt]`; 0.3: was ASCII only and the line was dropped).
 - The display label is the `[Label]`, or the id if absent.
 - `<S>` is a side hint `L|R|T|B`; `--` / `-->` / `<--` / `<-->` choose the
   arrowheads (none / end / start / both).

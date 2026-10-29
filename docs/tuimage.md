@@ -16,6 +16,10 @@ tuimage::dataUri image/png $bytes   ;# -> "data:image/png;base64,...."
 tuimage::fromDataUri $uri           ;# -> {mime image/png bytes <raw>}
 ```
 
+`fromDataUri` splits the parameters at `;` outside double quotes: in
+`charset="utf-8;base64"` the `base64` belongs to the value and does not
+switch on decoding (0.2).
+
 Dimensions are read straight from the header (PNG IHDR, GIF screen descriptor,
 BMP info header, JPEG SOFn scan, WEBP VP8/VP8L/VP8X). `$bytes` must be raw binary
 (e.g. a file read from a binary channel, or `tubase64::decode` of an embedded

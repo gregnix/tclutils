@@ -6,7 +6,7 @@ field. It is inspired by Unix `join`, but intentionally small.
 ## Load
 
 ```tcl
-package require tclutils::tujoin 0.1.2
+package require tclutils::tujoin 0.2
 ```
 
 ## Examples
@@ -73,3 +73,9 @@ Documented for completeness (same module, also covered by the test suite):
 tujoin::files leftPath rightPath args          ;# relational join of two files on a key field (file variant of lines)
 tujoin::lines leftLines rightLines args        ;# relational join of two line lists on a key field; all options above
 ```
+
+## Line ends
+
+`texts` and `files` end the result with LF when one of the inputs ends with
+LF, and without LF otherwise. Versions before 0.2 never wrote the final LF.
+`lines` returns the lines without a final LF.

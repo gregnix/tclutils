@@ -1,9 +1,11 @@
-.TH tudav n 0.2 tclutils
+.TH tudav n 0.3 tclutils
 .SH tclutils::tudav
 .PP
 A minimal WebDAV / CardDAV / CalDAV client. Create a client bound to a base URL and credentials, then run PROPFIND / REPORT / GET / PUT / DELETE. Multistatus responses are parsed into resource dicts (href, status, code, etag, contenttype, collection, displayname, and \fBdata\fR for inline calendar/address data).
 .PP
-Built on the Tcl core \fBhttp\fR package; \fBhttps uses the \fR\fBtls\fR\fB package\fR, loaded lazily on first https request. Basic auth uses \fBtclutils::tubase64\fR; entity text is decoded with \fBtclutils::tuxml\fR. The client does not parse resource bodies — feed a fetched vCard to \fBtclutils::tuvcard\fR or an iCalendar to \fBtclutils::tuical\fR.
+Built on the Tcl core \fBhttp\fR package; \fBhttps uses the \fR\fBtls\fR\fB package\fR, loaded lazily on first https request. Basic auth sends \fBuser:pass\fR as UTF\-8 (RFC 7617, 0.3) via \fBtclutils::tubase64\fR; entity text is decoded with \fBtclutils::tuxml\fR. The client does not parse resource bodies — feed a fetched vCard to \fBtclutils::tuvcard\fR or an iCalendar to \fBtclutils::tuical\fR.
+.PP
+A relative \fBhref\fR is resolved against the base URL; \fB.\fR and \fB..\fR segments are removed (\fB../a.ics\fR from \fBhttps://h/k/\fR is \fBhttps://h/a.ics\fR, 0.3).
 .SS API
 .CS
 set c [::tclutils::tudav::client https://dav.example.com/addressbooks/me/contacts/ \
@@ -28,7 +30,9 @@ Commands:
 .IP \(bu
 \fBget c path\fR → body (errors on non\-2xx).
 .IP \(bu
-\fBput c path data ?\-type ct? ?\-etag e?\fR \-> returns the new ETag (if the server reports one); \fBdelete c path ?\-etag e?\fR.
+\fBput c path data ?\-type ct? ?\-etag e?\fR \-> returns the new ETag (if the server reports one); \fBdelete c path ?\-etag e?\fR. A strong ETag is stored without its quotes (\fBabc\fR), a weak one as sent (\fBW/"abc"\fR); \fB\-etag\fR goes out in \fBIf\-Match\fR with the quotes RFC 7232 asks for (0.3; \fBabc\fR was sent bare and a weak tag lost its closing quote).
+.IP \(bu
+A response with several \fBpropstat\fR blocks takes status, code and properties from the first 2xx block (0.3: a leading 404 block gave the found properties the code 404). \fBcalendarQuery\fR refuses a day that does not exist (\fB2026\-02\-29\fR) with \fB{TCLUTILS TUDAV DATE}\fR on Tcl 8.6 too.
 .IP \(bu
 \fBlastStatus c\fR → last HTTP status line ; \fBdestroy c\fR.
 .IP \(bu

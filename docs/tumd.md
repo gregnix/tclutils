@@ -9,7 +9,7 @@ extraction, table-of-contents generation, and YAML front matter splitting.
 ## Package
 
 ```tcl
-package require tclutils::tumd 0.1
+package require tclutils::tumd 0.2
 ```
 
 ## API
@@ -51,6 +51,15 @@ Inline constructs:
 - links and images
 - autolinks
 - hard line breaks with two trailing spaces
+
+## Heading anchors
+
+`toHtml` gives each heading an `id`, `toc` links to it. The anchor is made
+as on GitHub: lower case, `*` and backticks removed, everything but letters,
+digits, `_`, `-` and blanks removed, blanks become `-`. Letters of every
+script stay (`Jörg` -> `jörg`, `Über` -> `über`). A repeated anchor gets
+`-1`, `-2`, ... (0.2; 0.1 kept only `a-z` and `0-9`, so `Jörg` and `Jrg` both
+became `jrg`).
 
 ## Limits
 

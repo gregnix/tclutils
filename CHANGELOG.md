@@ -5,11 +5,32 @@
 Recommended pairing: tclutils 0.69.0 + tkutils 0.49.0 + ctrlutils 0.4.
 
 Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
-`tudiff` 0.2, `tubookmark` 0.3, `tuical` 0.2, `tuvcard` 0.2; new
-`tusysinfo`, `tuedid` 0.1. When copying over an older tree, delete
+`tudiff` 0.2, `tubookmark` 0.3, `tuical` 0.2, `tuvcard` 0.2, `tuini` 0.2,
+`tupatch` 0.3, `tusplit` 0.3, `tutee` 0.3, `tuldif` 0.3, `tumd` 0.2,
+`tuiconv` 0.2, `tucat` 0.2, `tucsplit` 0.2, `tuhead` 0.2, `tutail` 0.2,
+`tugrep` 0.2, `tustr` 0.3, `tuer` 0.4, `tugantt` 0.3, `tuxychart` 0.2,
+`tusankey` 0.2, `tudate` 0.3, `tunumany` 0.3, `tubase64` 0.2, `tucrc` 0.2,
+`tudav` 0.3, `tuflow` 0.4, `tuc4` 0.2, `tugit` 0.3, `turadar` 0.3,
+`tusort`, `tuuniq`, `tucut`, `tujoin`, `tucolumn`, `tufmt` 0.2,
+`tupaste`, `tushuf`, `tufold` 0.3, `tutestrun` 0.2, `tuarchitecture` 0.3,
+`tustate`, `tublock` 0.2, `tunotes`, `tumindmap` 0.2, `common` 0.3,
+`tused`, `tusettings`, `tuimage` 0.2, `tuprovider`, `tutreemap`, `tuclass` 0.3; new
+`tusysinfo`, `tuedid`, `tulint` 0.1. When copying over an older tree, delete
 `tclutils-0.68.0.tm`, `tucsv-0.1.tm`, `tusqlite-0.1.tm`, `tuholiday-0.1.tm`,
 `tuzip-0.1.tm`, `tudiff-0.1.tm`, `tubookmark-0.2.tm`, `tuical-0.1.tm`,
-`tuvcard-0.1.tm`.
+`tuvcard-0.1.tm`, `tuini-0.1.tm`, `tupatch-0.2.tm`, `tusplit-0.2.tm`,
+`tutee-0.2.tm`, `tuldif-0.2.tm`, `tumd-0.1.tm`, `tuiconv-0.1.tm`,
+`tucat-0.1.tm`, `tucsplit-0.1.tm`, `tuhead-0.1.tm`, `tutail-0.1.tm`,
+`tugrep-0.1.3.tm`, `tustr-0.2.tm`, `tuer-0.3.tm`, `tugantt-0.2.tm`,
+`tuxychart-0.1.tm`, `tusankey-0.1.tm`, `tudate-0.2.tm`, `tunumany-0.2.tm`,
+`tubase64-0.1.tm`, `tucrc-0.1.tm`, `tudav-0.2.tm`, `tuflow-0.3.tm`,
+`tuc4-0.1.tm`, `tugit-0.2.tm`, `turadar-0.2.tm`, `tusort-0.1.tm`,
+`tuuniq-0.1.tm`, `tucut-0.1.tm`, `tupaste-0.2.tm`, `tujoin-0.1.2.tm`,
+`tushuf-0.2.tm`, `tucolumn-0.1.tm`, `tufold-0.2.tm`, `tufmt-0.1.tm`,
+`tutestrun-0.1.tm`, `tuarchitecture-0.2.tm`, `tustate-0.1.tm`,
+`tublock-0.1.tm`, `tunotes-0.1.tm`, `tumindmap-0.1.tm`, `common-0.2.tm`, `tused-0.1.3.tm`,
+`tusettings-0.1.tm`, `tuimage-0.1.tm`, `tuprovider-0.2.tm`, `tutreemap-0.2.tm`,
+`tuclass-0.2.tm`.
 
 - `tucsv`: `-profile excel-de|rfc4180` for `text`, `file`, `writeFile`;
   `text -bom 1`; `file` and `writeFile` take `-encoding` (default utf-8);
@@ -39,12 +60,119 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
   back. Tests `roundtrip-html-*`.
 - `tuical`, `tuvcard`: `toIcs` and `toVcf` end the last line with CRLF too
   (RFC 5545/6350; was missing). Tests `roundtrip-ics-crlf`.
+- `tuini`: `setValue`, `addSection` and `toIni` refuse a line break in a
+  value, `=`/line break/leading `;#[`/outer blanks in a key, `]`/line
+  break/outer blanks in a section name (`{TCLUTILS TUINI VALUE}`); `toIni`
+  wrote such text and `parse` failed on it. Doc: last of two equal keys
+  wins, outer blanks dropped. Tests `tuini-3.1`–`3.7`.
+- `tupatch`: the final LF is kept; `\ No newline at end of file` handled as
+  in `diff -u`; `parse` reports `oldNoNl`/`newNoNl`. Tests `tupatch-6.1`–`6.7`.
+- `tusplit`: line parts keep their line ends, parts joined give the input;
+  `file -lines` splits the bytes (CRLF, encoding stay); `splitLines
+  -encoding` (default utf-8). Tests `tusplit-3.1`–`3.4`.
+- `tutee`: `writeFile` copies bytes (CR and encoding were lost), returns the
+  byte count. Doc: `write` appends LF unlike `tee`. Tests `tutee-3.1`, `3.2`.
+- `tumd`: anchors as on GitHub (letters of all scripts, `_`, `-1`/`-2` for
+  repeats); `Jörg` and `Jrg` both gave `jrg`. Tests `tumd-4.1`–`4.4`.
+- `tuiconv`: strict on 8.6 and 9: `{TCLUTILS TUICONV UNMAPPABLE}`,
+  `{TCLUTILS TUICONV INVALID}`; `-replace 1` substitutes (8.6 wrote `?`
+  silently). Tests `tuiconv-3.1`–`3.5`.
+- `tucat`: no number after the final LF; `files` numbers through as
+  `cat -n`; unknown options are an error. Tests `tucat-2.1`–`2.5`.
+- `tuldif`: binary attributes (`jpegPhoto`, `userCertificate`, `;binary`,
+  `-binary`) keep their bytes; `toLdif` wrote them UTF-8 encoded. Tests
+  `tuldif-4.1`–`4.6`.
+- `tucsplit`: parts keep their line ends (were joined without LF);
+  `-encoding`, `file` keeps CRLF. Tests `tucsplit-2.1`–`2.3`.
+- `tuhead`, `tutail`: line ends kept as `head`/`tail`; `text` and `file`
+  agree (`tail -n 1` of `a\nb\n` was empty); `{TCLUTILS TUHEAD|TUTAIL
+  COUNT}`; `file -encoding`. Tests `tuhead-2.1`–`2.3`, `tutail-2.1`, `2.2`.
+- `tugrep`: no empty line after the final LF; `file` keeps trailing empty
+  lines. Tests `tugrep-9.1`, `9.2`.
+- `tustr`: `toCamel`/`toSnake` with letters of all scripts (`jRgMLler`);
+  `slugify` spells Latin letters in ASCII (`Jörg` -> `joerg`, was `j-rg`).
+  Tests `tustr-9.1`–`9.3`.
+- `tuer`: Unicode entity names; unknown lines raise `SYNTAX` (a block
+  `Büro {` became an edge `string`–`PK`). Tests `tuer-9.1`–`9.3`.
+- `tugantt`: unknown duration unit raises `DURATION` (was length 0); ids
+  with umlauts; unit `ms`. Tests `tugantt-9.1`–`9.3`.
+- `tuxychart`: series length must match the x-axis labels (`COUNT`).
+  Tests `tuxychart-9.1`, `9.2`.
+- `tusankey`: bad rows raise `VALUE` (were skipped); rows with 0 still
+  skipped. Test `tusankey-1.8`.
+- Doc: `tujson` and `tuurl parseQuery` keep the last of two equal keys;
+  `tuldif` drops comments.
 - New `tests/roundtrip.test` with files in `tests/data/roundtrip`
   (calendar, contacts, bookmarks): read, write, read again, compare.
 - `tudiff`: `-eol ignore|strict` (default ignore; `text` now also ignores
   CR in strings, as `files` did) and `-encoding` for the file commands;
   strict shows a missing final newline as GNU diff. Tests `tudiff-3.1`–`3.4`.
 - `tools/check-modules.md`: example output without a personal path.
+- `tudate`: a day or month that does not exist (`2026-02-29`,
+  `31.04.2026`, `Feb 30 2026`) is `PARSE` on 8.6 too (rolled over to the
+  next month); `m/d/Y` after `d/m/Y`; more formats (no seconds,
+  `YYYYMMDD`, time only, English month names). Tests `tudate-7.1`–`7.5`.
+- `tunumany`: decimal comma before the unit (`1,5K` = 1500); `1,500K`
+  does not parse. Tests `tunumany-4.1`, `4.2`.
+- `tubase64`, `tucrc`: `-encoding binary|utf-8` (default binary); a
+  character above 255 is `BYTES` on 8.6 too (low byte kept).
+  `tubase64::decode -encoding utf-8`. Tests `tubase64-2.*`, `tucrc-2.*`.
+- `tudav`: Basic authentication as UTF-8 (RFC 7617). Test `tudav-1.2`.
+- `tuflow`, `tuc4`: ids with Unicode letters (`Büro[Amt]` was dropped,
+  `größe` became `gr`). Tests `tuflow-9.1`, `tuc4-9.1`.
+- `tugit`: a commit id used twice is `DUPID` (self edge before);
+  generated ids skip used ones. Tests `tugit-9.1`–`9.3`.
+- `turadar`: one value per axis, else `COUNT` or `AXIS` (missing values
+  were 0, extra or misspelled keys dropped). Tests `turadar-1.9`, `2.6`–`2.8`.
+- `tusort`, `tuuniq`, `tucut`, `tupaste`, `tujoin`, `tushuf`, `tucolumn`,
+  `tufold`, `tufmt`: text output ends with LF exactly when the input does
+  (was always dropped). `bin/tusort.tcl`, `bin/tuuniq.tcl` print the
+  result as is (`tuuniq` split lines as a list). Tests `*-9.1`.
+- Doc: `tunumfmt` and `tusize` name the base of `K` and `KiB`.
+- `man/man1`: `.TH` 0.69.0.
+- `tutestrun` 0.2: starts each test file with `-encoding utf-8`; under
+  Tcl 8.6 with cp1252 (Windows) 19 tests failed on mojibake in expected
+  values. Test `tutestrun-1.9`.
+- `tests/tusysinfo.test`: the fake registry does not provide a second
+  `registry` version where the real package is loaded (Windows); cleanup
+  undoes only what the setup did.
+- `tusysinfo`: a monitor without status is not connected; no or an
+  unreadable PowerShell answer gives `warnings` (and a report section)
+  instead of empty memory, disks and monitors. Test `tusysinfo-9.1`.
+- `tuical`, `tuvcard`: folding at 75 octets, not characters; `BEGIN`/`END`
+  in any case; `;` and `:` in quoted parameter values; `setProperty`,
+  `addProperty` refuse a line break (`VALUE`). `tuvcard`: a group prefix
+  (`item1.FN`) counts for the name. Tests `tuical-9.*`, `tuvcard-9.*`.
+- `tuflow`: `;` inside a label, an edge label or quotes does not split the
+  statement. Test `tuflow-9.2`.
+- `tudav`: status and properties from the 2xx `propstat`; weak ETags kept,
+  `If-Match` quoted; `_caldavTime` refuses a day that does not exist on
+  8.6; `.` and `..` in an href are resolved. Tests `tudav-10.*`.
+- `tuarchitecture`, `tustate`, `tublock`: ids with Unicode letters. Tests
+  `*-9.1`.
+- `tusqlite::value`: options `-default` and `-params` (positional forms
+  still work). Tests `tusqlite-5.11`, `5.12`.
+- `tunotes`: `save` writes UTF-8 (was the system encoding); `load` reads
+  UTF-8 and falls back to the system encoding for older files. Tests
+  `tunotes-9.1`, `9.2`.
+- `tumindmap`: an id with Unicode letters before a shape is dropped (was
+  kept as text). Test `tumindmap-9.1`.
+- New `tulint`: static checks for Tcl sources, findings as data; rules
+  `ENC-1`, `ENC-2`, `ENC-3`, `TST-3`; own rules with `register`. CLI
+  `bin/tulint.tcl` (exit 1 on an error finding). Not in the umbrella.
+  Tests `tulint-*`.
+- `common` 0.3: `replaceFile` writes through a temporary file; a failed
+  write leaves the old file, no temp file and no open channel. Test
+  `common-9.1`, `9.2`.
+- Written with `replaceFile` (old file kept on a failed write; was empty
+  with an open channel): `tused::processFile`, `tuprovider` local `put`,
+  `writeSvg`/`writePng` of `tugantt`, `turadar`, `tusankey`, `tuxychart`,
+  `tutreemap`; `tusettings` removes its temp file. Tests `*-9.1`,
+  `tugantt-10.1`, `tuxychart-10.1`.
+- `tutreemap`: a `:::class` name with umlauts is removed whole (was cut
+  after the first letter). `tuclass`: `;` inside quotes stays in the
+  member. `tuimage::fromDataUri`: `;base64` inside a quoted parameter is
+  not the base64 flag. Tests `tutreemap-9.2`, `tuclass-9.1`, `tuimage-9.1`.
 
 ## 0.68.0 - 2026-10-24
 

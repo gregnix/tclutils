@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tufmt 0.1
+package require tclutils::tufmt 0.2
 
 test tufmt-1.1 {greedy wrap to width} -body {
     ::tclutils::tufmt::reflow "the quick brown fox jumps" -width 10
@@ -31,5 +31,9 @@ test tufmt-4.2 {width must be positive} -body {
     catch {::tclutils::tufmt::reflow "x" -width 0} e o
     dict get $o -errorcode
 } -result {TCLUTILS COMMON INTEGER -width}
+
+test tufmt-9.1 {final LF kept exactly when the input has it} -body {
+    list [::tclutils::tufmt::reflow "J\u00f6rg\nM\u00fcller\n"] [::tclutils::tufmt::reflow "J\u00f6rg\nM\u00fcller"]
+} -result [list "J\u00f6rg M\u00fcller\n" "J\u00f6rg M\u00fcller"]
 
 cleanupTests

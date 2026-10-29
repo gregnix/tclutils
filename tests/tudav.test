@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tudav 0.2
+package require tclutils::tudav 0.3
 
 # ---- pure helpers ----
 test tudav-1.1 {basic auth header} -body {
@@ -334,5 +334,38 @@ test tudav-9.5 {client -insecure must be boolean} -body {
 } -result {TCLUTILS COMMON BOOLEAN}
 
 if {[info exists srvPipe]} { catch {close $srvPipe} }
+
+test tudav-1.2 {basic auth is UTF-8} -body {
+    ::tclutils::tudav::_basicAuth "J\u00f6rg" "\u20ac"
+} -result {Basic SsO2cmc64oKs}
+
+test tudav-10.1 {status and properties from the 2xx propstat} -body {
+    set x [string map [list @ \u00f6] {<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"><d:response><d:href>/B%C3%BCro/a.ics</d:href>
+      <d:propstat><d:prop><d:getcontenttype/></d:prop><d:status>HTTP/1.1 404 Not Found</d:status></d:propstat>
+      <d:propstat><d:prop><d:displayname>J@rg</d:displayname><d:getetag>W/"abc"</d:getetag></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+    </d:response></d:multistatus>}]
+    set r [lindex [::tclutils::tudav::_parseMultistatus $x] 0]
+    list [dict get $r displayname] [dict get $r code] [dict get $r etag]
+} -result [list "J\u00f6rg" 200 {W/"abc"}]
+test tudav-10.2 {If-Match gets the quotes back} -body {
+    list [::tclutils::tudav::_etagHeader abc] [::tclutils::tudav::_etagHeader {"abc"}] \
+         [::tclutils::tudav::_etagHeader {W/"abc"}] [::tclutils::tudav::_etagValue {"abc"}]
+} -result [list {"abc"} {"abc"} {W/"abc"} abc]
+test tudav-10.3 {a day that does not exist is DATE on 8.6 too} -body {
+    set r {}
+    foreach d {2026-02-29 20260229 2024-02-29 2026-1-5} {
+        if {[catch {::tclutils::tudav::_caldavTime $d} v o]} { set v [lindex [dict get $o -errorcode] end] }
+        lappend r $v
+    }
+    set r
+} -result {DATE DATE 20240229T000000Z 20260105T000000Z}
+
+test tudav-10.4 {resolve removes "." and ".." segments (0.3)} -body {
+    list [::tclutils::tudav::_resolve https://example/kalender/ ../J\u00f6rg.ics] \
+         [::tclutils::tudav::_resolve https://example/a/b/ ./c/../d.ics] \
+         [::tclutils::tudav::_resolve https://example/a/ /x/../y/] \
+         [::tclutils::tudav::_resolve https://example/ ../../z.ics] \
+         [::tclutils::tudav::_resolve https://example/a/coll x.vcf]
+} -result [list https://example/J\u00f6rg.ics https://example/a/b/d.ics https://example/y/ https://example/z.ics https://example/a/x.vcf]
 
 cleanupTests

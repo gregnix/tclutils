@@ -7,7 +7,7 @@ set tmDir [file join $root lib tm]
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
 catch {tcl::tm::path remove $tmDir}
 tcl::tm::path add $tmDir
-package require tclutils::tuflow
+package require tclutils::tuflow 0.4
 
 namespace eval M { namespace import ::tclutils::tuflow::* }
 
@@ -106,7 +106,7 @@ test tuflow-5.2 {hyphen in node id is BADID, not a silent truncate} -body {
         Nwifi-3["SSID"]}} e o
     list [lindex [dict get $o -errorcode] end] \
         [string match {*Nwifi-3*} $e] \
-        [string match {*A-Za-z0-9_*} $e]
+        [string match {*letters, digits and _*} $e]
 } -result {BADID 1 1}
 
 test tuflow-5.3 {underscore in node id is legal} -body {
@@ -248,5 +248,17 @@ test tuflow-fix-3.3 {A & B alone declares both nodes, no edge} -body {
     set m [M::parse "flowchart LR\nA\[a\] & B\n"]
     list [lmap n [dict get $m nodes] {dict get $n id}] [llength [dict get $m edges]]
 } -result {{A B} 0}
+
+test tuflow-9.1 {Unicode node ids: Büro[Amt] is a node} -body {
+    set m [M::parse "flowchart LR\n    A\[Jörg\] -->|hält| B\[Büro\]\n    Büro\[Amt\]\n    Büro --> Jörg_2"]
+    list [ids $m] [nodeOf $m Büro label] [epairs $m]
+} -result {{A B Büro Jörg_2} Amt {{A B} {Büro Jörg_2}}}
+
+test tuflow-9.2 {";" inside a label or an edge label does not split the statement} -body {
+    set m1 [M::parse "flowchart LR\n    A\[J\u00f6rg;B\u00fcro\] --> B\[Amt\]"]
+    set m2 [M::parse "flowchart LR\n    A -->|h\u00e4lt;fest| B"]
+    set m3 [M::parse "flowchart LR; A-->B; B-->C"]
+    list [nodeOf $m1 A label] [epairs $m1] [edgeKey $m2 A B label] [epairs $m3]
+} -result [list "J\u00f6rg;B\u00fcro" {{A B}} "h\u00e4lt;fest" {{A B} {B C}}]
 
 cleanupTests

@@ -1,0 +1,62 @@
+.TH tulint n 0.1 tclutils
+.SH tclutils::tulint
+.PP
+Static checks for Tcl sources. The module returns findings as data and prints nothing; \fBbin/tulint.tcl\fR is the command line. Pure Tcl, no Tk, Tcl 8.6+ / 9.x.
+.PP
+The rule names are the identifiers of the book \fITcl/Tk Quality\fR (\fBENC\-1\fR, \fBTST\-3\fR ...): each finding names the entry that explains the error class, the test that finds it and the fix.
+.SS API
+.CS
+::tclutils::tulint::check paths ?-rules names|all? ?-exclude patterns?
+;# -> list of findings, each {file F line N rule R severity S message M}
+::tclutils::tulint::checkFile path ?-rules names|all?
+::tclutils::tulint::checkText text ?-file name? ?-rules names|all?
+::tclutils::tulint::rules        ;# -> list of {name severity description}
+::tclutils::tulint::register name severity description cmd
+::tclutils::tulint::unregister name
+::tclutils::tulint::summary findings          ;# -> {error N warning N info N}
+::tclutils::tulint::format findings ?-format text|json?
+.CE
+.PP
+\fBcheck\fR walks directories and takes \fB*.tcl\fR, \fB*.tm\fR and \fB*.test\fR; \fB.git\fR, \fBnogit\fR and every path matching a glob of \fB\-exclude\fR are skipped. Files are read as UTF\-8; a file that is not valid UTF\-8 is the finding \fBFILE\fR (error), and its rules are not run. \fBcheckText\fR decides by the \fB\-file\fR name which rules apply (a \fB*.test\fR file, a \fBpkgIndex.tcl\fR ...).
+.PP
+Unknown options, a missing value and an unknown rule name are errors (\fB{TCLUTILS TULINT OPTION}\fR, \fBRULE\fR); a typo is never ignored. \fBformat \-format json\fR escapes through \fBtclutils::tujson\fR.
+.SS Rules
+.TS
+l l l.
+Rule	Severity	Finds
+\fBENC\-1\fR	warning	non\-ASCII characters in a \fB*.test\fR file (outside comments): under Tcl 8.6 safe only when the runner starts it with \fB\-encoding utf\-8\fR, as \fBtutestrun\fR 0.2 does
+\fBENC\-2\fR	error	\fBpkgIndex.tcl\fR sources a file without \fB\-encoding\fR
+\fBENC\-3\fR	warning	non\-ASCII characters outside comments in a \fB*.tcl\fR script, \fBtests/all.tcl\fR and helper scripts included (\fB*.tm\fR modules are read as UTF\-8 by \fBtcl::tm\fR)
+\fBTST\-3\fR	error	the same test name twice in a file; definitions in two branches of one \fBif\fR or \fBswitch\fR are alternatives and do not count
+.TE
+.PP
+\fBTST\-3\fR reads complete commands (\fBinfo complete\fR), not lines, and descends into braced bodies (\fBnamespace eval\fR, \fBif\fR, \fBforeach\fR ...); braces inside strings do not confuse it.
+.SS "Own rules"
+.PP
+A rule is a command called as \fB{*}cmd file text\fR; it returns a list of \fB{line message}\fR pairs. Other packages register project conventions this way:
+.CS
+proc ::myproj::noSqlite3 {file text} {
+    set out {}; set n 0
+    foreach l [split $text \n] {
+        incr n
+        if {[regexp {package\s+require\s+sqlite3\M} $l]} {
+            lappend out [list $n "use tdbc::sqlite3"]
+        }
+    }
+    return $out
+}
+::tclutils::tulint::register MY-1 warning "sqlite3 instead of tdbc" ::myproj::noSqlite3
+.CE
+.SS "Suppressing a finding"
+.PP
+\fB# tulint: ignore RULE ?RULE ...?\fR on a line of its own applies to the next line; \fB;# tulint: ignore RULE\fR at the end of a line applies to that line. Only the named rules are suppressed.
+.SS "Command line"
+.CS
+tclsh bin/tulint.tcl ?--rules {ENC-2 TST-3}? ?--exclude pattern? \
+    ?--severity error|warning|info? ?--json? ?--list? path ?path ...?
+.CE
+.PP
+Exit code 0 without an error finding, 1 with at least one, 2 for a wrong call. \fB\-\-severity\fR only filters what is printed; the exit code always counts every error.
+.SS Errors
+.PP
+\fB{TCLUTILS TULINT OPTION}\fR, \fB{TCLUTILS TULINT RULE}\fR, \fB{TCLUTILS TULINT SEVERITY}\fR. A file that cannot be opened raises the error of \fBopen\fR.

@@ -93,4 +93,9 @@ test tumindmap-4.4 {header is case-insensitive and skipped} -body {
     nnodes [M::parse "MindMap\n  root"]
 } -result 1
 
+test tumindmap-9.1 {an id with umlauts before a shape is dropped (0.2)} -body {
+    set m [M::parse "mindmap\n  root\n    B\u00fcro\[Text\]\n    Gr\u00f6\u00dfe((Kreis))"]
+    list [labels $m] [shapes $m]
+} -result [list {root Text Kreis} {rounded box circle}]
+
 cleanupTests

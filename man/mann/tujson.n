@@ -15,7 +15,7 @@ package require tclutils::tujson
 ::tclutils::tujson::fromJson json
 .CE
 .PP
-\fBparse\fR maps JSON objects to Tcl dictionaries and JSON arrays to Tcl lists. Strings are returned as Tcl strings, numbers as their original numeric text, \fBtrue\fR as \fB1\fR, \fBfalse\fR as \fB0\fR, and \fBnull\fR as the empty string.
+\fBparse\fR maps JSON objects to Tcl dictionaries and JSON arrays to Tcl lists. Strings are returned as Tcl strings, numbers as their original numeric text, \fBtrue\fR as \fB1\fR, \fBfalse\fR as \fB0\fR, and \fBnull\fR as the empty string. When an object holds a key twice, the last value wins, as in JavaScript (RFC 8259 says names should be unique).
 .SS Example
 .CS
 set d [::tclutils::tujson::parse {{"name":"Gregor","items":[1,2]}}]

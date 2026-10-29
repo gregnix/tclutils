@@ -2,7 +2,7 @@ package require tcltest
 namespace import ::tcltest::*
 set root [file dirname [file dirname [file normalize [info script]]]]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tushuf 0.2
+package require tclutils::tushuf 0.3
 
 set input {a b c d e f g h i j}
 
@@ -37,5 +37,9 @@ test tushuf-2.3 {same order as the low 31 bits of the seed} {
     expr {[::tclutils::tushuf::lines {a b c d e f g} -seed 5000000000] eq
           [::tclutils::tushuf::lines {a b c d e f g} -seed 705032704]}
 } 1
+
+test tushuf-9.1 {final LF kept exactly when the input has it} {
+    list [::tclutils::tushuf::text "J\u00f6rg\n" -seed 1] [::tclutils::tushuf::text "J\u00f6rg" -seed 1]
+} [list "J\u00f6rg\n" "J\u00f6rg"]
 
 cleanupTests

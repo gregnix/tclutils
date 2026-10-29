@@ -104,4 +104,31 @@ test tuxychart-4.3 {integer -scale multiplies the raster dimensions} -body {
     list $w1 $h1 $w3 $h3
 } -result {200 200 600 600}
 
+# --- 0.2 -------------------------------------------------------------------------
+test tuxychart-9.1 {three labels, two values: COUNT} -body {
+    list [catch {M::parse "xychart-beta\n x-axis \[Jörg, Büro, Amt\]\n bar \[10, 1.50\]"} msg] $::errorCode $msg
+} -result {1 {TCLUTILS TUXYCHART COUNT} {bar series has 2 values for 3 x-axis labels}}
+test tuxychart-9.2 {without labels any length is fine} -body {
+    llength [dict get [M::parse "xychart-beta\n bar \[1, 2\]\n line \[1, 2, 3\]"] series]
+} -result 2
+
+test tuxychart-10.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tuxychart-10.1.svg]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tuxychart::writeSvg [M::parse "xychart-beta\n  x-axis \[a,b\]\n  bar \[1,2\]"] $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tuxychart-10.1.svg
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

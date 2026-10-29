@@ -1,10 +1,10 @@
-.TH tuarchitecture n 0.2 tclutils
+.TH tuarchitecture n 0.3 tclutils
 .SH tclutils::tuarchitecture
 .PP
 Parses a Mermaid \fBarchitecture\-beta\fR block into a \fBtclutils::tudiagram\fR model so an architecture diagram renders natively (SVG or PNG) through the pure\-Tcl engine everywhere \-\- no browser. Like \fBtuc4\fR, this is a \fBgraph parser\fR: it only builds a model; layout and rendering are done by \fBtudiagram\fR. Normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which detect the \fBarchitecture\-beta\fR header, parse here, and lay the graph out.
 .SS Package
 .CS
-package require tclutils::tuarchitecture 0.2
+package require tclutils::tuarchitecture 0.3
 .CE
 .SS Commands
 .CS
@@ -29,6 +29,8 @@ architecture-beta
 .CE
 .IP \(bu
 The header is \fBarchitecture\-beta\fR (bare \fBarchitecture\fR is also accepted).
+.IP \(bu
+Ids are letters, digits and \fB_\fR, Unicode letters included (\fBservice büro(disk)[Amt]\fR; 0.3: was ASCII only and the line was dropped).
 .IP \(bu
 The display label is the \fB[Label]\fR, or the id if absent.
 .IP \(bu

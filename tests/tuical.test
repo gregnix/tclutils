@@ -113,4 +113,33 @@ test tuical-todos-7 {newComponent rejects odd props} -body {
     dict get $o -errorcode
 } -result {TCLUTILS TUICAL ARG}
 
+test tuical-9.1 {BEGIN and END in lower case} -body {
+    set c [::tclutils::tuical::parse "begin:VCALENDAR\r\nbegin:VEVENT\r\nSUMMARY:Jörg\r\nend:VEVENT\r\nend:VCALENDAR\r\n"]
+    dict get [::tclutils::tuical::eventInfo [lindex [::tclutils::tuical::events $c] 0]] summary
+} -result "Jörg"
+test tuical-9.2 {";" and ":" in a quoted parameter value} -body {
+    set c [::tclutils::tuical::parse "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nX;P=\"a;b\";ALTREP=\"http://x/y\":Jörg\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"]
+    set p [lindex [dict get [lindex [::tclutils::tuical::events $c] 0] props] 0]
+    set out [::tclutils::tuical::toIcs $c]
+    list [dict get $p value] [dict get $p params] \
+        [string match "*X;P=\"a;b\";ALTREP=\"http://x/y\":Jörg\r\n*" $out]
+} -result [list "Jörg" [list P {a;b} ALTREP http://x/y] 1]
+test tuical-9.3 {folding counts octets and keeps characters whole} -body {
+    set s [string repeat ö 68]
+    set c [::tclutils::tuical::newComponent VEVENT]
+    set c [::tclutils::tuical::setProperty $c SUMMARY $s]
+    set out [::tclutils::tuical::toIcs $c]
+    set max 0
+    foreach l [split [string map {"\r\n" "\n"} $out] \n] {
+        set b [string length [encoding convertto utf-8 $l]]
+        if {$b > $max} { set max $b }
+    }
+    set back [::tclutils::tuical::parse $out]
+    list [expr {$max <= 75}] [::tclutils::tuical::property [lindex $back 0] SUMMARY]
+} -result [list 1 [string repeat ö 68]]
+test tuical-9.4 {a line break in a raw value is refused} -body {
+    catch {::tclutils::tuical::setProperty [::tclutils::tuical::newComponent VEVENT] SUMMARY "a\nb"} m o
+    dict get $o -errorcode
+} -result {TCLUTILS TUICAL VALUE}
+
 cleanupTests

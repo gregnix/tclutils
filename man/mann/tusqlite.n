@@ -23,7 +23,7 @@ Commands:
 .IP \(bu
 \fBrows db sql ?params?\fR — run a query, return a list of column→value dicts (empty list if there are no rows).
 .IP \(bu
-\fBvalue db sql ?default? ?params?\fR — the first column of the first row, or \fBdefault\fR (default empty string) if the result is empty.
+\fBvalue db sql ?\-default d? ?\-params dict?\fR — the first column of the first row, or the default (\fB""\fR) when there is no row. The options keep a parameter dict apart from the default; the positional forms \fBvalue db sql default\fR and \fBvalue db sql default params\fR still work (0.2). Errors \fB{TCLUTILS TUSQLITE OPTION}\fR.
 .IP \(bu
 \fBupdate db table set where\fR — UPDATE the rows matching every key/value of \fBwhere\fR with the columns in \fBset\fR; returns the number of changed rows.
 .IP \(bu

@@ -3,13 +3,25 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tutail 0.1
+package require tclutils::tutail 0.2
 
 set tmp [file join [temporaryDirectory] tutail-[pid].txt]
 set f [open $tmp w]; puts $f "1\n2\n3\n4"; close $f
 
 test tutail-1.1 {text last lines} {::tclutils::tutail::text "1\n2\n3" 2} "2\n3"
-test tutail-1.2 {file last lines} {::tclutils::tutail::file $tmp 2} "3\n4"
+test tutail-1.2 {file last lines} {::tclutils::tutail::file $tmp 2} "3\n4\n"
 test tutail-1.3 {zero} {::tclutils::tutail::text "1\n2" 0} ""
 file delete -force $tmp
+# --- 0.2 ---------------------------------------------------------------------
+set tmp2 [file join [temporaryDirectory] tutail2-[pid].txt]
+set f [open $tmp2 wb]; puts -nonewline $f [encoding convertto utf-8 "eins\nJörg\n"]; close $f
+test tutail-2.1 {count 1 is the last line, text and file agree} -body {
+    list [::tclutils::tutail::text "eins\nJörg\n" 1] [::tclutils::tutail::file $tmp2 1] \
+        [::tclutils::tutail::text "eins\nJörg" 1]
+} -result [list "Jörg\n" "Jörg\n" Jörg]
+test tutail-2.2 {bad count has an error code} -body {
+    catch {::tclutils::tutail::file x abc}; set ::errorCode
+} -result {TCLUTILS TUTAIL COUNT}
+file delete -force $tmp2
+
 cleanupTests

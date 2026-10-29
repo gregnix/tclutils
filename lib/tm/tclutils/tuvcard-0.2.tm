@@ -30,27 +30,67 @@ proc ::tclutils::tuvcard::_unfold {vcf} {
     return $out
 }
 
+# Split a content line into name, value and params. ";" and ":" inside a
+# quoted parameter value (TYPE="work;cell", ALTREP="http://x") do not
+# split; the quotes are removed from the value and put back by the writer
+# where the value needs them (0.2).
 proc ::tclutils::tuvcard::_parseProp {line} {
-    set ci [string first ":" $line]
+    set n [string length $line]
+    set q 0
+    set parts {}
+    set cur ""
+    set ci -1
+    for {set i 0} {$i < $n} {incr i} {
+        set c [string index $line $i]
+        if {$c eq "\""} {
+            set q [expr {!$q}]
+        } elseif {!$q && $c eq ";"} {
+            lappend parts $cur
+            set cur ""
+            continue
+        } elseif {!$q && $c eq ":"} {
+            set ci $i
+            break
+        }
+        append cur $c
+    }
     if {$ci < 0} {
         return -code error -errorcode {TCLUTILS TUVCARD SYNTAX} \
             "vCard line without ':' -> $line"
     }
-    set namepart [string range $line 0 [expr {$ci - 1}]]
+    lappend parts $cur
     set value [string range $line [expr {$ci + 1}] end]
-    set parts [split $namepart ";"]
     set name [lindex $parts 0]
     set params {}
     foreach p [lrange $parts 1 end] {
         set eq [string first "=" $p]
         if {$eq >= 0} {
-            lappend params [string range $p 0 [expr {$eq - 1}]] \
-                [string range $p [expr {$eq + 1}] end]
+            set v [string range $p [expr {$eq + 1}] end]
+            if {[string length $v] >= 2 && [string index $v 0] eq "\""
+                    && [string index $v end] eq "\""} {
+                set v [string range $v 1 end-1]
+            }
+            lappend params [string range $p 0 [expr {$eq - 1}]] $v
         } else {
             lappend params $p ""
         }
     }
     return [list $name $value $params]
+}
+
+# A parameter value with ";" or ":" goes out in double quotes.
+proc ::tclutils::tuvcard::_quoteParam {v} {
+    if {[regexp {[;:]} $v] && ![string match {"*"} $v]} { return "\"$v\"" }
+    return $v
+}
+
+# Values are raw content-line text: a line break in one would end the
+# line and break the file. Escape TEXT with escapeText first.
+proc ::tclutils::tuvcard::_checkValue {name value} {
+    if {[regexp {[\r\n]} $value]} {
+        return -code error -errorcode {TCLUTILS TUVCARD VALUE} \
+            "value of $name holds a line break; escape it (escapeText) first"
+    }
 }
 
 # Parse vCard text -> list of cards (each a list of property dicts).
@@ -61,12 +101,12 @@ proc ::tclutils::tuvcard::parse {vcf} {
     foreach line [_unfold $vcf] {
         if {$line eq ""} continue
         lassign [_parseProp $line] name value params
-        if {$name eq "BEGIN" && [string equal -nocase $value VCARD]} {
+        if {[string equal -nocase $name BEGIN] && [string equal -nocase $value VCARD]} {
             set cur {}
             set in 1
             continue
         }
-        if {$name eq "END" && [string equal -nocase $value VCARD]} {
+        if {[string equal -nocase $name END] && [string equal -nocase $value VCARD]} {
             lappend cards $cur
             set in 0
             continue
@@ -78,14 +118,24 @@ proc ::tclutils::tuvcard::parse {vcf} {
     return $cards
 }
 
+# Fold a content line to at most 75 octets (RFC 5545 3.1, RFC 6350 3.2),
+# never inside a UTF-8 sequence; continuation lines start with a space
+# (0.2: was 75 characters, a line of umlauts became 142 bytes).
 proc ::tclutils::tuvcard::_fold {line} {
-    if {[string length $line] <= 75} { return $line }
-    set res [string range $line 0 74]
-    set i 75
-    set n [string length $line]
-    while {$i < $n} {
-        append res "\r\n " [string range $line $i [expr {$i + 73}]]
-        incr i 74
+    if {[string length [encoding convertto utf-8 $line]] <= 75} { return $line }
+    set res ""
+    set len 0
+    set max 75
+    foreach c [split $line ""] {
+        scan $c %c cp
+        set w [expr {$cp < 0x80 ? 1 : $cp < 0x800 ? 2 : $cp < 0x10000 ? 3 : 4}]
+        if {$len + $w > $max} {
+            append res "\r\n "
+            set len 1
+            set max 75
+        }
+        append res $c
+        incr len $w
     }
     return $res
 }
@@ -97,7 +147,7 @@ proc ::tclutils::tuvcard::_emitCard {card outVar} {
         set line [dict get $p name]
         foreach {k v} [dict get $p params] {
             append line ";" $k
-            if {$v ne ""} { append line "=" $v }
+            if {$v ne ""} { append line "=" [_quoteParam $v] }
         }
         append line ":" [dict get $p value]
         lappend out [_fold $line]
@@ -121,18 +171,27 @@ proc ::tclutils::tuvcard::toVcf {cards} {
 
 # --- accessors (operate on a single card) ---
 
+# A property name matches with or without a group prefix: "item1.FN" is an
+# FN (RFC 6350 3.3). The name stays as written for the round trip (0.2).
+proc ::tclutils::tuvcard::_nameIs {pname name} {
+    if {[string equal -nocase $pname $name]} { return 1 }
+    set dot [string last . $pname]
+    return [expr {$dot > 0 && [string equal -nocase \
+        [string range $pname [expr {$dot + 1}] end] $name]}]
+}
+
 proc ::tclutils::tuvcard::properties {card {name ""}} {
     if {$name eq ""} { return $card }
     set out {}
     foreach p $card {
-        if {[string equal -nocase [dict get $p name] $name]} { lappend out $p }
+        if {[_nameIs [dict get $p name] $name]} { lappend out $p }
     }
     return $out
 }
 
 proc ::tclutils::tuvcard::property {card name} {
     foreach p $card {
-        if {[string equal -nocase [dict get $p name] $name]} {
+        if {[_nameIs [dict get $p name] $name]} {
             return [dict get $p value]
         }
     }
@@ -142,7 +201,7 @@ proc ::tclutils::tuvcard::property {card name} {
 proc ::tclutils::tuvcard::get {card name} {
     set out {}
     foreach p $card {
-        if {[string equal -nocase [dict get $p name] $name]} {
+        if {[_nameIs [dict get $p name] $name]} {
             lappend out [dict get $p value]
         }
     }
@@ -162,6 +221,7 @@ proc ::tclutils::tuvcard::fullName {card} {
 
 # Return a copy of a card with a property appended.
 proc ::tclutils::tuvcard::addProperty {card name value {params {}}} {
+    _checkValue $name $value
     lappend card [dict create name $name value $value params $params]
     return $card
 }
@@ -173,6 +233,7 @@ proc ::tclutils::tuvcard::removeProperty {card index} {
 
 # Return a copy of a card with the property at index replaced.
 proc ::tclutils::tuvcard::setProperty {card index name value {params {}}} {
+    _checkValue $name $value
     return [lreplace $card $index $index \
         [dict create name $name value $value params $params]]
 }

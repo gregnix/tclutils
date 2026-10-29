@@ -35,7 +35,9 @@ runner. The `all.tcl` files of the three libraries show the lookup.
    anything), other versions beside it, and which module-path variables are
    set.
 3. **Each file in its own process** with *-argv* (tcltest options such as
-   `-match`), under a wall-clock limit: `-limit` seconds, or the value of
+   `-match`), started as `tclsh -encoding utf-8 file` (0.2): Tcl 8.6 would
+   read the file in the system encoding (cp1252 on Windows) and break every
+   expected value with an umlaut. Under a wall-clock limit: `-limit` seconds, or the value of
    the environment variable named by `-limitvar`. A hung file is killed.
 4. **Summary.** A file with failed tests, without tcltest summary line, with
    a non-zero exit or a hang is listed under "Files with problems". tcltest

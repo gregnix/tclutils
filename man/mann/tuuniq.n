@@ -1,4 +1,4 @@
-.TH tuuniq n 0.1 tclutils
+.TH tuuniq n 0.2 tclutils
 .SH tclutils::tuuniq
 .PP
 Uniq helpers similar to Unix \fBuniq\fR, implemented in pure Tcl.
@@ -6,7 +6,7 @@ Uniq helpers similar to Unix \fBuniq\fR, implemented in pure Tcl.
 Important: \fBuniq\fR removes only adjacent duplicate lines. Sort first if you want to remove all duplicates independent of position.
 .SS Package
 .CS
-package require tclutils::tuuniq 0.1
+package require tclutils::tuuniq 0.2
 .CE
 .SS Commands
 .CS
@@ -28,3 +28,6 @@ set unique [::tclutils::tuuniq::uniqList {a a b a}]
 
 set counts [::tclutils::tuuniq::countFile names.txt]
 .CE
+.SS "Line ends"
+.PP
+\fBtext\fR and \fBfile\fR return text that ends with LF exactly when the input does: \fB"b\enJörg\en"\fR gives a result with final LF, \fB"b\enJörg"\fR one without, like \fBtuhead\fR, \fBtutail\fR and \fBtunl\fR. Versions before 0.2 dropped the final LF.
