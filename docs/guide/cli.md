@@ -28,6 +28,8 @@ Diagram demos are scripts under `examples/`, not wrappers:
 - `tunl.tcl`
 - `tunumfmt.tcl`
 - `tuodf.tcl`
+- `tudocx.tcl`
+- `tuxlsx.tcl`
 - `tupatch.tcl`
 - `tupdf.tcl`
 - `tupngdraw.tcl`

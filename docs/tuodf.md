@@ -9,7 +9,7 @@ content use a dedicated ODF library.
 ## Package
 
 ```tcl
-package require tclutils::tuodf 0.1
+package require tclutils::tuodf 0.2
 ```
 
 ## API
@@ -21,6 +21,11 @@ package require tclutils::tuodf 0.1
 ::tclutils::tuodf::part odtFile name
 ::tclutils::tuodf::parts odtFile
 ```
+
+`paragraphs` returns the text of every paragraph and heading in document
+order (headings since 0.2; up to 0.1 they were left out). It also finds the
+paragraphs inside tables and lists, in spreadsheet cells (`.ods`) and on
+slides (`.odp`), so `text` works as a plain-text extract for search.
 
 ## Example
 

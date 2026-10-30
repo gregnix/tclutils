@@ -1,0 +1,42 @@
+.TH tuxlsx n 0.1 tclutils
+.SH tclutils::tuxlsx
+.PP
+Minimal Excel (\fB.xlsx\fR, Office Open XML) helpers in pure Tcl.
+.PP
+\fBtuxlsx\fR writes one sheet of rows and reads the cell values of any workbook back. It is not a spreadsheet toolkit: no formats, formulas, column widths or several sheets when writing; no formatting when reading.
+.SS Package
+.CS
+package require tclutils::tuxlsx 0.1
+.CE
+.SS API
+.CS
+::tclutils::tuxlsx::writeRows xlsxFile rows ?-sheet NAME? ?-numbers auto|0? ?-title T? ?-creator C?
+::tclutils::tuxlsx::sheets xlsxFile
+::tclutils::tuxlsx::rows xlsxFile ?-sheet NAME|INDEX?
+::tclutils::tuxlsx::text xlsxFile
+::tclutils::tuxlsx::part xlsxFile name
+::tclutils::tuxlsx::parts xlsxFile
+.CE
+.IP \(bu
+\fBwriteRows\fR writes ROWS (a list of rows, each a list of cell values) into one sheet (\fB\-sheet\fR, default \fBSheet1\fR). With \fB\-numbers auto\fR (default) a value that looks like a decimal number (\fB\-12\fR, \fB3.5\fR, \fB1e3\fR) is stored as a number, everything else as text; \fB\-numbers 0\fR stores every cell as text. \fB007\fR and \fB1,5\fR stay text. Text is written inline, not as shared strings. A minimal \fBstyles.xml\fR is included, so Excel opens the file without a repair message. Returns the file name.
+.IP \(bu
+\fBsheets\fR returns the sheet names in workbook order.
+.IP \(bu
+\fBrows\fR returns the cells of one sheet (\fB\-sheet\fR by name or 1\-based number, default the first) as a list of rows. Values as Excel stores them: shared and inline strings as text (rich text joined, phonetic runs left out), numbers as written in the file (a date is its serial number, a percentage its fraction), booleans \fB1\fR/\fB0\fR, formulas their last computed value, errors as text (\fB#DIV/0!\fR). Gaps are filled with \fB""\fR; a row is as long as its last cell, a missing row is an empty list.
+.IP \(bu
+\fBtext\fR returns all sheets: cells joined by \fB\et\fR, rows by \fB\en\fR, sheets separated by an empty line.
+.IP \(bu
+\fBpart\fR returns one container part as text, \fBparts\fR the member names.
+.PP
+Errors: \fB{TCLUTILS TUXLSX SHEET name}\fR unknown sheet; \fB{TCLUTILS TUXLSX VALUE}\fR a sheet name Excel does not accept (empty, more than 31 characters, one of \fB[ ] : * ? / \e\fR, starting or ending with \fB'\fR); \fB{TCLUTILS TUXLSX PART name}\fR a missing part; \fB{TCLUTILS COMMON OPTION ...}\fR bad options. A missing or damaged ZIP is reported by \fBtuzip\fR.
+.SS Example
+.CS
+package require tclutils::tuxlsx
+
+::tclutils::tuxlsx::writeRows devices.xlsx {{Item Count} {Printer 3} {Router 1}} -sheet Devices
+::tclutils::tuxlsx::sheets devices.xlsx                 ;# -> Devices
+::tclutils::tuxlsx::rows devices.xlsx                   ;# -> {Item Count} {Printer 3} {Router 1}
+.CE
+.SS Notes
+.PP
+Output is deterministic (fixed timestamp). Excel, LibreOffice and openpyxl open the files. The reader is a small scanner, not an XML parser; it reads what Excel, LibreOffice and openpyxl write. Command line: \fBbin/tuxlsx.tcl sheets|rows|text|create\fR.

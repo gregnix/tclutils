@@ -129,6 +129,8 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tupdf` | inspector | Read-only PDF structure scan plus ZUGFeRD/Factur-X heuristics; not a full PDF parser or PDF/A-3/EN 16931 conformance check. |
 | `tupdftext` | basis complete | Text per page for full-text search: ToUnicode/encodings, filters, object streams, forms; no decryption, no OCR, no column layout. Measured against pdftotext (99.5–100 % of the words on 11 of 13 files). |
 | `tuodf` | minimal document helper | Create/read simple ODT text documents; not a full ODF library. |
+| `tudocx` | minimal document helper | Create/read simple DOCX text documents; not a Word library. |
+| `tuxlsx` | minimal document helper | Write one XLSX sheet of rows, read cell values of any workbook; no formatting. |
 | `tucal` | generator | cal-like calendars (month/year/three-month, ISO weeks, locale names). Text output only, not a scheduling library. |
 
 ## Date / web / IDs

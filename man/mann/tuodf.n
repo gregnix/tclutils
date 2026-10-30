@@ -1,4 +1,4 @@
-.TH tuodf n 0.1 tclutils
+.TH tuodf n 0.2 tclutils
 .SH tclutils::tuodf
 .PP
 Minimal OpenDocument Text (\fB.odt\fR) helpers in pure Tcl.
@@ -6,7 +6,7 @@ Minimal OpenDocument Text (\fB.odt\fR) helpers in pure Tcl.
 \fBtuodf\fR creates and reads simple paragraph\-based ODF text documents. It is not a full ODF toolkit; for rich styles, tables, images, spreadsheets, and Draw content use a dedicated ODF library.
 .SS Package
 .CS
-package require tclutils::tuodf 0.1
+package require tclutils::tuodf 0.2
 .CE
 .SS API
 .CS
@@ -16,6 +16,8 @@ package require tclutils::tuodf 0.1
 ::tclutils::tuodf::part odtFile name
 ::tclutils::tuodf::parts odtFile
 .CE
+.PP
+\fBparagraphs\fR returns the text of every paragraph and heading in document order (headings since 0.2; up to 0.1 they were left out). It also finds the paragraphs inside tables and lists, in spreadsheet cells (\fB.ods\fR) and on slides (\fB.odp\fR), so \fBtext\fR works as a plain\-text extract for search.
 .SS Example
 .CS
 package require tclutils::tuodf

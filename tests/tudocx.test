@@ -1,0 +1,92 @@
+package require tcltest
+namespace import ::tcltest::*
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+tcl::tm::path add [file join $root lib tm]
+package require tclutils::tudocx 0.1
+package require tclutils::tuzip 0.2
+
+set tmp [makeDirectory tudocx]
+set docx [file join $tmp doc.docx]
+
+# A .docx from raw parts, as Word writes it (main part named in _rels/.rels).
+proc docxFrom {path documentXml {target word/document.xml}} {
+    set rels "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"$target\"/></Relationships>"
+    set m {}
+    foreach {n c} [list {[Content_Types].xml} {<Types/>} _rels/.rels $rels $target $documentXml] {
+        lappend m [dict create name $n content [encoding convertto utf-8 $c]]
+    }
+    ::tclutils::tuzip::createMembers $path $m -mtime 1262304000
+    return $path
+}
+
+test tudocx-1.1 {createText writes the parts of a minimal package} -body {
+    ::tclutils::tudocx::createText $docx {{Hello world} {Second}}
+    lsort [::tclutils::tudocx::parts $docx]
+} -result {{[Content_Types].xml} _rels/.rels docProps/app.xml docProps/core.xml word/document.xml}
+
+test tudocx-1.2 {round trip: special characters, tab, line break, empty paragraph, umlauts} -body {
+    ::tclutils::tudocx::createText $docx [list "a < b & \"c\" 'd'" "x\ty" "eins\nzwei" "" "Gr\u00f6\u00dfe"]
+    ::tclutils::tudocx::paragraphs $docx
+} -result [list "a < b & \"c\" 'd'" "x\ty" "eins\nzwei" "" "Gr\u00f6\u00dfe"]
+
+test tudocx-1.3 {text joins by newline; an empty list gives one empty paragraph} -body {
+    ::tclutils::tudocx::createText $docx {one two}
+    set a [::tclutils::tudocx::text $docx]
+    ::tclutils::tudocx::createText $docx {}
+    list $a [::tclutils::tudocx::paragraphs $docx]
+} -result [list "one\ntwo" {{}}]
+
+test tudocx-1.4 {title and creator in docProps/core.xml; deterministic output} -body {
+    set a [file join $tmp a.docx] ; set b [file join $tmp b.docx]
+    ::tclutils::tudocx::createText $a {x} -title "T & U" -creator Gregor
+    ::tclutils::tudocx::createText $b {x} -title "T & U" -creator Gregor
+    set core [::tclutils::tudocx::part $a docProps/core.xml]
+    list [string match {*<dc:title>T &amp; U</dc:title>*} $core] \
+         [string match {*<dc:creator>Gregor</dc:creator>*} $core] \
+         [expr {[::tclutils::common::readBinaryFile $a] eq [::tclutils::common::readBinaryFile $b]}]
+} -result {1 1 1}
+
+test tudocx-1.5 {unknown option is an error} -body {
+    catch {::tclutils::tudocx::createText $docx {x} -bogus 1} m o
+    dict get $o -errorcode
+} -result {TCLUTILS COMMON OPTION -bogus}
+
+test tudocx-2.1 {reading Word XML: heading, runs, tab stops, table, deleted text, field code} -body {
+    docxFrom [file join $tmp w.docx] {<?xml version="1.0"?><w:document xmlns:w="w"><w:body>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:tabs><w:tab w:val="left" w:pos="720"/></w:tabs></w:pPr><w:r><w:t>Netz</w:t></w:r></w:p>
+<w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">Die </w:t></w:r><w:r><w:t>Gr&#246;&#xDF;e</w:t></w:r><w:del><w:r><w:delText>alt</w:delText></w:r></w:del><w:r><w:tab/><w:t>neu</w:t><w:br/><w:t>2</w:t></w:r></w:p>
+<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> PAGE </w:instrText></w:r><w:r><w:t>7</w:t></w:r></w:p>
+<w:tbl><w:tr><w:tc><w:p><w:r><w:t>Zelle</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+<w:p/>
+<w:sectPr/></w:body></w:document>}
+    ::tclutils::tudocx::paragraphs [file join $tmp w.docx]
+} -result [list Netz "Die Gr\u00f6\u00dfe\tneu\n2" 7 Zelle {}]
+
+test tudocx-2.2 {the main part is found through _rels/.rels} -body {
+    docxFrom [file join $tmp r.docx] {<w:document xmlns:w="w"><w:body><w:p><w:r><w:t>hier</w:t></w:r></w:p></w:body></w:document>} word/document2.xml
+    ::tclutils::tudocx::text [file join $tmp r.docx]
+} -result hier
+
+test tudocx-2.3 {a package without a document part is an error} -body {
+    set f [file join $tmp none.docx]
+    ::tclutils::tuzip::createMembers $f [list [dict create name a.xml content <a/>]]
+    catch {::tclutils::tudocx::paragraphs $f} m o
+    lrange [dict get $o -errorcode] 0 2
+} -result {TCLUTILS TUDOCX PART}
+
+test tudocx-2.4 {a page break is no text; a line break is} -body {
+    docxFrom [file join $tmp pb.docx] {<w:document xmlns:w="w"><w:body><w:p><w:r><w:t>Seite 1</w:t></w:r></w:p><w:p><w:r><w:br w:type="page"/></w:r></w:p><w:p><w:r><w:t>a</w:t><w:br/><w:t>b</w:t><w:br w:type="column"/><w:t>c</w:t></w:r></w:p></w:body></w:document>}
+    ::tclutils::tudocx::paragraphs [file join $tmp pb.docx]
+} -result [list {Seite 1} {} "a\nbc"]
+
+test tudocx-2.5 {another prefix and the default namespace of WordprocessingML} -body {
+    set ns http://schemas.openxmlformats.org/wordprocessingml/2006/main
+    docxFrom [file join $tmp p1.docx] "<x:document xmlns:x=\"$ns\"><x:body><x:p><x:pPr><x:tabs><x:tab x:pos=\"1\"/></x:tabs></x:pPr><x:r><x:t>eins</x:t><x:tab/><x:t>zwei</x:t></x:r></x:p></x:body></x:document>"
+    docxFrom [file join $tmp p2.docx] "<document xmlns=\"$ns\"><body><p><r><t>drei</t></r></p><p/></body></document>"
+    list [::tclutils::tudocx::paragraphs [file join $tmp p1.docx]] \
+         [::tclutils::tudocx::paragraphs [file join $tmp p2.docx]]
+} -result [list [list "eins\tzwei"] {drei {}}]
+
+removeDirectory tudocx
+cleanupTests

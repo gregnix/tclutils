@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuodf 0.1
+package require tclutils::tuodf 0.2
 package require tclutils::tuzip 0.1
 
 set tmp [makeDirectory tuodf]
@@ -78,5 +78,23 @@ test tuodf-4.1 {unknown option rejected} -body {
     catch {::tclutils::tuodf::createText $odt {"x"} -bogus 1} err opts
     dict get $opts -errorcode
 } -result {TCLUTILS COMMON OPTION -bogus}
+
+# A content.xml as LibreOffice writes it: heading, span, table, list.
+proc odfFile {path body} {
+    set dir [file join [temporaryDirectory] tuodf-src[pid]]
+    file delete -force $dir; file mkdir $dir
+    set fh [open [file join $dir mimetype] wb]; puts -nonewline $fh application/vnd.oasis.opendocument.text; close $fh
+    set fh [open [file join $dir content.xml] w]; fconfigure $fh -encoding utf-8
+    puts -nonewline $fh "<?xml version=\"1.0\" encoding=\"UTF-8\"?><office:document-content xmlns:office=\"o\" xmlns:text=\"t\" xmlns:table=\"tb\"><office:body>$body</office:body></office:document-content>"
+    close $fh
+    ::tclutils::tuzip::create $path [list [file join $dir mimetype] [file join $dir content.xml]] -base $dir
+    file delete -force $dir
+    return $path
+}
+
+test tuodf-5.1 {paragraphs: headings in document order, tables and lists (0.2)} -body {
+    set f [odfFile [file join $tmp h.odt] "<office:text><text:h text:outline-level=\"1\">Netz</text:h><text:p>Die <text:span>Gr\u00f6\u00dfe</text:span>.</text:p><table:table><table:table-row><table:table-cell><text:p>Zelle</text:p></table:table-cell></table:table-row></table:table><text:list><text:list-item><text:p>Punkt</text:p></text:list-item></text:list><text:h text:outline-level=\"2\"/></office:text>"]
+    ::tclutils::tuodf::paragraphs $f
+} -result [list Netz "Die Gr\u00f6\u00dfe." Zelle Punkt {}]
 
 cleanupTests

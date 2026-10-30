@@ -17,8 +17,8 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
 `tused`, `tusettings`, `tuimage` 0.2, `tuprovider`, `tutreemap`, `tuclass` 0.3,
 `tupacket`, `tujourney`, `tutimeline`, `tupie`, `tusequence` 0.3, `tukanban`,
 `tuquadrant` 0.2, `tudiagram` 0.6, `tusvg` 0.4, `tupngdraw` 0.14, `tupng` 0.6,
-`tuappinfo` 0.3; new
-`tusysinfo`, `tuedid`, `tulint` 0.1. When copying over an older tree, delete
+`tuappinfo` 0.3, `tuodf` 0.2; new
+`tusysinfo`, `tuedid`, `tulint`, `tudocx`, `tuxlsx` 0.1. When copying over an older tree, delete
 `tclutils-0.68.0.tm`, `tucsv-0.1.tm`, `tusqlite-0.1.tm`, `tuholiday-0.1.tm`,
 `tuzip-0.1.tm`, `tudiff-0.1.tm`, `tubookmark-0.2.tm`, `tuical-0.1.tm`,
 `tuvcard-0.1.tm`, `tuini-0.1.tm`, `tupatch-0.2.tm`, `tusplit-0.2.tm`,
@@ -36,7 +36,7 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
 `tuclass-0.2.tm`, `tupacket-0.2.tm`, `tujourney-0.2.tm`, `tukanban-0.1.tm`,
 `tutimeline-0.2.tm`, `tupie-0.2.tm`, `tuquadrant-0.1.tm`, `tusequence-0.2.tm`,
 `tudiagram-0.5.tm`, `tusvg-0.3.tm`, `tupngdraw-0.13.tm`, `tupng-0.5.tm`,
-`tuappinfo-0.2.tm`.
+`tuappinfo-0.2.tm`, `tuodf-0.1.tm`.
 
 - `tucsv`: `-profile excel-de|rfc4180` for `text`, `file`, `writeFile`;
   `text -bom 1`; `file` and `writeFile` take `-encoding` (default utf-8);
@@ -185,6 +185,16 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
 - `tools/setup.md`: example folders `tclutils-0.69.0`, `tkutils-0.49.0`
   (were 0.58.0 and 0.41.0). `tusqlite` doc: example with `value -default`;
   the trap of the positional form.
+- New `tudocx`: write paragraph documents (.docx), read the text of any
+  Word document (headings, tables; no deleted text or field codes). New
+  `tuxlsx`: write one sheet of rows (.xlsx), read sheets and cell values
+  (shared/inline strings, numbers, booleans, cached formula values). Pure
+  Tcl over `tuzip`, as `tuodf`. In the umbrella. CLIs `bin/tudocx.tcl`,
+  `bin/tuxlsx.tcl`. Tests `tudocx-*`, `tuxlsx-*`. Both read any namespace
+  prefix (also the default namespace, as other tools write); a page or
+  column break in a .docx is no text.
+- `tuodf` 0.2: `paragraphs` and `text` include headings (`text:h`, were left
+  out), in document order. Test `tuodf-5.1`.
 - `tuappinfo`: the Tk line shows the patch level (`9.0.4`, was `9.0`); the
   demo tracks the module file. Test `tkpatch-1`.
 - `tutreemap`: a `:::class` name with umlauts is removed whole (was cut

@@ -18,7 +18,7 @@ package require tclutils::tuzip 0.1
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tuodf {
     namespace export createText text paragraphs part parts
-    variable version 0.1
+    variable version 0.2
     # Fixed timestamp for reproducible builds and a valid (non-zero) DOS date.
     variable epoch 1262304000
     variable mimeText "application/vnd.oasis.opendocument.text"
@@ -191,11 +191,16 @@ proc ::tclutils::tuodf::parts {odtFile} {
     return [::tclutils::tuzip::names $odtFile]
 }
 
-# Return the document's paragraphs as a list of plain-text strings.
-# Lightweight extractor: handles text:p with inline spans, tabs, spaces and
-# line breaks. It does not descend into tables or other block structures.
+# Return the document's paragraphs as a list of plain-text strings, in
+# document order. Lightweight extractor: handles text:p and headings (text:h,
+# since 0.2; up to 0.1 they were left out) with inline spans, tabs, spaces
+# and line breaks. Paragraphs inside tables, lists and spreadsheet cells
+# (.ods) and slides (.odp) are found as well; no other structure is kept.
 proc ::tclutils::tuodf::paragraphs {odtFile} {
     set xml [part $odtFile content.xml]
+    # a heading is a paragraph with a level: read it the same way
+    regsub -all {<text:h\y} $xml {<text:p} xml
+    regsub -all {</text:h>} $xml {</text:p>} xml
     # Normalize self-closing empty paragraphs to an explicit open/close pair so
     # a single, unambiguous pattern handles every paragraph.
     regsub -all {<text:p\y[^>]*/>} $xml {<text:p></text:p>} xml
@@ -217,4 +222,4 @@ proc ::tclutils::tuodf::text {odtFile} {
     return [join [paragraphs $odtFile] \n]
 }
 
-package provide tclutils::tuodf 0.1
+package provide tclutils::tuodf 0.2

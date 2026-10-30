@@ -1,0 +1,42 @@
+.TH tudocx n 0.1 tclutils
+.SH tclutils::tudocx
+.PP
+Minimal Word (\fB.docx\fR, Office Open XML) helpers in pure Tcl.
+.PP
+\fBtudocx\fR writes simple paragraph documents and reads the text of any Word document back. It is the counterpart of \fBtuodf\fR for Office Open XML and not a Word toolkit: no styles, tables, images or numbering when writing.
+.SS Package
+.CS
+package require tclutils::tudocx 0.1
+.CE
+.SS API
+.CS
+::tclutils::tudocx::createText docxFile paragraphs ?-title T? ?-creator C?
+::tclutils::tudocx::paragraphs docxFile
+::tclutils::tudocx::text docxFile
+::tclutils::tudocx::part docxFile name
+::tclutils::tudocx::parts docxFile
+.CE
+.IP \(bu
+\fBcreateText\fR writes \fB[Content_Types].xml\fR, \fB_rels/.rels\fR, \fBword/document.xml\fR and \fBdocProps/core.xml\fR / \fBapp.xml\fR. In a paragraph a tab becomes \fBw:tab\fR, a newline \fBw:br\fR. \fB\-title\fR and \fB\-creator\fR go into \fBdocProps/core.xml\fR. Returns the file name.
+.IP \(bu
+\fBparagraphs\fR returns the text of every paragraph of the main document part (found through \fB_rels/.rels\fR, usually \fBword/document.xml\fR) in document order: headings, list items and table cells included. \fBw:tab\fR is \fB\et\fR, \fBw:br\fR is \fB\en\fR. Deleted text of tracked changes (\fBw:delText\fR) and field codes (\fBw:instrText\fR) are left out. Headers, footers, footnotes and comments are in other parts and are not read.
+.IP \(bu
+\fBtext\fR joins the paragraphs with \fB\en\fR.
+.IP \(bu
+\fBpart\fR returns one container part as text (UTF\-8), \fBparts\fR the member names.
+.PP
+Errors: \fB{TCLUTILS TUDOCX PART name}\fR when there is no main document part; \fB{TCLUTILS COMMON OPTION ...}\fR for bad options. A missing or damaged ZIP is reported by \fBtuzip\fR.
+.SS Example
+.CS
+package require tclutils::tudocx
+
+::tclutils::tudocx::createText demo.docx \
+    {{First paragraph} {Second with \u00e4\u00f6\u00fc\u00df} {} "a\tb"} \
+    -title Demo -creator Tcl
+puts [::tclutils::tudocx::text demo.docx]
+.CE
+.SS Notes
+.PP
+Output is deterministic: a fixed timestamp for all entries, no dates in \fBdocProps/core.xml\fR. Word, LibreOffice and python\-docx open the files.
+.PP
+The reader is a small text extractor with regular expressions, not an XML parser. Command line: \fBbin/tudocx.tcl text|parts|create\fR.
