@@ -27,6 +27,8 @@ package require tclutils::tuflow 0.4
 ::tclutils::tuflow::writePng  text file ?-opt val ...?   ;# -> file (PNG)
 ```
 
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
+
 `parse` is **graph-only**: it returns a `tudiagram` model for the graph-like
 Mermaid types and raises `{TCLUTILS TUFLOW UNSUPPORTED}` for every non-graph
 type, including ones that `toSvg` / `toPng` draw. `toSvg` / `toPng` are the

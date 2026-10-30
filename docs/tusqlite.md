@@ -22,7 +22,7 @@ sqlite3 db mydata.db
 foreach row [::tclutils::tusqlite::rows db {SELECT name, age FROM people}] {
     puts [dict get $row name]
 }
-set n [::tclutils::tusqlite::value db {SELECT count(*) FROM people} 0]
+set n [::tclutils::tusqlite::value db {SELECT count(*) FROM people} -default 0]
 ```
 
 Commands:
@@ -37,7 +37,10 @@ Commands:
   row, or the default (`""`) when there is no row. The options keep a
   parameter dict apart from the default; the positional forms
   `value db sql default` and `value db sql default params` still work
-  (0.2). Errors `{TCLUTILS TUSQLITE OPTION}`.
+  (0.2). Errors `{TCLUTILS TUSQLITE OPTION}`. Trap of the positional form:
+  `value db $sql {id 1}` takes the dict as the default, not as parameters;
+  the query runs without them, and with no row the dict comes back. Write
+  `value db $sql -params {id 1}`.
 - `update db table set where` — UPDATE the rows matching every key/value of
   `where` with the columns in `set`; returns the number of changed rows.
 - `delete db table where` — DELETE the matching rows; returns their number.

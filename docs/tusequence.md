@@ -8,7 +8,7 @@ through the pure-Tcl engine. A self-contained 2D renderer in the
 ## Package
 
 ```tcl
-package require tclutils::tusequence 0.2
+package require tclutils::tusequence 0.3
 ```
 
 ## Commands
@@ -20,6 +20,8 @@ package require tclutils::tusequence 0.2
 ::tclutils::tusequence::writeSvg model file ?...?
 ::tclutils::tusequence::writePng model file ?...?
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 `-width` / `-height` default to `0`, meaning the size is computed from the
 content. Pass explicit values to override.

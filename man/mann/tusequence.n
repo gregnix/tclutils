@@ -1,10 +1,10 @@
-.TH tusequence n 0.2 tclutils
+.TH tusequence n 0.3 tclutils
 .SH tclutils::tusequence
 .PP
 Parses a Mermaid \fBsequenceDiagram\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtugantt\fR / \fBtusankey\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here.
 .SS Package
 .CS
-package require tclutils::tusequence 0.2
+package require tclutils::tusequence 0.3
 .CE
 .SS Commands
 .CS
@@ -14,6 +14,8 @@ package require tclutils::tusequence 0.2
 ::tclutils::tusequence::writeSvg model file ?...?
 ::tclutils::tusequence::writePng model file ?...?
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .PP
 \fB\-width\fR / \fB\-height\fR default to \fB0\fR, meaning the size is computed from the content. Pass explicit values to override.
 .SS "Supported syntax (Mermaid subset)"

@@ -21,6 +21,8 @@ The file helpers use Tcl 8.6 \fBtry ... finally\fR, so opened channels are close
 \fBreadBinaryFile\fR explicitly configures binary translation and uses \fBiso8859\-1\fR as byte\-preserving channel encoding. This avoids the removed Tcl 9 channel encoding name \fBbinary\fR and still preserves byte values for modules such as \fBtustrings\fR, \fBtuhexdump\fR, \fBtubase64\fR, and \fBtuzip\fR.
 .PP
 \fBreplaceFile\fR (0.3) writes to \fBpath.tmp<pid>\fR and renames that over \fBpath\fR. If writing fails, also when the error only shows on \fBclose\fR (a full disk), the old file stays as it was, the temporary file is removed and no channel stays open. \fB\-encoding binary\fR writes bytes. An existing file keeps its permissions (Unix). On Linux the rename is atomic; on Windows \fBfile rename \-force\fR replaces the target in two steps, but the old content is untouched until the last one.
+.PP
+\fBwriteFile\fR with mode \fBw\fR (the default) or \fBwb\fR goes through \fBreplaceFile\fR (tclutils 0.69.0); mode \fBa\fR appends in place as before. So \fBtunotes::save\fR and \fBtujson::filePretty\fR/\fBfileMinify\fR keep the old file on a failed write too.
 .SS "Delimited text"
 .PP
 \fBsplitDelimited\fR supports both one\-character and multi\-character delimiters. It is used by \fBtucut\fR and \fBtujoin\fR, replacing duplicated private \fB_split\fR implementations.

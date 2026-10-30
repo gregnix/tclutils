@@ -27,6 +27,10 @@
 #          tests/all.tcl (8.6 reads it in the system encoding)  (warning)
 #   TST-3  the same test name twice in a file; two branches of one if or
 #          switch are alternatives and do not count       (error)
+#   DAT-2  open ... w (or wb, w+, TRUNC) in a module or script: the target
+#          is empty at once, a failed write loses the old file; write
+#          through common::replaceFile. A path word containing "tmp" is
+#          taken as a temporary file and not reported   (info)
 #
 # A file that is not valid UTF-8 is the finding FILE (error); its rules
 # are not run.
@@ -446,6 +450,29 @@ proc ::tclutils::tulint::_ruleTst3 {file text} {
     return $out
 }
 
+# open with a truncating mode, outside comments; *.test files are skipped,
+# they write their fixtures this way on purpose
+proc ::tclutils::tulint::_ruleDat2 {file text} {
+    if {[_isTestFile $file] || [file extension $file] ni {.tcl .tm}} { return {} }
+    set re {\[open\s+(\S+)\s+(?:"?w[b+]?"?|\{w[b+]?\}|\{[^\}]*TRUNC[^\}]*\})[\s\]]}
+    set out {}
+    set n 0
+    foreach l [_lines $text] {
+        incr n
+        if {[string match "#*" [string trimleft $l]]} continue
+        set code $l
+        if {[set i [string first ";#" $code]] >= 0} { set code [string range $code 0 $i-1] }
+        foreach {all path} [regexp -all -inline $re $code] {
+            if {[string match -nocase *tmp* $path]} continue
+            lappend out [list $n "open $path truncates the file at once: a failed write leaves it empty; write through common::replaceFile (temporary file, then rename)"]
+            break
+        }
+    }
+    return $out
+}
+
+::tclutils::tulint::register DAT-2 info \
+    "open truncates the target before the data is written" ::tclutils::tulint::_ruleDat2
 ::tclutils::tulint::register ENC-1 warning \
     "non-ASCII characters in a test file" ::tclutils::tulint::_ruleEnc1
 ::tclutils::tulint::register ENC-2 error \

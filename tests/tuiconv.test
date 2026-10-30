@@ -78,4 +78,23 @@ test tuiconv-3.5 {valid text passes unchanged} -body {
     ::tclutils::tuiconv::convert [::tclutils::tuiconv::convert [encoding convertto utf-8 "Jörg"] utf-8 cp1252] cp1252 utf-8
 } -result [encoding convertto utf-8 "Jörg"]
 
+test tuiconv-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tuiconv-9.1.txt]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tuiconv::writeFile $f abc iso8859-1}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tuiconv-9.1.txt
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

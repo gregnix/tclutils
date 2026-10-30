@@ -1,4 +1,4 @@
-.TH tuappinfo n 0.2 tclutils
+.TH tuappinfo n 0.3 tclutils
 .SH tclutils::tuappinfo
 .PP
 Collect application / system information into a plain\-text report: Tcl/Tk versions, executable, platform, selected environment variables, search paths, loaded packages, and an optional list of explicitly tracked module files. Supports anonymisation of user / host / path data. Pure Tcl, no GUI \-\- the caller renders the returned text (e.g. in a Tk window or a log file).
@@ -15,7 +15,9 @@ Collect application / system information into a plain\-text report: Tcl/Tk versi
 .IP \(bu
 Options: unknown options and an option without a value raise \fB{TCLUTILS TUAPPINFO OPTION}\fR, a non\-boolean \fB\-anonymize\fR raises \fB{TCLUTILS TUAPPINFO VALUE}\fR.
 .IP \(bu
-\fBwriteLog\fR — write \fBbuildReport\fR to \fBfile\fR; returns the file path.
+\fBwriteLog\fR — write \fBbuildReport\fR to \fBfile\fR as UTF\-8 through a temporary file (\fBcommon::replaceFile\fR), so a failed write keeps an old log; returns the file path (0.3; up to 0.2 in the system encoding).
+.IP \(bu
+The Tk line shows the patch level (\fB9.0.4\fR), as the Tcl line does (0.3; up to 0.2 \fBtk_version\fR, \fB9.0\fR).
 .CS
 puts [::tclutils::tuappinfo::buildReport -title "MyApp 1.0"]
 ::tclutils::tuappinfo::writeLog /tmp/myapp-info.txt -title "MyApp 1.0" -anonymize 1

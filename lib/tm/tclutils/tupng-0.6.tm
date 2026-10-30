@@ -25,14 +25,14 @@
 # pixel buffer (e.g. tclutils::tupngdraw or Tk photo data).
 
 package require Tcl 8.6-
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tupng {
     namespace export encodeRGB encodeRGBA encodeGray encodeIndexed \
         writeRGB writeRGBA writeGray writeIndexed encodeRGBARaw writeRGBARaw \
         decode readPNG
-    variable version 0.5
+    variable version 0.6
 }
 
 # --- option / value validation ----------------------------------------
@@ -274,11 +274,9 @@ proc ::tclutils::tupng::encodeIndexed {palette image args} {
 }
 
 # --- public writers (encode + write to file) ---------------------------
+# temp file + rename: a failed write leaves the old file (0.6)
 proc ::tclutils::tupng::_writeFile {file bytes} {
-    set fid [open $file w]
-    fconfigure $fid -translation binary
-    puts -nonewline $fid $bytes
-    close $fid
+    ::tclutils::common::replaceFile $file $bytes -encoding binary
     return $file
 }
 proc ::tclutils::tupng::writeRGB {file image args} {
@@ -498,4 +496,4 @@ proc ::tclutils::tupng::readPNG {file} {
     return [decode $bytes]
 }
 
-package provide tclutils::tupng 0.5
+package provide tclutils::tupng 0.6

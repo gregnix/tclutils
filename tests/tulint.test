@@ -27,7 +27,7 @@ proc cleanTmp {} { file delete -force [file join [temporaryDirectory] tulint-[pi
 
 test tulint-1.1 {built-in rules, sorted, with severity} -body {
     lmap r [L::rules] {list [dict get $r name] [dict get $r severity]}
-} -result {{ENC-1 warning} {ENC-2 error} {ENC-3 warning} {TST-3 error}}
+} -result {{DAT-2 info} {ENC-1 warning} {ENC-2 error} {ENC-3 warning} {TST-3 error}}
 
 test tulint-1.2 {register and unregister a rule} -body {
     proc ::noFoo {file text} {
@@ -39,7 +39,7 @@ test tulint-1.2 {register and unregister a rule} -body {
     set a [hits "set a 1\nset foo 2\n" x.tcl X-1]
     L::unregister X-1
     list $a [llength [L::rules]]
-} -result {{{2 X-1}} 4}
+} -result {{{2 X-1}} 5}
 
 test tulint-1.3 {bad severity, bad name, unknown rule} -body {
     set r {}
@@ -199,5 +199,34 @@ test tulint-6.1 {CLI: exit 1 on an error even when --severity hides it} -setup {
     }
     set r
 } -cleanup cleanTmp -result {1 1 0 2}
+
+# --- DAT-2 ----------------------------------------------------------------------
+
+test tulint-7.1 {DAT-2: truncating open modes, not read or append, not in comments} -body {
+    hits {set a [open $f w]
+set b [open $f wb]
+set c [open $f {WRONLY CREAT TRUNC}]
+set d [open $f r]
+set e [open $f a]
+# set g [open $f w]
+set h [open $f "w+"] ;# set i [open $f w]
+} m.tm DAT-2
+} -result {{1 DAT-2} {2 DAT-2} {3 DAT-2} {7 DAT-2}}
+
+test tulint-7.2 {DAT-2: a temporary file is fine, test files and other files are skipped} -body {
+    set t {set h [open $tmp w]
+set h [open "$path.tmp[pid]" w]
+set h [open $out w]
+}
+    list [hits $t m.tm DAT-2] [hits $t x.test DAT-2] [hits $t notes.txt DAT-2] [hits $t app.tcl DAT-2]
+} -result {{{3 DAT-2}} {} {} {{3 DAT-2}}}
+
+test tulint-7.3 {DAT-2 is info: it does not make the CLI fail} -setup {
+    put cli7/m.tcl "set h \[open \$out w\]\n"
+} -body {
+    set dir [file join [temporaryDirectory] tulint-[pid] cli7]
+    list [catch {exec [info nameofexecutable] [file join $root bin tulint.tcl] $dir 2>@1} out] \
+         [string match "*info DAT-2*" $out]
+} -cleanup cleanTmp -result {0 1}
 
 cleanupTests

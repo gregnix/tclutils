@@ -6,7 +6,7 @@ high-level history and forward view.
 
 _As of 2026-10-28: 146 module files under `lib/tm/tclutils/` (140 flat
 modules and four provider classes), plus the umbrella `tclutils` 0.69.0.
-Recommended pairing: tclutils 0.69.0 + tkutils 0.49.0 + ctrlutils 0.4.
+Recommended pairing: tclutils 0.69.0 + tkutils 0.49.0 + ctrlutils 0.5.
 Each module has `docs/<module>.md` and a man page under `man/mann/`._
 
 _Done since 2026-07-19 and not repeated in the backlog: the storage

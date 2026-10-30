@@ -41,13 +41,21 @@ proc ::tclutils::common::readBinaryFile {path} {
 
 # writeFile path data ?mode? ?-encoding enc?
 # mode is the open access mode (default w). Without -encoding the channel uses
-# the system encoding, as readFile does.
+# the system encoding, as readFile does. Modes w and wb replace the file
+# through replaceFile (0.3): a failed write leaves the old file; other modes
+# (a, ...) write in place.
 proc ::tclutils::common::writeFile {path data args} {
     set mode w
     if {[llength $args] % 2 == 1} {
         set args [lassign $args mode]
     }
     set o [parseOptions {-encoding ""} {*}$args]
+    if {$mode eq "wb"} {
+        return [replaceFile $path $data -encoding binary]
+    }
+    if {$mode eq "w"} {
+        return [replaceFile $path $data -encoding [dict get $o -encoding] -translation auto]
+    }
     set fh [open $path $mode]
     try {
         fconfigure $fh -translation auto
@@ -150,8 +158,8 @@ proc ::tclutils::common::ensureOneOf {value allowed what} {
 # (0.3). If writing fails -- also when the error only shows on close, as a
 # full disk does -- PATH keeps its old content, the temporary file is
 # removed and no channel stays open. -encoding binary writes bytes.
-# Defaults: -encoding utf-8 -translation lf. An existing PATH keeps its
-# permissions (Unix).
+# Defaults: -encoding utf-8 -translation lf; -encoding "" keeps the system
+# encoding. An existing PATH keeps its permissions (Unix).
 proc ::tclutils::common::replaceFile {path data args} {
     set o [parseOptions {-encoding utf-8 -translation lf} {*}$args]
     set tmp "$path.tmp[pid]"
@@ -160,8 +168,10 @@ proc ::tclutils::common::replaceFile {path data args} {
         if {[dict get $o -encoding] eq "binary"} {
             fconfigure $fh -translation binary
         } else {
-            fconfigure $fh -encoding [dict get $o -encoding] \
-                -translation [dict get $o -translation]
+            fconfigure $fh -translation [dict get $o -translation]
+            if {[dict get $o -encoding] ne ""} {
+                fconfigure $fh -encoding [dict get $o -encoding]
+            }
         }
         puts -nonewline $fh $data
         set ch $fh

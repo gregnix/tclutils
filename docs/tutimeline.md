@@ -19,7 +19,7 @@ across the top.
 ## Package
 
 ```tcl
-package require tclutils::tutimeline 0.2
+package require tclutils::tutimeline 0.3
 ```
 
 ## Commands
@@ -31,6 +31,8 @@ package require tclutils::tutimeline 0.2
 ::tclutils::tutimeline::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
 ::tclutils::tutimeline::writePng model file ?-opt val ...?   ;# -> file (PNG)
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 `parse` turns Mermaid `timeline` source into a model dict with keys `title`,
 `periods` (a list of `{time events section}`, `events` a list) and `sections`

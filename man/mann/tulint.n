@@ -28,6 +28,7 @@ Rule	Severity	Finds
 \fBENC\-2\fR	error	\fBpkgIndex.tcl\fR sources a file without \fB\-encoding\fR
 \fBENC\-3\fR	warning	non\-ASCII characters outside comments in a \fB*.tcl\fR script, \fBtests/all.tcl\fR and helper scripts included (\fB*.tm\fR modules are read as UTF\-8 by \fBtcl::tm\fR)
 \fBTST\-3\fR	error	the same test name twice in a file; definitions in two branches of one \fBif\fR or \fBswitch\fR are alternatives and do not count
+\fBDAT\-2\fR	info	\fBopen\fR with mode \fBw\fR, \fBwb\fR, \fBw+\fR or \fBTRUNC\fR in a \fB*.tm\fR or \fB*.tcl\fR file: the target is empty at once, a failed write loses the old content; write through \fBcommon::replaceFile\fR. A path word with \fBtmp\fR in it counts as a temporary file; \fB*.test\fR files are skipped
 .TE
 .PP
 \fBTST\-3\fR reads complete commands (\fBinfo complete\fR), not lines, and descends into braced bodies (\fBnamespace eval\fR, \fBif\fR, \fBforeach\fR ...); braces inside strings do not confuse it.

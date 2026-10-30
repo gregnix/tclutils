@@ -122,4 +122,23 @@ test tusvg-5.6 {no listed icon falls back to the question-mark glyph} -body {
     list [llength [::tclutils::tusvg::icons]] $bad
 } -result {149 {}}
 
+test tusvg-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tusvg-9.1.svg]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {set s [::tclutils::tusvg::create 8 8]; ::tclutils::tusvg::write $s $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tusvg-9.1.svg
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

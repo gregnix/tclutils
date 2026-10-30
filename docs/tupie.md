@@ -17,7 +17,7 @@ A slice is drawn as a filled polygon (centre plus arc-sampled rim points), so th
 ## Package
 
 ```tcl
-package require tclutils::tupie 0.2
+package require tclutils::tupie 0.3
 ```
 
 ## Commands
@@ -29,6 +29,8 @@ package require tclutils::tupie 0.2
 ::tclutils::tupie::writeSvg  model file ?-opt val ...?     ;# -> file (SVG)
 ::tclutils::tupie::writePng  model file ?-opt val ...?     ;# -> file (PNG)
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 `parse` turns Mermaid `pie` source into a model dict with keys `title`
 (string, may be empty), `showData` (`0`|`1`) and `slices` (a list of

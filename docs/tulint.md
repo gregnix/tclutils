@@ -40,6 +40,7 @@ Unknown options, a missing value and an unknown rule name are errors
 | `ENC-2` | error | `pkgIndex.tcl` sources a file without `-encoding` |
 | `ENC-3` | warning | non-ASCII characters outside comments in a `*.tcl` script, `tests/all.tcl` and helper scripts included (`*.tm` modules are read as UTF-8 by `tcl::tm`) |
 | `TST-3` | error | the same test name twice in a file; definitions in two branches of one `if` or `switch` are alternatives and do not count |
+| `DAT-2` | info | `open` with mode `w`, `wb`, `w+` or `TRUNC` in a `*.tm` or `*.tcl` file: the target is empty at once, a failed write loses the old content; write through `common::replaceFile`. A path word with `tmp` in it counts as a temporary file; `*.test` files are skipped |
 
 `TST-3` reads complete commands (`info complete`), not lines, and
 descends into braced bodies (`namespace eval`, `if`, `foreach` ...);

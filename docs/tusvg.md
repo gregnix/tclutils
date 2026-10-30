@@ -13,6 +13,10 @@ set out [tusvg::toString $svg]              ;# SVG text
 tusvg::write $svg file.svg                  ;# UTF-8 file
 ```
 
+`write` (the proc and the method of the canvas object) writes through a
+temporary file (`common::replaceFile`): a failed write leaves the old file
+and no open channel (0.4).
+
 ## Canvas object (for diagram renderers)
 
 ```tcl

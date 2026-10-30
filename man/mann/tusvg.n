@@ -1,4 +1,4 @@
-.TH tusvg n 0.3 tclutils
+.TH tusvg n 0.4 tclutils
 .SH tclutils::tusvg
 .PP
 A pure\-Tcl \fBSVG generator\fR \-\- no Tk, no external packages. Build a document as a dict, add shapes/paths/text/gradients/groups, and render to a string or file. Ships a library of 149 named toolbar icons (including aliases). It complements the \fBtupng\fR encoders: \fBtusvg\fR is the vector counterpart.
@@ -8,6 +8,8 @@ set svg [tusvg::create width height ?-viewBox "x y w h"? ?-id name?]
 set out [tusvg::toString $svg]              ;# SVG text
 tusvg::write $svg file.svg                  ;# UTF-8 file
 .CE
+.PP
+\fBwrite\fR (the proc and the method of the canvas object) writes through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (0.4).
 .SS "Canvas object (for diagram renderers)"
 .CS
 set c [tusvg::new ?-width W? ?-height H? ?-background C?]   ;# -> a canvas object

@@ -28,7 +28,11 @@ caller renders the returned text (e.g. in a Tk window or a log file).
 - Options: unknown options and an option without a value raise
   `{TCLUTILS TUAPPINFO OPTION}`, a non-boolean `-anonymize` raises
   `{TCLUTILS TUAPPINFO VALUE}`.
-- `writeLog` — write `buildReport` to `file`; returns the file path.
+- `writeLog` — write `buildReport` to `file` as UTF-8 through a temporary
+  file (`common::replaceFile`), so a failed write keeps an old log; returns
+  the file path (0.3; up to 0.2 in the system encoding).
+- The Tk line shows the patch level (`9.0.4`), as the Tcl line does (0.3;
+  up to 0.2 `tk_version`, `9.0`).
 
 ```tcl
 puts [::tclutils::tuappinfo::buildReport -title "MyApp 1.0"]

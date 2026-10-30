@@ -73,4 +73,32 @@ test opt-2 {option without value -> OPTION, non-boolean -anonymize -> VALUE} -bo
     list [dict get $o -errorcode] [dict get $o2 -errorcode]
 } -result {{TCLUTILS TUAPPINFO OPTION} {TCLUTILS TUAPPINFO VALUE}}
 
+test tkpatch-1 {the Tk line shows the patch level (0.3)} -setup {
+    set had [info exists ::tk_version]
+    if {!$had} { set ::tk_version 9.0; set ::tk_patchLevel 9.0.4 }
+} -body {
+    expr {[string first "Tk version: $::tk_patchLevel\n" "[${ns}::buildReport]\n"] >= 0}
+} -cleanup {
+    if {!$had} { unset ::tk_version ::tk_patchLevel }
+} -result 1
+
+test writeLog-2 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS writeLog-2.txt]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {${ns}::writeLog $f -title T}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile writeLog-2.txt
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

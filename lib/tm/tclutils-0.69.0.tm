@@ -89,13 +89,13 @@ package require tclutils::tuopen 0.2
 package require tclutils::tubookmark 0.3
 package require tclutils::tulog 0.2
 package require tclutils::tuimage 0.2
-package require tclutils::tupng 0.5
-package require tclutils::tupngdraw 0.13
+package require tclutils::tupng 0.6
+package require tclutils::tupngdraw 0.14
 package require tclutils::tutablepng 0.2
 package require tclutils::tumonthpng 0.5
 package require tclutils::tucodepng 0.1
 package require tclutils::tupngpad 0.2
-package require tclutils::tusvg 0.3
+package require tclutils::tusvg 0.4
 package require tclutils::tupagespec 0.2
 package require tclutils::tuexe 0.2
 package require tclutils::tulayout 0.2
@@ -103,7 +103,7 @@ package require tclutils::tulayout 0.2
 package require tclutils::tudeploy 0.2
 # Introspection / diagnostics
 package require tclutils::tupkgfinder 0.2
-package require tclutils::tuappinfo 0.2
+package require tclutils::tuappinfo 0.3
 package require tclutils::tuedid 0.1
 package require tclutils::tusysinfo 0.1
 package require tclutils::tusettings 0.2

@@ -1,4 +1,4 @@
-.TH tupngdraw n 0.13 tclutils
+.TH tupngdraw n 0.14 tclutils
 .SH tclutils::tupngdraw
 .PP
 A tiny pure\-Tcl 2D drawing layer that renders to a PNG via \fBtclutils::tupng\fR. No Tk and no external packages (TclOO is part of Tcl core). A surface is a TclOO object whose command is the handle, in the spirit of \fBpdf4tcl\fR \-\- but a PNG is a single surface, so there are no pages.
@@ -40,6 +40,8 @@ $p data  ?-compression 0..9? ?-filter best|none|sub|up|average|paeth?   ;# -> PN
 $p write file ?-compression ...? ?-filter ...?                          ;# -> file
 $p destroy
 .CE
+.PP
+\fBwrite\fR writes through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (0.14).
 .PP
 For the shapes, \fB\-fill 1\fR fills the interior with the fill colour and (unless \fB\-outline 0\fR) draws the outline with the stroke colour and current line width. \fB\-color\fR overrides the stroke for that call; \fB\-fillcolor\fR overrides the fill.
 .IP \(bu

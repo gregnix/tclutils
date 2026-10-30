@@ -14,7 +14,7 @@ sqlite3 db mydata.db
 foreach row [::tclutils::tusqlite::rows db {SELECT name, age FROM people}] {
     puts [dict get $row name]
 }
-set n [::tclutils::tusqlite::value db {SELECT count(*) FROM people} 0]
+set n [::tclutils::tusqlite::value db {SELECT count(*) FROM people} -default 0]
 .CE
 .PP
 Commands:
@@ -23,7 +23,7 @@ Commands:
 .IP \(bu
 \fBrows db sql ?params?\fR — run a query, return a list of column→value dicts (empty list if there are no rows).
 .IP \(bu
-\fBvalue db sql ?\-default d? ?\-params dict?\fR — the first column of the first row, or the default (\fB""\fR) when there is no row. The options keep a parameter dict apart from the default; the positional forms \fBvalue db sql default\fR and \fBvalue db sql default params\fR still work (0.2). Errors \fB{TCLUTILS TUSQLITE OPTION}\fR.
+\fBvalue db sql ?\-default d? ?\-params dict?\fR — the first column of the first row, or the default (\fB""\fR) when there is no row. The options keep a parameter dict apart from the default; the positional forms \fBvalue db sql default\fR and \fBvalue db sql default params\fR still work (0.2). Errors \fB{TCLUTILS TUSQLITE OPTION}\fR. Trap of the positional form: \fBvalue db $sql {id 1}\fR takes the dict as the default, not as parameters; the query runs without them, and with no row the dict comes back. Write \fBvalue db $sql \-params {id 1}\fR.
 .IP \(bu
 \fBupdate db table set where\fR — UPDATE the rows matching every key/value of \fBwhere\fR with the columns in \fBset\fR; returns the number of changed rows.
 .IP \(bu

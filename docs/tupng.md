@@ -12,7 +12,9 @@ The encoder writes 8-bit images in four colour types:
 | `encodeIndexed` / `writeIndexed` | palette (3)           | integer index into palette |
 
 The image model is a list of rows; each row is a list of pixels and all rows
-must have equal length. `encode*` return PNG bytes; `write*` write them to a file.
+must have equal length. `encode*` return PNG bytes; `write*` write them to a file
+through a temporary file (`common::replaceFile`): a failed write leaves the old
+file and no open channel (0.6).
 Two raw helpers, `encodeRGBARaw` / `writeRGBARaw`, take pre-packed
 `width*height*4` RGBA bytes directly (the encode side of `decode`).
 

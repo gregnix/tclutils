@@ -261,4 +261,42 @@ test tuflow-9.2 {";" inside a label or an edge label does not split the statemen
     list [nodeOf $m1 A label] [epairs $m1] [edgeKey $m2 A B label] [epairs $m3]
 } -result [list "J\u00f6rg;B\u00fcro" {{A B}} "h\u00e4lt;fest" {{A B} {B C}}]
 
+test tuflow-9.3 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tuflow-9.3.svg]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tuflow::writeSvg "graph RL\n  X --> Y" $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tuflow-9.3.svg
+} -result {1 PRECIOUS 0 0}
+
+test tuflow-9.4 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tuflow-9.4.png]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tuflow::writePng "graph RL\n  X --> Y" $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tuflow-9.4.png
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

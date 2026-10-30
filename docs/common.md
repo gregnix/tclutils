@@ -33,6 +33,10 @@ file keeps its permissions (Unix). On Linux the rename is atomic; on
 Windows `file rename -force` replaces the target in two steps, but the old
 content is untouched until the last one.
 
+`writeFile` with mode `w` (the default) or `wb` goes through `replaceFile`
+(tclutils 0.69.0); mode `a` appends in place as before. So `tunotes::save`
+and `tujson::filePretty`/`fileMinify` keep the old file on a failed write too.
+
 ## Delimited text
 
 `splitDelimited` supports both one-character and multi-character delimiters.

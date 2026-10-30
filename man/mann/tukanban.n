@@ -1,10 +1,10 @@
-.TH tukanban n 0.1 tclutils
+.TH tukanban n 0.2 tclutils
 .SH tclutils::tukanban
 .PP
 Parses a Mermaid \fBkanban\fR block and renders it natively (SVG or PNG) through the pure\-Tcl engine. A self\-contained 2D renderer in the \fBtclutils::tuflow\fR family (like \fBtupie\fR / \fBtusankey\fR / \fBtupacket\fR); normally you call \fBtuflow::toSvg\fR / \fBtuflow::toPng\fR, which dispatch here. A kanban board is a column layout, not a node\-edge graph, so it does \fBnot\fR go through \fBtudiagram\fR.
 .SS Package
 .CS
-package require tclutils::tukanban 0.1
+package require tclutils::tukanban 0.2
 .CE
 .SS Commands
 .CS
@@ -14,6 +14,8 @@ package require tclutils::tukanban 0.1
 ::tclutils::tukanban::writeSvg model file ?...?
 ::tclutils::tukanban::writePng model file ?...?
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .SS "Supported syntax (Mermaid subset)"
 .CS
 kanban

@@ -9,7 +9,7 @@ node-edge graph, so it does **not** go through `tudiagram`.
 ## Package
 
 ```tcl
-package require tclutils::tukanban 0.1
+package require tclutils::tukanban 0.2
 ```
 
 ## Commands
@@ -21,6 +21,8 @@ package require tclutils::tukanban 0.1
 ::tclutils::tukanban::writeSvg model file ?...?
 ::tclutils::tukanban::writePng model file ?...?
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 ## Supported syntax (Mermaid subset)
 

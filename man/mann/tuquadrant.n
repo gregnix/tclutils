@@ -1,4 +1,4 @@
-.TH tuquadrant n 0.1 tclutils
+.TH tuquadrant n 0.2 tclutils
 .SH tclutils::tuquadrant
 .PP
 A Mermaid\-style \fBquadrant chart\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBquadrantChart\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
@@ -8,7 +8,7 @@ A quadrant chart is not a node\-edge graph, so \fBtuquadrant\fR does \fBnot\fR g
 The plot is a unit square split into four tinted quadrants; data points are placed at their normalised \fB0..1\fR coordinates with the same routine on both backends, so the SVG and the raster output stay congruent.
 .SS Package
 .CS
-package require tclutils::tuquadrant 0.1
+package require tclutils::tuquadrant 0.2
 .CE
 .SS Commands
 .CS
@@ -18,6 +18,8 @@ package require tclutils::tuquadrant 0.1
 ::tclutils::tuquadrant::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
 ::tclutils::tuquadrant::writePng model file ?-opt val ...?   ;# -> file (PNG)
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .PP
 \fBparse\fR turns Mermaid \fBquadrantChart\fR source into a model dict with keys \fBtitle\fR, \fBxleft\fR/\fBxright\fR, \fBybottom\fR/\fBytop\fR, \fBq1\fR..\fBq4\fR (quadrant labels) and \fBpoints\fR (a list of \fB{name x y}\fR with \fBx\fR,\fBy\fR in \fB0..1\fR). The render commands take that model.
 .PP

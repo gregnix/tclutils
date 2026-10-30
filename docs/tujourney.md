@@ -19,7 +19,7 @@ as coloured dots, and an actor legend.
 ## Package
 
 ```tcl
-package require tclutils::tujourney 0.2
+package require tclutils::tujourney 0.3
 ```
 
 ## Commands
@@ -31,6 +31,8 @@ package require tclutils::tujourney 0.2
 ::tclutils::tujourney::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
 ::tclutils::tujourney::writePng model file ?-opt val ...?   ;# -> file (PNG)
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 `parse` turns Mermaid `journey` source into a model dict with keys `title`,
 `tasks` (a list of `{name score actors section}`), `sections` (ordered unique

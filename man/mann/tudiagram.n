@@ -1,4 +1,4 @@
-.TH tudiagram n 0.5 tclutils
+.TH tudiagram n 0.6 tclutils
 .SH tclutils::tudiagram
 .PP
 A pure\-Tcl \fBnode\-edge graph renderer\fR for the \fBtuflow\fR diagram family. It builds a small diagram model (a dict), runs a layered layout, and draws the result to SVG or PNG with the pure\-Tcl backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
@@ -8,7 +8,7 @@ A pure\-Tcl \fBnode\-edge graph renderer\fR for the \fBtuflow\fR diagram family.
 The render layer talks only to the congruent canvas protocol shared by \fBtusvg\fR and \fBtupngdraw\fR: the same \fBrender\fR proc emits SVG or PNG, the constructor is the only difference. Box sizing uses the shared monospace text metric, so the layout geometry is backend\-independent and the SVG and PNG output stay congruent.
 .SS Package
 .CS
-package require tclutils::tudiagram 0.5
+package require tclutils::tudiagram 0.6
 .CE
 .PP
 Depends only on \fBtclutils::common\fR. Building and laying out a model needs no canvas; rendering needs a \fBtusvg\fR or \fBtupngdraw\fR object. The optional \fB\-fontfile\fR path additionally needs the third\-party \fBGlyphs\fR package at render time (lazy, unbundled).
@@ -73,7 +73,7 @@ Resolves a theme name to its dict. Known names are \fBdefault\fR, \fBpipeline\fR
 ::tclutils::tudiagram::writePng d file ?-scale N?         ;# -> file (PNG)
 .CE
 .PP
-\fBrender\fR draws the (already laid\-out) model onto an existing canvas object — a \fBtclutils::tusvg\fR or \fBtclutils::tupngdraw\fR instance — and is the low\-level entry point. The four \fBto*\fR / \fBwrite*\fR procs are the convenience wrappers: they construct the right backend, call \fBrender\fR, and return the bytes / write the file.
+\fBrender\fR draws the (already laid\-out) model onto an existing canvas object — a \fBtclutils::tusvg\fR or \fBtclutils::tupngdraw\fR instance — and is the low\-level entry point. The four \fBto*\fR / \fBwrite*\fR procs are the convenience wrappers: they construct the right backend, call \fBrender\fR, and return the bytes / write the file. \fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (0.6).
 .SS "Render options"
 .CS
 -scale N      raster supersample factor, positive integer  (default 1; toPng/writePng only)

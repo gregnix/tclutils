@@ -96,4 +96,42 @@ test tuquadrant-4.3 {integer -scale multiplies the raster dimensions} -body {
     list $w1 $h1 $w3 $h3
 } -result {200 200 600 600}
 
+test tuquadrant-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tuquadrant-9.1.svg]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tuquadrant::writeSvg [M::parse "quadrantChart\n  A: \[0.3, 0.6\]\n  B: \[0.45, 0.23\]"] $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tuquadrant-9.1.svg
+} -result {1 PRECIOUS 0 0}
+
+test tuquadrant-9.2 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tuquadrant-9.2.png]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tuquadrant::writePng [M::parse "quadrantChart\n  A: \[0.3, 0.6\]\n  B: \[0.45, 0.23\]"] $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tuquadrant-9.2.png
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

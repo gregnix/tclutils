@@ -13,8 +13,9 @@
 #
 # Error codes: {TCLUTILS TUAPPINFO OPTION|VALUE}.
 #
-# Tcl 8.6-
+# Tcl 8.6-, tclutils::common 0.3 (writeLog)
 package require Tcl 8.6-
+package require tclutils::common 0.3
 
 namespace eval ::tclutils::tuappinfo {
     variable loadedTm {}
@@ -67,9 +68,8 @@ proc ::tclutils::tuappinfo::buildReport {args} {
 # Write the report to a file (same options as buildReport).
 proc ::tclutils::tuappinfo::writeLog {file args} {
     set txt [buildReport {*}$args]
-    set fh [open $file w]
-    puts $fh $txt
-    close $fh
+    # temporary file, then rename: a failed write keeps an old log (0.3)
+    ::tclutils::common::replaceFile $file "$txt\n" -encoding utf-8 -translation auto
     return $file
 }
 
@@ -125,7 +125,8 @@ proc ::tclutils::tuappinfo::_collectCoreInfo {title anonymize} {
     lappend info "--- Tcl / Tk ---"
     lappend info "Tcl version: [info patchlevel]"
     if {[info exists ::tk_version]} {
-        lappend info "Tk version: $::tk_version"
+        # the patch level, as for Tcl (0.3; was tk_version, "9.0")
+        lappend info "Tk version: [expr {[info exists ::tk_patchLevel] ? $::tk_patchLevel : $::tk_version}]"
     }
     if {$anonymize} {
         lappend info "Executable: [_maskPath [info nameofexecutable] [_home]]"
@@ -230,4 +231,4 @@ proc ::tclutils::tuappinfo::_collectLoadedTm {anonymize} {
     return $info
 }
 
-package provide tclutils::tuappinfo 0.2
+package provide tclutils::tuappinfo 0.3

@@ -1,4 +1,4 @@
-.TH tupng n 0.5 tclutils
+.TH tupng n 0.6 tclutils
 .SH tclutils::tupng
 .PP
 A pure\-Tcl PNG \fBencoder/decoder\fR \-\- no Tk, no external packages, only the core \fBzlib\fR command. It complements \fBtclutils::tuimage\fR (which inspects PNG headers). The encoder writes 8\-bit images in four colour types:
@@ -11,7 +11,7 @@ Function	Colour type	Pixel syntax
 \fBencodeIndexed\fR / \fBwriteIndexed\fR	palette (3)	integer index into palette
 .TE
 .PP
-The image model is a list of rows; each row is a list of pixels and all rows must have equal length. \fBencode*\fR return PNG bytes; \fBwrite*\fR write them to a file. Two raw helpers, \fBencodeRGBARaw\fR / \fBwriteRGBARaw\fR, take pre\-packed \fBwidth*height*4\fR RGBA bytes directly (the encode side of \fBdecode\fR).
+The image model is a list of rows; each row is a list of pixels and all rows must have equal length. \fBencode*\fR return PNG bytes; \fBwrite*\fR write them to a file through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (0.6). Two raw helpers, \fBencodeRGBARaw\fR / \fBwriteRGBARaw\fR, take pre\-packed \fBwidth*height*4\fR RGBA bytes directly (the encode side of \fBdecode\fR).
 .CS
 set png [tupng::encodeRGB {{FF0000 00FF00} {0000FF FFFFFF}}]
 tupng::writeRGBA out.png {{FF0000FF 00FF0080} {0000FF00 FFFFFFFF}} -compression 9

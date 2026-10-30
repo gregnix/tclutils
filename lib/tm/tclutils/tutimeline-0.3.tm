@@ -1,4 +1,4 @@
-# tutimeline-0.2.tm -- parse and render a Mermaid `timeline` block to SVG or PNG
+# tutimeline-0.3.tm -- parse and render a Mermaid `timeline` block to SVG or PNG
 # Description: parse and render a Mermaid `timeline` block to SVG or PNG (pure-Tcl backends)
 # Category: Diagrams · Mermaid
 # through the pure-Tcl backends (tusvg / tupngdraw), so a timeline can be shown
@@ -25,11 +25,11 @@
 # periods may crowd or clip (no wrapping/rotation); a section is a contiguous
 # run of periods (as Mermaid emits them).
 #
-# Namespace: ::tclutils::tutimeline   Package: tclutils::tutimeline 0.2
+# Namespace: ::tclutils::tutimeline   Package: tclutils::tutimeline 0.3
 # Errors:    {TCLUTILS TUTIMELINE <REASON>}   REASON in EMPTY, ARG, FONT
 
 package require Tcl 8.6-
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 
 namespace eval ::tclutils::tutimeline {
     namespace export parse toSvg toPng writeSvg writePng
@@ -308,19 +308,15 @@ proc ::tclutils::tutimeline::toPng {model args} {
 
 proc ::tclutils::tutimeline::writeSvg {model file args} {
     set svg [toSvg $model {*}$args]
-    set fh [open $file w]
-    fconfigure $fh -encoding utf-8 -translation lf
-    puts -nonewline $fh $svg
-    close $fh
+    # temp file + rename: a failed write leaves the old file (0.69.0)
+    ::tclutils::common::replaceFile $file $svg -encoding utf-8 -translation lf
     return $file
 }
 
 proc ::tclutils::tutimeline::writePng {model file args} {
     set png [toPng $model {*}$args]
-    set fh [open $file wb]
-    puts -nonewline $fh $png
-    close $fh
+    ::tclutils::common::replaceFile $file $png -encoding binary
     return $file
 }
 
-package provide tclutils::tutimeline 0.2
+package provide tclutils::tutimeline 0.3

@@ -77,7 +77,8 @@ set rows [::tclutils::tucsv::file data.csv -delimiter {;}]
 
 `file` and `writeFile` take `-encoding` (default `utf-8`). `writeFile` writes
 the line ends given by `-newline` unchanged; without it the platform default
-applies.
+applies. It writes through a temporary file (`common::replaceFile`): a failed
+write leaves the old file and no open channel (tclutils 0.69.0).
 
 ## Profiles
 

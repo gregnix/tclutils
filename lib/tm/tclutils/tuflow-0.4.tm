@@ -34,6 +34,7 @@
 # Errors:    {TCLUTILS TUFLOW <REASON>}
 
 package require Tcl 8.6-
+package require tclutils::common 0.3
 package require tclutils::tudiagram 0.2
 
 namespace eval ::tclutils {}
@@ -534,18 +535,14 @@ proc ::tclutils::tuflow::toPng {text args} {
 
 proc ::tclutils::tuflow::writeSvg {text file args} {
     set svg [toSvg $text {*}$args]
-    set fh [open $file w]
-    fconfigure $fh -encoding utf-8 -translation lf
-    puts -nonewline $fh $svg
-    close $fh
+    # temp file + rename: a failed write leaves the old file (0.69.0)
+    ::tclutils::common::replaceFile $file $svg -encoding utf-8 -translation lf
     return $file
 }
 
 proc ::tclutils::tuflow::writePng {text file args} {
     set png [toPng $text {*}$args]
-    set fh [open $file wb]
-    puts -nonewline $fh $png
-    close $fh
+    ::tclutils::common::replaceFile $file $png -encoding binary
     return $file
 }
 

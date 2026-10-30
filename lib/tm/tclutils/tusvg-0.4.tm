@@ -1,4 +1,4 @@
-# tusvg-0.3.tm – SVG canvas, congruent with the tupngdraw object API.
+# tusvg-0.4.tm – SVG canvas, congruent with the tupngdraw object API.
 # Description: SVG canvas, congruent with the tupngdraw object API.
 # Category: Graphics · raster/vector
 #
@@ -22,13 +22,13 @@
 # gradients, the icon library) as additional methods / legacy procs — these have
 # no tupngdraw counterpart and are not part of the swap contract.
 #
-# Namespace: ::tclutils::tusvg   Package: tclutils::tusvg 0.3
+# Namespace: ::tclutils::tusvg   Package: tclutils::tusvg 0.4
 # Errors:    {TCLUTILS TUSVG <REASON>}
 # Tcl 8.6+/9.x, TclOO core. No Tk, no external packages.
 
 package require Tcl 8.6-
 package require TclOO
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tusvg {
@@ -256,11 +256,10 @@ oo::class create ::tclutils::tusvg::Canvas {
  height=\"$height\" viewBox=\"0 0 $width $height\">\n$d$bg$elems</svg>\n"
     }
 
+    # temp file + rename: a failed write leaves the old file (0.4)
     method write {file args} {
-        set fid [open $file w]
-        fconfigure $fid -encoding utf-8
-        puts -nonewline $fid [my data {*}$args]
-        close $fid
+        ::tclutils::common::replaceFile $file [my data {*}$args] \
+            -encoding utf-8 -translation auto
         return $file
     }
 
@@ -836,10 +835,7 @@ proc ::tclutils::tusvg::toString {svg} {
 
 proc ::tclutils::tusvg::write {svg filename} {
     set content [toString $svg]
-    set f [open $filename w]
-    fconfigure $f -encoding utf-8
-    puts -nonewline $f $content
-    close $f
+    ::tclutils::common::replaceFile $filename $content -encoding utf-8 -translation auto
     return $filename
 }
 
@@ -1711,4 +1707,4 @@ proc ::tclutils::tusvg::icons {} {
 }
 
 
-package provide tclutils::tusvg 0.3
+package provide tclutils::tusvg 0.4

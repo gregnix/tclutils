@@ -28,4 +28,4 @@ bytes that are not valid in the source encoding	\fBTCLUTILS TUICONV INVALID enc\
 unknown encoding	\fBTCLUTILS TUICONV ENCODING enc\fR
 .TE
 .PP
-\fB\-replace 1\fR substitutes instead: \fB?\fR when writing, a replacement character when reading. \fBwriteFile\fR converts before it opens the file, so on an error the file keeps its content. Up to 0.1 Tcl 8.6 wrote \fB?\fR without a word and Tcl 9.0 raised a plain Tcl error.
+\fB\-replace 1\fR substitutes instead: \fB?\fR when writing, a replacement character when reading. \fBwriteFile\fR converts before it writes, so on an error the file keeps its content; the bytes go through a temporary file (\fBcommon::replaceFile\fR), so a failed write keeps it too. Up to 0.1 Tcl 8.6 wrote \fB?\fR without a word and Tcl 9.0 raised a plain Tcl error.

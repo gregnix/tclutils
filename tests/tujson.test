@@ -181,4 +181,25 @@ test tujson-tojson-7 {unknown type is rejected} -body {
     set e
 } -result {unknown JSON type "weird"}
 
+test tujson-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tujson-9.1.json]
+    set in [makeFile {{"a":1}} tujson-9.1.in]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tujson::filePretty $in $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tujson-9.1.json
+    removeFile tujson-9.1.in
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

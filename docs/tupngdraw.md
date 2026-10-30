@@ -51,6 +51,9 @@ $p write file ?-compression ...? ?-filter ...?                          ;# -> fi
 $p destroy
 ```
 
+`write` writes through a temporary file (`common::replaceFile`): a failed
+write leaves the old file and no open channel (0.14).
+
 For the shapes, `-fill 1` fills the interior with the fill colour and (unless
 `-outline 0`) draws the outline with the stroke colour and current line width.
 `-color` overrides the stroke for that call; `-fillcolor` overrides the fill.

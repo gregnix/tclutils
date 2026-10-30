@@ -1,4 +1,4 @@
-.TH tupie n 0.2 tclutils
+.TH tupie n 0.3 tclutils
 .SH tclutils::tupie
 .PP
 A Mermaid\-style \fBpie chart\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBpie\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
@@ -8,7 +8,7 @@ A pie chart is not a node\-edge graph, so \fBtupie\fR does \fBnot\fR go through 
 A slice is drawn as a filled polygon (centre plus arc\-sampled rim points), so the \fBsame\fR routine renders identically on the raster and the SVG backend.
 .SS Package
 .CS
-package require tclutils::tupie 0.2
+package require tclutils::tupie 0.3
 .CE
 .SS Commands
 .CS
@@ -18,6 +18,8 @@ package require tclutils::tupie 0.2
 ::tclutils::tupie::writeSvg  model file ?-opt val ...?     ;# -> file (SVG)
 ::tclutils::tupie::writePng  model file ?-opt val ...?     ;# -> file (PNG)
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .PP
 \fBparse\fR turns Mermaid \fBpie\fR source into a model dict with keys \fBtitle\fR (string, may be empty), \fBshowData\fR (\fB0\fR|\fB1\fR) and \fBslices\fR (a list of \fB{label value}\fR pairs). The render commands take that model.
 .PP

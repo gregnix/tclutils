@@ -8,7 +8,7 @@
 # delimiter, CRLF line ends and (writeFile) a UTF-8 byte order mark.
 
 package require Tcl 8.6-
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tucsv {
@@ -233,16 +233,12 @@ proc ::tclutils::tucsv::dicts {rows args} {
 
 proc ::tclutils::tucsv::writeFile {path rows args} {
     lassign [_take [_profile {*}$args] {-encoding} {-encoding utf-8}] args fo
-    set fh [open $path w]
-    try {
-        # with an explicit -newline the text carries its own line ends;
-        # otherwise the platform convention applies, as before
-        set tr [expr {[dict exists $args -newline] ? "lf" : "auto"}]
-        fconfigure $fh -translation $tr -encoding [dict get $fo -encoding]
-        puts -nonewline $fh [text $rows {*}$args]
-    } finally {
-        close $fh
-    }
+    # with an explicit -newline the text carries its own line ends;
+    # otherwise the platform convention applies, as before. Written through
+    # common::replaceFile: a failed write leaves the old file.
+    set tr [expr {[dict exists $args -newline] ? "lf" : "auto"}]
+    ::tclutils::common::replaceFile $path [text $rows {*}$args] \
+        -encoding [dict get $fo -encoding] -translation $tr
     return $path
 }
 

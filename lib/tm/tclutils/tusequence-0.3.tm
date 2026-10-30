@@ -1,4 +1,4 @@
-# tusequence-0.2.tm -- parse and render a Mermaid `sequenceDiagram` block to SVG
+# tusequence-0.3.tm -- parse and render a Mermaid `sequenceDiagram` block to SVG
 # Description: parse and render a Mermaid `sequenceDiagram` block to SVG or PNG.
 # Category: Diagrams · Mermaid
 # or PNG. A self-contained 2D renderer in the tuflow family (like tugantt /
@@ -21,11 +21,11 @@
 # the full width (indented per nesting depth) rather than only the involved
 # lifelines; no create/destroy, no participant boxes, no links/popups.
 #
-# Namespace: ::tclutils::tusequence   Package: tclutils::tusequence 0.2
+# Namespace: ::tclutils::tusequence   Package: tclutils::tusequence 0.3
 # Errors:    {TCLUTILS TUSEQUENCE <REASON>}   REASON in EMPTY | ARG | FONT
 
 package require Tcl 8.6 9
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 
 namespace eval ::tclutils::tusequence {
     namespace export parse toSvg toPng writeSvg writePng
@@ -614,19 +614,15 @@ proc ::tclutils::tusequence::toPng {model args} {
 
 proc ::tclutils::tusequence::writeSvg {model file args} {
     set svg [toSvg $model {*}$args]
-    set fh [open $file w]
-    fconfigure $fh -encoding utf-8 -translation lf
-    puts -nonewline $fh $svg
-    close $fh
+    # temp file + rename: a failed write leaves the old file (0.69.0)
+    ::tclutils::common::replaceFile $file $svg -encoding utf-8 -translation lf
     return $file
 }
 
 proc ::tclutils::tusequence::writePng {model file args} {
     set png [toPng $model {*}$args]
-    set fh [open $file wb]
-    puts -nonewline $fh $png
-    close $fh
+    ::tclutils::common::replaceFile $file $png -encoding binary
     return $file
 }
 
-package provide tclutils::tusequence 0.2
+package provide tclutils::tusequence 0.3

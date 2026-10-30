@@ -10,7 +10,7 @@ bit-field table, not a node-edge graph, so it does **not** go through
 ## Package
 
 ```tcl
-package require tclutils::tupacket 0.2
+package require tclutils::tupacket 0.3
 ```
 
 ## Commands
@@ -22,6 +22,8 @@ package require tclutils::tupacket 0.2
 ::tclutils::tupacket::writeSvg model file ?...?
 ::tclutils::tupacket::writePng model file ?...?
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 ## Supported syntax (Mermaid subset)
 

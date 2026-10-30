@@ -1,4 +1,4 @@
-.TH tujourney n 0.2 tclutils
+.TH tujourney n 0.3 tclutils
 .SH tclutils::tujourney
 .PP
 A Mermaid\-style \fBuser journey\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBjourney\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
@@ -8,7 +8,7 @@ A journey is not a node\-edge graph, so \fBtujourney\fR does \fBnot\fR go throug
 The chart shows the tasks left\-to\-right in source order, a line through their satisfaction scores, section bands across the top, the actors under each task as coloured dots, and an actor legend.
 .SS Package
 .CS
-package require tclutils::tujourney 0.2
+package require tclutils::tujourney 0.3
 .CE
 .SS Commands
 .CS
@@ -18,6 +18,8 @@ package require tclutils::tujourney 0.2
 ::tclutils::tujourney::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
 ::tclutils::tujourney::writePng model file ?-opt val ...?   ;# -> file (PNG)
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .PP
 \fBparse\fR turns Mermaid \fBjourney\fR source into a model dict with keys \fBtitle\fR, \fBtasks\fR (a list of \fB{name score actors section}\fR), \fBsections\fR (ordered unique section names) and \fBactors\fR (ordered unique actor names). The render commands take that model.
 .PP

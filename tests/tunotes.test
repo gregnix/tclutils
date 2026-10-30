@@ -236,4 +236,23 @@ test tunotes-9.2 {a file of 0.1 in the system encoding is still read} -setup {
     removeFile tunotes-9.2.json
 } -result "J\u00f6rg"
 
+test tunotes-9.3 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tunotes-9.3.txt]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tunotes::save [lindex [mkstore] 0] $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tunotes-9.3.txt
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

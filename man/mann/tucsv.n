@@ -65,7 +65,7 @@ set rows [::tclutils::tucsv::file data.csv -delimiter {;}]
 ::tclutils::tucsv::writeFile out.csv $rows -profile excel-de
 .CE
 .PP
-\fBfile\fR and \fBwriteFile\fR take \fB\-encoding\fR (default \fButf\-8\fR). \fBwriteFile\fR writes the line ends given by \fB\-newline\fR unchanged; without it the platform default applies.
+\fBfile\fR and \fBwriteFile\fR take \fB\-encoding\fR (default \fButf\-8\fR). \fBwriteFile\fR writes the line ends given by \fB\-newline\fR unchanged; without it the platform default applies. It writes through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .SS Profiles
 .PP
 \fB\-profile\fR works with \fBtext\fR, \fBfile\fR and \fBwriteFile\fR. Options given after it override its values.

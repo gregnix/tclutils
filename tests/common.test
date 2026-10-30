@@ -144,4 +144,42 @@ test common-9.2 {replaceFile writes text, bytes and keeps permissions} -setup {
     removeFile common-9.2.bin
 } -result {1 2 750 0}
 
+test common-9.3 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS common-9.3.txt]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::common::writeFile $f NEW}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile common-9.3.txt
+} -result {1 PRECIOUS 0 0}
+
+test common-9.4 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS common-9.4.bin]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::common::writeFile $f NEW wb}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile common-9.4.bin
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

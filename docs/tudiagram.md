@@ -21,7 +21,7 @@ geometry is backend-independent and the SVG and PNG output stay congruent.
 ## Package
 
 ```tcl
-package require tclutils::tudiagram 0.5
+package require tclutils::tudiagram 0.6
 ```
 
 Depends only on `tclutils::common`. Building and laying out a model needs no
@@ -143,7 +143,9 @@ returned. Any other value (an unknown name, a dict without `fill`) raises
 `tclutils::tusvg` or `tclutils::tupngdraw` instance — and is the low-level entry
 point. The four `to*` / `write*` procs are the convenience wrappers: they
 construct the right backend, call `render`, and return the bytes / write the
-file.
+file. `writeSvg` and `writePng` write through a temporary file
+(`common::replaceFile`): a failed write leaves the old file and no open
+channel (0.6).
 
 ## Render options
 

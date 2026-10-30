@@ -45,10 +45,10 @@ placements are handled automatically:
 
 ```
 ~/lib/tcltk/
-├── tclutils-0.58.0/
+├── tclutils-0.69.0/
 │   ├── tools/setup.tcl     ← source this
 │   └── lib/tm/tclutils/…
-└── tkutils-0.41.0/
+└── tkutils-0.49.0/
     └── lib/tm/tkutils/…
 ```
 
@@ -57,11 +57,11 @@ placements are handled automatically:
 ```
 ~/lib/tcltk/
 ├── setup.tcl               ← source this
-├── tclutils-0.58.0/lib/tm/…
-└── tkutils-0.41.0/lib/tm/…
+├── tclutils-0.69.0/lib/tm/…
+└── tkutils-0.49.0/lib/tm/…
 ```
 
-Both versioned (`tclutils-0.58.0/`) and unversioned (`tclutils/`) folder names
+Both versioned (`tclutils-0.69.0/`) and unversioned (`tclutils/`) folder names
 are accepted; for versioned siblings the highest version is chosen. Because the
 `.tm` files themselves are already version-stamped (`tubin-0.1.tm`), Tcl then
 picks the highest matching version automatically.

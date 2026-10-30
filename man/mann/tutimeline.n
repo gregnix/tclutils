@@ -1,4 +1,4 @@
-.TH tutimeline n 0.2 tclutils
+.TH tutimeline n 0.3 tclutils
 .SH tclutils::tutimeline
 .PP
 A Mermaid\-style \fBtimeline\fR renderer for the \fBtuflow\fR diagram family. It parses a Mermaid \fBtimeline\fR block into a small model and renders it to SVG or PNG with the pure\-Tcl drawing backends (\fBtclutils::tusvg\fR / \fBtclutils::tupngdraw\fR). No Tk, no browser, no external rasteriser.
@@ -8,7 +8,7 @@ A timeline is not a node\-edge graph, so \fBtutimeline\fR does \fBnot\fR go thro
 The chart is drawn horizontally: a time axis with the period labels below it, each period's events stacked as boxes above it, and sections as coloured bands across the top.
 .SS Package
 .CS
-package require tclutils::tutimeline 0.2
+package require tclutils::tutimeline 0.3
 .CE
 .SS Commands
 .CS
@@ -18,6 +18,8 @@ package require tclutils::tutimeline 0.2
 ::tclutils::tutimeline::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
 ::tclutils::tutimeline::writePng model file ?-opt val ...?   ;# -> file (PNG)
 .CE
+.PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 .PP
 \fBparse\fR turns Mermaid \fBtimeline\fR source into a model dict with keys \fBtitle\fR, \fBperiods\fR (a list of \fB{time events section}\fR, \fBevents\fR a list) and \fBsections\fR (ordered unique section names). The render commands take that model.
 .PP

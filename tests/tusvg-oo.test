@@ -107,4 +107,23 @@ test tusvg-oo-3.1 {icon method embeds the icon as SVG markup} -body {
         [regexp -all {<svg} $d] [regexp -all {</svg>} $d]
 } -result {1 1 0 0 2 2}
 
+test tusvg-oo-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tusvg-oo-9.1.svg]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {set c [::tclutils::tusvg::new -width 8 -height 8]; $c write $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tusvg-oo-9.1.svg
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

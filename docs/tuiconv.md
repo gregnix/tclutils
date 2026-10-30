@@ -30,6 +30,7 @@ Conversion is strict, the same under Tcl 8.6 and 9 (0.2):
 | unknown encoding | `TCLUTILS TUICONV ENCODING enc` |
 
 `-replace 1` substitutes instead: `?` when writing, a replacement character
-when reading. `writeFile` converts before it opens the file, so on an error
-the file keeps its content. Up to 0.1 Tcl 8.6 wrote `?` without a word and
+when reading. `writeFile` converts before it writes, so on an error
+the file keeps its content; the bytes go through a temporary file
+(`common::replaceFile`), so a failed write keeps it too. Up to 0.1 Tcl 8.6 wrote `?` without a word and
 Tcl 9.0 raised a plain Tcl error.

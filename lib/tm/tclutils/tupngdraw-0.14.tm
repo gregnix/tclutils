@@ -44,14 +44,14 @@
 # plus German umlauts/eszett), embedded as glyph data. MIT, like the rest.
 
 package require Tcl 8.6-
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 package require tclutils::tupng 0.2
 package require TclOO
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tupngdraw {
     namespace export new
-    variable version 0.13
+    variable version 0.14
     variable colors {
         black {0 0 0 255}        white {255 255 255 255}
         red {255 0 0 255}        green {0 128 0 255}
@@ -1076,11 +1076,9 @@ oo::class create ::tclutils::tupngdraw::Image {
         }
         return [::tclutils::tupng::encodeRGBARaw $packed $width $height {*}$args]
     }
+    # temp file + rename: a failed write leaves the old file (0.14)
     method write {file args} {
-        set fid [open $file w]
-        fconfigure $fid -translation binary
-        puts -nonewline $fid [my data {*}$args]
-        close $fid
+        ::tclutils::common::replaceFile $file [my data {*}$args] -encoding binary
         return $file
     }
 }
@@ -1089,4 +1087,4 @@ proc ::tclutils::tupngdraw::new {args} {
     return [::tclutils::tupngdraw::Image new {*}$args]
 }
 
-package provide tclutils::tupngdraw 0.13
+package provide tclutils::tupngdraw 0.14

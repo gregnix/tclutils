@@ -211,4 +211,23 @@ test tutreemap-9.2 {a :::class with umlauts is removed whole (0.3)} -body {
     lmap c [dict get [lindex [dict get $m children] 0] children] {list [dict get $c name] [dict get $c value]}
 } -result {{Amt 2.0}}
 
+test tutreemap-9.3 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tutreemap-9.3.png]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tutreemap::writePng [M::parse "treemap-beta\n\"A\": 1"] $f}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tutreemap-9.3.png
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

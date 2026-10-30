@@ -234,4 +234,23 @@ test tupng-6.1 {encodeIndexed keeps tRNS bytes that look like a number} -body {
     expr {[string first tRNS010 $png] >= 0}
 } -result 1
 
+test tupng-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
+    set f [makeFile PRECIOUS tupng-9.1.png]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {::tclutils::tupng::writeRGB $f {{FF0000 00FF00}}}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tupng-9.1.png
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

@@ -1,4 +1,4 @@
-# tupie-0.2.tm -- a Mermaid-style pie chart renderer for the tuflow family.
+# tupie-0.3.tm -- a Mermaid-style pie chart renderer for the tuflow family.
 # Description: a Mermaid-style pie chart renderer for the tuflow family.
 # Category: Diagrams · Mermaid
 #
@@ -30,11 +30,11 @@
 # With -fontfile on the raster backend, labels use a real TTF via fillcontours
 # (lazy Glyphs, ungebundled). The SVG backend ignores -fontfile.
 #
-# Namespace: ::tclutils::tupie   Package: tclutils::tupie 0.2
+# Namespace: ::tclutils::tupie   Package: tclutils::tupie 0.3
 # Errors:    {TCLUTILS TUPIE <REASON>}   REASON in EMPTY|VALUE|FONT|ARG
 
 package require Tcl 8.6-
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tupie {
@@ -333,19 +333,15 @@ proc ::tclutils::tupie::toPng {model args} {
 
 proc ::tclutils::tupie::writeSvg {model file args} {
     set svg [toSvg $model {*}$args]
-    set fh [open $file w]
-    fconfigure $fh -encoding utf-8 -translation lf
-    puts -nonewline $fh $svg
-    close $fh
+    # temp file + rename: a failed write leaves the old file (0.69.0)
+    ::tclutils::common::replaceFile $file $svg -encoding utf-8 -translation lf
     return $file
 }
 
 proc ::tclutils::tupie::writePng {model file args} {
     set png [toPng $model {*}$args]
-    set fh [open $file wb]
-    puts -nonewline $fh $png
-    close $fh
+    ::tclutils::common::replaceFile $file $png -encoding binary
     return $file
 }
 
-package provide tclutils::tupie 0.2
+package provide tclutils::tupie 0.3

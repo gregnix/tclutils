@@ -19,7 +19,7 @@ backends, so the SVG and the raster output stay congruent.
 ## Package
 
 ```tcl
-package require tclutils::tuquadrant 0.1
+package require tclutils::tuquadrant 0.2
 ```
 
 ## Commands
@@ -31,6 +31,8 @@ package require tclutils::tuquadrant 0.1
 ::tclutils::tuquadrant::writeSvg model file ?-opt val ...?   ;# -> file (SVG)
 ::tclutils::tuquadrant::writePng model file ?-opt val ...?   ;# -> file (PNG)
 ```
+
+`writeSvg` and `writePng` write through a temporary file (`common::replaceFile`): a failed write leaves the old file and no open channel (tclutils 0.69.0).
 
 `parse` turns Mermaid `quadrantChart` source into a model dict with keys
 `title`, `xleft`/`xright`, `ybottom`/`ytop`, `q1`..`q4` (quadrant labels) and

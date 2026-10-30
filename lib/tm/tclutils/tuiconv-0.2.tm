@@ -11,7 +11,7 @@
 # Latin-1 character when decoding, as the Tcl version does it).
 
 package require Tcl 8.6-
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tuiconv {
@@ -114,13 +114,8 @@ proc ::tclutils::tuiconv::writeFile {filename text encodingName args} {
     _checkEncoding $encodingName
     # converted before the file is opened: on an error the file stays as it was
     set bytes [_encode $text $encodingName $replace]
-    set fh [open $filename wb]
-    try {
-        fconfigure $fh -translation binary -encoding iso8859-1
-        puts -nonewline $fh $bytes
-    } finally {
-        close $fh
-    }
+    # through a temporary file: a failed write leaves the old file
+    ::tclutils::common::replaceFile $filename $bytes -encoding binary
     return $filename
 }
 

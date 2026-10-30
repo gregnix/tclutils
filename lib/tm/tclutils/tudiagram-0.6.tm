@@ -1,4 +1,4 @@
-# tudiagram-0.5.tm – box-and-arrow diagrams in pure Tcl.
+# tudiagram-0.6.tm – box-and-arrow diagrams in pure Tcl.
 # Description: box-and-arrow diagrams in pure Tcl.
 # Category: Diagrams · Mermaid
 #
@@ -47,14 +47,14 @@
 # Builder procs are functional: they return the updated diagram dict
 #   (use:  set d [tudiagram::addNode $d id -label X]).
 #
-# Namespace: ::tclutils::tudiagram   Package: tclutils::tudiagram 0.5
+# Namespace: ::tclutils::tudiagram   Package: tclutils::tudiagram 0.6
 # Errors:    {TCLUTILS TUDIAGRAM <REASON>}   REASON in DUPID NONODE EMPTY DIR ARG FONT THEME
 # Tcl 8.6+/9.x. Depends only on tclutils::common; render needs a canvas object
 # (tusvg or tupngdraw) but the model/layout do not. The optional -fontfile path
 # additionally needs the Glyphs package at render time.
 
 package require Tcl 8.6-
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tudiagram {
@@ -1418,11 +1418,9 @@ proc ::tclutils::tudiagram::writeSvg {d file args} {
 }
 proc ::tclutils::tudiagram::writePng {d file args} {
     set png [_pngData $d [_optScale {*}$args]]
-    set fh [open $file wb]
-    fconfigure $fh -translation binary
-    puts -nonewline $fh $png
-    close $fh
+    # temp file + rename: a failed write leaves the old file (0.6)
+    ::tclutils::common::replaceFile $file $png -encoding binary
     return $file
 }
 
-package provide tclutils::tudiagram 0.5
+package provide tclutils::tudiagram 0.6

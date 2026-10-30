@@ -2,7 +2,7 @@
 
 ## 0.69.0 - 2026-10-28
 
-Recommended pairing: tclutils 0.69.0 + tkutils 0.49.0 + ctrlutils 0.4.
+Recommended pairing: tclutils 0.69.0 + tkutils 0.49.0 + ctrlutils 0.5.
 
 Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
 `tudiff` 0.2, `tubookmark` 0.3, `tuical` 0.2, `tuvcard` 0.2, `tuini` 0.2,
@@ -14,7 +14,10 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
 `tusort`, `tuuniq`, `tucut`, `tujoin`, `tucolumn`, `tufmt` 0.2,
 `tupaste`, `tushuf`, `tufold` 0.3, `tutestrun` 0.2, `tuarchitecture` 0.3,
 `tustate`, `tublock` 0.2, `tunotes`, `tumindmap` 0.2, `common` 0.3,
-`tused`, `tusettings`, `tuimage` 0.2, `tuprovider`, `tutreemap`, `tuclass` 0.3; new
+`tused`, `tusettings`, `tuimage` 0.2, `tuprovider`, `tutreemap`, `tuclass` 0.3,
+`tupacket`, `tujourney`, `tutimeline`, `tupie`, `tusequence` 0.3, `tukanban`,
+`tuquadrant` 0.2, `tudiagram` 0.6, `tusvg` 0.4, `tupngdraw` 0.14, `tupng` 0.6,
+`tuappinfo` 0.3; new
 `tusysinfo`, `tuedid`, `tulint` 0.1. When copying over an older tree, delete
 `tclutils-0.68.0.tm`, `tucsv-0.1.tm`, `tusqlite-0.1.tm`, `tuholiday-0.1.tm`,
 `tuzip-0.1.tm`, `tudiff-0.1.tm`, `tubookmark-0.2.tm`, `tuical-0.1.tm`,
@@ -30,7 +33,10 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
 `tutestrun-0.1.tm`, `tuarchitecture-0.2.tm`, `tustate-0.1.tm`,
 `tublock-0.1.tm`, `tunotes-0.1.tm`, `tumindmap-0.1.tm`, `common-0.2.tm`, `tused-0.1.3.tm`,
 `tusettings-0.1.tm`, `tuimage-0.1.tm`, `tuprovider-0.2.tm`, `tutreemap-0.2.tm`,
-`tuclass-0.2.tm`.
+`tuclass-0.2.tm`, `tupacket-0.2.tm`, `tujourney-0.2.tm`, `tukanban-0.1.tm`,
+`tutimeline-0.2.tm`, `tupie-0.2.tm`, `tuquadrant-0.1.tm`, `tusequence-0.2.tm`,
+`tudiagram-0.5.tm`, `tusvg-0.3.tm`, `tupngdraw-0.13.tm`, `tupng-0.5.tm`,
+`tuappinfo-0.2.tm`.
 
 - `tucsv`: `-profile excel-de|rfc4180` for `text`, `file`, `writeFile`;
   `text -bom 1`; `file` and `writeFile` take `-encoding` (default utf-8);
@@ -160,7 +166,7 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
 - New `tulint`: static checks for Tcl sources, findings as data; rules
   `ENC-1`, `ENC-2`, `ENC-3`, `TST-3`; own rules with `register`. CLI
   `bin/tulint.tcl` (exit 1 on an error finding). Not in the umbrella.
-  Tests `tulint-*`.
+  Rule `DAT-2` (info): `open` with a truncating mode. Tests `tulint-*`.
 - `common` 0.3: `replaceFile` writes through a temporary file; a failed
   write leaves the old file, no temp file and no open channel. Test
   `common-9.1`, `9.2`.
@@ -169,6 +175,18 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
   `writeSvg`/`writePng` of `tugantt`, `turadar`, `tusankey`, `tuxychart`,
   `tutreemap`; `tusettings` removes its temp file. Tests `*-9.1`,
   `tugantt-10.1`, `tuxychart-10.1`.
+- Also with `replaceFile`: `common::writeFile` (modes `w`, `wb`; so
+  `tunotes::save`, `tujson::filePretty`/`fileMinify`), `tucsv::writeFile`,
+  `tuiconv::writeFile`, `writeSvg`/`writePng` of `tuflow`, `tupacket`,
+  `tujourney`, `tukanban`, `tutimeline`, `tupie`, `tuquadrant`,
+  `tusequence`, `tudiagram`, `tusvg` `write`, `tupngdraw` `write`, `tupng`
+  `write*`, `tuappinfo::writeLog` (now UTF-8). Tests `*-9.1`, `*-9.2`,
+  `tuflow-9.3`/`9.4`, `tudiagram-12.*`, `tupngdraw-15.1`, `common-9.3`/`9.4`.
+- `tools/setup.md`: example folders `tclutils-0.69.0`, `tkutils-0.49.0`
+  (were 0.58.0 and 0.41.0). `tusqlite` doc: example with `value -default`;
+  the trap of the positional form.
+- `tuappinfo`: the Tk line shows the patch level (`9.0.4`, was `9.0`); the
+  demo tracks the module file. Test `tkpatch-1`.
 - `tutreemap`: a `:::class` name with umlauts is removed whole (was cut
   after the first letter). `tuclass`: `;` inside quotes stays in the
   member. `tuimage::fromDataUri`: `;base64` inside a quoted parameter is

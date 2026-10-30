@@ -17,6 +17,8 @@ package require tclutils::tuflow 0.4
 ::tclutils::tuflow::writePng  text file ?-opt val ...?   ;# -> file (PNG)
 .CE
 .PP
+\fBwriteSvg\fR and \fBwritePng\fR write through a temporary file (\fBcommon::replaceFile\fR): a failed write leaves the old file and no open channel (tclutils 0.69.0).
+.PP
 \fBparse\fR is \fBgraph\-only\fR: it returns a \fBtudiagram\fR model for the graph\-like Mermaid types and raises \fB{TCLUTILS TUFLOW UNSUPPORTED}\fR for every non\-graph type, including ones that \fBtoSvg\fR / \fBtoPng\fR draw. \fBtoSvg\fR / \fBtoPng\fR are the \fBrender facade\fR: they detect a non\-graph block before \fBparse\fR is reached and dispatch it to that family's renderer.
 .PP
 \fBwriteSvg\fR and \fBwritePng\fR pass their options through to \fBtoSvg\fR and \fBtoPng\fR. A key the facade does not forward for that diagram is dropped.
