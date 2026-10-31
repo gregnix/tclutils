@@ -3,12 +3,12 @@
 Text of a PDF, page by page, in pure Tcl. Meant for full-text search: words,
 spaces and line breaks come out; columns and tables only as far as the order
 in the PDF gives them. No poppler, no C extension; the streams are unpacked
-with Tcl's built-in `zlib`.
+with Tcl's built-in `zlib`. A numeric-looking string from the page stays text (0.2).
 
 ## Package
 
 ```tcl
-package require tclutils::tupdftext 0.1
+package require tclutils::tupdftext 0.2
 ```
 
 ## API

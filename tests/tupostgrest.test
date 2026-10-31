@@ -74,9 +74,9 @@ test pg-2.3 {delete defaults to return=minimal} -body {
 
 test pg-2.4 {rpc posts to /rpc/<fn> with the args as the body} -body {
     set ::resp {200 application/json {[{"id":1}]}}
-    ${::ns}::rpc [client] search_documents [dict create q "rechnung müller"]
+    ${::ns}::rpc [client] search_documents [dict create q "rechnung m\u00fcller"]
     list [dict get $::last url] [dict get $::last body]
-} -result {https://api.example.com/rpc/search_documents {{"q":"rechnung müller"}}}
+} -result "https://api.example.com/rpc/search_documents {{\"q\":\"rechnung m\u00fcller\"}}"
 
 # --- errors -----------------------------------------------------------------
 test pg-3.1 {HTTP >= 400 raises with the PostgREST message} -body {

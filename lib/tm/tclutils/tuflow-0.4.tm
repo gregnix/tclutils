@@ -143,7 +143,11 @@ proc ::tclutils::tuflow::_takeEdge {sVar} {
         return ""
     }
     set s $rest
-    set arrow [expr {$op in {-.-> --> ==> --o --x} ? "end" : "none"}]
+    if {$op in {-.-> --> ==> --o --x}} {
+        set arrow end
+    } else {
+        set arrow none
+    }
     set style solid
     if {[string match {*.*} $op]} {
         set style dotted

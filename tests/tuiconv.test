@@ -56,12 +56,12 @@ foreach f [list $encFile [file join [temporaryDirectory] tuiconv-out.txt] [file 
 # --- 0.2: strict on Tcl 8.6 and 9 --------------------------------------------
 
 test tuiconv-3.1 {a character the target cannot hold is an error} -body {
-    list [catch {::tclutils::tuiconv::convert [encoding convertto utf-8 "Jörg €"] utf-8 iso8859-1} m] \
+    list [catch {::tclutils::tuiconv::convert [encoding convertto utf-8 "J\u00f6rg \u20ac"] utf-8 iso8859-1} m] \
         $::errorCode $m
 } -result {1 {TCLUTILS TUICONV UNMAPPABLE iso8859-1} {character U+20AC at index 5 cannot be written in iso8859-1}}
 
 test tuiconv-3.2 {-replace 1 writes ?} -body {
-    binary encode hex [::tclutils::tuiconv::convert [encoding convertto utf-8 "Jörg €"] utf-8 iso8859-1 -replace 1]
+    binary encode hex [::tclutils::tuiconv::convert [encoding convertto utf-8 "J\u00f6rg \u20ac"] utf-8 iso8859-1 -replace 1]
 } -result 4af67267203f
 
 test tuiconv-3.3 {invalid source bytes are an error} -body {
@@ -70,13 +70,13 @@ test tuiconv-3.3 {invalid source bytes are an error} -body {
 
 test tuiconv-3.4 {writeFile: on an error the file stays} -body {
     set f [makeFile alt tuiconv34.txt]
-    catch {::tclutils::tuiconv::writeFile $f "€" iso8859-1}
+    catch {::tclutils::tuiconv::writeFile $f "\u20ac" iso8859-1}
     string trim [::tclutils::tuiconv::readFile $f utf-8]
 } -result alt
 
 test tuiconv-3.5 {valid text passes unchanged} -body {
-    ::tclutils::tuiconv::convert [::tclutils::tuiconv::convert [encoding convertto utf-8 "Jörg"] utf-8 cp1252] cp1252 utf-8
-} -result [encoding convertto utf-8 "Jörg"]
+    ::tclutils::tuiconv::convert [::tclutils::tuiconv::convert [encoding convertto utf-8 "J\u00f6rg"] utf-8 cp1252] cp1252 utf-8
+} -result [encoding convertto utf-8 "J\u00f6rg"]
 
 test tuiconv-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
     set f [makeFile PRECIOUS tuiconv-9.1.txt]

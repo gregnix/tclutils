@@ -112,7 +112,7 @@ proc mkdb {} {
     catch {pdb close}
     sqlite3 pdb :memory:
     pdb eval {CREATE TABLE firm (id INTEGER PRIMARY KEY, name TEXT, city TEXT)}
-    foreach {i n c} {1 {Tämo GmbH} Nordhafen 2 {Quarz KG} Westkai 3 {x'; DROP TABLE firm; --} Ostmole} {
+    foreach {i n c} "1 {T\u00e4mo GmbH} Nordhafen 2 {Quarz KG} Westkai 3 {x'; DROP TABLE firm; --} Ostmole" {
         ::tclutils::tusqlite::insert pdb firm [dict create id $i name $n city $c]
     }
 }
@@ -129,7 +129,7 @@ test tusqlite-5.3 {value with default and params} -constraints sqlite3 -body {
     mkdb
     list [::tclutils::tusqlite::value pdb {SELECT name FROM firm WHERE id = :id} - {id 1}] \
          [::tclutils::tusqlite::value pdb {SELECT name FROM firm WHERE id = :id} - {id 99}]
-} -result {{Tämo GmbH} -}
+} -result "{T\u00e4mo GmbH} -"
 test tusqlite-5.4 {a value that looks like SQL stays a value} -constraints sqlite3 -body {
     mkdb
     ::tclutils::tusqlite::value pdb {SELECT id FROM firm WHERE name = :n} {} \

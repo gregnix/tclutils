@@ -78,7 +78,7 @@ test tusvg-swap-2.1 {textwidth is identical across tusvg and tupngdraw} \
 
 test tusvg-swap-2.2 {one drawing proc runs unchanged on both backends} \
         -constraints tupngdraw -body {
-    # Shared API only — the proc never names a backend.
+    # Shared API only \u2014 the proc never names a backend.
     proc _draw {c} {
         $c setfill "#eeeeff"; $c setstroke "#333344"; $c setlinewidth 2
         $c rect 5 5 95 45 -fill 1 -outline 1

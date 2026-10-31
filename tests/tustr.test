@@ -80,13 +80,13 @@ test tustr-print-3 {more than one character is an error} -body {
 
 # --- 0.3 -------------------------------------------------------------------------
 test tustr-9.1 {slugify spells Latin letters in ASCII} -body {
-    lmap s {"Jörg Müller" Größe "Ça va? Ærø" Łódź "éx" "日本 ok"} { ::tclutils::tustr::slugify $s }
+    lmap s "\"J\u00f6rg M\u00fcller\" Gr\u00f6\u00dfe \"\u00c7a va? \u00c6r\u00f8\" \u0141\u00f3d\u017a \"e\u0301x\" \"\u65e5\u672c ok\"" { ::tclutils::tustr::slugify $s }
 } -result {joerg-mueller groesse ca-va-aero lodz ex ok}
 test tustr-9.2 {toCamel keeps letters of every script} -body {
-    list [::tclutils::tustr::toCamel "Jörg Müller"] [::tclutils::tustr::toCamel my-cool_var]
-} -result {jörgMüller myCoolVar}
+    list [::tclutils::tustr::toCamel "J\u00f6rg M\u00fcller"] [::tclutils::tustr::toCamel my-cool_var]
+} -result "j\u00f6rgM\u00fcller myCoolVar"
 test tustr-9.3 {toSnake splits at upper case umlauts too} -body {
-    list [::tclutils::tustr::toSnake JörgMüller] [::tclutils::tustr::toSnake ÜberÄrger]
-} -result {jörg_müller über_ärger}
+    list [::tclutils::tustr::toSnake J\u00f6rgM\u00fcller] [::tclutils::tustr::toSnake \u00dcber\u00c4rger]
+} -result "j\u00f6rg_m\u00fcller \u00fcber_\u00e4rger"
 
 cleanupTests

@@ -32,13 +32,8 @@ proc ::tclutils::tucsplit::_prepareOutdir {outdir} {
 
 proc ::tclutils::tucsplit::_writePart {part outdir prefix index digits suffix enc} {
     set path [_formatName $outdir $prefix $index $digits $suffix]
-    set fh [open $path wb]
-    try {
-        fconfigure $fh -translation binary -encoding iso8859-1
-        puts -nonewline $fh [encoding convertto $enc [join $part ""]]
-    } finally {
-        close $fh
-    }
+    ::tclutils::common::replaceFile $path \
+        [encoding convertto $enc [join $part ""]] -encoding binary
     return $path
 }
 

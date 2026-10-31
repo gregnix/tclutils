@@ -171,7 +171,11 @@ proc ::tclutils::tupostgrest::request {client method path args} {
     }
     if {[dict get $client schema] ne ""} {
         # PostgREST content negotiation for a non-default schema
-        set pfx [expr {$method in {GET HEAD} ? "Accept-Profile" : "Content-Profile"}]
+        if {$method in {GET HEAD}} {
+            set pfx "Accept-Profile"
+        } else {
+            set pfx "Content-Profile"
+        }
         lappend headers $pfx [dict get $client schema]
     }
     if {$o(prefer) ne ""} { lappend headers Prefer $o(prefer) }
@@ -282,7 +286,11 @@ proc ::tclutils::tupostgrest::insert {client table row args} {
             default { _err OPTION "unknown option \"$k\"" }
         }
     }
-    set prefer [expr {$o(return) ? "return=representation" : "return=minimal"}]
+    if {$o(return)} {
+        set prefer "return=representation"
+    } else {
+        set prefer "return=minimal"
+    }
     return [request $client POST /$table -body [_rowJson $row] -prefer $prefer]
 }
 
@@ -297,7 +305,11 @@ proc ::tclutils::tupostgrest::update {client table patch args} {
     }
     set q {}
     if {[info exists o(filters)]} { foreach {c val} $o(filters) { lappend q $c $val } }
-    set prefer [expr {$o(return) ? "return=representation" : "return=minimal"}]
+    if {$o(return)} {
+        set prefer "return=representation"
+    } else {
+        set prefer "return=minimal"
+    }
     return [request $client PATCH /$table -query $q -body [_rowJson $patch] -prefer $prefer]
 }
 
@@ -312,7 +324,11 @@ proc ::tclutils::tupostgrest::delete {client table args} {
     }
     set q {}
     if {[info exists o(filters)]} { foreach {c val} $o(filters) { lappend q $c $val } }
-    set prefer [expr {$o(return) ? "return=representation" : "return=minimal"}]
+    if {$o(return)} {
+        set prefer "return=representation"
+    } else {
+        set prefer "return=minimal"
+    }
     return [request $client DELETE /$table -query $q -prefer $prefer]
 }
 

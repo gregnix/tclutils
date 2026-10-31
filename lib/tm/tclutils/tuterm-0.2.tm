@@ -68,7 +68,11 @@ proc ::tclutils::tuterm::_color {which value} {
         scan $rr %x r; scan $gg %x g; scan $bb %x b
         return "\x1b\[${base};2;${r};${g};${b}m"
     }
-    set cat [expr {$which eq "fg" ? "fgcolor" : "bgcolor"}]
+    if {$which eq "fg"} {
+        set cat fgcolor
+    } else {
+        set cat bgcolor
+    }
     if {[dict exists $sgr $cat $value]} { return [dict get $sgr $cat $value] }
     _err VALUE "unknown color \"$value\""
 }

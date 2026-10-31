@@ -202,7 +202,11 @@ proc ::tclutils::tucsv::text {rows args} {
     foreach row $rows {
         lappend out [joinLine $row -delimiter [dict get $opts -delimiter] -quote [dict get $opts -quote] -alwaysQuote [dict get $opts -alwaysQuote]]
     }
-    set bom [expr {[dict get $bomOpt -bom] ? "\uFEFF" : ""}]
+    if {[dict get $bomOpt -bom]} {
+        set bom "\uFEFF"
+    } else {
+        set bom ""
+    }
     return $bom[join $out [dict get $opts -newline]]
 }
 
@@ -236,7 +240,11 @@ proc ::tclutils::tucsv::writeFile {path rows args} {
     # with an explicit -newline the text carries its own line ends;
     # otherwise the platform convention applies, as before. Written through
     # common::replaceFile: a failed write leaves the old file.
-    set tr [expr {[dict exists $args -newline] ? "lf" : "auto"}]
+    if {[dict exists $args -newline]} {
+        set tr lf
+    } else {
+        set tr auto
+    }
     ::tclutils::common::replaceFile $path [text $rows {*}$args] \
         -encoding [dict get $fo -encoding] -translation $tr
     return $path

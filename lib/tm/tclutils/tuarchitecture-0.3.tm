@@ -96,7 +96,11 @@ proc ::tclutils::tuarchitecture::parse {text} {
             if {$lbl ne ""} { set label($id) $lbl }
         } else {
             lappend order $id
-            set shape($id) [expr {$shp ne "" ? $shp : "box"}]
+            if {$shp ne ""} {
+                set shape($id) $shp
+            } else {
+                set shape($id) box
+            }
             set label($id) [if {$lbl ne ""} {set lbl} else {set id}]
         }
     }}

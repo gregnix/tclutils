@@ -589,7 +589,12 @@ proc ::tclutils::tujson::_emit {typed indent level} {
             }
             return $val
         }
-        boolean { return [expr {[string is true -strict $val] ? "true" : "false"}] }
+        boolean {
+            if {[string is true -strict $val]} {
+                return true
+            }
+            return false
+        }
         null    { return "null" }
         object  { return [_emitObject $val $indent $level] }
         array   { return [_emitArray  $val $indent $level] }
@@ -645,7 +650,10 @@ proc ::tclutils::tujson::num  {n} {
     return [list number $n]
 }
 proc ::tclutils::tujson::bool {b} {
-    return [list boolean [expr {[string is true -strict $b] ? "true" : "false"}]]
+    if {[string is true -strict $b]} {
+        return [list boolean true]
+    }
+    return [list boolean false]
 }
 proc ::tclutils::tujson::null {} { return [list null {}] }
 proc ::tclutils::tujson::obj  {pairs} { return [list object $pairs] }

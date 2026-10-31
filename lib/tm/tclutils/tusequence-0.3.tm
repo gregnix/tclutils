@@ -121,7 +121,11 @@ proc ::tclutils::tusequence::_drawCentered {c gfont scale cx ty str color} {
 # both 0|1}; both=1 for the bidirectional <<->> / <<-->> (head at each end).
 proc ::tclutils::tusequence::_arrowSpec {op} {
     set both [string match "<<*" $op]
-    set line [expr {[string first "--" $op] >= 0 ? "dotted" : "solid"}]
+    if {[string first "--" $op] >= 0} {
+        set line dotted
+    } else {
+        set line solid
+    }
     if {[string match "*>>" $op]} {
         set head filled
     } elseif {[string match "*x" $op]} {

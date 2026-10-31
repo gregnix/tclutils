@@ -471,7 +471,11 @@ proc ::tclutils::tugantt::_draw {c model o gfont} {
             }
         }
         # alternating section background across the plot area
-        set bg [expr {$secIdx % 2 ? [dict get $colors sectionB] : [dict get $colors sectionA]}]
+        if {$secIdx % 2} {
+            set bg [dict get $colors sectionB]
+        } else {
+            set bg [dict get $colors sectionA]
+        }
         $c rect [expr {int($plotX0)}] [expr {int($y)}] [expr {int($plotX1)}] [expr {int($y+$rowH)}] \
             -fill 1 -fillcolor $bg -outline 0
 

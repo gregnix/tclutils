@@ -171,7 +171,11 @@ proc ::tclutils::tuico::info {icoFile} {
         if {$height == 0} { set height 256 }
 
         set payload [string range $data $offset [expr {$offset + $length - 1}]]
-        set format [expr {[_isPng $payload] ? "png" : "bmp"}]
+        if {[_isPng $payload]} {
+            set format png
+        } else {
+            set format bmp
+        }
 
         lappend result [dict create \
             width  $width \

@@ -249,10 +249,10 @@ test tuflow-fix-3.3 {A & B alone declares both nodes, no edge} -body {
     list [lmap n [dict get $m nodes] {dict get $n id}] [llength [dict get $m edges]]
 } -result {{A B} 0}
 
-test tuflow-9.1 {Unicode node ids: Büro[Amt] is a node} -body {
-    set m [M::parse "flowchart LR\n    A\[Jörg\] -->|hält| B\[Büro\]\n    Büro\[Amt\]\n    Büro --> Jörg_2"]
-    list [ids $m] [nodeOf $m Büro label] [epairs $m]
-} -result {{A B Büro Jörg_2} Amt {{A B} {Büro Jörg_2}}}
+test tuflow-9.1 "Unicode node ids: B\u00fcro\[Amt\] is a node" -body {
+    set m [M::parse "flowchart LR\n    A\[J\u00f6rg\] -->|h\u00e4lt| B\[B\u00fcro\]\n    B\u00fcro\[Amt\]\n    B\u00fcro --> J\u00f6rg_2"]
+    list [ids $m] [nodeOf $m B\u00fcro label] [epairs $m]
+} -result "{A B B\u00fcro J\u00f6rg_2} Amt {{A B} {B\u00fcro J\u00f6rg_2}}"
 
 test tuflow-9.2 {";" inside a label or an edge label does not split the statement} -body {
     set m1 [M::parse "flowchart LR\n    A\[J\u00f6rg;B\u00fcro\] --> B\[Amt\]"]

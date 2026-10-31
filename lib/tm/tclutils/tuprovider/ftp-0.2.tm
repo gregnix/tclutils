@@ -87,8 +87,16 @@ oo::class create ::tclutils::tuprovider::Ftp {
             set size  [lindex $fields 4]
             set name  [join [lrange $fields 8 end] " "]
             if {$name eq "." || $name eq ".."} continue
-            set type [expr {[string index $perms 0] eq "d" ? "dir" : "file"}]
-            set child [expr {$path eq "/" ? "/$name" : "$path/$name"}]
+            if {[string index $perms 0] eq "d"} {
+                set type dir
+            } else {
+                set type file
+            }
+            if {$path eq "/"} {
+                set child "/$name"
+            } else {
+                set child "$path/$name"
+            }
             lappend out [my _entry $name $child $type \
                              [expr {[string is integer -strict $size] ? $size : 0}]]
         }

@@ -27,7 +27,11 @@ while {$i < [llength $argv]} {
     }
     incr i
 }
-set text [expr {$file ne "" ? [::tclutils::common::readFile $file] : [read stdin]}]
+if {$file ne ""} {
+    set text [::tclutils::common::readFile $file]
+} else {
+    set text [read stdin]
+}
 set rows {}
 foreach line [split [string trimright $text \n] \n] {
     lappend rows [split $line $delim]

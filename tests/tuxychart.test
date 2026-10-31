@@ -106,7 +106,7 @@ test tuxychart-4.3 {integer -scale multiplies the raster dimensions} -body {
 
 # --- 0.2 -------------------------------------------------------------------------
 test tuxychart-9.1 {three labels, two values: COUNT} -body {
-    list [catch {M::parse "xychart-beta\n x-axis \[Jörg, Büro, Amt\]\n bar \[10, 1.50\]"} msg] $::errorCode $msg
+    list [catch {M::parse "xychart-beta\n x-axis \[J\u00f6rg, B\u00fcro, Amt\]\n bar \[10, 1.50\]"} msg] $::errorCode $msg
 } -result {1 {TCLUTILS TUXYCHART COUNT} {bar series has 2 values for 3 x-axis labels}}
 test tuxychart-9.2 {without labels any length is fine} -body {
     llength [dict get [M::parse "xychart-beta\n bar \[1, 2\]\n line \[1, 2, 3\]"] series]

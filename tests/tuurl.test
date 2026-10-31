@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuurl 0.1
+package require tclutils::tuurl 0.2
 
 test tuurl-1.1 {encode reserved} -body { ::tclutils::tuurl::encode "a b/c" } -result {a%20b%2Fc}
 test tuurl-1.2 {encode plus} -body { ::tclutils::tuurl::encode "a b" -plus 1 } -result {a+b}
@@ -31,5 +31,18 @@ test tuurl-3.3 {query roundtrip} -body {
     set d2 [::tclutils::tuurl::parseQuery [::tclutils::tuurl::buildQuery $d]]
     list [dict get $d2 name] [dict get $d2 city]
 } -result "a&b M\u00fcnchen"
+
+
+test tuurl-2.5 {decode: raw characters count as UTF-8, also mixed with %XX (0.2)} -body {
+    list [::tclutils::tuurl::decode "J\u00f6rg"] \
+         [::tclutils::tuurl::decode "J\u00f6r%67"] \
+         [::tclutils::tuurl::decode "\u00e4%C3%B6"]
+} -result [list "J\u00f6rg" "J\u00f6rg" "\u00e4\u00f6"]
+
+test tuurl-2.6 {decode: broken %, %00 and invalid UTF-8 do not break off (0.2)} -body {
+    list [::tclutils::tuurl::decode "50%"] [::tclutils::tuurl::decode "a%4"] \
+         [::tclutils::tuurl::decode "a%GGb"] [string length [::tclutils::tuurl::decode "a%00b"]] \
+         [::tclutils::tuurl::decode "a%FFb"] [::tclutils::tuurl::decode "%5Bpid%5D"]
+} -result [list 50% a%4 a%GGb 3 "a\xffb" {[pid]}]
 
 cleanupTests

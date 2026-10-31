@@ -1,10 +1,10 @@
-.TH tupdftext n 0.1 tclutils
+.TH tupdftext n 0.2 tclutils
 .SH tclutils::tupdftext
 .PP
-Text of a PDF, page by page, in pure Tcl. Meant for full\-text search: words, spaces and line breaks come out; columns and tables only as far as the order in the PDF gives them. No poppler, no C extension; the streams are unpacked with Tcl's built\-in \fBzlib\fR.
+Text of a PDF, page by page, in pure Tcl. Meant for full\-text search: words, spaces and line breaks come out; columns and tables only as far as the order in the PDF gives them. No poppler, no C extension; the streams are unpacked with Tcl's built\-in \fBzlib\fR. A numeric-looking string from the page stays text (0.2).
 .SS Package
 .CS
-package require tclutils::tupdftext 0.1
+package require tclutils::tupdftext 0.2
 .CE
 .SS API
 .CS

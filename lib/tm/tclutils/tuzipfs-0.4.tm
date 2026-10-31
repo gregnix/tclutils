@@ -11,7 +11,7 @@ namespace eval ::tclutils::tuzipfs {
     namespace export available requireAvailable root mounts mount unmount \
         listFiles find exists readFile withMounted \
         rcopy copyStdlib mkimg buildImage
-    variable version 0.3
+    variable version 0.4
 }
 
 proc ::tclutils::tuzipfs::available {} {
@@ -139,8 +139,7 @@ proc ::tclutils::tuzipfs::rcopy {src dst} {
         file mkdir [file dirname $dst]
         set in [open $src rb]
         try { set data [read $in] } finally { close $in }
-        set out [open $dst wb]
-        try { puts -nonewline $out $data } finally { close $out }
+        ::tclutils::common::replaceFile $dst $data -encoding binary
     }
     return $dst
 }
@@ -257,4 +256,4 @@ proc ::tclutils::tuzipfs::buildImage {args} {
     return [mkimg $out $vfs -strip $vfs -basekit [dict get $opts -basekit]]
 }
 
-package provide tclutils::tuzipfs 0.3
+package provide tclutils::tuzipfs 0.4

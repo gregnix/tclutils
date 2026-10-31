@@ -5,7 +5,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuzipfs 0.3
+package require tclutils::tuzipfs 0.4
 package require tclutils::tuzip 0.1
 
 testConstraint haveZipfs [::tclutils::tuzipfs::available]
@@ -79,5 +79,29 @@ test tuzipfs-3.1 {rcopy copies dot files and dot directories} -setup {
     }
     set r
 } -result {1 1 1 1}
+
+
+test tuzipfs-3.2 {rcopy: a failed write leaves the old file} -setup {
+    set src [makeFile NEW rsrc-3.2.txt]
+    set f [makeFile PRECIOUS rdst-3.2.txt]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tuzipfs::rcopy $src $f
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile rsrc-3.2.txt
+    removeFile rdst-3.2.txt
+} -result {1 PRECIOUS 0 0}
 
 cleanupTests

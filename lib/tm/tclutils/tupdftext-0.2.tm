@@ -45,7 +45,7 @@ package require tclutils::common 0.1
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tupdftext {
     namespace export pages text summary
-    variable version 0.1
+    variable version 0.2
     variable maxFormDepth 8
 }
 
@@ -596,7 +596,14 @@ proc ::tclutils::tupdftext::_initTables {} {
                        PDFDocEncoding iso8859-1} {
         set t {}
         for {set i 0} {$i < 256} {incr i} {
-            if {$i < 32} { lappend t [expr {$i in {9 10 13} ? [format %c $i] : ""}]; continue }
+            if {$i < 32} {
+                if {$i in {9 10 13}} {
+                    lappend t [format %c $i]
+                } else {
+                    lappend t ""
+                }
+                continue
+            }
             if {[catch {encoding convertfrom {*}$opts $tcl [format %c $i]} ch]} {
                 set ch ""
             }
@@ -680,7 +687,11 @@ proc ::tclutils::tupdftext::_utf16 {bytes} {
 
 proc ::tclutils::tupdftext::_font {doc ref} {
     upvar #0 $doc D
-    set key [expr {[lindex $ref 0] eq "r" ? [lindex $ref 1] : $ref}]
+    if {[lindex $ref 0] eq "r"} {
+        set key [lindex $ref 1]
+    } else {
+        set key $ref
+    }
     if {[info exists D(font,$key)]} { return $D(font,$key) }
     _initTables
     variable encTables
@@ -1071,7 +1082,11 @@ proc ::tclutils::tupdftext::_run {doc data res ctm st depth} {
                 if {$font eq ""} { set font [dict create name ? subtype ? twoByte 0 \
                     spaces {} uni {} enc [_stdEnc] widths {} dw 500 scale 0.001 mapped 0] }
                 set arg [lindex $ops end]
-                set items [expr {[lindex $arg 0] eq "a" ? [lindex $arg 1] : [list $arg]}]
+                if {[lindex $arg 0] eq "a"} {
+                    set items [lindex $arg 1]
+                } else {
+                    set items [list $arg]
+                }
                 set scale [dict get $font scale]
                 foreach it $items {
                     if {[lindex $it 0] eq "n"} {
@@ -1104,7 +1119,11 @@ proc ::tclutils::tupdftext::_run {doc data res ctm st depth} {
                 set xname [lindex [lindex $ops end] 1]
                 foreach {k xv} $xobjs {
                     if {$k ne $xname} continue
-                    set ref [expr {[lindex $xv 0] eq "r" ? [lindex $xv 1] : ""}]
+                    if {[lindex $xv 0] eq "r"} {
+                        set ref [lindex $xv 1]
+                    } else {
+                        set ref ""
+                    }
                     set xs [_res $doc $xv]
                     if {[lindex $xs 0] ne "stream"} break
                     set xd [lindex $xs 1]
@@ -1117,7 +1136,11 @@ proc ::tclutils::tupdftext::_run {doc data res ctm st depth} {
                         set m [lmap x [lindex $fm 1] { _num [_res $doc $x] 0 }]
                     }
                     set xr [_dget $doc $xd Resources]
-                    set xres [expr {$xr ne "" ? [_dictOf $xr] : $res}]
+                    if {$xr ne ""} {
+                        set xres [_dictOf $xr]
+                    } else {
+                        set xres $res
+                    }
                     if {[catch {_streamData $doc $xs} xdata]} break
                     if {$ref ne ""} { dict lappend st fontsSeen $ref }
                     set st [_run $doc $xdata $xres [_mul $m $ctm] $st [expr {$depth + 1}]]
@@ -1276,4 +1299,4 @@ proc ::tclutils::tupdftext::summary {file} {
     }
 }
 
-package provide tclutils::tupdftext 0.1
+package provide tclutils::tupdftext 0.2

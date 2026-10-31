@@ -29,6 +29,7 @@ package require tclutils::tuzipfs
 
 ```tcl
 ::tclutils::tuzipfs::rcopy src dst
+# rcopy leaves an existing destination file if the write fails (0.4).
 ::tclutils::tuzipfs::copyStdlib destDir ?-tk boolean? ?-from running|DIR?
 ::tclutils::tuzipfs::mkimg outfile indir ?-strip DIR? ?-basekit FILE? ?-password PW?
 ::tclutils::tuzipfs::buildImage -out FILE -vfs DIR ?-basekit FILE? ?-stdlib none|cli|gui? ?-stdlibfrom running|DIR?

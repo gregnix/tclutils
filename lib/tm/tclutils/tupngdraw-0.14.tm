@@ -297,7 +297,11 @@ oo::class create ::tclutils::tupngdraw::Image {
     }
 
     method clear {{color {}}} {
-        set col [expr {$color eq "" ? $background : [::tclutils::tupngdraw::_color $color]}]
+        if {$color eq ""} {
+            set col $background
+        } else {
+            set col [::tclutils::tupngdraw::_color $color]
+        }
         lassign $col r g b a
         set buffer [lrepeat [expr {$width * $height}] $r $g $b $a]
         return
@@ -697,8 +701,11 @@ oo::class create ::tclutils::tupngdraw::Image {
             return -code error -errorcode {TCLUTILS TUPNGDRAW RULE} \
                 "-rule must be nonzero|evenodd"
         }
-        set fc [expr {[dict get $o -color] eq "" ? $fill \
-            : [::tclutils::tupngdraw::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set fc $fill
+        } else {
+            set fc [::tclutils::tupngdraw::_color [dict get $o -color]]
+        }
         set clean {}
         foreach c $contours { if {[llength $c] >= 6} { lappend clean $c } }
         if {![llength $clean]} return
@@ -720,8 +727,11 @@ oo::class create ::tclutils::tupngdraw::Image {
     method setpixel {x y args} {
         set x [expr {int(round($x))}]; set y [expr {int(round($y))}]
         set o [::tclutils::common::parseOptions {-color {}} {*}$args]
-        set col [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tupngdraw::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set col $stroke
+        } else {
+            set col [::tclutils::tupngdraw::_color [dict get $o -color]]
+        }
         my _put $x $y $col
         return
     }
@@ -730,8 +740,11 @@ oo::class create ::tclutils::tupngdraw::Image {
         foreach v {x1 y1 x2 y2} { set $v [expr {int(round([set $v]))}] }
         set o [::tclutils::common::parseOptions \
             {-color {} -width {} -aa {} -caps round} {*}$args]
-        set col [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tupngdraw::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set col $stroke
+        } else {
+            set col [::tclutils::tupngdraw::_color [dict get $o -color]]
+        }
         set lw [expr {[dict get $o -width] eq "" ? $linewidth \
             : [::tclutils::common::ensurePositiveInteger [dict get $o -width] -width]}]
         set cap [dict get $o -caps]
@@ -779,13 +792,19 @@ oo::class create ::tclutils::tupngdraw::Image {
             return
         }
         if {[dict get $o -fill]} {
-            set fc [expr {[dict get $o -fillcolor] eq "" ? $fill \
-                : [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]}]
+            if {[dict get $o -fillcolor] eq ""} {
+                set fc $fill
+            } else {
+                set fc [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]
+            }
             for {set y $y1} {$y <= $y2} {incr y} { my _hspan $x1 $x2 $y $fc }
         }
         if {[dict get $o -outline]} {
-            set sc [expr {[dict get $o -color] eq "" ? $stroke \
-                : [::tclutils::tupngdraw::_color [dict get $o -color]]}]
+            if {[dict get $o -color] eq ""} {
+                set sc $stroke
+            } else {
+                set sc [::tclutils::tupngdraw::_color [dict get $o -color]]
+            }
             my _strokePoly [list $x1 $y1 $x2 $y1 $x2 $y2 $x1 $y2] 1 $sc \
                 [my _resolveAA $o] [expr {$linewidth / 2.0}] [dict get $o -join] round
         }
@@ -799,8 +818,11 @@ oo::class create ::tclutils::tupngdraw::Image {
             {-fill 0 -outline 1 -color {} -fillcolor {} -aa {} -join round} {*}$args]
         ::tclutils::common::ensureBoolean [dict get $o -fill] -fill
         if {[dict get $o -fill]} {
-            set fc [expr {[dict get $o -fillcolor] eq "" ? $fill \
-                : [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]}]
+            if {[dict get $o -fillcolor] eq ""} {
+                set fc $fill
+            } else {
+                set fc [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]
+            }
             if {[my _resolveAA $o]} {
                 lassign $fc fr fg fb fa
                 set lo [expr {$cy - $r - 1}]; set hi [expr {$cy + $r + 1}]
@@ -821,8 +843,11 @@ oo::class create ::tclutils::tupngdraw::Image {
             }
         }
         if {![dict get $o -outline]} { return }
-        set sc [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tupngdraw::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set sc $stroke
+        } else {
+            set sc [::tclutils::tupngdraw::_color [dict get $o -color]]
+        }
         my _strokePath [my _ringSegs $cx $cy $r $r] $sc [my _resolveAA $o] $linewidth
         return
     }
@@ -853,8 +878,11 @@ oo::class create ::tclutils::tupngdraw::Image {
             {-fill 0 -outline 1 -color {} -fillcolor {} -aa {} -join round} {*}$args]
         ::tclutils::common::ensureBoolean [dict get $o -fill] -fill
         if {[dict get $o -fill]} {
-            set fc [expr {[dict get $o -fillcolor] eq "" ? $fill \
-                : [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]}]
+            if {[dict get $o -fillcolor] eq ""} {
+                set fc $fill
+            } else {
+                set fc [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]
+            }
             if {[my _resolveAA $o]} {
                 set steps [expr {int(ceil(6.2831853 * (($rx > $ry) ? $rx : $ry)))}]
                 if {$steps < 24} {set steps 24}
@@ -877,8 +905,11 @@ oo::class create ::tclutils::tupngdraw::Image {
             }
         }
         if {![dict get $o -outline]} { return }
-        set sc [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tupngdraw::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set sc $stroke
+        } else {
+            set sc [::tclutils::tupngdraw::_color [dict get $o -color]]
+        }
         my _strokePath [my _ringSegs $cx $cy $rx $ry] $sc [my _resolveAA $o] $linewidth
         return
     }
@@ -895,8 +926,11 @@ oo::class create ::tclutils::tupngdraw::Image {
         set xs {}; set ys {}
         foreach {x y} $points { lappend xs [expr {int(round($x))}]; lappend ys [expr {int(round($y))}] }
         if {[dict get $o -fill]} {
-            set fc [expr {[dict get $o -fillcolor] eq "" ? $fill \
-                : [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]}]
+            if {[dict get $o -fillcolor] eq ""} {
+                set fc $fill
+            } else {
+                set fc [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]
+            }
             if {[my _resolveAA $o]} {
                 array set pcov {}
                 my _polyCovAdd pcov $xs $ys 4
@@ -925,8 +959,11 @@ oo::class create ::tclutils::tupngdraw::Image {
             }
         }
         if {![dict get $o -outline]} { return }
-        set sc [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tupngdraw::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set sc $stroke
+        } else {
+            set sc [::tclutils::tupngdraw::_color [dict get $o -color]]
+        }
         set pp {}
         for {set i 0} {$i < $np} {incr i} { lappend pp [lindex $xs $i] [lindex $ys $i] }
         my _strokePoly $pp 1 $sc [my _resolveAA $o] [expr {$linewidth / 2.0}] \
@@ -955,14 +992,20 @@ oo::class create ::tclutils::tupngdraw::Image {
             lappend pts [expr {$cx + $r * cos($a)}] [expr {$cy + $r * sin($a)}]
         }
         if {[dict get $o -fill] && $style ne "arc"} {
-            set fc [expr {[dict get $o -fillcolor] eq "" ? $fill \
-                : [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]}]
+            if {[dict get $o -fillcolor] eq ""} {
+                set fc $fill
+            } else {
+                set fc [::tclutils::tupngdraw::_color [dict get $o -fillcolor]]
+            }
             set fpts $pts
             if {$style eq "pie"} { set fpts [linsert $pts 0 $cx $cy] }
             my polygon $fpts -fill 1 -outline 0 -fillcolor $fc
         }
-        set sc [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tupngdraw::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set sc $stroke
+        } else {
+            set sc [::tclutils::tupngdraw::_color [dict get $o -color]]
+        }
         set lw [expr {[dict get $o -width] eq "" ? $linewidth \
             : [::tclutils::common::ensurePositiveInteger [dict get $o -width] -width]}]
         set jn [dict get $o -join]
@@ -981,8 +1024,11 @@ oo::class create ::tclutils::tupngdraw::Image {
     method text {x y str args} {
         set o [::tclutils::common::parseOptions \
             {-color {} -scale 1 -spacing 0} {*}$args]
-        set col [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tupngdraw::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set col $stroke
+        } else {
+            set col [::tclutils::tupngdraw::_color [dict get $o -color]]
+        }
         set sc [::tclutils::common::ensurePositiveInteger [dict get $o -scale] -scale]
         set sp [dict get $o -spacing]
         set x [expr {int(round($x))}]

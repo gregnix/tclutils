@@ -368,4 +368,56 @@ test tudav-10.4 {resolve removes "." and ".." segments (0.3)} -body {
          [::tclutils::tudav::_resolve https://example/a/coll x.vcf]
 } -result [list https://example/J\u00f6rg.ics https://example/a/b/d.ics https://example/y/ https://example/z.ics https://example/a/x.vcf]
 
+
+test tudav-10.5 {resolve: "//host/x" keeps the scheme, takes the host} -body {
+    list [::tclutils::tudav::_resolve https://example/cal/x.ics //other.example/x] \
+         [::tclutils::tudav::_resolve http://h/a/ //o/a/../b.ics] \
+         [::tclutils::tudav::_resolve https://example/cal/ //o]
+} -result {https://other.example/x http://o/b.ics https://o}
+
+test tudav-11.1 {_origin: scheme, host and port, default ports filled in} -body {
+    list [::tclutils::tudav::_origin https://U@Dav.Example/cal/] \
+         [::tclutils::tudav::_origin http://h:5232/x] \
+         [::tclutils::tudav::_origin {http://[::1]/x}] \
+         [::tclutils::tudav::_origin /rel/path]
+} -result {https://dav.example:443 http://h:5232 {http://[::1]:80} {}}
+
+# A one-shot HTTP server that answers 200 and notes whether the request
+# carried an Authorization header.
+proc davSrvAccept {name ch addr port} {
+    fconfigure $ch -translation crlf -blocking 0
+    set ::davAuth($ch) 0
+    fileevent $ch readable [list davSrvRead $name $ch]
+}
+proc davSrvRead {name ch} {
+    while {[gets $ch line] >= 0} {
+        if {[string match -nocase authorization:* $line]} { set ::davAuth($ch) 1 }
+        if {$line eq ""} {
+            lappend ::davSeen $name $::davAuth($ch)
+            fconfigure $ch -blocking 1
+            puts -nonewline $ch "HTTP/1.0 200 OK\nContent-Type: text/plain\nContent-Length: 2\n\nok"
+            close $ch
+            return
+        }
+    }
+    if {[eof $ch]} { close $ch }
+}
+
+test tudav-11.2 {Authorization only to the base origin; only http and https} -setup {
+    set ::davSeen {}
+    set s1 [socket -server [list davSrvAccept base] -myaddr 127.0.0.1 0]
+    set s2 [socket -server [list davSrvAccept other] -myaddr 127.0.0.1 0]
+    set p1 [lindex [fconfigure $s1 -sockname] 2]
+    set p2 [lindex [fconfigure $s2 -sockname] 2]
+    set c [::tclutils::tudav::client http://127.0.0.1:$p1/dav/ -user u -password p]
+} -body {
+    ::tclutils::tudav::get $c x.ics
+    ::tclutils::tudav::get $c http://127.0.0.1:$p2/steal.ics
+    ::tclutils::tudav::get $c http://127.0.0.1:$p1/abs.ics
+    set rc [catch {::tclutils::tudav::get $c file:///etc/passwd} m o]
+    list $::davSeen $rc [dict get $o -errorcode]
+} -cleanup {
+    close $s1; close $s2
+} -result {{base 1 other 0 base 1} 1 {TCLUTILS TUDAV URL}}
+
 cleanupTests

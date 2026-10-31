@@ -10,7 +10,7 @@ package require tclutils::common 0.1
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tuurl {
     namespace export encode decode buildQuery parseQuery
-    variable version 0.1
+    variable version 0.2
 }
 
 # Percent-encode a string. Option: -plus bool (default 0). With -plus 1 a space
@@ -33,26 +33,38 @@ proc ::tclutils::tuurl::encode {str args} {
 }
 
 # Percent-decode a string. Option: -plus bool (default 0). With -plus 1 a "+"
-# becomes a space.
+# becomes a space. Characters that are not percent-encoded count as their
+# UTF-8 bytes, so "J%C3%B6rg" and an already decoded "J\u00f6rg" give the same
+# text (up to 0.1 Tcl 9 broke off on the second). A "%" without two hex
+# digits stays as it is; %00 gives a NUL character. Invalid UTF-8 stays as
+# the bytes (one character 0-255 each); up to 0.1 Tcl 9 broke off.
 proc ::tclutils::tuurl::decode {str args} {
     set opts [::tclutils::common::parseOptions {-plus 0} {*}$args]
     set plus [::tclutils::common::ensureBoolean [dict get $opts -plus] -plus]
     if {$plus} { set str [string map {+ " "} $str] }
+    set str [encoding convertto utf-8 $str]
     set bytes ""
-    set n [string length $str]
-    for {set i 0} {$i < $n} {incr i} {
-        set ch [string index $str $i]
-        if {$ch eq "%" && $i + 2 < $n} {
-            set hex [string range $str $i+1 $i+2]
-            if {[scan $hex %2x code] == 1 && [string is xdigit -strict $hex]} {
-                append bytes [binary format c $code]
-                incr i 2
-                continue
-            }
+    while {[set i [string first % $str]] >= 0} {
+        append bytes [string range $str 0 [expr {$i - 1}]]
+        set hex [string range $str [expr {$i + 1}] [expr {$i + 2}]]
+        if {[string length $hex] == 2 && [string is xdigit -strict $hex]} {
+            append bytes [binary format H2 $hex]
+            set str [string range $str [expr {$i + 3}] end]
+        } else {
+            append bytes %
+            set str [string range $str [expr {$i + 1}] end]
         }
-        append bytes $ch
     }
-    return [encoding convertfrom utf-8 $bytes]
+    append bytes $str
+    if {[package vsatisfies [package provide Tcl] 9-]} {
+        if {[catch {encoding convertfrom -profile strict utf-8 $bytes} t]} {
+            return $bytes
+        }
+        return $t
+    }
+    set t [encoding convertfrom utf-8 $bytes]
+    if {[encoding convertto utf-8 $t] ne $bytes} { return $bytes }
+    return $t
 }
 
 # Build a query string "k=v&k2=v2" from a dict. Option: -plus bool (default 1).
@@ -85,4 +97,4 @@ proc ::tclutils::tuurl::parseQuery {q args} {
     return $d
 }
 
-package provide tclutils::tuurl 0.1
+package provide tclutils::tuurl 0.2

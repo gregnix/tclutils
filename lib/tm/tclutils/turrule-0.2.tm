@@ -47,8 +47,12 @@ proc ::tclutils::turrule::_scan {s} {
 }
 
 proc ::tclutils::turrule::_fmt {epoch dateOnly} {
-    return [clock format $epoch \
-        -format [expr {$dateOnly ? "%Y-%m-%d" : "%Y-%m-%dT%H:%M:%S"}] -gmt 1]
+    if {$dateOnly} {
+        set fmt "%Y-%m-%d"
+    } else {
+        set fmt "%Y-%m-%dT%H:%M:%S"
+    }
+    return [clock format $epoch -format $fmt -gmt 1]
 }
 
 proc ::tclutils::turrule::_midnight {epoch} { return [expr {$epoch - ($epoch % 86400)}] }

@@ -14,11 +14,11 @@ test tuhead-1.3 {zero} {::tclutils::tuhead::text "1\n2" 0} ""
 file delete -force $tmp
 # --- 0.2 ---------------------------------------------------------------------
 set tmp2 [file join [temporaryDirectory] tuhead2-[pid].txt]
-set f [open $tmp2 wb]; puts -nonewline $f [encoding convertto utf-8 "eins\nJörg\n"]; close $f
+set f [open $tmp2 wb]; puts -nonewline $f [encoding convertto utf-8 "eins\nJ\u00f6rg\n"]; close $f
 test tuhead-2.1 {text and file agree; line ends kept} -body {
-    list [::tclutils::tuhead::text "eins\nJörg\n" 2] [::tclutils::tuhead::file $tmp2 2] \
-        [::tclutils::tuhead::text "eins\nJörg\n" 10] [::tclutils::tuhead::text "eins\nJörg\n" 1]
-} -result [list "eins\nJörg\n" "eins\nJörg\n" "eins\nJörg\n" "eins\n"]
+    list [::tclutils::tuhead::text "eins\nJ\u00f6rg\n" 2] [::tclutils::tuhead::file $tmp2 2] \
+        [::tclutils::tuhead::text "eins\nJ\u00f6rg\n" 10] [::tclutils::tuhead::text "eins\nJ\u00f6rg\n" 1]
+} -result [list "eins\nJ\u00f6rg\n" "eins\nJ\u00f6rg\n" "eins\nJ\u00f6rg\n" "eins\n"]
 test tuhead-2.2 {no final LF stays without} {::tclutils::tuhead::text "a\nb" 5} "a\nb"
 test tuhead-2.3 {bad count has an error code} -body {
     catch {::tclutils::tuhead::text a -1}; set ::errorCode

@@ -1,7 +1,7 @@
-.TH tutask n 0.2 tclutils
+.TH tutask n 0.3 tclutils
 .SH tclutils::tutask
 .PP
-Tasks on coroutines: \fBawait\fR with timeout, \fBcancel\fR that runs \fBfinally\fR, task groups, a thread pool and a sandbox. Pure Tcl; the pool needs the Thread package and loads it on first use.
+Tasks on coroutines: \fBawait\fR with timeout, \fBcancel\fR that runs \fBfinally\fR, task groups, a thread pool and a sandbox. Pure Tcl; the pool needs the Thread package and loads it on first use. An error message is kept as text (0.3).
 .SS Commands
 .PP
 \fBspawn\fR, \fBrun\fR, \fBcurrent\fR, \fBawait\fR, \fBsleep\fR, \fBtimer\fR, \fBonwrite\fR, \fBpipe\fR, \fBgroup\fR, \fBpool\fR, \fBsandbox\fR, \fBtasks\fR, \fBstats\fR \-\- all in \fB::tclutils::tutask\fR, exported for \fBnamespace import\fR.

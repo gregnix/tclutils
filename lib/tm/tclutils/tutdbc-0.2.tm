@@ -52,7 +52,11 @@ proc ::tclutils::tutdbc::rows {conn sql {binds {}}} {
     set out [list]
     set stmt [$conn prepare $sql]
     try {
-        set rs [expr {[dict size $binds] ? [$stmt execute $binds] : [$stmt execute]}]
+        if {[dict size $binds]} {
+            set rs [$stmt execute $binds]
+        } else {
+            set rs [$stmt execute]
+        }
         try {
             set cols [$rs columns]
             foreach r [$rs allrows -as dicts] {
@@ -87,7 +91,11 @@ proc ::tclutils::tutdbc::execute {conn sql {binds {}}} {
     set n 0
     set stmt [$conn prepare $sql]
     try {
-        set rs [expr {[dict size $binds] ? [$stmt execute $binds] : [$stmt execute]}]
+        if {[dict size $binds]} {
+            set rs [$stmt execute $binds]
+        } else {
+            set rs [$stmt execute]
+        }
         catch {set n [$rs rowcount]}
         catch {$rs close}
     } finally {

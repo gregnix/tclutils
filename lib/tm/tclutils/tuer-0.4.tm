@@ -42,8 +42,12 @@ proc ::tclutils::tuer::_err {reason msg} {
 proc ::tclutils::tuer::_cardMark {marker} {
     set many [expr {[string match "*\{*" $marker] || [string match "*\}*" $marker]}]
     set zero [string match "*o*" $marker]
-    if {$many} { return [expr {$zero ? "zeroOrMany" : "oneOrMany"}] }
-    return [expr {$zero ? "zeroOrOne" : "exactlyOne"}]
+    if {$many} {
+        if {$zero} { return zeroOrMany }
+        return oneOrMany
+    }
+    if {$zero} { return zeroOrOne }
+    return exactlyOne
 }
 
 proc ::tclutils::tuer::parse {text} {
@@ -97,7 +101,11 @@ proc ::tclutils::tuer::parse {text} {
         if {[regexp {^(\S+)\s+(\S+)\s+(\S+)\s*(?::\s*(.*))?$} $line -> a card b lbl]
                 && [regexp {\.\.|--} $card]} {
             # ".." is a non-identifying relationship (dashed); "--" identifying
-            set est [expr {[string match {*..*} $card] ? "dashed" : "solid"}]
+            if {[string match {*..*} $card]} {
+                set est dashed
+            } else {
+                set est solid
+            }
             # split the cardinality around the separator into left/right markers
             if {[regexp {^(.*?)(\.\.|--)(.*)$} $card -> lm _sep rm]} {
                 set sm [_cardMark $lm]

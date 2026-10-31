@@ -81,7 +81,11 @@ proc ::tclutils::tufind::ParseSizeSpec {spec} {
     set op exact
     set value $spec
     if {[regexp {^([+-])(.*)$} $spec -> sign rest]} {
-        set op [expr {$sign eq "+" ? "gt" : "lt"}]
+        if {$sign eq "+"} {
+            set op gt
+        } else {
+            set op lt
+        }
         set value $rest
     }
     if {![regexp {^([0-9]+)([kKmMgG]?)$} $value -> number unit]} {
@@ -113,7 +117,11 @@ proc ::tclutils::tufind::ParseMtimeSpec {spec} {
     set op exact
     set value $spec
     if {[regexp {^([+-])(.*)$} $spec -> sign rest]} {
-        set op [expr {$sign eq "+" ? "older" : "newer"}]
+        if {$sign eq "+"} {
+            set op older
+        } else {
+            set op newer
+        }
         set value $rest
     }
     if {![string is integer -strict $value]} {

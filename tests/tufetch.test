@@ -16,7 +16,7 @@ set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 catch {tcl::tm::path add [file join $root lib tm]}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
-package require tclutils::tufetch 0.4
+package require tclutils::tufetch 0.5
 
 proc opts {args} {
     ::tclutils::common::parseOptions $::tclutils::tufetch::defaults {*}$args
@@ -267,5 +267,106 @@ test tufetch-2.3 {the curl path reports an HTTP status as a clean errorcode} -co
         [file join [temporaryDirectory] tufetch-404.tmp] -timeout 15000} e o
     lrange [dict get $o -errorcode] 0 4
 } -result {TCLUTILS TUFETCH HTTP 4XX 404}
+
+
+test tufetch-3.6 {a failed write leaves the old file} -setup {
+    package require http
+    set f [makeFile PRECIOUS tufetch-3.6.bin]
+    foreach c {geturl status ncode data cleanup} {
+        rename ::http::$c ::_tf_$c
+    }
+    proc ::http::geturl {url args} { return ::tf_tok }
+    proc ::http::status {tok} { return ok }
+    proc ::http::ncode {tok} { return 200 }
+    proc ::http::data {tok} { return NEWBYTES }
+    proc ::http::cleanup {tok} {}
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set o {-timeout 1000 -redirects 0 -method GET -headers {} -data {} -type {}}
+    set rc [catch {::tclutils::tufetch::_nativeLoop http://example.test/x $f $o}]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    foreach c {geturl status ncode data cleanup} {
+        rename ::http::$c {}
+        rename ::_tf_$c ::http::$c
+    }
+    removeFile tufetch-3.6.bin
+} -result {1 PRECIOUS 0 0}
+
+test tufetch-5.1 {_redirectUrl resolves relative Location forms (0.5)} -body {
+    set f ::tclutils::tufetch::_redirectUrl
+    list [$f https://h/a/b?q=1 /c] [$f https://h/a/b c] [$f https://h a] \
+         [$f https://h/a/b ?x=1] [$f https://h/a //o/p] [$f http://h/a https://o/p]
+} -result {https://h/c https://h/a/c https://h/a https://h/a/b?x=1 https://o/p https://o/p}
+
+test tufetch-5.5 {_redirectUrl resolves "." and ".." in the path} -body {
+    set f ::tclutils::tufetch::_redirectUrl
+    list [$f https://example/cal/x ../J\u00f6rg.ics] [$f https://h/a/b ./c/../d?q=../x] \
+         [$f https://h/ ../../z] [$f https://h/a/ /x/../y/] [$f https://h/a //o/p/./q]
+} -result [list https://example/J\u00f6rg.ics https://h/a/d?q=../x https://h/z https://h/y/ https://o/p/q]
+
+test tufetch-5.2 {_redirectUrl refuses https to http and other schemes (0.5)} -body {
+    set r {}
+    foreach {from loc} {https://h/a http://h/b https://h/a file:///etc/passwd http://h/a ftp://o/x} {
+        catch {::tclutils::tufetch::_redirectUrl $from $loc} m o
+        lappend r [dict get $o -errorcode]
+    }
+    set r
+} -result {{TCLUTILS TUFETCH REDIRECT} {TCLUTILS TUFETCH REDIRECT} {TCLUTILS TUFETCH REDIRECT}}
+
+test tufetch-5.3 {curl gets --proto-redir after the scheme of the URL (0.5)} -body {
+    set o [dict create -timeout 1000 -redirects 5 -method GET -headers {} -data {} -type {} -insecure 0 -cafile {}]
+    set a [::tclutils::tufetch::_curlArgs https://h/x out $o]
+    set b [::tclutils::tufetch::_curlArgs http://h/x out $o]
+    list [lindex $a [expr {[lsearch $a --proto-redir] + 1}]] \
+         [lindex $b [expr {[lsearch $b --proto-redir] + 1}]]
+} -result {=https =http,https}
+
+# A local server: /a answers 302 with the relative Location "b", /b the body.
+proc fetchSrvAccept {ch addr port} {
+    fconfigure $ch -translation crlf -blocking 0
+    set ::fetchReq($ch) ""
+    fileevent $ch readable [list fetchSrvRead $ch]
+}
+proc fetchSrvRead {ch} {
+    while {[gets $ch line] >= 0} {
+        if {$::fetchReq($ch) eq ""} { set ::fetchReq($ch) $line; continue }
+        if {$line ne ""} continue
+        set req $::fetchReq($ch)
+        fconfigure $ch -translation binary -blocking 1
+        if {[string match "GET /dir/a *" $req]} {
+            puts -nonewline $ch "HTTP/1.0 302 Found\r\nLocation: b\r\nContent-Length: 0\r\n\r\n"
+        } elseif {[string match "GET /dir/b *" $req]} {
+            puts -nonewline $ch "HTTP/1.0 200 OK\r\nContent-Length: 4\r\n\r\nJ\xc3\xb6r"
+        } else {
+            puts -nonewline $ch "HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n"
+        }
+        close $ch
+        return
+    }
+    if {[eof $ch]} { close $ch }
+}
+
+test tufetch-5.4 {native path follows a relative Location (0.5)} -setup {
+    set srv [socket -server fetchSrvAccept -myaddr 127.0.0.1 0]
+    set port [lindex [fconfigure $srv -sockname] 2]
+    set out [file join [temporaryDirectory] tufetch-4.4.bin]
+} -body {
+    set how [::tclutils::tufetch::download http://127.0.0.1:$port/dir/a $out]
+    set ch [open $out rb]; set d [read $ch]; close $ch
+    list $how [encoding convertfrom utf-8 $d]
+} -cleanup {
+    close $srv
+    file delete -force $out
+} -result [list native "J\u00f6r"]
 
 cleanupTests

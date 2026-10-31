@@ -61,8 +61,11 @@ proc ::tclutils::tusize::human {n args} {
         return -code error -errorcode {TCLUTILS TUSIZE VALUE} "byte count must be an integer"
     }
     set base [expr {$si ? 1000 : 1024}]
-    set units [expr {$si ? {B kB MB GB TB PB EB ZB YB}
-                         : {B KiB MiB GiB TiB PiB EiB ZiB YiB}}]
+    if {$si} {
+        set units {B kB MB GB TB PB EB ZB YB}
+    } else {
+        set units {B KiB MiB GiB TiB PiB EiB ZiB YiB}
+    }
     set size [expr {double($n)}]
     set i 0
     set last [expr {[llength $units] - 1}]

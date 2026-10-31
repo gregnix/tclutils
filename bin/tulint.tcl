@@ -40,7 +40,10 @@ if {[catch {::tclutils::tulint::check $paths {*}$opts} found]} {
     puts stderr $found
     exit 2
 }
-set shown [lmap f $found {expr {[dict get $f severity] in $show ? $f : [continue]}}]
+set shown {}
+foreach f $found {
+    if {[dict get $f severity] in $show} { lappend shown $f }
+}
 if {$json} {
     puts [::tclutils::tulint::format $shown -format json]
 } elseif {[llength $shown]} {

@@ -34,7 +34,7 @@
 # is Tcl core. Sandbox code runs in the calling thread, bounded by command
 # and time limits.
 #
-# Namespace: ::tclutils::tutask   Package: tclutils::tutask 0.2
+# Namespace: ::tclutils::tutask   Package: tclutils::tutask 0.3
 # Errors:    {TCLUTILS TUTASK <REASON>}, REASON one of CANCELLED TIMEOUT
 #            NOTASK NOTDONE OPTION NOTHREAD EMPTY PROTOCOL INIT INSIDE,
 #            {TCLUTILS TUTASK LIMIT COMMANDS|TIME}
@@ -48,7 +48,7 @@ namespace eval ::tclutils {}
 namespace eval ::tclutils::tutask {
     namespace export spawn await sleep timer pipe onwrite current run \
         group pool sandbox stats tasks
-    variable version 0.2
+    variable version 0.3
     variable seq 0
     # await bookkeeping, keyed by an integer per await:
     #   pend(key)    coroutine that waits
@@ -514,8 +514,13 @@ oo::class create ::tclutils::tutask::Task {
         if {$state eq "error" && !$observed} {
             set ec NONE
             if {[dict exists $opts -errorcode]} { set ec [dict get $opts -errorcode] }
+            if {[dict exists $opts -errorinfo]} {
+                set _ei [dict get $opts -errorinfo]
+            } else {
+                set _ei $value
+            }
             after 0 [list error "tutask: error in task [self] was never collected: $value" \
-                [expr {[dict exists $opts -errorinfo] ? [dict get $opts -errorinfo] : $value}] $ec]
+                $_ei $ec]
         }
         unset -nocomplain ::tclutils::tutask::live([self])
     }
@@ -997,4 +1002,4 @@ proc ::tclutils::tutask::sandbox {args} {
     return [::tclutils::tutask::Sandbox new {*}$args]
 }
 
-package provide tclutils::tutask 0.2
+package provide tclutils::tutask 0.3

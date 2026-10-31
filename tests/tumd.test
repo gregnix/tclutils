@@ -88,18 +88,18 @@ test tumd-3.2 {toc with indentation and anchors} -body {
 
 # --- 0.2: anchors as GitHub makes them ----------------------------------------
 
-test tumd-4.1 {letters of every script stay; Jörg and Jrg differ} -body {
-    ::tclutils::tumd::toc "# Jörg\n# Jrg\n# Über\n"
-} -result "- \[Jörg\](#jörg)\n- \[Jrg\](#jrg)\n- \[Über\](#über)"
+test tumd-4.1 "letters of every script stay; J\u00f6rg and Jrg differ" -body {
+    ::tclutils::tumd::toc "# J\u00f6rg\n# Jrg\n# \u00dcber\n"
+} -result "- \[J\u00f6rg\](#j\u00f6rg)\n- \[Jrg\](#jrg)\n- \[\u00dcber\](#\u00fcber)"
 
 test tumd-4.2 {repeated headings get -1, -2} -body {
     ::tclutils::tumd::toc "# A\n# A\n# A\n"
 } -result "- \[A\](#a)\n- \[A\](#a-1)\n- \[A\](#a-2)"
 
 test tumd-4.3 {toHtml ids match toc} -body {
-    set h [::tclutils::tumd::toHtml "# Jörg\n# Jörg\n"]
+    set h [::tclutils::tumd::toHtml "# J\u00f6rg\n# J\u00f6rg\n"]
     regexp -all -inline {id="[^"]*"} $h
-} -result [list {id="jörg"} {id="jörg-1"}]
+} -result [list "id=\"j\u00f6rg\"" "id=\"j\u00f6rg-1\""]
 
 test tumd-4.4 {underscore stays, punctuation goes, * and ` go} -body {
     ::tclutils::tumd::toc "# foo_bar: *Baz* `x`\n"

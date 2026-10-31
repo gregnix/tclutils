@@ -203,7 +203,11 @@ proc ::tclutils::tumd::toHtml {markdown} {
         # Flat list (ordered or unordered).
         if {[regexp {^[ ]{0,3}([-*+]|\d+[.)])[ \t]+} $line]} {
             set ordered [regexp {^[ ]{0,3}\d} $line]
-            set tag [expr {$ordered ? "ol" : "ul"}]
+            if {$ordered} {
+                set tag ol
+            } else {
+                set tag ul
+            }
             set lis ""
             while {$i < $n && \
                     [regexp {^[ ]{0,3}(?:[-*+]|\d+[.)])[ \t]+(.*)$} [lindex $lines $i] -> itext]} {

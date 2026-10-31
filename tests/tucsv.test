@@ -62,25 +62,25 @@ test tucsv-strict-2 {lenient recovers instead of erroring} -body {
 
 test tucsv-3.1 {writeFile writes UTF-8 by default} -body {
     set tmp [file join [temporaryDirectory] tucsv-u-[pid].csv]
-    ::tclutils::tucsv::writeFile $tmp [list [list Tämo Öl]]
+    ::tclutils::tucsv::writeFile $tmp [list [list T\u00e4mo \u00d6l]]
     set fh [open $tmp rb]; set raw [read $fh]; close $fh
     file delete -force $tmp
     binary encode hex $raw
-} -result [binary encode hex [encoding convertto utf-8 "Tämo,Öl"]]
+} -result [binary encode hex [encoding convertto utf-8 "T\u00e4mo,\u00d6l"]]
 test tucsv-3.2 {profile excel-de: semicolon, CRLF, BOM} -body {
     set tmp [file join [temporaryDirectory] tucsv-x-[pid].csv]
     ::tclutils::tucsv::writeFile $tmp [list {a b} {{x;y} 2}] -profile excel-de
     set fh [open $tmp rb]; set raw [read $fh]; close $fh
     file delete -force $tmp
     set raw
-} -result [encoding convertto utf-8 "﻿a;b\r\n\"x;y\";2"]
+} -result [encoding convertto utf-8 "\ufeffa;b\r\n\"x;y\";2"]
 test tucsv-3.3 {excel-de file reads back (BOM stripped)} -body {
     set tmp [file join [temporaryDirectory] tucsv-r-[pid].csv]
-    ::tclutils::tucsv::writeFile $tmp [list {Name Ort} {Tämo Nordhafen}] -profile excel-de
+    ::tclutils::tucsv::writeFile $tmp [list {Name Ort} "T\u00e4mo Nordhafen"] -profile excel-de
     set r [::tclutils::tucsv::file $tmp -profile excel-de]
     file delete -force $tmp
     set r
-} -result {{Name Ort} {Tämo Nordhafen}}
+} -result "{Name Ort} {T\u00e4mo Nordhafen}"
 test tucsv-3.4 {text -bom and explicit options after the profile win} -body {
     ::tclutils::tucsv::text {{a b}} -profile excel-de -delimiter , -bom 0
 } -result "a,b"
@@ -89,12 +89,12 @@ test tucsv-3.5 {unknown profile} -body {
 } -returnCodes error -result {unknown profile "excel-fr": must be excel-de or rfc4180}
 test tucsv-3.6 {-encoding for other files} -body {
     set tmp [file join [temporaryDirectory] tucsv-l-[pid].csv]
-    ::tclutils::tucsv::writeFile $tmp [list [list Öl]] -encoding iso8859-1
+    ::tclutils::tucsv::writeFile $tmp [list [list \u00d6l]] -encoding iso8859-1
     set fh [open $tmp rb]; set raw [read $fh]; close $fh
     set back [::tclutils::tucsv::file $tmp -encoding iso8859-1]
     file delete -force $tmp
     list [string length $raw] $back
-} -result {2 Öl}
+} -result "2 \u00d6l"
 
 test tucsv-9.1 {a failed write leaves the old file, no temp file, no channel} -setup {
     set f [makeFile PRECIOUS tucsv-9.1.csv]

@@ -16,6 +16,12 @@
 # silently changed the policy for this client. Client options -cafile <file>
 # and -insecure 0|1 give the way out for internal servers.
 #
+# A path may be a full URL (an href from the server). Only http and https are
+# sent ({TCLUTILS TUDAV URL} else), and the Authorization header goes only to
+# the origin of the base URL (scheme, host, port): an href on another host
+# gets the request without credentials, so a server cannot lead them away.
+# For a second host (e.g. a calendar home elsewhere) open a second client.
+#
 # This client does not parse the resource bodies themselves -- feed a fetched
 # vCard to tclutils::tuvcard or an iCalendar to tclutils::tuical.
 
@@ -79,6 +85,13 @@ proc ::tclutils::tudav::_resolve {base href} {
         return $base
     }
     if {[regexp {^[a-zA-Z][a-zA-Z0-9+.-]*://} $href]} { return $href }
+    # "//host/path": same scheme, other host (RFC 3986 network-path
+    # reference; was appended to the base host)
+    if {[string match //* $href]
+            && [regexp {^([a-zA-Z][a-zA-Z0-9+.-]*):} $base -> scheme]} {
+        regexp {^(//[^/?#]*)(.*)$} $href -> auth path
+        return $scheme:$auth[_dotSegments $path]
+    }
     if {![regexp {^([a-zA-Z][a-zA-Z0-9+.-]*://[^/]+)(/.*)?$} $base -> origin rest]} {
         # base is not a full URL; fall back to simple join
         if {[string match */ $base]} { return $base[string trimleft $href /] }
@@ -89,6 +102,21 @@ proc ::tclutils::tudav::_resolve {base href} {
     # relative to the base path
     set dir [string range $rest 0 [string last / $rest]]
     return $origin[_dotSegments $dir$href]
+}
+
+# Origin of a URL as "scheme://host:port", lower case, default port filled
+# in; "" when the URL has no scheme and host.
+proc ::tclutils::tudav::_origin {url} {
+    if {![regexp {^([a-zA-Z][a-zA-Z0-9+.-]*)://([^/?#]*)} $url -> scheme auth]} {
+        return ""
+    }
+    set scheme [string tolower $scheme]
+    set host [string tolower [regsub {^.*@} $auth ""]]
+    if {![regexp {^(\[[^\]]*\]|[^:]*)(?::(\d+))?$} $host -> h port]} { return "" }
+    if {$port eq ""} {
+        switch -- $scheme { http { set port 80 } https { set port 443 } }
+    }
+    return "$scheme://$h:$port"
 }
 
 # Strip namespace prefixes from element tags so parsing is prefix-agnostic.
@@ -278,10 +306,18 @@ proc ::tclutils::tudav::_request {c method path args} {
     set opts [::tclutils::common::parseOptions \
         {-query "" -type "" -depth "" -headers {}} {*}$args]
     set url [_resolve $state($c,url) $path]
+    if {![regexp -nocase {^https?://} $url]} {
+        return -code error -errorcode {TCLUTILS TUDAV URL} \
+            "only http and https URLs: $url"
+    }
     set prefix [_tlsPrefix $c $url]
 
     set hdrs $state($c,headers)
-    if {$state($c,auth) ne ""} { lappend hdrs Authorization $state($c,auth) }
+    # credentials only to the origin of the base URL
+    if {$state($c,auth) ne ""
+            && [_origin $url] eq [_origin $state($c,url)]} {
+        lappend hdrs Authorization $state($c,auth)
+    }
     if {[dict get $opts -depth] ne ""} { lappend hdrs Depth [dict get $opts -depth] }
     foreach {k v} [dict get $opts -headers] { lappend hdrs $k $v }
 

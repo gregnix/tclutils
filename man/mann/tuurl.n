@@ -1,4 +1,4 @@
-.TH tuurl n 0.1 tclutils
+.TH tuurl n 0.2 tclutils
 .SH tclutils::tuurl
 .PP
 URL percent\-encoding/decoding and query strings (RFC 3986). Unreserved characters \fBA\-Z a\-z 0\-9 \- . _ ~\fR pass through; everything else is encoded over the UTF\-8 bytes.
@@ -13,7 +13,7 @@ Commands:
 .IP \(bu
 \fBencode str ?\-plus bool?\fR — percent\-encode. \fB\-plus 1\fR: space becomes \fB+\fR.
 .IP \(bu
-\fBdecode str ?\-plus bool?\fR — percent\-decode. \fB\-plus 1\fR: \fB+\fR becomes space.
+\fBdecode str ?\-plus bool?\fR — percent\-decode. \fB\-plus 1\fR: \fB+\fR becomes space. Characters that are not percent\-encoded count as their UTF\-8 bytes, so \fBJ%C3%B6rg\fR and an already decoded \fBJörg\fR give the same text (0.2; under Tcl 9 0.1 broke off on the second). A \fB%\fR without two hex digits stays, \fB%00\fR gives a NUL character. Invalid UTF\-8 (\fB%FF\fR) stays as the bytes, one character 0–255 each (0.1 broke off under Tcl 9). The result is text, not a checked file name: test it before it reaches \fBopen\fR or a path.
 .IP \(bu
 \fBbuildQuery dict ?\-plus bool?\fR — \fBk=v&k2=v2\fR (default \fB\-plus 1\fR).
 .IP \(bu

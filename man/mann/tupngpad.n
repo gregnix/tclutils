@@ -1,4 +1,4 @@
-.TH tupngpad n 0.2 tclutils
+.TH tupngpad n 0.3 tclutils
 .SH tclutils::tupngpad
 .PP
 Normalise a set of (transparent) PNGs to a uniform size. Typical use: object cut\-outs saved as transparent PNGs, each cropped to its own tight bounding box. \fBtupngpad\fR brings them all to one common size, centres each one, keeps a margin around the content, and flattens transparency onto a background colour (e.g. white). Pure Tcl, no Tk and no external packages; the pixel work pairs with \fBtclutils::tupng\fR / \fBtclutils::tupngdraw\fR.
@@ -11,7 +11,7 @@ tclutils::tupngpad::batch $files /out -margin 4 -background white
 .CE
 .SS File\-level
 .PP
-\fBtupngpad::batch files outdir ?options?\fR — read each PNG in \fBfiles\fR, optionally trim it to its content, then pad every image to one common size and write the result into \fBoutdir\fR (same base name). Returns a dict \fB{size {tw th} files {in1 out1 in2 out2 ...}}\fR: the common output size and the input/output paths in pairs. All options are checked before any file is read.
+\fBtupngpad::batch files outdir ?options?\fR — read each PNG in \fBfiles\fR, optionally trim it to its content, then pad every image to one common size and write the result into \fBoutdir\fR (same base name). Returns a dict \fB{size {tw th} files {in1 out1 in2 out2 ...}}\fR: the common output size and the input/output paths in pairs. All options are checked before any file is read. A failed write leaves an existing output file (0.3, \fBcommon::replaceFile\fR).
 .PP
 Options:
 .IP \(bu

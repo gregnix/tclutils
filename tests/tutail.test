@@ -14,11 +14,11 @@ test tutail-1.3 {zero} {::tclutils::tutail::text "1\n2" 0} ""
 file delete -force $tmp
 # --- 0.2 ---------------------------------------------------------------------
 set tmp2 [file join [temporaryDirectory] tutail2-[pid].txt]
-set f [open $tmp2 wb]; puts -nonewline $f [encoding convertto utf-8 "eins\nJörg\n"]; close $f
+set f [open $tmp2 wb]; puts -nonewline $f [encoding convertto utf-8 "eins\nJ\u00f6rg\n"]; close $f
 test tutail-2.1 {count 1 is the last line, text and file agree} -body {
-    list [::tclutils::tutail::text "eins\nJörg\n" 1] [::tclutils::tutail::file $tmp2 1] \
-        [::tclutils::tutail::text "eins\nJörg" 1]
-} -result [list "Jörg\n" "Jörg\n" Jörg]
+    list [::tclutils::tutail::text "eins\nJ\u00f6rg\n" 1] [::tclutils::tutail::file $tmp2 1] \
+        [::tclutils::tutail::text "eins\nJ\u00f6rg" 1]
+} -result [list "J\u00f6rg\n" "J\u00f6rg\n" J\u00f6rg]
 test tutail-2.2 {bad count has an error code} -body {
     catch {::tclutils::tutail::file x abc}; set ::errorCode
 } -result {TCLUTILS TUTAIL COUNT}

@@ -122,20 +122,20 @@ test tuvcard-photo-3.1 {inline 3.0 photo without TYPE is MIME-sniffed via tuimag
 } -result {inline image/png 1}
 
 test tuvcard-9.1 {BEGIN in lower case, group prefix, quoted TYPE} -body {
-    set c [lindex [::tclutils::tuvcard::parse "begin:VCARD\r\nVERSION:4.0\r\nitem1.FN:Jörg\r\nTEL;TYPE=\"work;cell\":555\r\nend:VCARD\r\n"] 0]
+    set c [lindex [::tclutils::tuvcard::parse "begin:VCARD\r\nVERSION:4.0\r\nitem1.FN:J\u00f6rg\r\nTEL;TYPE=\"work;cell\":555\r\nend:VCARD\r\n"] 0]
     set tel [lindex [::tclutils::tuvcard::properties $c TEL] 0]
     list [::tclutils::tuvcard::fullName $c] [dict get $tel params] \
-        [string match "*item1.FN:Jörg\r\nTEL;TYPE=\"work;cell\":555\r\n*" [::tclutils::tuvcard::toVcf $c]]
-} -result [list "Jörg" [list TYPE {work;cell}] 1]
+        [string match "*item1.FN:J\u00f6rg\r\nTEL;TYPE=\"work;cell\":555\r\n*" [::tclutils::tuvcard::toVcf $c]]
+} -result [list "J\u00f6rg" [list TYPE {work;cell}] 1]
 test tuvcard-9.2 {fold at 75 octets} -body {
-    set c [::tclutils::tuvcard::addProperty {} NOTE [string repeat € 40]]
+    set c [::tclutils::tuvcard::addProperty {} NOTE [string repeat \u20ac 40]]
     set max 0
     foreach l [split [string map {"\r\n" "\n"} [::tclutils::tuvcard::toVcf $c]] \n] {
         set b [string length [encoding convertto utf-8 $l]]
         if {$b > $max} { set max $b }
     }
     list [expr {$max <= 75}] [::tclutils::tuvcard::property [lindex [::tclutils::tuvcard::parse [::tclutils::tuvcard::toVcf $c]] 0] NOTE]
-} -result [list 1 [string repeat € 40]]
+} -result [list 1 [string repeat \u20ac 40]]
 test tuvcard-9.3 {a line break in a value is refused} -body {
     catch {::tclutils::tuvcard::addProperty {} NOTE "a\r\nb"} m o
     dict get $o -errorcode

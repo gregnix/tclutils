@@ -112,4 +112,34 @@ test tupngpad-4.7 {padTo: half-transparent pixel blends on white} -body {
     set px
 } -result {255 127 127 255}
 
+
+test tupngpad-4.8 {a failed write leaves the old file} -setup {
+    set dir [makeDirectory pin48]
+    set odir [makeDirectory pout48]
+    set png [::tclutils::tupng::encodeRGBARaw [blk 2 2 0 0 2 2] 2 2]
+    set inf [file join $dir a.png]
+    set ch [open $inf w]; fconfigure $ch -translation binary
+    puts -nonewline $ch $png; close $ch
+    set f [file join $odir a.png]
+    set ch [open $f w]; puts -nonewline $ch PRECIOUS; close $ch
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tupngpad::batch [list $inf] $odir -trim 0
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeDirectory pin48
+    removeDirectory pout48
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

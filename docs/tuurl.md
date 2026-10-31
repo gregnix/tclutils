@@ -16,6 +16,12 @@ Commands:
 
 - `encode str ?-plus bool?` — percent-encode. `-plus 1`: space becomes `+`.
 - `decode str ?-plus bool?` — percent-decode. `-plus 1`: `+` becomes space.
+  Characters that are not percent-encoded count as their UTF-8 bytes, so
+  `J%C3%B6rg` and an already decoded `Jörg` give the same text (0.2; under
+  Tcl 9 0.1 broke off on the second). A `%` without two hex digits stays,
+  `%00` gives a NUL character. Invalid UTF-8 (`%FF`) stays as the bytes, one
+  character 0–255 each (0.1 broke off under Tcl 9). The result is text, not a
+  checked file name: test it before it reaches `open` or a path.
 - `buildQuery dict ?-plus bool?` — `k=v&k2=v2` (default `-plus 1`).
 - `parseQuery str ?-plus bool?` — parse into a dict (default `-plus 1`). A key
   that occurs more than once (`a=1&a=2`, e.g. checkboxes) keeps only its last

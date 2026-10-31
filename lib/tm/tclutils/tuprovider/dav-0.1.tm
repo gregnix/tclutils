@@ -75,7 +75,11 @@ oo::class create ::tclutils::tuprovider::Dav {
         # getProperties does not itself say collection-or-not reliably across
         # servers; fall back to name only. Type "file" unless a trailing slash
         # marks a collection.
-        set type [expr {[string index $path end] eq "/" ? "dir" : "file"}]
+        if {[string index $path end] eq "/"} {
+            set type dir
+        } else {
+            set type file
+        }
         return [my _entry [my _name $path] $path $type]
     }
 

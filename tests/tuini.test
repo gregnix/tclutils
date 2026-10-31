@@ -86,19 +86,19 @@ test tuini-3.4 {section names that would read back differently are refused} -bod
 } -result {{1 1} {1 1} {1 1} {1 1}}
 
 test tuini-3.5 {what parse returns, toIni writes back unchanged} -body {
-    set t "g = 1\n\[Büro\]\nname = Jörg \nname = Zweite\nort=München\n\[leer\]\n"
+    set t "g = 1\n\[B\u00fcro\]\nname = J\u00f6rg \nname = Zweite\nort=M\u00fcnchen\n\[leer\]\n"
     set a [::tclutils::tuini::parse $t]
     expr {[::tclutils::tuini::parse [::tclutils::tuini::toIni $a]] eq $a}
 } -result 1
 
 test tuini-3.6 {a key twice: the last value wins; outer blanks dropped} -body {
-    set d [::tclutils::tuini::parse "\[S\]\nname = Jörg \nname = Zweite\nx =  a b  \n"]
+    set d [::tclutils::tuini::parse "\[S\]\nname = J\u00f6rg \nname = Zweite\nx =  a b  \n"]
     list [::tclutils::tuini::get $d S name] [::tclutils::tuini::get $d S x]
 } -result {Zweite {a b}}
 
 test tuini-3.7 {ordinary keys and values still pass} -body {
-    set d [::tclutils::tuini::setValue {} "" "Pfad.Ä-1" "a = b; #c \[d\]"]
-    ::tclutils::tuini::get [::tclutils::tuini::parse [::tclutils::tuini::toIni $d]] "" "Pfad.Ä-1"
+    set d [::tclutils::tuini::setValue {} "" "Pfad.\u00c4-1" "a = b; #c \[d\]"]
+    ::tclutils::tuini::get [::tclutils::tuini::parse [::tclutils::tuini::toIni $d]] "" "Pfad.\u00c4-1"
 } -result {a = b; #c [d]}
 
 cleanupTests

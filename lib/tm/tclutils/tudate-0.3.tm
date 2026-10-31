@@ -87,8 +87,12 @@ proc ::tclutils::tudate::parse {str args} {
 proc ::tclutils::tudate::iso {seconds args} {
     set opts [::tclutils::common::parseOptions {-time 0} {*}$args]
     set t [::tclutils::common::ensureBoolean [dict get $opts -time] -time]
-    return [clock format $seconds \
-        -format [expr {$t ? "%Y-%m-%dT%H:%M:%S" : "%Y-%m-%d"}]]
+    if {$t} {
+        set fmt "%Y-%m-%dT%H:%M:%S"
+    } else {
+        set fmt "%Y-%m-%d"
+    }
+    return [clock format $seconds -format $fmt]
 }
 
 # Calendar arithmetic: add $count of $unit to $seconds.

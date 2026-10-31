@@ -83,7 +83,11 @@ proc ::tclutils::tuedid::parse {bytes} {
     set code ""
     foreach shift {10 5 0} {
         set c [expr {($m >> $shift) & 0x1F}]
-        append code [expr {$c >= 1 && $c <= 26 ? [format %c [expr {64 + $c}]] : "?"}]
+        if {$c >= 1 && $c <= 26} {
+            append code [format %c [expr {64 + $c}]]
+        } else {
+            append code "?"
+        }
     }
     set product [expr {[lindex $b 10] | ([lindex $b 11] << 8)}]
     set serial [expr {[lindex $b 12] | ([lindex $b 13] << 8)

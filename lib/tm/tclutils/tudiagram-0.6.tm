@@ -443,7 +443,11 @@ proc ::tclutils::tudiagram::layout {d} {
     set meta    [dict get $d meta]
     set dir     [dict get $meta direction]
     # RL/BT are laid out as their LR/TB mirror, then flipped at the end.
-    set baseDir [expr {$dir in {LR RL} ? "LR" : "TB"}]
+    if {$dir in {LR RL}} {
+        set baseDir LR
+    } else {
+        set baseDir TB
+    }
     set th      [theme [dict get $meta theme]]
     set font    [dict get $th font]
     set pad     [dict get $th pad]
@@ -1113,7 +1117,11 @@ proc ::tclutils::tudiagram::render {d canvas} {
             set gp [expr {$basePad + $lvl*$step}]
             set gx1 [expr {int($minx-$gp)}]; set gy1 [expr {int($miny-$gp)}]
             set gx2 [expr {int($maxx+$gp)}]; set gy2 [expr {int($maxy+$gp)}]
-            set gfill [expr {$lvl%2 ? "#e6ebf3" : "#eef1f6"}]
+            if {$lvl % 2} {
+                set gfill "#e6ebf3"
+            } else {
+                set gfill "#eef1f6"
+            }
             $canvas setfill $gfill
             $canvas rect $gx1 $gy1 $gx2 $gy2 -fill 1 -fillcolor $gfill \
                 -outline 1 -color #9aa0a6 -rx 8 -ry 8
@@ -1148,7 +1156,11 @@ proc ::tclutils::tudiagram::render {d canvas} {
         if {[llength $pts] < 4} continue
         $canvas setstroke $edgeC
         $canvas setlinewidth 2
-        set est [expr {[dict exists $e style] ? [dict get $e style] : "solid"}]
+        if {[dict exists $e style]} {
+            set est [dict get $e style]
+        } else {
+            set est solid
+        }
         for {set i 0} {$i < [llength $pts]-2} {incr i 2} {
             set x1 [expr {int([lindex $pts $i])}];   set y1 [expr {int([lindex $pts [expr {$i+1}]])}]
             set x2 [expr {int([lindex $pts [expr {$i+2}]])}]; set y2 [expr {int([lindex $pts [expr {$i+3}]])}]
@@ -1200,8 +1212,16 @@ proc ::tclutils::tudiagram::render {d canvas} {
         }
         # cardinality end-marks: drawn before the arrow block's "none" early-out,
         # so arrowless edges (e.g. ER relationships) still get their marks.
-        set sm [expr {[dict exists $e startMark] ? [dict get $e startMark] : "none"}]
-        set em [expr {[dict exists $e endMark]   ? [dict get $e endMark]   : "none"}]
+        if {[dict exists $e startMark]} {
+            set sm [dict get $e startMark]
+        } else {
+            set sm none
+        }
+        if {[dict exists $e endMark]} {
+            set em [dict get $e endMark]
+        } else {
+            set em none
+        }
         if {$em ne "none"} {
             _drawEndMark $canvas [lindex $pts end-1] [lindex $pts end] \
                 [lindex $pts end-3] [lindex $pts end-2] $em $edgeC

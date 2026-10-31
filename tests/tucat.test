@@ -15,8 +15,8 @@ file delete -force $tmp
 # --- 0.2 ---------------------------------------------------------------------
 
 test tucat-2.1 {no number for the end after the last LF} -body {
-    ::tclutils::tucat::text "eins\nJörg\n" -number 1
-} -result "     1\teins\n     2\tJörg\n"
+    ::tclutils::tucat::text "eins\nJ\u00f6rg\n" -number 1
+} -result "     1\teins\n     2\tJ\u00f6rg\n"
 
 test tucat-2.2 {-nonblank skips empty lines} -body {
     ::tclutils::tucat::text "a\n\nb\n" -nonblank 1
@@ -34,11 +34,11 @@ test tucat-2.3 {files numbers through, as cat -n} -setup {
 test tucat-2.4 {files without LF are joined as they are} -setup {
     set d [makeDirectory tucat24]
     set fa [file join $d a]; set fb [file join $d b]
-    set fh [open $fa w]; puts -nonewline $fh "Jörg"; close $fh
+    set fh [open $fa w]; puts -nonewline $fh "J\u00f6rg"; close $fh
     set fh [open $fb w]; puts -nonewline $fh "drei"; close $fh
 } -body {
     ::tclutils::tucat::files [list $fa $fb]
-} -result "Jörgdrei"
+} -result "J\u00f6rgdrei"
 
 test tucat-2.5 {unknown option is an error} -body {
     catch {::tclutils::tucat::text a -nummer 1}

@@ -94,14 +94,20 @@ oo::class create ::tclutils::tusvg::Canvas {
     method _paint {o} {
         set f none
         if {[dict get $o -fill]} {
-            set f [expr {[dict get $o -fillcolor] eq "" ? $fill \
-                : [::tclutils::tusvg::_color [dict get $o -fillcolor]]}]
+            if {[dict get $o -fillcolor] eq ""} {
+                set f $fill
+            } else {
+                set f [::tclutils::tusvg::_color [dict get $o -fillcolor]]
+            }
         }
         set s none
         set sw ""
         if {[dict get $o -outline]} {
-            set s [expr {[dict get $o -color] eq "" ? $stroke \
-                : [::tclutils::tusvg::_color [dict get $o -color]]}]
+            if {[dict get $o -color] eq ""} {
+                set s $stroke
+            } else {
+                set s [::tclutils::tusvg::_color [dict get $o -color]]
+            }
             set sw " stroke-width=\"$linewidth\""
         }
         return "fill=\"$f\" stroke=\"$s\"$sw"
@@ -127,8 +133,11 @@ oo::class create ::tclutils::tusvg::Canvas {
     method line {x1 y1 x2 y2 args} {
         set o [::tclutils::common::parseOptions \
             {-color {} -width {} -caps round} {*}$args]
-        set col [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tusvg::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set col $stroke
+        } else {
+            set col [::tclutils::tusvg::_color [dict get $o -color]]
+        }
         set lw [expr {[dict get $o -width] eq "" ? $linewidth \
             : [::tclutils::common::ensurePositiveInteger [dict get $o -width] -width]}]
         set cap [dict get $o -caps]
@@ -156,8 +165,11 @@ oo::class create ::tclutils::tusvg::Canvas {
 
     method polyline {points args} {
         set o [::tclutils::common::parseOptions {-color {} -width {}} {*}$args]
-        set col [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tusvg::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set col $stroke
+        } else {
+            set col [::tclutils::tusvg::_color [dict get $o -color]]
+        }
         set lw [expr {[dict get $o -width] eq "" ? $linewidth : [dict get $o -width]}]
         lappend body "<polyline points=\"[my _points $points]\" fill=\"none\"\
  stroke=\"$col\" stroke-width=\"$lw\"/>"
@@ -193,8 +205,11 @@ oo::class create ::tclutils::tusvg::Canvas {
     method text {x y str args} {
         set o [::tclutils::common::parseOptions \
             {-color {} -scale 1 -spacing 0 -anchor start} {*}$args]
-        set col [expr {[dict get $o -color] eq "" ? $stroke \
-            : [::tclutils::tusvg::_color [dict get $o -color]]}]
+        if {[dict get $o -color] eq ""} {
+            set col $stroke
+        } else {
+            set col [::tclutils::tusvg::_color [dict get $o -color]]
+        }
         set sc [::tclutils::common::ensurePositiveInteger [dict get $o -scale] -scale]
         set tw [my textwidth $str -scale $sc -spacing [dict get $o -spacing]]
         set fs       [expr {8 * $sc}]

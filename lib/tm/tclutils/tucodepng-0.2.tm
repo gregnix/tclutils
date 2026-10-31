@@ -24,7 +24,7 @@ package require tclutils::tucode 0.1
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tucodepng {
     namespace export render write ascii latin1 all
-    variable version 0.1
+    variable version 0.2
     variable themes
 }
 
@@ -164,10 +164,7 @@ proc ::tclutils::tucodepng::render {from to args} {
 
 proc ::tclutils::tucodepng::write {file from to args} {
     set png [render $from $to {*}$args]
-    set fid [open $file w]
-    fconfigure $fid -translation binary
-    puts -nonewline $fid $png
-    close $fid
+    ::tclutils::common::replaceFile $file $png -encoding binary
     return $file
 }
 
@@ -175,4 +172,4 @@ proc ::tclutils::tucodepng::ascii  {args} { return [render 0 127 {*}$args] }
 proc ::tclutils::tucodepng::latin1 {args} { return [render 128 255 {*}$args] }
 proc ::tclutils::tucodepng::all    {args} { return [render 0 255 {*}$args] }
 
-package provide tclutils::tucodepng 0.1
+package provide tclutils::tucodepng 0.2

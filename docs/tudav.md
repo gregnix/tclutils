@@ -89,8 +89,18 @@ and any later registration by another module changed the policy for this client.
 `{TCLUTILS TUDAV TLS}` and the message names the way out (`-cafile`,
 `SSL_CERT_FILE`).
 
+### Credentials stay on the base origin
+
+A path may be a full URL, e.g. an `href` from a multistatus answer. Only
+`http` and `https` are sent (`{TCLUTILS TUDAV URL}` else). The
+`Authorization` header goes only to the origin of the base URL (scheme, host
+and port; 80/443 filled in). An `href` on another host gets the request
+without credentials, so a server cannot lead them elsewhere; it then usually
+answers 401. For a calendar home on a second host, open a second client with
+that URL. Up to 2026-10-30 the header went to any URL.
+
 Errors: HTTP failures → `{TCLUTILS TUDAV HTTP}`; missing tls for https →
-`{TCLUTILS TUDAV TLS}`.
+`{TCLUTILS TUDAV TLS}`; a URL other than http/https → `{TCLUTILS TUDAV URL}`.
 
 ## Additional exported commands
 

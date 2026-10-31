@@ -126,7 +126,11 @@ proc ::tclutils::tuclass::parse {text} {
             set lbl [string trim $lbl]
             if {$lbl eq ""} { set lbl [_reltype $op] }
             # ".." operators (dependency / realization) are drawn dashed
-            set est [expr {[string match {*.*} $op] ? "dashed" : "solid"}]
+            if {[string match {*.*} $op]} {
+                set est dashed
+            } else {
+                set est solid
+            }
             # arrowhead on the left ("<...") -> child is on the right
             if {[string index $op 0] eq "<"} {
                 lappend edges [list $b $a $lbl $est]

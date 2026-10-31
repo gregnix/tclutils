@@ -108,8 +108,8 @@ test tugrep-4.1 {file -fileswithmatches keeps a numeric-looking name} -setup {
 } -result {010}
 
 # --- 0.2: no empty line after the final LF -------------------------------------
-test tugrep-9.1 {".*" matches two lines in "eins\nJörg\n"} -body {
-    ::tclutils::tugrep::search "eins\nJörg\n" {.*} -count 1
+test tugrep-9.1 "\".*\" matches two lines in \"eins\\nJ\u00f6rg\\n\"" -body {
+    ::tclutils::tugrep::search "eins\nJ\u00f6rg\n" {.*} -count 1
 } -result 2
 test tugrep-9.2 {empty lines at the end of a file count} -body {
     set f [makeFile "a\n\n\n" tugrep92.txt]

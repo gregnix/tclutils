@@ -115,8 +115,13 @@ proc ::tclutils::tuc4::parse {text} {
 
     set d [::tclutils::tudiagram::create -direction TB -title $title]
     foreach id $order {
+        if {[info exists style($id)]} {
+            set _st $style($id)
+        } else {
+            set _st {}
+        }
         set d [::tclutils::tudiagram::addNode $d $id -label $label($id) -shape $shape($id) \
-            -style [expr {[info exists style($id)] ? $style($id) : {}}]]
+            -style $_st]
     }
     foreach e $edges {
         lassign $e f t l

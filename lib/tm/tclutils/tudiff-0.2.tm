@@ -34,7 +34,7 @@ proc ::tclutils::tudiff::ReadFile {filename {eol ignore} {enc ""}} {
         set fh [open $filename r]
         try {
             fconfigure $fh -translation binary
-            fconfigure $fh -encoding [expr {$enc eq "" ? [encoding system] : $enc}]
+            fconfigure $fh -encoding [if {$enc eq ""} {encoding system} else {set enc}]
             return [read $fh]
         } finally {
             close $fh

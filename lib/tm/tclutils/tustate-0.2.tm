@@ -36,7 +36,11 @@ proc ::tclutils::tustate::_resolve {endpoint side oV lV sV} {
     set ep [string trim $endpoint]
     set ep [string trim $ep \"]
     if {$ep eq {[*]}} {
-        set id [expr {$side eq "from" ? "__start" : "__end"}]
+        if {$side eq "from"} {
+            set id __start
+        } else {
+            set id __end
+        }
         if {![info exists shape($id)]} { lappend order $id; set shape($id) dot; set label($id) "" }
         return $id
     }

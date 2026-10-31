@@ -86,7 +86,7 @@ test tusplit-2.4 {file: missing value of a passed-on option} -body {
 
 test tusplit-3.1 {splitLines: parts joined give the text again} -body {
     set out [makeDirectory sl31]
-    set t "eins\nJörg\ndrei\n"
+    set t "eins\nJ\u00f6rg\ndrei\n"
     set files [::tclutils::tusplit::splitLines $t -lines 2 -outdir $out]
     set all ""
     foreach f $files { append all [readBin $f] }
@@ -114,5 +114,52 @@ test tusplit-3.4 {splitLines: unknown -encoding} -body {
     catch {::tclutils::tusplit::splitLines a -encoding nix -outdir [makeDirectory sl34]}
     set ::errorCode
 } -result {TCLUTILS TUSPLIT ENCODING nix}
+
+
+test tusplit-4.1 {splitLines: a failed write leaves the old file} -setup {
+    set d [makeDirectory spfail1]
+    set f [file join $d x00]
+    set ch [open $f w]; puts -nonewline $ch PRECIOUS; close $ch
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tusplit::splitLines "a\n" -outdir $d
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeDirectory spfail1
+} -result {1 PRECIOUS 0 0}
+
+test tusplit-4.2 {splitBytes: a failed write leaves the old file} -setup {
+    set d [makeDirectory spfail2]
+    set f [file join $d x00]
+    set ch [open $f w]; puts -nonewline $ch PRECIOUS; close $ch
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tusplit::splitBytes ab -bytes 2 -outdir $d
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeDirectory spfail2
+} -result {1 PRECIOUS 0 0}
 
 cleanupTests

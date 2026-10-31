@@ -117,12 +117,12 @@ test tuldif-4.3 {;binary and -binary mark attributes} -body {
     lmap p $e { string length [lindex $p 1] }
 } -result {4 2 2}
 
-test tuldif-4.4 {text stays UTF-8: cn Jörg} -body {
-    ::tclutils::tuldif::toLdif [list [list {dn cn=x} {cn Jörg}]]
+test tuldif-4.4 "text stays UTF-8: cn J\u00f6rg" -body {
+    ::tclutils::tuldif::toLdif [list [list {dn cn=x} "cn J\u00f6rg"]]
 } -result "dn: cn=x\ncn:: SsO2cmc=\n"
 
 test tuldif-4.5 {a binary attribute with characters above \xFF is an error} -body {
-    list [catch {::tclutils::tuldif::toLdif [list [list {dn cn=x} {jpegPhoto Jörg€}]]}] $::errorCode
+    list [catch {::tclutils::tuldif::toLdif [list [list {dn cn=x} "jpegPhoto J\u00f6rg\u20ac"]]}] $::errorCode
 } -result {1 {TCLUTILS TULDIF BINARY}}
 
 test tuldif-4.6 {wrong option} -body {

@@ -23,11 +23,11 @@ test tunumany-4.1 {option without value -> OPTION} -body {
 } -result {{option "-default" requires a value} {TCLUTILS TUNUMANY OPTION}}
 test tunumany-4.2 {KiB is IEC} -body {::tclutils::tunumany::parse 2KiB} -result 2048
 
-test tunumany-4.1 {decimal comma before the unit} -body {
+test tunumany-4.3 {decimal comma before the unit} -body {
     list [::tclutils::tunumany::parse "1,5K"] [::tclutils::tunumany::parse "2,25 Mi"] \
          [::tclutils::tunumany::parse "-1,5k"]
 } -result {1500 2359296 -1500}
-test tunumany-4.2 {three digits after the comma do not parse} -body {
+test tunumany-4.4 {three digits after the comma do not parse} -body {
     ::tclutils::tunumany::parse "1,500K" -default none
 } -result none
 

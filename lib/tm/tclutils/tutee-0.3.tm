@@ -22,7 +22,11 @@ namespace eval ::tclutils::tutee {
 # files this call created are removed again, and the error is re-raised:
 # existing files keep their content.
 proc ::tclutils::tutee::_openOutputs {paths append} {
-    set mode [expr {$append ? {WRONLY CREAT APPEND} : {WRONLY CREAT}}]
+    if {$append} {
+        set mode {WRONLY CREAT APPEND}
+    } else {
+        set mode {WRONLY CREAT}
+    }
     set chans {}
     set created {}
     foreach path $paths {

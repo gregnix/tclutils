@@ -17,7 +17,9 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
 `tused`, `tusettings`, `tuimage` 0.2, `tuprovider`, `tutreemap`, `tuclass` 0.3,
 `tupacket`, `tujourney`, `tutimeline`, `tupie`, `tusequence` 0.3, `tukanban`,
 `tuquadrant` 0.2, `tudiagram` 0.6, `tusvg` 0.4, `tupngdraw` 0.14, `tupng` 0.6,
-`tuappinfo` 0.3, `tuodf` 0.2; new
+`tuappinfo` 0.3, `tuodf` 0.2, `tucodepng` 0.2, `tufetch` 0.5,
+`tumonthpng` 0.6, `tupngpad` 0.3, `tutablepng` 0.3, `tuzipfs` 0.4,
+`tupdftext` 0.2, `tutask` 0.3, `tuurl` 0.2, `tudeploy` 0.3; new
 `tusysinfo`, `tuedid`, `tulint`, `tudocx`, `tuxlsx` 0.1. When copying over an older tree, delete
 `tclutils-0.68.0.tm`, `tucsv-0.1.tm`, `tusqlite-0.1.tm`, `tuholiday-0.1.tm`,
 `tuzip-0.1.tm`, `tudiff-0.1.tm`, `tubookmark-0.2.tm`, `tuical-0.1.tm`,
@@ -36,8 +38,39 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
 `tuclass-0.2.tm`, `tupacket-0.2.tm`, `tujourney-0.2.tm`, `tukanban-0.1.tm`,
 `tutimeline-0.2.tm`, `tupie-0.2.tm`, `tuquadrant-0.1.tm`, `tusequence-0.2.tm`,
 `tudiagram-0.5.tm`, `tusvg-0.3.tm`, `tupngdraw-0.13.tm`, `tupng-0.5.tm`,
-`tuappinfo-0.2.tm`, `tuodf-0.1.tm`.
+`tuappinfo-0.2.tm`, `tuodf-0.1.tm`, `tucodepng-0.1.tm`, `tufetch-0.4.tm`,
+`tumonthpng-0.5.tm`, `tupngpad-0.2.tm`, `tutablepng-0.2.tm`,
+`tuzipfs-0.3.tm`, `tupdftext-0.1.tm`, `tutask-0.2.tm`, `tuurl-0.1.tm`,
+`tudeploy-0.2.tm`.
 
+- `tucodepng` 0.2, `tumonthpng` 0.6, `tupngpad` 0.3, `tutablepng` 0.3,
+  `tuzipfs` 0.4, `tusplit`, `tucsplit`: destination file via
+  `common::replaceFile`.
+- `tupdftext` 0.2, `tutask` 0.3: text no longer goes through `expr`.
+- Text-valued `expr` ternaries are `if`/`else`.
+- `tuodf`: `sheets` and `rows` read a spreadsheet (`.ods`) as tables;
+  repeats are capped at 1000. Numeric character references are decoded
+  (`&#252;` stayed as it was). Tests `tuodf-6.1`–`6.3`.
+- `tudocx`, `tuxlsx`: a numeric reference past Unicode is U+FFFD (under
+  Tcl 8.6 a big number broke off the reading). Test `tudocx-2.6`.
+- `tudav`: the Authorization header goes only to the origin of the base
+  URL; an href on another host is requested without credentials. Only
+  http and https (`{TCLUTILS TUDAV URL}`). Tests `tudav-11.1`, `11.2`.
+  An href `//host/path` keeps the scheme and takes that host (was appended
+  to the base host). Test `tudav-10.5`.
+- `tufetch` 0.5: a redirect is resolved (relative `Location`), must be
+  http/https, https to http is refused (`REDIRECT`); curl gets
+  `--proto-redir`; `.` and `..` in the redirect path are resolved. The
+  native path writes through a temporary file. Tests `tufetch-3.6`,
+  `5.1`–`5.5`.
+- `tuurl` 0.2: `decode` takes raw characters as UTF-8, also mixed with
+  `%XX`; invalid UTF-8 stays as bytes (Tcl 9 broke off on both). Tests
+  `tuurl-2.5`, `2.6`.
+- `tudeploy` 0.3: `resourceDirs` rejects a name or `-tag` that is absolute
+  or contains `..` (`USAGE`). Test `resourceDirs-9`.
+- `tuzip`: `create`, `createMembers` and `extract` write through a
+  temporary file; a write error leaves the old file (was empty). Tests
+  `tuzip-4.1`–`4.3`.
 - `tucsv`: `-profile excel-de|rfc4180` for `text`, `file`, `writeFile`;
   `text -bom 1`; `file` and `writeFile` take `-encoding` (default utf-8);
   `writeFile` keeps the line ends of `-newline`. Tests `tucsv-3.1`–`3.6`.
@@ -195,8 +228,15 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
   column break in a .docx is no text.
 - `tuodf` 0.2: `paragraphs` and `text` include headings (`text:h`, were left
   out), in document order. Test `tuodf-5.1`.
-- `tuappinfo`: the Tk line shows the patch level (`9.0.4`, was `9.0`); the
-  demo tracks the module file. Test `tkpatch-1`.
+- `tuappinfo`: the Tk line shows the patch level (`9.0.4`, was `9.0`).
+  Test `tkpatch-1`.
+- `tuappinfo`: new sections `Search variables` (`TCLLIBPATH`,
+  `TCL*_TM_PATH`, `LD_LIBRARY_PATH`, `DYLD_LIBRARY_PATH`), `tcl_pkgPath`
+  and `Loaded Libraries` (`info loaded`); packages show the file they came
+  from; missing search folders end in `(missing)`; Tcl and Tk library,
+  windowing system; `Host` from `info hostname` on every platform. The
+  demo loads the packages named on the command line. Tests `search-1`–`3`,
+  `missing-1`, `core-1`, `origin-1`, `2`, `libs-1`.
 - `tutreemap`: a `:::class` name with umlauts is removed whole (was cut
   after the first letter). `tuclass`: `;` inside quotes stays in the
   member. `tuimage::fromDataUri`: `;base64` inside a quoted parameter is

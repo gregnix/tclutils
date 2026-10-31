@@ -22,7 +22,7 @@ package require Tcl 8.6-
 if {[package vcompare [info tclversion] 9.0] < 0} {
     package require zlib
 }
-package require tclutils::common 0.1
+package require tclutils::common 0.3
 package require tclutils::tubin 0.1
 
 namespace eval ::tclutils {}
@@ -192,13 +192,8 @@ proc ::tclutils::tuzip::extract {zipfile member outfile args} {
     set data [::tclutils::tuzip::readMember $zipfile $member {*}$args]
     set dir [file dirname $outfile]
     if {$dir ne "." && ![file isdirectory $dir]} { file mkdir $dir }
-    set fh [open $outfile wb]
-    try {
-        fconfigure $fh -translation binary -encoding iso8859-1
-        puts -nonewline $fh $data
-    } finally {
-        close $fh
-    }
+    # through a temporary file: a write error leaves the old file
+    ::tclutils::common::replaceFile $outfile $data -encoding binary
     return $outfile
 }
 
@@ -282,13 +277,9 @@ proc ::tclutils::tuzip::create {zipfile files args} {
     append out "PK\x05\x06" [Pack16 0] [Pack16 0] [Pack16 $count] [Pack16 $count] \
         [Pack32 $cdSize] [Pack32 $cdOffset] [Pack16 0]
 
-    set fh [open $zipfile wb]
-    try {
-        fconfigure $fh -translation binary -encoding iso8859-1
-        puts -nonewline $fh $out
-    } finally {
-        close $fh
-    }
+    # through a temporary file: a write error leaves the old file (up to
+    # 2026-10-30 the target was opened first and stayed empty)
+    ::tclutils::common::replaceFile $zipfile $out -encoding binary
     return $zipfile
 }
 
@@ -314,7 +305,11 @@ proc ::tclutils::tuzip::createMembers {zipfile members args} {
         }
         set name [NormalizeName [dict get $m name]]
         set bytes [dict get $m content]
-        set method [expr {[dict exists $m method] ? [dict get $m method] : "deflate"}]
+        if {[dict exists $m method]} {
+            set method [dict get $m method]
+        } else {
+            set method deflate
+        }
         set crc [U32 [zlib crc32 $bytes]]
         set usize [string length $bytes]
         switch -- $method {
@@ -337,13 +332,9 @@ proc ::tclutils::tuzip::createMembers {zipfile members args} {
     append out "PK\x05\x06" [Pack16 0] [Pack16 0] [Pack16 $count] [Pack16 $count] \
         [Pack32 $cdSize] [Pack32 $cdOffset] [Pack16 0]
 
-    set fh [open $zipfile wb]
-    try {
-        fconfigure $fh -translation binary -encoding iso8859-1
-        puts -nonewline $fh $out
-    } finally {
-        close $fh
-    }
+    # through a temporary file: a write error leaves the old file (up to
+    # 2026-10-30 the target was opened first and stayed empty)
+    ::tclutils::common::replaceFile $zipfile $out -encoding binary
     return $zipfile
 }
 

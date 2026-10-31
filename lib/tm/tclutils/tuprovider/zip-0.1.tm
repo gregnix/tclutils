@@ -74,16 +74,26 @@ oo::class create ::tclutils::tuprovider::Zip {
         }
         set out {}
         dict for {leaf type} $seen {
-            set childpath [expr {$path eq "/" ? "/$leaf" : "$path/$leaf"}]
-            set size [expr {$type eq "file"
-                            ? [my _size [my _member $childpath]] : ""}]
+            if {$path eq "/"} {
+                set childpath "/$leaf"
+            } else {
+                set childpath "$path/$leaf"
+            }
+            if {$type eq "file"} {
+                set size [my _size [my _member $childpath]]
+            } else {
+                set size ""
+            }
             lappend out [my _entry $leaf $childpath $type $size]
         }
         return $out
     }
 
     method _size {member} {
-        return [expr {[dict exists $sizes $member] ? [dict get $sizes $member] : ""}]
+        if {[dict exists $sizes $member]} {
+            return [dict get $sizes $member]
+        }
+        return ""
     }
 
     # ---- stat: one entry, or error -----------------------------------------

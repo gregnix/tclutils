@@ -70,8 +70,11 @@ Verified end to end against Radicale 3.7 (provision, PUT, REPORT, GET, DELETE) o
 https is verified through \fBtclutils::tuhttps\fR and registered only for the duration of each request. Up to 0.1 the client registered \fBhttps\fR once, globally and for good, without \fB\-require\fR — under \fBtls\fR 1.x (Tcl 8.6) that meant \fBno verification at all\fR (measured 2026\-09\-19 against a self\-signed server), and any later registration by another module changed the policy for this client.
 .PP
 \fBBehaviour change:\fR a server with a self\-signed or internal certificate that 0.1 accepted silently is now rejected; pass \fB\-cafile\fR (preferred) or \fB\-insecure 1\fR. Under tls 1.x without any CA bundle the request fails with \fB{TCLUTILS TUDAV TLS}\fR and the message names the way out (\fB\-cafile\fR, \fBSSL_CERT_FILE\fR).
+.SS "Credentials stay on the base origin"
 .PP
-Errors: HTTP failures → \fB{TCLUTILS TUDAV HTTP}\fR; missing tls for https → \fB{TCLUTILS TUDAV TLS}\fR.
+A path may be a full URL, e.g. an \fBhref\fR from a multistatus answer. Only \fBhttp\fR and \fBhttps\fR are sent (\fB{TCLUTILS TUDAV URL}\fR else). The \fBAuthorization\fR header goes only to the origin of the base URL (scheme, host and port; 80/443 filled in). An \fBhref\fR on another host gets the request without credentials, so a server cannot lead them elsewhere; it then usually answers 401. For a calendar home on a second host, open a second client with that URL. Up to 2026\-10\-30 the header went to any URL.
+.PP
+Errors: HTTP failures → \fB{TCLUTILS TUDAV HTTP}\fR; missing tls for https → \fB{TCLUTILS TUDAV TLS}\fR; a URL other than http/https → \fB{TCLUTILS TUDAV URL}\fR.
 .SS "Additional exported commands"
 .PP
 Documented for completeness (same module, also covered by the test suite):

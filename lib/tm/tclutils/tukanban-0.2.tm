@@ -296,7 +296,11 @@ proc ::tclutils::tukanban::_draw {c model o gfont} {
             if {$prio ne ""} {
                 set pmap {high #e15759 medium #f28e2b low #59a14f critical #b4232e blocked #b4232e}
                 set pkey [string tolower $prio]
-                set pcol [expr {[dict exists $pmap $pkey] ? [dict get $pmap $pkey] : "#8a8a8a"}]
+                if {[dict exists $pmap $pkey]} {
+                    set pcol [dict get $pmap $pkey]
+                } else {
+                    set pcol "#8a8a8a"
+                }
                 set pw [expr {[$c textwidth $prio -scale $fs] + 8*$fs}]
                 set px1 [expr {$kx1 - 4*$fs}]; set px0 [expr {$px1 - $pw}]
                 $c setfill $pcol

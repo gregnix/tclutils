@@ -5,7 +5,8 @@ cut-outs saved as transparent PNGs, each cropped to its own tight bounding box.
 `tupngpad` brings them all to one common size, centres each one, keeps a margin
 around the content, and flattens transparency onto a background colour (e.g.
 white). Pure Tcl, no Tk and no external packages; the pixel work pairs with
-`tclutils::tupng` / `tclutils::tupngdraw`.
+`tclutils::tupng` / `tclutils::tupngdraw`. `batch` leaves an existing output
+file if the write fails (0.3).
 
 ## API
 

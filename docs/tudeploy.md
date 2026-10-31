@@ -45,7 +45,9 @@ interp alias {} tudeploy {} ::tclutils::tudeploy
   resource `name`: per base dir (+ parent) `vendor/<name>/<tag>`,
   `vendor/<name>`, `vendor/<tag>`, `vendor`, `bin`, and the base dir itself.
   Feed the result to `tuexe::find -dirs`, or glob it yourself for non-executable
-  resources. `-tag` overrides the platform tag.
+  resources. `-tag` overrides the platform tag. `name` and `-tag` must stay
+  below `vendor/`: an absolute name or a `..` part is `{TCLUTILS TUDEPLOY
+  USAGE}` (0.3; up to 0.2 `/tmp` or `../../x` became a candidate).
 - `sourceModule` — load `pkg` by sourcing its module file directly, bypassing
   `tcl::tm` discovery. Searches the resolved dirs (`-dirs`, else `roots` of the
   given `-roots`/`-base`/`-env`) for `<tail>-<ver>.tm` (tail = last `::`
@@ -102,7 +104,7 @@ package require tclutils::tudeploy
 
 Carries `{TCLUTILS TUDEPLOY <REASON>}`: `OPTION` (unknown option / missing
 value), `VALUE` (`-tmadd` or `-fail` not a boolean), `USAGE` (missing
-required argument), `REQUIRE` (with `-fail 1`, a package could not be
+required argument, or a `resourceDirs` name leading out of `vendor/`), `REQUIRE` (with `-fail 1`, a package could not be
 loaded).
 
 ## Demo

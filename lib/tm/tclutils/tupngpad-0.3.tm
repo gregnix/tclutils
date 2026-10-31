@@ -21,7 +21,7 @@ package require tclutils::tupngdraw 0.13
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tupngpad {
     namespace export bbox trim padTo batch
-    variable version 0.2
+    variable version 0.3
     variable aligns {center nw n ne w e sw s se}
 }
 
@@ -170,13 +170,10 @@ proc ::tclutils::tupngpad::batch {files outdir args} {
         set png [padTo $rgba $w $h $tw $th \
             -background [dict get $o -background] -align [dict get $o -align]]
         set out [file join $outdir [file tail $f]]
-        set fid [open $out w]
-        fconfigure $fid -translation binary
-        puts -nonewline $fid $png
-        close $fid
+        ::tclutils::common::replaceFile $out $png -encoding binary
         lappend result $f $out
     }
     return [dict create size [list $tw $th] files $result]
 }
 
-package provide tclutils::tupngpad 0.2
+package provide tclutils::tupngpad 0.3

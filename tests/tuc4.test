@@ -116,8 +116,8 @@ test tuc4-5.2 {an _Ext element is grey} -body {
 } -result #757575
 
 test tuc4-9.1 {Unicode ids stay whole} -body {
-    set m [M::parse "C4Context\n  Person(größe, \"Weg\")\n  System(büro, \"Büro\")\n  Rel(größe, büro, \"gibt auf\")"]
+    set m [M::parse "C4Context\n  Person(gr\u00f6\u00dfe, \"Weg\")\n  System(b\u00fcro, \"B\u00fcro\")\n  Rel(gr\u00f6\u00dfe, b\u00fcro, \"gibt auf\")"]
     list [lmap n [dict get $m nodes] {dict get $n id}] [nedges $m]
-} -result {{größe büro} 1}
+} -result "{gr\u00f6\u00dfe b\u00fcro} 1"
 
 cleanupTests

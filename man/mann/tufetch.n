@@ -1,4 +1,4 @@
-.TH tufetch n 0.4 tclutils
+.TH tufetch n 0.5 tclutils
 .SH tclutils::tufetch
 .PP
 A tiny HTTP(S) helper: fetch a URL into memory (\fBget\fR) or to a file (\fBdownload\fR), byte\-safe. Transport order: native Tcl \fBhttp\fR + \fBtls\fR (the \fBtls\fR package is loaded lazily, like \fBtclutils::tudav\fR); if that is unavailable it falls back to \fBcurl\fR or \fBwget\fR located via \fBauto_execok\fR. Supports GET and POST with custom headers and a request body, so higher\-level clients (e.g. \fBtclutils::tusparql\fR) can build on it.
@@ -19,11 +19,13 @@ Commands:
 .IP \(bu
 \fBget url ?opts?\fR — return the response body as UTF\-8 text.
 .IP \(bu
-\fBdownload url path ?opts?\fR — save the body to \fBpath\fR (raw bytes); returns the transport used (\fBnative\fR, \fBcurl\fR or \fBwget\fR).
+\fBdownload url path ?opts?\fR — save the body to \fBpath\fR (raw bytes); returns the transport used (\fBnative\fR, \fBcurl\fR or \fBwget\fR). The native path leaves an existing file if the write fails (0.5, \fBcommon::replaceFile\fR).
 .PP
 Options (both commands):
 .IP \(bu
-\fB\-timeout ms\fR (default 30000), \fB\-redirects n\fR (default 5).
+\fB\-timeout ms\fR (default 30000), \fB\-redirects n\fR (default 5). Each redirect is checked (0.5): a relative \fBLocation\fR is resolved against the current URL, the target must be \fBhttp\fR/\fBhttps\fR, and https to http is refused (\fB{TCLUTILS TUFETCH REDIRECT}\fR). curl gets \fB\-\-proto\-redir\fR to the same effect; the wget fallback has no such switch.
+.IP \(bu
+\fBdownload\fR on the native path writes through a temporary file (0.5): an error while writing leaves the old file.
 .IP \(bu
 \fB\-method get|post\fR (default get).
 .IP \(bu
@@ -55,7 +57,7 @@ errorcode	meaning
 \fB{TCLUTILS TUFETCH URL}\fR	unsupported or invalid URL (only \fBhttp\fR/\fBhttps\fR)
 \fB{TCLUTILS TUFETCH TIMEOUT}\fR	the request timed out
 \fB{TCLUTILS TUFETCH CONNECT}\fR	connection/DNS/transport failure
-\fB{TCLUTILS TUFETCH REDIRECT}\fR	too many redirects
+\fB{TCLUTILS TUFETCH REDIRECT}\fR	too many redirects, a target other than \fBhttp\fR/\fBhttps\fR, or https to http
 \fB{TCLUTILS TUFETCH NOMETHOD}\fR	no transport available (also: tls 1.x without CA bundle and no curl/wget)
 \fB{TCLUTILS TUFETCH CAFILE}\fR	the \fB\-cafile\fR given is not readable
 .TE

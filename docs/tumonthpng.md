@@ -13,6 +13,7 @@ package require tclutils::tumonthpng
 
 ::tclutils::tumonthpng::render year month ?options?   ;# -> PNG bytes
 ::tclutils::tumonthpng::write  file year month ?options?  ;# -> file
+# write, writeQuarter and writeYear leave an existing file if the write fails (0.6).
 ```
 
 Options (defaults): `-theme default` (`default|dark|light`), `-scale 2`,

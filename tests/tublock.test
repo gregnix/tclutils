@@ -39,7 +39,7 @@ test tublock-1.4 {stadium and cylinder shapes decode (block-beta)} -body {
     lmap i {a b} { dict get [nodeById $m $i] shape }
 } -result {stadium cylinder}
 
-test tublock-1.4 {label with spaces is one block (tokeniser)} -body {
+test tublock-1.6 {label with spaces is one block (tokeniser)} -body {
     set m [M::parse "block-beta\n  a\[\"Long label\"\] b"]
     list [nnodes $m] [dict get [nodeById $m a] label]
 } -result {2 {Long label}}

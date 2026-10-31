@@ -24,7 +24,11 @@ package require tclutils::tuzip
 for common ZIP files and for inspecting ODF files such as `.odt`, `.ods`, `.odg`
 and `.odp`, because those files are ZIP containers.
 
-Binary files are always opened in binary mode.
+Binary files are always opened in binary mode. `create`, `createMembers` and
+`extract` write through a temporary file in the target folder and rename it:
+an error while writing leaves the old file (up to 2026-10-30 the target was
+opened first and stayed empty). `tudocx`, `tuxlsx` and `tuodf` write through
+`createMembers` and get the same.
 
 Member names (0.2): written as UTF-8. A name with non-ASCII characters gets the
 UTF-8 flag (general purpose bit 11), and the central directory says "made on

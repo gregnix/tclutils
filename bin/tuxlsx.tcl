@@ -14,7 +14,11 @@ lassign $argv cmd file
 switch -- $cmd {
     sheets { foreach s [::tclutils::tuxlsx::sheets $file] { puts $s } }
     rows {
-        set opts [expr {[llength $argv] > 2 ? [list -sheet [lindex $argv 2]] : {}}]
+        if {[llength $argv] > 2} {
+            set opts [list -sheet [lindex $argv 2]]
+        } else {
+            set opts {}
+        }
         foreach r [::tclutils::tuxlsx::rows $file {*}$opts] { puts [join $r \t] }
     }
     text { puts [::tclutils::tuxlsx::text $file] }

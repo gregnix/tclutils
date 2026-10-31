@@ -130,4 +130,14 @@ test sourceModule-5 {option without value when present -> OPTION} -body {
     dict get $o -errorcode
 } -result {TCLUTILS TUDEPLOY OPTION}
 
+
+test resourceDirs-9 {a name or tag leading out of vendor/ is USAGE (0.3)} -body {
+    set r {}
+    foreach a [list [list /tmp] [list ../../x] [list a/../../x] [list ok -tag ../t] [list ok -tag /t]] {
+        catch {tudeploy resourceDirs {*}$a -base [list [temporaryDirectory]]} m o
+        lappend r [lindex [dict get $o -errorcode] 2]
+    }
+    lappend r [catch {tudeploy resourceDirs webp/sub -base [list [temporaryDirectory]]}]
+} -result {USAGE USAGE USAGE USAGE USAGE 0}
+
 cleanupTests

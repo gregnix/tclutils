@@ -158,10 +158,10 @@ test tugantt-9.1 {an unknown duration unit is an error} -body {
     set ::errorCode
 } -result {TCLUTILS TUGANTT DURATION}
 test tugantt-9.2 {an id with umlauts is an id} -body {
-    set m [M::parse "gantt\nZeile : büro, 2026-10-03, 1d\nNach : after büro, 1d"]
+    set m [M::parse "gantt\nZeile : b\u00fcro, 2026-10-03, 1d\nNach : after b\u00fcro, 1d"]
     set t0 [rtask $m 0]; set t1 [rtask $m 1]
     list [dict get [lindex [dict get $m tasks] 0] id] [gday [dict get $t0 start]] [gday [dict get $t1 start]]
-} -result {büro 2026-10-03 2026-10-04}
+} -result "b\u00fcro 2026-10-03 2026-10-04"
 test tugantt-9.3 {ms is a unit} -body {
     gdays [rtask [M::parse "gantt\nA : 2026-10-01, 86400000ms"] 0]
 } -result 1.0

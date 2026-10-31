@@ -151,8 +151,16 @@ oo::class create ::tclutils::tuprovider::Local {
         foreach f [glob -nocomplain -directory $path -- * .*] {
             set leaf [file tail $f]
             if {$leaf in {. ..}} continue
-            set type [expr {[file isdirectory $f] ? "dir" : "file"}]
-            set size [expr {$type eq "file" ? [file size $f] : ""}]
+            if {[file isdirectory $f]} {
+                set type dir
+            } else {
+                set type file
+            }
+            if {$type eq "file"} {
+                set size [file size $f]
+            } else {
+                set size ""
+            }
             lappend out [my _entry $leaf $f $type $size [file mtime $f]]
         }
         return $out
@@ -160,8 +168,16 @@ oo::class create ::tclutils::tuprovider::Local {
 
     method stat {path} {
         if {![file exists $path]} { error "no such path: $path" }
-        set type [expr {[file isdirectory $path] ? "dir" : "file"}]
-        set size [expr {$type eq "file" ? [file size $path] : ""}]
+        if {[file isdirectory $path]} {
+            set type dir
+        } else {
+            set type file
+        }
+        if {$type eq "file"} {
+            set size [file size $path]
+        } else {
+            set size ""
+        }
         return [my _entry [file tail $path] $path $type $size [file mtime $path]]
     }
 

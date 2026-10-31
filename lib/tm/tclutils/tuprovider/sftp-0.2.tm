@@ -142,8 +142,16 @@ oo::class create ::tclutils::tuprovider::Sftp {
             set name [file tail [string trimright $nameField /]]
             if {$name eq "." || $name eq ".."} continue
             if {$name eq ""} continue
-            set type [expr {[string index $perms 0] eq "d" ? "dir" : "file"}]
-            set child [expr {$path eq "/" ? "/$name" : "[string trimright $path /]/$name"}]
+            if {[string index $perms 0] eq "d"} {
+                set type dir
+            } else {
+                set type file
+            }
+            if {$path eq "/"} {
+                set child "/$name"
+            } else {
+                set child "[string trimright $path /]/$name"
+            }
             lappend out [my _entry $name $child $type \
                              [expr {[string is integer -strict $size] ? $size : 0}]]
         }

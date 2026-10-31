@@ -43,17 +43,24 @@
 #     the native path steps aside and curl/wget are tried. If neither exists,
 #     NOMETHOD names the way out instead of fetching unverified.
 #
+# 0.5 checks each redirect: a relative Location is resolved against the
+# current URL (up to 0.4 it went to http::geturl as it was and failed), the
+# target must be http or https, and a redirect from https to http is
+# {TCLUTILS TUFETCH REDIRECT}. curl gets --proto-redir to the same effect;
+# wget has no such switch. The native path writes the file through a
+# temporary file: an error while writing leaves the old file.
+#
 # This module is NOT dependency-free: it uses the core http package and either
 # the tls extension or an external curl/wget. It is meant as an optional helper.
 
 package require Tcl 8.6-
-package require tclutils::common 0.2
+package require tclutils::common 0.3
 package require tclutils::tuhttps 0.1
 
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tufetch {
     namespace export get download
-    variable version 0.4
+    variable version 0.5
     variable defaults {-timeout 30000 -redirects 5 -method GET -headers {} -data {} -type {}
                        -insecure 0 -cafile {}}
     # why the native path stepped aside (for the NOMETHOD message), or ""
@@ -158,6 +165,61 @@ proc ::tclutils::tufetch::_checkUrl {url} {
     }
 }
 
+# _redirectUrl from loc -- the absolute target of a Location header, checked.
+# Pure helper. Relative forms: "//host/p", "/p", "p", "?q".
+# Remove "." and ".." segments from a URL path; ".." never climbs above
+# the root.
+proc ::tclutils::tufetch::_dotSegments {path} {
+    set out {}
+    set segs [split $path /]
+    set n [llength $segs]
+    for {set i 0} {$i < $n} {incr i} {
+        set s [lindex $segs $i]
+        set last [expr {$i == $n - 1}]
+        switch -- $s {
+            . { if {$last} { lappend out "" } }
+            .. {
+                if {[llength $out] > 1} { set out [lrange $out 0 end-1] }
+                if {$last} { lappend out "" }
+            }
+            default { lappend out $s }
+        }
+    }
+    return [join $out /]
+}
+
+proc ::tclutils::tufetch::_redirectUrl {from loc} {
+    set loc [string trim $loc]
+    regexp {^([a-zA-Z][a-zA-Z0-9+.-]*):} $from -> scheme
+    regexp {^([a-zA-Z][a-zA-Z0-9+.-]*://[^/?#]*)([^?#]*)} $from -> origin path
+    if {[regexp {^[a-zA-Z][a-zA-Z0-9+.-]*:} $loc]} {
+        set to $loc
+    } elseif {[string match //* $loc]} {
+        set to $scheme:$loc
+    } elseif {[string match /* $loc]} {
+        set to $origin$loc
+    } elseif {[string index $loc 0] eq "?"} {
+        set to $origin$path$loc
+    } elseif {$path eq ""} {
+        set to $origin/$loc
+    } else {
+        set to $origin[string range $path 0 [string last / $path]]$loc
+    }
+    if {![regexp -nocase {^https?://} $to]} {
+        return -code error -errorcode {TCLUTILS TUFETCH REDIRECT} \
+            "redirect to an unsupported URL: $to"
+    }
+    # "." and ".." in the path are resolved (RFC 3986 5.2.4)
+    if {[regexp {^([a-zA-Z][a-zA-Z0-9+.-]*://[^/?#]*)([^?#]*)(.*)$} $to -> o p rest]} {
+        set to $o[_dotSegments $p]$rest
+    }
+    if {[string equal -nocase $scheme https] && [regexp -nocase {^http://} $to]} {
+        return -code error -errorcode {TCLUTILS TUFETCH REDIRECT} \
+            "redirect from https to http refused: $to"
+    }
+    return $to
+}
+
 # --- request-line construction (pure helpers) --------------------------------
 
 # _nativeOpts o timeout -- build the ::http::geturl option list. Pure helper.
@@ -181,6 +243,12 @@ proc ::tclutils::tufetch::_curlArgs {url path o} {
         --retry 2 --max-redirs [dict get $o -redirects] \
         --max-time [expr {[dict get $o -timeout] / 1000}]]
     lappend a -X [string toupper [dict get $o -method]]
+    # redirects: only http(s), and from https only to https
+    if {[string match -nocase https:* $url]} {
+        lappend a --proto-redir =https
+    } else {
+        lappend a --proto-redir =http,https
+    }
     if {[dict exists $o -insecure] && [dict get $o -insecure]} { lappend a -k }
     if {[dict exists $o -cafile] && [dict get $o -cafile] ne ""} {
         lappend a --cacert [dict get $o -cafile]
@@ -271,13 +339,18 @@ proc ::tclutils::tufetch::_nativeLoop {url path o} {
                     return -code error -errorcode {TCLUTILS TUFETCH REDIRECT} \
                         "too many redirects for $url"
                 }
-                set url $loc
+                set next [_redirectUrl $url $loc]
+                if {[string match -nocase https:* $next]
+                        && ![string match -nocase https:* $url]} {
+                    # http -> https: the tls socket is set up in _native
+                    dict set o -redirects [expr {$redirects - $hops}]
+                    return [_native $next $path $o]
+                }
+                set url $next
                 continue
             }
             if {$ncode != 200} { _httpError $ncode $url }
-            set fh [open $path wb]
-            puts -nonewline $fh [::http::data $tok]
-            close $fh
+            ::tclutils::common::replaceFile $path [::http::data $tok] -encoding binary
             return 1
         } finally {
             ::http::cleanup $tok
@@ -292,7 +365,10 @@ proc ::tclutils::tufetch::_tmpdir {} {
             return $::env($v)
         }
     }
-    return [expr {[file isdirectory /tmp] ? "/tmp" : [pwd]}]
+    if {[file isdirectory /tmp]} {
+        return "/tmp"
+    }
+    return [pwd]
 }
 
-package provide tclutils::tufetch 0.4
+package provide tclutils::tufetch 0.5

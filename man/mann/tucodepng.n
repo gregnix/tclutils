@@ -1,4 +1,4 @@
-.TH tucodepng n 0.1 tclutils
+.TH tucodepng n 0.2 tclutils
 .SH tclutils::tucodepng
 .PP
 Render a character\-code table (a classic code\-page grid) to a PNG. Data comes from \fBtclutils::tucode\fR (\fBlookup\fR); drawing from \fBtclutils::tupngdraw\fR. Pure Tcl.
@@ -12,6 +12,7 @@ set png [tclutils::tucodepng::latin1 -shownames 1]   ;# 128..255 -> PNG bytes
 \fBrender from to ?opts?\fR \-> PNG bytes (range within 0..255).
 .IP \(bu
 \fBwrite file from to ?opts?\fR \-> writes the PNG, returns the filename.
+A failed write leaves an existing file (\fBcommon::replaceFile\fR, 0.2).
 .IP \(bu
 \fBascii ?opts?\fR (0..127), \fBlatin1 ?opts?\fR (128..255), \fBall ?opts?\fR (0..255).
 .PP

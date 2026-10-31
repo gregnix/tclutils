@@ -128,4 +128,76 @@ proc rmTree {path} {
 }
 rmTree $tmp
 catch {file delete $tuzipTmpRoot}
+file mkdir $tuzipTmpRoot
+
+test tuzip-4.1 {create: a failed write leaves the old file} -setup {
+    set src [makeFile hello zsrc-4.1.txt]
+    set f [makeFile PRECIOUS z-4.1.zip]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tuzip::create $f [list $src]
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile zsrc-4.1.txt
+    removeFile z-4.1.zip
+} -result {1 PRECIOUS 0 0}
+
+test tuzip-4.2 {createMembers: a failed write leaves the old file} -setup {
+    set f [makeFile PRECIOUS z-4.2.zip]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tuzip::createMembers $f [list [dict create name a.txt content hello]]
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile z-4.2.zip
+} -result {1 PRECIOUS 0 0}
+
+test tuzip-4.3 {extract: a failed write leaves the old file} -setup {
+    set src [makeFile hello zsrc-4.3.txt]
+    set zip [makeFile {} z-4.3-ok.zip]
+    ::tclutils::tuzip::create $zip [list $src]
+    set f [makeFile PRECIOUS z-4.3-out.txt]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tuzip::extract $zip [file tail $src] $f
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile zsrc-4.3.txt
+    removeFile z-4.3-ok.zip
+    removeFile z-4.3-out.txt
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

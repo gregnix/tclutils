@@ -73,7 +73,11 @@ proc ::tclutils::tunumany::parse {str args} {
 
     set route $prefer
     if {$route eq "auto"} {
-        set route [expr {[_looksSi $t] ? "si" : "locale"}]
+        if {[_looksSi $t]} {
+            set route si
+        } else {
+            set route locale
+        }
     }
 
     if {$route eq "si"} {

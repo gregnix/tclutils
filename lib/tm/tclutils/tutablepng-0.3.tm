@@ -25,7 +25,7 @@ package require tclutils::tupngdraw 0.12
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tutablepng {
     namespace export render write
-    variable version 0.2
+    variable version 0.3
 }
 
 # Cell c of row r, or "" past the end of a short row. Plain lindex/if keeps
@@ -48,7 +48,11 @@ proc ::tclutils::tutablepng::_nonneg {value what} {
 
 proc ::tclutils::tutablepng::_aligns {spec ncols} {
     if {[llength $spec] <= 1} {
-        set a [expr {$spec eq "" ? "l" : [lindex $spec 0]}]
+        if {$spec eq ""} {
+            set a l
+        } else {
+            set a [lindex $spec 0]
+        }
         if {$a ni {l c r}} {
             return -code error -errorcode {TCLUTILS TUTABLEPNG ALIGN} \
                 "-align must be l|c|r (or a per-column list of them)"
@@ -57,7 +61,11 @@ proc ::tclutils::tutablepng::_aligns {spec ncols} {
     }
     set out {}
     for {set c 0} {$c < $ncols} {incr c} {
-        set a [expr {$c < [llength $spec] ? [lindex $spec $c] : [lindex $spec end]}]
+        if {$c < [llength $spec]} {
+            set a [lindex $spec $c]
+        } else {
+            set a [lindex $spec end]
+        }
         if {$a ni {l c r}} {
             return -code error -errorcode {TCLUTILS TUTABLEPNG ALIGN} \
                 "-align entries must be l|c|r"
@@ -137,7 +145,11 @@ proc ::tclutils::tutablepng::render {rows args} {
                 c { set tx [expr {$x + ($cw - $tw) / 2}] }
                 default { set tx [expr {$x + $pad}] }
             }
-            set tcol [expr {$isheader ? [dict get $o -headertext] : [dict get $o -textcolor]}]
+            if {$isheader} {
+                set tcol [dict get $o -headertext]
+            } else {
+                set tcol [dict get $o -textcolor]
+            }
             $img text $tx [expr {$y + $pad}] $cell -color $tcol -scale $scale -spacing $sp
             incr x $cw
         }
@@ -170,11 +182,8 @@ proc ::tclutils::tutablepng::render {rows args} {
 
 proc ::tclutils::tutablepng::write {file rows args} {
     set png [render $rows {*}$args]
-    set fid [open $file w]
-    fconfigure $fid -translation binary
-    puts -nonewline $fid $png
-    close $fid
+    ::tclutils::common::replaceFile $file $png -encoding binary
     return $file
 }
 
-package provide tclutils::tutablepng 0.2
+package provide tclutils::tutablepng 0.3

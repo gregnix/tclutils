@@ -1,4 +1,4 @@
-.TH tutablepng n 0.2 tclutils
+.TH tutablepng n 0.3 tclutils
 .SH tclutils::tutablepng
 .PP
 Render tabular data to a PNG table image using the pure\-Tcl drawing layer \fBtclutils::tupngdraw\fR (no Tk, no external packages). An export adapter: data in, a styled table image out.
@@ -9,6 +9,8 @@ package require tclutils::tutablepng
 ::tclutils::tutablepng::render rows ?options?   ;# -> PNG bytes
 ::tclutils::tutablepng::write  file rows ?options?  ;# -> file
 .CE
+.PP
+\fBwrite\fR leaves an existing file if the write fails (0.3, \fBcommon::replaceFile\fR).
 .PP
 \fBrows\fR is a list of rows; each row is a list of cell strings. Short rows are padded with empty cells; the column count is the widest row.
 .PP

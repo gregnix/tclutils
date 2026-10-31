@@ -202,7 +202,11 @@ proc ::tclutils::tucal::_block {year month opts {compact 0}} {
     set weeknumbers [::tclutils::common::ensureBoolean [dict get $opts -weeknumbers] -weeknumbers]
     set cellWidth [expr {$compact ? 2 : 3}]
     set daysWidth [expr {7 * $cellWidth + 6}]
-    set prefix [expr {$weeknumbers ? "    " : ""}]
+    if {$weeknumbers} {
+        set prefix "    "
+    } else {
+        set prefix ""
+    }
     set title [_monthTitle $year $month [dict get $opts -locale]]
     set lines [list $prefix[_center $title $daysWidth]]
     lappend lines {*}[_renderMonthBody $year $month $opts $compact]

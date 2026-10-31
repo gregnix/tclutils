@@ -2,7 +2,7 @@
 
 Tasks on coroutines: `await` with timeout, `cancel` that runs `finally`,
 task groups, a thread pool and a sandbox. Pure Tcl; the pool needs the
-Thread package and loads it on first use.
+Thread package and loads it on first use. An error message is kept as text (0.3).
 
 ## Commands
 

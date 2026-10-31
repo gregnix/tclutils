@@ -115,7 +115,7 @@ test tupie-6.1 {more slices than palette colours still renders} -body {
 
 # --- fixes 0.2: exponent form, negative values -----------------------------------
 
-test tupie-6.1 {1e3 is a number} -body {
+test tupie-6.6 {1e3 is a number} -body {
     dict get [::tclutils::tupie::parse "pie\n\"a\" : 1e3\n\"b\" : 2.5E-1\n"] slices
 } -result {{a 1e3} {b 2.5E-1}}
 test tupie-6.2 {a negative value raises VALUE with the line number} -body {

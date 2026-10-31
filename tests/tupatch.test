@@ -104,8 +104,8 @@ test tupatch-5.2 {boolean words are accepted} -body {
 test tupatch-6.1 {diff of two LF files applied gives the target exactly} -setup {
     package require tclutils::tudiff
 } -body {
-    set a "eins\nJörg\ndrei\n"
-    set b "eins\nJörg Müller\ndrei\n"
+    set a "eins\nJ\u00f6rg\ndrei\n"
+    set b "eins\nJ\u00f6rg M\u00fcller\ndrei\n"
     set r [::tclutils::tupatch::text $a [::tclutils::tudiff::unifiedText $a $b]]
     list [expr {$r eq $b}] [string index $r end]
 } -result [list 1 "\n"]

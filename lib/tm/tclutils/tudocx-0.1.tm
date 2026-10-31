@@ -47,6 +47,16 @@ proc ::tclutils::tudocx::_xmlEscape {s} {
     return [string map {& &amp; < &lt; > &gt; \" &quot; ' &apos;} $s]
 }
 
+# A numeric character reference as a character; a code point past
+# Unicode, NUL or too long a number is U+FFFD (up to 2026-10-30 a big
+# number broke off the reading under Tcl 8.6).
+proc ::tclutils::tudocx::_cp {digits base} {
+    if {[string length $digits] > 8} { return \uFFFD }
+    if {$base == 16} { set n [scan $digits %x] } else { set n [scan $digits %d] }
+    if {$n <= 0 || $n > 0x10FFFF} { return \uFFFD }
+    return [format %c $n]
+}
+
 # Entities of an XML text: the five named ones and numeric references.
 proc ::tclutils::tudocx::_xmlUnescape {s} {
     if {[string first & $s] < 0} { return $s }
@@ -60,8 +70,8 @@ proc ::tclutils::tudocx::_xmlUnescape {s} {
             quot { append out \" }
             apos { append out ' }
             amp  { append out & }
-            #x*  { append out [format %c [scan [string range $ent 2 end] %x]] }
-            default { append out [format %c [scan [string range $ent 1 end] %d]] }
+            #x*  { append out [_cp [string range $ent 2 end] 16] }
+            default { append out [_cp [string range $ent 1 end] 10] }
         }
         set s [string range $s [expr {[lindex $m 1] + 1}] end]
     }

@@ -288,7 +288,11 @@ proc ::tclutils::tujourney::_draw {c model o gfont} {
         lassign $t nm sc al sec
         set cx [expr {$px0 + ($i + 0.5) * $slotW}]
         set cy [apply $toY $sc]
-        set pcol [expr {[llength $al] ? $acol([lindex $al 0]) : "#4e79a7"}]
+        if {[llength $al]} {
+            set pcol $acol([lindex $al 0])
+        } else {
+            set pcol "#4e79a7"
+        }
         $c circle $cx $cy $r -fill 1 -fillcolor $pcol -outline 1 -color white
 
         # task name under the plot

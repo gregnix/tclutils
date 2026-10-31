@@ -22,7 +22,7 @@ package require tclutils::tucut 0.2
 package require tclutils::tupaste 0.3
 package require tclutils::tujoin 0.2
 package require tclutils::tuzip 0.2
-package require tclutils::tuzipfs 0.3
+package require tclutils::tuzipfs 0.4
 package require tclutils::tuico 0.2
 package require tclutils::tujson 0.1
 package require tclutils::tuxml 0.1
@@ -44,7 +44,7 @@ package require tclutils::tuodf 0.2
 package require tclutils::tudocx 0.1
 package require tclutils::tuxlsx 0.1
 package require tclutils::tupdf 0.2
-package require tclutils::tupdftext 0.1
+package require tclutils::tupdftext 0.2
 package require tclutils::tumd 0.2
 package require tclutils::tufile 0.2
 package require tclutils::tuawk 0.2
@@ -79,10 +79,10 @@ package require tclutils::tubase32 0.2
 package require tclutils::tuuuid 0.1
 package require tclutils::tufmt 0.2
 package require tclutils::tudate 0.3
-package require tclutils::tuurl 0.1
+package require tclutils::tuurl 0.2
 package require tclutils::tupostgrest 0.2
 package require tclutils::tuevent 0.1
-package require tclutils::tutask 0.2
+package require tclutils::tutask 0.3
 package require tclutils::turegistry 0.1
 package require tclutils::tudav 0.3
 package require tclutils::tuholiday 0.2
@@ -93,16 +93,16 @@ package require tclutils::tulog 0.2
 package require tclutils::tuimage 0.2
 package require tclutils::tupng 0.6
 package require tclutils::tupngdraw 0.14
-package require tclutils::tutablepng 0.2
-package require tclutils::tumonthpng 0.5
-package require tclutils::tucodepng 0.1
-package require tclutils::tupngpad 0.2
+package require tclutils::tutablepng 0.3
+package require tclutils::tumonthpng 0.6
+package require tclutils::tucodepng 0.2
+package require tclutils::tupngpad 0.3
 package require tclutils::tusvg 0.4
 package require tclutils::tupagespec 0.2
 package require tclutils::tuexe 0.2
 package require tclutils::tulayout 0.2
 # Deployment / packaging
-package require tclutils::tudeploy 0.2
+package require tclutils::tudeploy 0.3
 # Introspection / diagnostics
 package require tclutils::tupkgfinder 0.2
 package require tclutils::tuappinfo 0.3
@@ -117,7 +117,7 @@ package require tclutils::tumath 0.1
 package require tclutils::tutable 0.2
 # HTTP / SPARQL / SQLite helpers (optional, not dependency-free)
 package require tclutils::tuhttps 0.1
-package require tclutils::tufetch 0.4
+package require tclutils::tufetch 0.5
 package require tclutils::tusqlite 0.2
 package require tclutils::tusparql 0.2
 # MaxMind DB reader

@@ -101,4 +101,105 @@ test writeLog-2 {a failed write leaves the old file, no temp file, no channel} -
     removeFile writeLog-2.txt
 } -result {1 PRECIOUS 0 0}
 
+# ---- 0.3: search variables, missing folders, origin, info loaded ----
+
+proc saveEnv {names} {
+    set saved {}
+    foreach n $names {
+        if {[info exists ::env($n)]} { dict set saved $n $::env($n) }
+        unset -nocomplain ::env($n)
+    }
+    return $saved
+}
+proc restoreEnv {names saved} {
+    foreach n $names {
+        unset -nocomplain ::env($n)
+        if {[dict exists $saved $n]} { set ::env($n) [dict get $saved $n] }
+    }
+}
+set searchNames [list TCLLIBPATH LD_LIBRARY_PATH DYLD_LIBRARY_PATH \
+    {*}[array names ::env -regexp {^TCL[0-9]+_[0-9]+_TM_PATH$}] TCL9_9_TM_PATH]
+
+test search-1 {search variables: one entry per line, missing folders marked} -setup {
+    set saved [saveEnv $searchNames]
+    set ::env(TCLLIBPATH) [list /gibt/es/nicht $::here]
+    set ::env(TCL9_9_TM_PATH) "/auch/nicht[${ns}::_pathSep]$::here"
+} -body {
+    set r [${ns}::buildReport]
+    list [string match "*--- Search variables ---\nTCLLIBPATH:\n    /gibt/es/nicht (missing)\n    $::here\n*" $r] \
+         [string match "*TCL9_9_TM_PATH:\n    /auch/nicht (missing)\n    $::here\n*" $r]
+} -cleanup {
+    restoreEnv $searchNames $saved
+} -result {1 1}
+
+test search-2 {no search variable set -> (none set)} -setup {
+    set saved [saveEnv $searchNames]
+} -body {
+    string match "*--- Search variables ---\n  (none set)\n*" [${ns}::buildReport]
+} -cleanup {
+    restoreEnv $searchNames $saved
+} -result 1
+
+test search-3 {anonymize masks the search variables} -setup {
+    set saved [saveEnv $searchNames]
+    set ::env(TCLLIBPATH) /opt/geheim/xlib
+} -body {
+    set r [${ns}::buildReport -anonymize 1]
+    list [string match */opt/geheim* $r] [string match {*<path>/xlib (missing)*} $r]
+} -cleanup {
+    restoreEnv $searchNames $saved
+} -result {0 1}
+
+test missing-1 {auto_path: a missing folder is marked, an existing one not} -setup {
+    set savedAuto $::auto_path
+    lappend ::auto_path /gibt/es/nicht/lib [info library]
+} -body {
+    set r [${ns}::buildReport]
+    list [string match "*\n  /gibt/es/nicht/lib (missing)\n*" $r] \
+         [string match "*\n  [info library]\n*" $r]
+} -cleanup {
+    set ::auto_path $savedAuto
+} -result {1 1}
+
+test core-1 {Tcl library and host on every platform} -body {
+    set r [${ns}::buildReport]
+    set host [info hostname]
+    list [string match "*\nTcl library: [info library]\n*" $r] \
+         [expr {$host eq "" || [string match "*\nHost: $host\n*" $r]}]
+} -result {1 1}
+
+test origin-1 {a loaded module shows its file} -body {
+    set f [lindex [package ifneeded tclutils::common [package provide tclutils::common]] end]
+    set r [${ns}::buildReport]
+    regexp -line "^  tclutils::common +0\\.3 +(.*)\$" $r -> from
+    expr {$from eq $f}
+} -result 1
+
+test origin-2 {_pkgOrigin: load, source, not literal, none} -setup {
+    package ifneeded tuaFake 1.0 {load /x/libfake.so Fake}
+    package ifneeded tuaFake 1.1 [list source -encoding utf-8 "/y/mit leer.tcl"]
+    package ifneeded tuaFake 1.2 {source [file join $dir f.tcl]}
+    package ifneeded tuaFake 1.3 {package provide tuaFake 1.3}
+} -body {
+    list [${ns}::_pkgOrigin tuaFake 1.0] [${ns}::_pkgOrigin tuaFake 1.1] \
+         [${ns}::_pkgOrigin tuaFake 1.2] [${ns}::_pkgOrigin tuaFake 1.3] \
+         [${ns}::_pkgOrigin tuaFake 9.9]
+} -cleanup {
+    package forget tuaFake
+} -result {/x/libfake.so {/y/mit leer.tcl} {} {} {}}
+
+test libs-1 {Loaded Libraries lists info loaded, static as (static)} -body {
+    set r [${ns}::buildReport]
+    set ok [string match "*--- Loaded Libraries ---\n*" $r]
+    foreach l [info loaded] {
+        lassign $l file prefix
+        if {$file eq ""} { set file "(static)" }
+        if {![string match "*\n  [format %-16s $prefix] $file*" $r]} { set ok 0 }
+    }
+    if {[llength [info loaded]] == 0} {
+        set ok [expr {$ok && [string match "*--- Loaded Libraries ---\n  (none)*" $r]}]
+    }
+    set ok
+} -result 1
+
 cleanupTests

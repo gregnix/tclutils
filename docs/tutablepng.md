@@ -11,6 +11,7 @@ package require tclutils::tutablepng
 
 ::tclutils::tutablepng::render rows ?options?   ;# -> PNG bytes
 ::tclutils::tutablepng::write  file rows ?options?  ;# -> file
+# write leaves an existing file if the write fails (0.3).
 ```
 
 `rows` is a list of rows; each row is a list of cell strings. Short rows are

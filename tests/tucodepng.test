@@ -65,4 +65,26 @@ test tucodepng-3.2 {writeAscii-style write produces a file} -setup {
     file exists $f
 } -cleanup { file delete $f } -result 1
 
+
+test tucodepng-4.1 {a failed write leaves the old file} -setup {
+    set f [makeFile PRECIOUS tucodepng-4.1.png]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tucodepng::write $f 65 65 -scale 1
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tucodepng-4.1.png
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

@@ -1,4 +1,4 @@
-.TH tumonthpng n 0.5 tclutils
+.TH tumonthpng n 0.6 tclutils
 .SH tclutils::tumonthpng
 .PP
 Render a month calendar to a PNG image, mirroring the look of the \fBmonthcanvas\fR Tk widget (themes, week numbers, weekday header, and today / weekend / holiday / note / other\-month cell states). Pure Tcl: the month grid is computed with the core \fBclock\fR command (no Tk, no \fBgel::calendar\fR); drawing uses \fBtclutils::tupngdraw\fR.
@@ -9,6 +9,8 @@ package require tclutils::tumonthpng
 ::tclutils::tumonthpng::render year month ?options?   ;# -> PNG bytes
 ::tclutils::tumonthpng::write  file year month ?options?  ;# -> file
 .CE
+.PP
+\fBwrite\fR, \fBwriteQuarter\fR and \fBwriteYear\fR leave an existing file if the write fails (0.6, \fBcommon::replaceFile\fR).
 .PP
 Options (defaults): \fB\-theme default\fR (\fBdefault|dark|light\fR), \fB\-scale 2\fR, \fB\-today {}\fR (ISO \fByyyy\-mm\-dd\fR; empty = system date), \fB\-holidays {}\fR (dict date\->name), \fB\-notes {}\fR (dict date\->text), \fB\-firstweekday 1\fR (1 = Monday .. 7 = Sunday; shifts the grid \fIand\fR the weekday header), \fB\-showweeks 1\fR (ISO week\-number column), \fB\-weekdays {Mo Di Mi Do Fr Sa So}\fR (always given Monday..Sunday; the header is rotated to \fB\-firstweekday\fR), \fB\-monthnames {Januar ... Dezember}\fR, \fB\-title {}\fR (override the "Month Year" title). Cell colours follow the chosen theme, ported from monthcanvas.
 .PP

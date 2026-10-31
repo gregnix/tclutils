@@ -97,4 +97,55 @@ test tuodf-5.1 {paragraphs: headings in document order, tables and lists (0.2)} 
     ::tclutils::tuodf::paragraphs $f
 } -result [list Netz "Die Gr\u00f6\u00dfe." Zelle Punkt {}]
 
+# A spreadsheet built from content.xml, as LibreOffice writes it: repeated
+# cells and rows, a merged-away cell, empty rows at the end.
+proc odsFile {path} {
+    set ns {xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"}
+    set c "<?xml version=\"1.0\" encoding=\"UTF-8\"?><office:document-content $ns><office:body><office:spreadsheet>"
+    append c {<table:table table:name="B&#252;ro &amp; Amt">}
+    append c {<table:table-row><table:table-cell><text:p>Ger&#228;t</text:p></table:table-cell><table:table-cell><text:p>Ort</text:p></table:table-cell><table:table-cell table:number-columns-repeated="1020"/></table:table-row>}
+    append c {<table:table-row><table:table-cell table:number-columns-spanned="2"><text:p>007</text:p></table:table-cell><table:covered-table-cell/><table:table-cell><text:p>a</text:p><text:p>b</text:p></table:table-cell></table:table-row>}
+    append c {<table:table-row table:number-rows-repeated="3"><table:table-cell table:number-columns-repeated="2"/></table:table-row>}
+    append c {<table:table-row><table:table-cell table:number-columns-repeated="2"><text:p>x</text:p></table:table-cell></table:table-row>}
+    append c {<table:table-row table:number-rows-repeated="1048570"><table:table-cell table:number-columns-repeated="1024"/></table:table-row>}
+    append c {</table:table><table:table table:name="Zwei"><table:table-row><table:table-cell table:number-columns-repeated="5000"><text:p>y</text:p></table:table-cell></table:table-row></table:table>}
+    append c "</office:spreadsheet></office:body></office:document-content>"
+    ::tclutils::tuzip::createMembers $path [list \
+        [dict create name mimetype content application/vnd.oasis.opendocument.spreadsheet method stored] \
+        [dict create name content.xml content [encoding convertto utf-8 $c]]]
+    return $path
+}
+
+test tuodf-6.1 {sheets and rows of a spreadsheet; repeats, merged cell, empty end (0.2)} -setup {
+    set f [odsFile [file join [temporaryDirectory] tuodf-6.1.ods]]
+} -body {
+    list [::tclutils::tuodf::sheets $f] [::tclutils::tuodf::rows $f] \
+         [llength [::tclutils::tuodf::rows $f -sheet Zwei]] \
+         [llength [lindex [::tclutils::tuodf::rows $f -sheet 2] 0]]
+} -cleanup {
+    file delete -force $f
+} -result [list [list "B\u00fcro & Amt" Zwei] \
+    [list [list "Ger\u00e4t" Ort] [list 007 {} "a\nb"] {} {} {} {x x}] 1 1000]
+
+test tuodf-6.2 {rows: an unknown sheet is SHEET} -setup {
+    set f [odsFile [file join [temporaryDirectory] tuodf-6.2.ods]]
+} -body {
+    catch {::tclutils::tuodf::rows $f -sheet Drei} m o
+    set a [dict get $o -errorcode]
+    catch {::tclutils::tuodf::rows $f -sheet 3} m o
+    list $a [dict get $o -errorcode]
+} -cleanup {
+    file delete -force $f
+} -result {{TCLUTILS TUODF SHEET Drei} {TCLUTILS TUODF SHEET 3}}
+
+test tuodf-6.3 {numeric character references; one past Unicode is U+FFFD} -setup {
+    set f [file join [temporaryDirectory] tuodf-6.3.odt]
+    set c {<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:body><office:text><text:p>&#252;&#x20AC;&#4294967296;&#0;&amp;</text:p></office:text></office:body></office:document-content>}
+    ::tclutils::tuzip::createMembers $f [list [dict create name content.xml content $c]]
+} -body {
+    ::tclutils::tuodf::paragraphs $f
+} -cleanup {
+    file delete -force $f
+} -result [list "\u00fc\u20ac\ufffd\ufffd&"]
+
 cleanupTests

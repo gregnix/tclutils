@@ -97,7 +97,7 @@ test tubookmark-4.4 {a title with markup stays inside its link} -body {
     llength [::tclutils::tubookmark::parse $html]
 } -result 2
 
-test tubookmark-3.1 {order kept, folder name with a slash stays one folder (0.3)} -body {
+test tubookmark-3.4 {order kept, folder name with a slash stays one folder (0.3)} -body {
     set html {<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <DL><p>
 <DT><A HREF="https://top.example/">Top</A>

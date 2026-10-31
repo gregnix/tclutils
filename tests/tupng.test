@@ -104,23 +104,23 @@ test tupng-3.4 {indexed with transparent palette entry} -constraints haveTk -set
 } -cleanup {removeDirectory ti} -result {0 1 {255 0 0}}
 
 # --- encodeRGBARaw (packed-bytes fast path) -------------------------------
-test tupng-3.1 {encodeRGBARaw dims + valid PNG} -body {
+test tupng-3.5 {encodeRGBARaw dims + valid PNG} -body {
     set bytes [binary format c* {255 0 0 255  0 255 0 255  0 0 255 255  255 255 255 255}]
     ::tclutils::tuimage::inspect [::tclutils::tupng::encodeRGBARaw $bytes 2 2]
 } -result {type png mime image/png width 2 height 2}
 
-test tupng-3.2 {encodeRGBARaw matches encodeRGBA for the same pixels} -body {
+test tupng-3.6 {encodeRGBARaw matches encodeRGBA for the same pixels} -body {
     set img {{FF0000FF 00FF00FF} {0000FFFF FFFFFFFF}}
     set raw [binary format c* {255 0 0 255  0 255 0 255  0 0 255 255  255 255 255 255}]
     expr {[::tclutils::tupng::encodeRGBA $img] eq [::tclutils::tupng::encodeRGBARaw $raw 2 2]}
 } -result 1
 
-test tupng-3.3 {wrong byte length -> DIM} -body {
+test tupng-3.7 {wrong byte length -> DIM} -body {
     catch {::tclutils::tupng::encodeRGBARaw [binary format c* {0 0 0}] 2 2} e o
     dict get $o -errorcode
 } -result {TCLUTILS TUPNG DIM}
 
-test tupng-3.4 {non-positive dimension -> DIM} -body {
+test tupng-3.8 {non-positive dimension -> DIM} -body {
     catch {::tclutils::tupng::encodeRGBARaw "" 0 2} e o
     dict get $o -errorcode
 } -result {TCLUTILS TUPNG DIM}

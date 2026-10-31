@@ -124,10 +124,10 @@ test tuer-6.3 {a lone quote is not stripped} -body {
 } -result {5"}
 
 # --- 0.4 -------------------------------------------------------------------------
-test tuer-9.1 {an entity block named Büro} -body {
-    set m [M::parse "erDiagram\n  Büro {\n    string name PK\n  }\n  Büro ||--o\{ Person : \"gibt auf\""]
-    list [ids $m] [epairs $m] [string match "Büro\n*" [dict get [nodeById $m Büro] label]]
-} -result {{Büro Person} {{Büro Person}} 1}
+test tuer-9.1 "an entity block named B\u00fcro" -body {
+    set m [M::parse "erDiagram\n  B\u00fcro {\n    string name PK\n  }\n  B\u00fcro ||--o\{ Person : \"gibt auf\""]
+    list [ids $m] [epairs $m] [string match "B\u00fcro\n*" [dict get [nodeById $m B\u00fcro] label]]
+} -result "{B\u00fcro Person} {{B\u00fcro Person}} 1"
 test tuer-9.2 {a line that is neither block, entity nor relationship} -body {
     list [catch {M::parse "erDiagram\n  A ||--|| B : x\n  das ist kein ER"} msg] $::errorCode
 } -result {1 {TCLUTILS TUER SYNTAX}}

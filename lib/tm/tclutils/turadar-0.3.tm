@@ -345,7 +345,11 @@ proc ::tclutils::turadar::_draw {c model o gfont} {
     # value labels at each ring along the top (vertical) axis
     for {set t 1} {$t <= $ticks} {incr t} {
         set val [expr {$vmin + ($vmax-$vmin)*$t/double($ticks)}]
-        set vs [expr {$val == int($val) ? int($val) : [format %.1f $val]}]
+        if {$val == int($val)} {
+            set vs [expr {int($val)}]
+        } else {
+            set vs [format %.1f $val]
+        }
         set ry [expr {$cy - $R*$t/double($ticks)}]
         _drawText $c $gfont $fs [expr {int($cx+3*$fs)}] [expr {int($ry-4*$fs)}] $vs #9a9a9a
     }

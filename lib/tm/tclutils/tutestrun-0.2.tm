@@ -65,7 +65,11 @@ proc ::tclutils::tutestrun::_ownTrees {root libs} {
 }
 
 proc ::tclutils::tutestrun::_stripEnv {dirs} {
-    set sep [expr {$::tcl_platform(platform) eq "windows" ? ";" : ":"}]
+    if {$::tcl_platform(platform) eq "windows"} {
+        set sep ";"
+    } else {
+        set sep ":"
+    }
     foreach var [array names ::env TCL*_TM_PATH] {
         set keep {}
         foreach d [split $::env($var) $sep] {

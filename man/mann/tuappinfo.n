@@ -1,7 +1,7 @@
 .TH tuappinfo n 0.3 tclutils
 .SH tclutils::tuappinfo
 .PP
-Collect application / system information into a plain\-text report: Tcl/Tk versions, executable, platform, selected environment variables, search paths, loaded packages, and an optional list of explicitly tracked module files. Supports anonymisation of user / host / path data. Pure Tcl, no GUI \-\- the caller renders the returned text (e.g. in a Tk window or a log file).
+Collect application / system information into a plain\-text report: Tcl/Tk versions and libraries, executable, platform, selected environment variables, the variables that steer the package search, search paths, loaded packages with their origin, loaded shared libraries, and an optional list of explicitly tracked module files. Supports anonymisation of user / host / path data. Pure Tcl, no GUI \-\- the caller renders the returned text (e.g. in a Tk window or a log file).
 .SS API
 .CS
 ::tclutils::tuappinfo::trackTm    file
@@ -11,13 +11,31 @@ Collect application / system information into a plain\-text report: Tcl/Tk versi
 .IP \(bu
 \fBtrackTm\fR — record a module file path so it appears under "Loaded TM Modules" (otherwise that section reads "(none tracked)").
 .IP \(bu
-\fBbuildReport\fR — return the full report as a single string. \fB\-anonymize 1\fR masks user/host names (stable hash), \fBTEMP\fR/\fBTMP\fR (\fB<TEMP>\fR), \fBPATH\fR (\fB<anonymized>\fR), tracked module files (\fB<tm\-HASH>.tm\fR) and every path in the report (\fBExecutable\fR, \fBHOME\fR, \fBauto_path\fR, \fBtm::path\fR) by one rule: a path equal to or below the home directory (\fB$HOME\fR, else \fB$USERPROFILE\fR) becomes \fB<HOME>/rest\fR (\fBHOME\fR itself \fB<HOME>\fR), any other path becomes \fB<path>/<last component>\fR, e.g. \fB/usr/share/tcltk\fR \-> \fB<path>/tcltk\fR. Separators are shown as \fB/\fR; on Windows the home prefix is compared without case.
+\fBbuildReport\fR — return the full report as a single string. \fB\-anonymize 1\fR masks user/host names (stable hash), \fBTEMP\fR/\fBTMP\fR (\fB<TEMP>\fR), \fBPATH\fR (\fB<anonymized>\fR), tracked module files (\fB<tm\-HASH>.tm\fR) and every path in the report (\fBExecutable\fR, the libraries, \fBHOME\fR, the search variables, \fBauto_path\fR, \fBtcl_pkgPath\fR, package origins, loaded libraries, \fBtm::path\fR) by one rule: a path equal to or below the home directory (\fB$HOME\fR, else \fB$USERPROFILE\fR) becomes \fB<HOME>/rest\fR (\fBHOME\fR itself \fB<HOME>\fR), any other path becomes \fB<path>/<last component>\fR, e.g. \fB/usr/share/tcltk\fR \-> \fB<path>/tcltk\fR. Separators are shown as \fB/\fR; on Windows the home prefix is compared without case.
 .IP \(bu
 Options: unknown options and an option without a value raise \fB{TCLUTILS TUAPPINFO OPTION}\fR, a non\-boolean \fB\-anonymize\fR raises \fB{TCLUTILS TUAPPINFO VALUE}\fR.
 .IP \(bu
 \fBwriteLog\fR — write \fBbuildReport\fR to \fBfile\fR as UTF\-8 through a temporary file (\fBcommon::replaceFile\fR), so a failed write keeps an old log; returns the file path (0.3; up to 0.2 in the system encoding).
 .IP \(bu
 The Tk line shows the patch level (\fB9.0.4\fR), as the Tcl line does (0.3; up to 0.2 \fBtk_version\fR, \fB9.0\fR).
+.PP
+Sections, in this order ("0.3": new in 0.3):
+.TS
+l l.
+Section	Content
+head	title, \fBTimestamp:\fR, \fBPID:\fR
+\fB\-\-\- Tcl / Tk \-\-\-\fR	Tcl version, \fBTcl library:\fR (0.3); with Tk the patch level, \fBTk library:\fR and \fBWindowing system:\fR (0.3); executable, platform, machine, \fBHost:\fR from \fBinfo hostname\fR (0.3: on every platform; \fBCOMPUTERNAME\fR only as fallback)
+\fB\-\-\- Environment \-\-\-\fR	\fBUSER\fR, \fBUSERNAME\fR, \fBHOME\fR, \fBTEMP\fR, \fBTMP\fR, \fBPATH\fR, if set
+\fB\-\-\- Search variables \-\-\-\fR	0.3: \fBTCLLIBPATH\fR, every \fBTCL<x>_<y>_TM_PATH\fR, \fBLD_LIBRARY_PATH\fR, \fBDYLD_LIBRARY_PATH\fR, if set; one entry per line; otherwise \fB(none set)\fR
+\fB\-\-\- auto_path \-\-\-\fR	one entry per line
+\fB\-\-\- tcl_pkgPath \-\-\-\fR	0.3, only where the variable exists (not on Windows)
+\fB\-\-\- Loaded Packages \-\-\-\fR	name, version and (0.3) the file that \fBpackage ifneeded\fR sources or loads; empty for built\-in packages and for scripts without a literal file name
+\fB\-\-\- Loaded Libraries \-\-\-\fR	0.3: \fBinfo loaded\fR, prefix and file; \fB(static)\fR for a statically linked package
+\fB\-\-\- tm::path \-\-\-\fR	\fBtcl::tm::path list\fR, in search order
+\fB\-\-\- Loaded TM Modules \-\-\-\fR	files recorded with \fBtrackTm\fR, else \fB(none tracked)\fR
+.TE
+.PP
+A folder in the search variables, \fBauto_path\fR, \fBtcl_pkgPath\fR and \fBtm::path\fR that does not exist ends in \fB (missing)\fR (0.3). \fBLoaded Libraries\fR is the proof of which shared library was loaded: two packages of the same name in different folders are told apart there.
 .CS
 puts [::tclutils::tuappinfo::buildReport -title "MyApp 1.0"]
 ::tclutils::tuappinfo::writeLog /tmp/myapp-info.txt -title "MyApp 1.0" -anonymize 1
@@ -25,4 +43,6 @@ puts [::tclutils::tuappinfo::buildReport -title "MyApp 1.0"]
 .SS Demo
 .CS
 tclsh examples/demo-tuappinfo.tcl
+tclsh examples/demo-tuappinfo.tcl sqlite3      ;# load first, then report
+tclsh examples/demo-tuappinfo.tcl -anonymize sqlite3
 .CE

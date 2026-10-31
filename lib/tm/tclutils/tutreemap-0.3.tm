@@ -300,7 +300,11 @@ proc ::tclutils::tutreemap::_drawNode {c node x y w h depth col assigned gfont f
     set name [dict get $node name]
     set kids [dict get $node children]
     set np [llength $palette]
-    set drawCol [expr {$col eq "" ? "#b7c2cd" : $col}]
+    if {$col eq ""} {
+        set drawCol "#b7c2cd"
+    } else {
+        set drawCol $col
+    }
 
     if {![llength $kids]} {
         # leaf cell

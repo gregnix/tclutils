@@ -140,7 +140,12 @@ proc ::tclutils::tugit::parse {text} {
         if {[regexp -nocase {^cherry-pick\M(.*)$} $line -> rest]} {
             set cid ""; regexp {id:\s*"([^"]*)"} $rest -> cid
             set id [apply $gen n shape]
-            apply $add $id [expr {$cid ne "" ? "pick $cid" : "cherry-pick"}] \
+            if {$cid ne ""} {
+                set _gl "pick $cid"
+            } else {
+                set _gl "cherry-pick"
+            }
+            apply $add $id $_gl \
                 rounded order label shape
             set style($id) [_branchStyle $cur bcolor bci]
             if {$head($cur) ne ""} { lappend edges [list $head($cur) $id] }
@@ -153,8 +158,13 @@ proc ::tclutils::tugit::parse {text} {
 
     set d [::tclutils::tudiagram::create -direction $dir]
     foreach id $order {
+        if {[info exists style($id)]} {
+            set _st $style($id)
+        } else {
+            set _st {}
+        }
         set d [::tclutils::tudiagram::addNode $d $id -label $label($id) -shape $shape($id) \
-            -style [expr {[info exists style($id)] ? $style($id) : {}}]]
+            -style $_st]
     }
     foreach e $edges {
         lassign $e f t

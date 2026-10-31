@@ -46,7 +46,7 @@ test roundtrip-ics-google.3 {google.ics: event, rule, alarm, escapes} -body {
         [::tclutils::tuical::unescapeText [::tclutils::tuical::property $ev DESCRIPTION]] \
         [::tclutils::tuical::unescapeText [::tclutils::tuical::property $ev LOCATION]]
 } -result [list 1 Projektbesprechung {FREQ=WEEKLY;COUNT=3;BYDAY=TU} -PT15M \
-    "Zeile eins\nZeile zwei, mit Komma" {Büro; Raum 2}]
+    "Zeile eins\nZeile zwei, mit Komma" "B\u00fcro; Raum 2"]
 
 test roundtrip-ics-outlook.3 {outlook.ics: TZID, attendee, organizer, X- property} -body {
     set c [::tclutils::tuical::parse [rtText outlook.ics]]
@@ -87,7 +87,7 @@ test roundtrip-vcf.2 {phone.vcf: cards, name, several numbers and mails} -body {
         [llength [::tclutils::tuvcard::properties $k TEL]] [llength $mails] \
         [dict get [lindex $mails 0] value] \
         [::tclutils::tuvcard::property $k NOTE]
-} -result [list 2 "Jörg Müller" 2 2 joerg@example.test \
+} -result [list 2 "J\u00f6rg M\u00fcller" 2 2 joerg@example.test \
     {Erste Zeile\nZweite Zeile\, mit Komma}]
 
 test roundtrip-vcf.3 {phone.vcf: card order and properties survive} -body {
@@ -114,7 +114,7 @@ test roundtrip-html-firefox.2 {firefox.html: folders, tags, description, entitie
         [dict get $b0 title] [join [dict get $b0 tags] ,] [dict get $b0 description] \
         [dict get $b1 url] [dict get $b1 title]
 } -result [list 2 {Entwicklung Entwicklung/Unterordner} {Tcl & Tk} tcl,docs \
-    {Dokumentation & Beispiele} https://example.org/?a=1&b=2 {Parameter & Umlaute äöü}]
+    {Dokumentation & Beispiele} https://example.org/?a=1&b=2 "Parameter & Umlaute \u00e4\u00f6\u00fc"]
 
 test roundtrip-html-chrome.2 {chrome.html: toolbar folder, sub folder, URL parameters} -body {
     set bs [::tclutils::tubookmark::parse [rtText chrome.html]]

@@ -26,11 +26,18 @@ Commands:
 
 - `get url ?opts?` — return the response body as UTF-8 text.
 - `download url path ?opts?` — save the body to `path` (raw bytes); returns the
-  transport used (`native`, `curl` or `wget`).
+  transport used (`native`, `curl` or `wget`). The native path leaves an
+  existing file if the write fails (0.5).
 
 Options (both commands):
 
-- `-timeout ms` (default 30000), `-redirects n` (default 5).
+- `-timeout ms` (default 30000), `-redirects n` (default 5). Each redirect
+  is checked (0.5): a relative `Location` is resolved against the current
+  URL, the target must be `http`/`https`, and https to http is refused
+  (`{TCLUTILS TUFETCH REDIRECT}`). curl gets `--proto-redir` to the same
+  effect; the wget fallback has no such switch.
+- `download` on the native path writes through a temporary file (0.5): an
+  error while writing leaves the old file.
 - `-method get|post` (default get).
 - `-headers {k v k v ...}` — extra request headers. (0.4 fixes the wget
   fallback: up to 0.3 each header became two arguments there, and wget took the
@@ -80,7 +87,7 @@ prefix-matched:
 | `{TCLUTILS TUFETCH URL}` | unsupported or invalid URL (only `http`/`https`) |
 | `{TCLUTILS TUFETCH TIMEOUT}` | the request timed out |
 | `{TCLUTILS TUFETCH CONNECT}` | connection/DNS/transport failure |
-| `{TCLUTILS TUFETCH REDIRECT}` | too many redirects |
+| `{TCLUTILS TUFETCH REDIRECT}` | too many redirects, a target other than `http`/`https`, or https to http |
 | `{TCLUTILS TUFETCH NOMETHOD}` | no transport available (also: tls 1.x without CA bundle and no curl/wget) |
 | `{TCLUTILS TUFETCH CAFILE}` | the `-cafile` given is not readable |
 

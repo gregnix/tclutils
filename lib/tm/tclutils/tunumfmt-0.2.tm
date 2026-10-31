@@ -88,7 +88,13 @@ proc ::tclutils::tunumfmt::fromHuman {str args} {
     switch -- $from {
         si  { set scale si }
         iec { set scale iec }
-        auto { set scale [expr {$isIec ? "iec" : "si"}] }
+        auto { 
+            if {$isIec} {
+                set scale iec
+            } else {
+                set scale si
+            }
+        }
         default {
             return -code error -errorcode {TCLUTILS TUNUMFMT FROM} \
                 "invalid -from \"$from\": must be si, iec, or auto"

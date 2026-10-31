@@ -94,7 +94,11 @@ proc ::tclutils::tudeploy::baseDirs {} {
 proc ::tclutils::tudeploy::platformTag {} {
     set os $::tcl_platform(platform)
     if {$os eq "unix"} {
-        set os [expr {$::tcl_platform(os) eq "Darwin" ? "macos" : "linux"}]
+        if {$::tcl_platform(os) eq "Darwin"} {
+            set os macos
+        } else {
+            set os linux
+        }
     }
     set bits [expr {$::tcl_platform(pointerSize) == 4 ? 32 : 64}]
     return $os$bits
@@ -162,6 +166,13 @@ proc ::tclutils::tudeploy::resourceDirs {name args} {
     set opt(parents) 1
     set opt(tag)     [platformTag]
     _parseOpts opt {base env parents tag} $args
+    # name and tag are folders below vendor/: an absolute name or ".." would
+    # lead out of it (up to 0.2 "/tmp" or "../../x" became a candidate)
+    foreach {what v} [list name $name tag $opt(tag)] {
+        if {[file pathtype $v] ne "relative" || ".." in [file split $v]} {
+            _err USAGE "resourceDirs: $what must stay below vendor/: $v"
+        }
+    }
     set dirs {}
     foreach v $opt(env) {
         if {[info exists ::env($v)] && $::env($v) ne ""} { lappend dirs $::env($v) }
@@ -220,4 +231,4 @@ proc ::tclutils::tudeploy::sourceModule {pkg args} {
     return 0
 }
 
-package provide tclutils::tudeploy 0.2
+package provide tclutils::tudeploy 0.3

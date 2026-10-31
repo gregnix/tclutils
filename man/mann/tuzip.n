@@ -18,7 +18,7 @@ package require tclutils::tuzip
 .PP
 \fBtuzip\fR currently supports stored entries and deflated entries. This is enough for common ZIP files and for inspecting ODF files such as \fB.odt\fR, \fB.ods\fR, \fB.odg\fR and \fB.odp\fR, because those files are ZIP containers.
 .PP
-Binary files are always opened in binary mode.
+Binary files are always opened in binary mode. \fBcreate\fR, \fBcreateMembers\fR and \fBextract\fR write through a temporary file in the target folder and rename it: an error while writing leaves the old file (up to 2026\-10\-30 the target was opened first and stayed empty). \fBtudocx\fR, \fBtuxlsx\fR and \fBtuodf\fR write through \fBcreateMembers\fR and get the same.
 .PP
 Member names (0.2): written as UTF\-8. A name with non\-ASCII characters gets the UTF\-8 flag (general purpose bit 11), and the central directory says "made on Unix", so Info\-ZIP \fBunzip\fR, Python and Windows read \fBJörg.txt\fR as \fBJörg.txt\fR. Up to 0.1 names were written as Latin\-1 without the flag (other programs saw \fBJ÷rg.txt\fR, a \fB€\fR became \fB?\fR).
 .PP

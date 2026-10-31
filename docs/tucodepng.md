@@ -11,6 +11,7 @@ from `tclutils::tucode` (`lookup`); drawing from `tclutils::tupngdraw`. Pure Tcl
 
 - `render from to ?opts?` -> PNG bytes (range within 0..255).
 - `write file from to ?opts?` -> writes the PNG, returns the filename.
+  A failed write leaves an existing file (0.2, `common::replaceFile`).
 - `ascii ?opts?` (0..127), `latin1 ?opts?` (128..255), `all ?opts?` (0..255).
 
 Each cell shows the hex code (top), the glyph (centre) and, with `-shownames`,

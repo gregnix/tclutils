@@ -269,7 +269,11 @@ proc ::tclutils::tupie::_draw {c model o gfont} {
             $c setfill $col
             $c rect $lx $ly [expr {$lx + $sw}] [expr {$ly + $sw}] \
                 -fill 1 -outline 0
-            set txt [expr {$showData ? "$lbl ($val, $pct)" : "$lbl $pct"}]
+            if {$showData} {
+                set txt "$lbl ($val, $pct)"
+            } else {
+                set txt "$lbl $pct"
+            }
             _drawText $c $gfont $fs \
                 [expr {$lx + $sw + 5 * $fs}] [expr {$ly + 1 * $fs}] $txt black
             set ly [expr {$ly + $rowH}]

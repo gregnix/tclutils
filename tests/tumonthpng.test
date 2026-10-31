@@ -220,4 +220,68 @@ test tumonthpng-8.1 {-title 0x1F is not normalised to 31} -body {
 
 rename ::__labels {}
 
+
+test tumonthpng-9.1 {write: a failed write leaves the old file} -setup {
+    set f [makeFile PRECIOUS tumonthpng-9.1.png]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tumonthpng::write $f 2026 6 -scale 1 -today 2026-06-06
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tumonthpng-9.1.png
+} -result {1 PRECIOUS 0 0}
+
+test tumonthpng-9.2 {writeQuarter: a failed write leaves the old file} -setup {
+    set f [makeFile PRECIOUS tumonthpng-9.2.png]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tumonthpng::writeQuarter $f 2026 6 -scale 1 -today 2026-06-06
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tumonthpng-9.2.png
+} -result {1 PRECIOUS 0 0}
+
+test tumonthpng-9.3 {writeYear: a failed write leaves the old file} -setup {
+    set f [makeFile PRECIOUS tumonthpng-9.3.png]
+    set before [llength [chan names file*]]
+    rename ::puts ::_realPuts
+    proc ::puts args {
+        if {[string match file* [lindex $args end-1]]} { error "disk full" }
+        ::_realPuts {*}$args
+    }
+} -body {
+    set rc [catch {
+        ::tclutils::tumonthpng::writeYear $f 2026 -scale 1 -today 2026-06-06
+    }]
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    set ch [open $f]; set d [read $ch]; close $ch
+    list $rc [string trim $d] [expr {[llength [chan names file*]] - $before}] \
+        [llength [glob -nocomplain $f.tmp*]]
+} -cleanup {
+    if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
+    removeFile tumonthpng-9.3.png
+} -result {1 PRECIOUS 0 0}
+
 cleanupTests

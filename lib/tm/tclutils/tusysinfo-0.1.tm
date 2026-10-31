@@ -78,7 +78,11 @@ proc ::tclutils::tusysinfo::_readBinary {path} {
 proc ::tclutils::tusysinfo::_run {cmd timeout} {
     variable runDone
     if {[auto_execok [lindex $cmd 0]] eq ""} { return [list 0 ""] }
-    set null [expr {$::tcl_platform(platform) eq "windows" ? "NUL" : "/dev/null"}]
+    if {$::tcl_platform(platform) eq "windows"} {
+        set null "NUL"
+    } else {
+        set null "/dev/null"
+    }
     if {[catch {open |[list {*}$cmd 2> $null] r} ch]} { return [list 0 ""] }
     fconfigure $ch -blocking 0 -encoding utf-8
     set key [string map {: _} $ch]
@@ -141,7 +145,10 @@ proc ::tclutils::tusysinfo::_clean {d} {
               {not applicable} {not specified} none o.e.m. oem {base board product}
               {type1productconfigid} 0123456789 {x.x}}
     dict map {k v} $d {
-        expr {[string tolower [string trim $v]] in $junk ? "" : $v}
+        if {[string tolower [string trim $v]] in $junk} {
+            set v ""
+        }
+        set v
     }
 }
 
@@ -230,7 +237,11 @@ proc ::tclutils::tusysinfo::_parseWinCim {json serials} {
     foreach p [_asList [_get $d physical]] {
         set t [string tolower [_get $p MediaType]]
         if {$t ni {ssd hdd}} {
-            set t [expr {[string tolower [_get $p BusType]] eq "nvme" ? "ssd" : ""}]
+            if {[string tolower [_get $p BusType]] eq "nvme"} {
+                set t ssd
+            } else {
+                set t ""
+            }
         }
         dict set media [_get $p DeviceId] $t
     }
@@ -448,8 +459,15 @@ proc ::tclutils::tusysinfo::_linux {sections root serials} {
             if {[string match 0x* $vendor]} { set vendor "" }   ;# virtio: PCI id
             set model [string trim "$vendor [_read $dir/device/model]"]
             set rot [_read $dir/queue/rotational]
-            set type [expr {[string match sr* $name] ? "optical" :
-                       $rot eq "0" ? "ssd" : $rot eq "1" ? "hdd" : ""}]
+            if {[string match sr* $name]} {
+                set type optical
+            } elseif {$rot eq "0"} {
+                set type ssd
+            } elseif {$rot eq "1"} {
+                set type hdd
+            } else {
+                set type ""
+            }
             set disk [dict create name $name model $model size $size type $type \
                 removable [expr {[_read $dir/removable] eq "1"}]]
             if {$serials} { dict set disk serial [_read $dir/device/serial] }
@@ -575,11 +593,20 @@ proc ::tclutils::tusysinfo::_windows {sections serials commands timeout} {
             bios [_get $b BIOSVersion] biosDate [_get $b BIOSReleaseDate]]]
     }
     if {"disks" in $sections} {
-        dict set r disks [expr {$cim eq "" ? {} : [dict get $cim disks]}]
+        if {$cim eq ""} {
+            dict set r disks {}
+        } else {
+            dict set r disks [dict get $cim disks]
+        }
     }
     if {"displays" in $sections} {
-        set active [expr {$cim eq "" ? {} : [dict get $cim active]}]
-        set known  [expr {$cim eq "" ? {} : [dict get $cim known]}]
+        if {$cim eq ""} {
+            set active {}
+            set known {}
+        } else {
+            set active [dict get $cim active]
+            set known [dict get $cim known]
+        }
         set displays {}
         set order {}
         set base {HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\DISPLAY}
@@ -599,7 +626,11 @@ proc ::tclutils::tusysinfo::_windows {sections serials commands timeout} {
                     if {![info exists mon($bytes)]} {
                         set d [_display $id $bytes $serials]
                         if {![dict size $d]} continue
-                        dict set d present [expr {[llength $known] ? 0 : ""}]
+                        if {[llength $known]} {
+                            dict set d present 0
+                        } else {
+                            dict set d present ""
+                        }
                         set mon($bytes) $d
                         lappend order $bytes
                     }
@@ -650,8 +681,11 @@ proc ::tclutils::tusysinfo::collect {args} {
 # Disk sizes in decimal units (as on the label), memory in binary units.
 proc ::tclutils::tusysinfo::_bytes {n {binary 0}} {
     if {![string is double -strict $n] || $n <= 0} { return "" }
-    set units [expr {$binary ? {TiB 1099511627776 GiB 1073741824 MiB 1048576}
-                              : {TB 1e12 GB 1e9 MB 1e6}}]
+    if {$binary} {
+        set units {TiB 1099511627776 GiB 1073741824 MiB 1048576}
+    } else {
+        set units {TB 1e12 GB 1e9 MB 1e6}
+    }
     foreach {u f} $units {
         if {$n >= $f} { return "[format %.1f [expr {double($n) / $f}]] $u" }
     }

@@ -58,13 +58,7 @@ proc ::tclutils::tusplit::_writeChunks {chunks opts digits} {
     set index 0
     foreach chunk $chunks {
         set path [_formatName $outdir [dict get $opts -prefix] $index $digits [dict get $opts -suffix]]
-        set fh [open $path wb]
-        try {
-            fconfigure $fh -translation binary -encoding iso8859-1
-            puts -nonewline $fh $chunk
-        } finally {
-            close $fh
-        }
+        ::tclutils::common::replaceFile $path $chunk -encoding binary
         lappend result $path
         incr index
     }
@@ -114,13 +108,7 @@ proc ::tclutils::tusplit::splitBytes {data args} {
     for {set pos 0} {$pos < $n || ($n == 0 && $index == 0)} {incr pos $byteCount} {
         set chunk [string range $data $pos [expr {$pos + $byteCount - 1}]]
         set path [_formatName $outdir [dict get $opts -prefix] $index $digits [dict get $opts -suffix]]
-        set fh [open $path wb]
-        try {
-            fconfigure $fh -translation binary -encoding iso8859-1
-            puts -nonewline $fh $chunk
-        } finally {
-            close $fh
-        }
+        ::tclutils::common::replaceFile $path $chunk -encoding binary
         lappend result $path
         incr index
         if {$n == 0} { break }

@@ -89,4 +89,14 @@ test tudocx-2.5 {another prefix and the default namespace of WordprocessingML} -
 } -result [list [list "eins\tzwei"] {drei {}}]
 
 removeDirectory tudocx
+test tudocx-2.6 {numeric character references; one past Unicode is U+FFFD} -setup {
+    set f [file join [temporaryDirectory] tudocx-2.6.docx]
+    set c {<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>&#252;&#x20AC;&#4294967296;&#0;</w:t></w:r></w:p></w:body></w:document>}
+    ::tclutils::tuzip::createMembers $f [list [dict create name word/document.xml content $c]]
+} -body {
+    ::tclutils::tudocx::paragraphs $f
+} -cleanup {
+    file delete -force $f
+} -result [list "\u00fc\u20ac\ufffd\ufffd"]
+
 cleanupTests

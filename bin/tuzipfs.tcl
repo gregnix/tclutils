@@ -29,8 +29,12 @@ switch -- $cmd {
     list {
         if {[llength $args] < 1 || [llength $args] > 2} { usage }
         set mount [lindex $args 0]
-        set glob [expr {[llength $args] == 2 ? [lindex $args 1] : "*"}]
-        foreach path [::tclutils::tuzipfs::listFiles $mount -glob $glob] { puts $path }
+        if {[llength $args] == 2} {
+            set globp [lindex $args 1]
+        } else {
+            set globp *
+        }
+        foreach path [::tclutils::tuzipfs::listFiles $mount -glob $globp] { puts $path }
     }
     read {
         if {[llength $args] != 1} { usage }

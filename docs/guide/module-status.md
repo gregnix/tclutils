@@ -128,7 +128,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tumd` | Markdown helper | CommonMark subset to HTML, headings, TOC, frontmatter; not a full Markdown engine. |
 | `tupdf` | inspector | Read-only PDF structure scan plus ZUGFeRD/Factur-X heuristics; not a full PDF parser or PDF/A-3/EN 16931 conformance check. |
 | `tupdftext` | basis complete | Text per page for full-text search: ToUnicode/encodings, filters, object streams, forms; no decryption, no OCR, no column layout. Measured against pdftotext (99.5–100 % of the words on 11 of 13 files). |
-| `tuodf` | minimal document helper | Create/read simple ODT text documents; not a full ODF library. |
+| `tuodf` | minimal document helper | Create/read simple ODT text documents; read paragraphs of .odt/.odp and tables of .ods (0.2); not a full ODF library. |
 | `tudocx` | minimal document helper | Create/read simple DOCX text documents; not a Word library. |
 | `tuxlsx` | minimal document helper | Write one XLSX sheet of rows, read cell values of any workbook; no formatting. |
 | `tucal` | generator | cal-like calendars (month/year/three-month, ISO weeks, locale names). Text output only, not a scheduling library. |
@@ -141,7 +141,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | `tuurl` | basis complete | RFC 3986 percent-encoding/decoding and query strings (UTF-8). |
 | `tuuuid` | basis complete | UUID v4 and v7 generate/validate/version; `/dev/urandom` with `rand()` fallback. |
 | `tudav` | basis complete | Minimal WebDAV/CardDAV/CalDAV client (PROPFIND/REPORT/GET/PUT/DELETE, calendarQuery/addressbookMultiget); core `http`, https via `tls`. Collection provisioning (mkCalendar/mkAddressbook) added; verified vs Radicale 3.7. 0.2: certificate verified through `tuhttps`, `-cafile`/`-insecure`. |
-| `tufetch` | helper | Tiny HTTP(S) `get`/`download` (to memory or file), GET/POST with headers and body; native `http`+`tls` else curl/wget via `auto_execok`. 0.4: verifies certificates on all transports, `-cafile`/`-insecure`. Optional, not dependency-free. |
+| `tufetch` | helper | Tiny HTTP(S) `get`/`download` (to memory or file), GET/POST with headers and body; native `http`+`tls` else curl/wget via `auto_execok`. 0.4: verifies certificates on all transports, `-cafile`/`-insecure`. 0.5: redirects checked (no https to http). Optional, not dependency-free. |
 | `tupostgrest` | helper | Minimal PostgREST client: URL/query/JSON body, bearer token, JSON response to dicts, PostgREST errors as Tcl errors. 0.2: `-cafile`; `-insecure` per client. Optional, not dependency-free. |
 | `tuhttps` | helper | One HTTPS policy for `tufetch`/`tudav`/`tupostgrest`: verifying `::tls::socket` prefix (`-insecure` the only way off), CA bundle search for tls 1.x, `https` registered only for the duration of a script. Needs `tls` at the point of use. |
 | `tusparql` | helper | Thin SPARQL client (`query` → row dicts, `ask` → 0/1) composing `tufetch`/`tuurl`/`tujson`; GET or POST, English labels via `wikibase:label`. Optional, not dependency-free. |
@@ -234,7 +234,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 | Module | Scope status | Notes |
 |---|---|---|
 | `tupkgfinder` | helper | Inspect package resolution: known versions, `ifneeded` scripts and source paths, active vs. shadowed version, search paths; optional filesystem search by pattern. |
-| `tuappinfo` | helper | Collect a plain-text application/system report (Tcl/Tk, environment, search paths, loaded packages, tracked modules); optional anonymisation of all paths. GUI-free; the caller renders. |
+| `tuappinfo` | helper | Collect a plain-text application/system report (Tcl/Tk, environment, search variables and paths, loaded packages with origin, loaded libraries, tracked modules); optional anonymisation of all paths. GUI-free; the caller renders. |
 | `tutestrun` | helper | The shared `tests/all.tcl` of tclutils, tkutils and ctrlutils: runs every `*.test` of a directory in its own process with a time limit and reports the files with problems; `run`. |
 
 ## Diagrams

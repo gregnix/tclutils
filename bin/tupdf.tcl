@@ -18,7 +18,7 @@ set file [lindex $argv 1]
 switch -- $cmd {
     text {
         # text of all pages (form feed between them, as pdftotext) or of one
-        package require tclutils::tupdftext 0.1
+        package require tclutils::tupdftext 0.2
         set page ""
         if {[llength $argv] == 4 && [lindex $argv 2] eq "-page"} {
             set page [lindex $argv 3]

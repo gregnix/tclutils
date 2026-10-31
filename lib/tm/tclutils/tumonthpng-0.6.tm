@@ -29,7 +29,7 @@ package require tclutils::tupngdraw 0.12
 namespace eval ::tclutils {}
 namespace eval ::tclutils::tumonthpng {
     namespace export render write renderQuarter writeQuarter renderYear writeYear
-    variable version 0.5
+    variable version 0.6
     variable themes
 }
 
@@ -329,10 +329,7 @@ proc ::tclutils::tumonthpng::MyCentre {img x y cw ch text color scale {tcmd {}}}
 
 proc ::tclutils::tumonthpng::write {file year month args} {
     set png [render $year $month {*}$args]
-    set fid [open $file w]
-    fconfigure $fid -translation binary
-    puts -nonewline $fid $png
-    close $fid
+    ::tclutils::common::replaceFile $file $png -encoding binary
     return $file
 }
 
@@ -436,13 +433,13 @@ proc ::tclutils::tumonthpng::renderYear {year args} {
 
 proc ::tclutils::tumonthpng::writeQuarter {file year month args} {
     set png [renderQuarter $year $month {*}$args]
-    set fid [open $file w]; fconfigure $fid -translation binary
-    puts -nonewline $fid $png; close $fid; return $file
+    ::tclutils::common::replaceFile $file $png -encoding binary
+    return $file
 }
 proc ::tclutils::tumonthpng::writeYear {file year args} {
     set png [renderYear $year {*}$args]
-    set fid [open $file w]; fconfigure $fid -translation binary
-    puts -nonewline $fid $png; close $fid; return $file
+    ::tclutils::common::replaceFile $file $png -encoding binary
+    return $file
 }
 
-package provide tclutils::tumonthpng 0.5
+package provide tclutils::tumonthpng 0.6

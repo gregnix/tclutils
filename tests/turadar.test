@@ -121,9 +121,9 @@ test turadar-2.7 {a key that names no axis is AXIS} -body {
 } -result {TCLUTILS TURADAR AXIS}
 
 test turadar-2.8 {Unicode axes and labels stay} -body {
-    set m [M::parse "radar-beta\ntitle Frühstück\naxis jörg\[\"Jörg\"\], büro, amt\ncurve m\[\"Müller\"\]{ büro: 2, jörg: 1, amt: 3 }"]
+    set m [M::parse "radar-beta\ntitle Fr\u00fchst\u00fcck\naxis j\u00f6rg\[\"J\u00f6rg\"\], b\u00fcro, amt\ncurve m\[\"M\u00fcller\"\]{ b\u00fcro: 2, j\u00f6rg: 1, amt: 3 }"]
     list [dict get $m title] [dict get $m axes] [curve $m 0]
-} -result {Frühstück {Jörg büro amt} {Müller {1.0 2.0 3.0}}}
+} -result "Fr\u00fchst\u00fcck {J\u00f6rg b\u00fcro amt} {M\u00fcller {1.0 2.0 3.0}}"
 
 # --- render ------------------------------------------------------------------
 
