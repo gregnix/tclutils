@@ -139,4 +139,77 @@ test shadows-4 {nothing is loaded} -setup {
     interp delete $ci
 } -result 1
 
+# ---- shadows (0.3): child interpreter, module hides pkgIndex.tcl -------------
+shWrite [file join $SH tmC tupkghid-1.0.tm] "package provide tupkghid 1.0"
+shWrite [file join $SH libC tupkghid1.1 pkgIndex.tcl] \
+    "package ifneeded tupkghid 1.1 \[list source \[file join \$dir h.tcl\]\]"
+shWrite [file join $SH libC tupkghid1.1 h.tcl] "package provide tupkghid 1.1"
+shWrite [file join $SH tmC tupkgpre-1.0.tm] "package provide tupkgpre 1.0"
+shWrite [file join $SH tmC tupkgpre-1.1b1.tm] "package provide tupkgpre 1.1b1"
+shWrite [file join $SH libC tupkgix1.0 pkgIndex.tcl] \
+    "package ifneeded tupkgix 1.0 \[list source \[file join \$dir i.tcl\]\]"
+shWrite [file join $SH libD tupkgix1.2 pkgIndex.tcl] \
+    "package ifneeded tupkgix 1.2 \[list source \[file join \$dir i.tcl\]\]"
+foreach d {libC/tupkgix1.0 libD/tupkgix1.2} v {1.0 1.2} {
+    shWrite [file join $SH $d i.tcl] "package provide tupkgix $v"
+}
+proc shChild {} {
+    global SH modFile
+    set ci [interp create]
+    $ci eval [list source $modFile]
+    $ci eval [list tcl::tm::path add [file join $SH tmC]]
+    $ci eval [list set ::auto_path [concat [list [file join $SH libC] \
+        [file join $SH libD]] [$ci eval {set ::auto_path}]]]
+    return $ci
+}
+
+test shadows-5 {a module hides a higher version in a pkgIndex.tcl} -setup {
+    set ci [shChild]
+} -body {
+    set d [lindex [$ci eval {::tclutils::tupkgfinder::shadows -pattern tupkghid}] 0]
+    list [dict get $d active] [dict get $d via] \
+        [lmap c [dict get $d candidates] {list [dict get $c version] \
+            [dict get $c kind] [dict get $c status]}]
+} -cleanup {
+    interp delete $ci
+} -result {1.0 module {{1.1 pkgIndex {hidden by module}} {1.0 tm active}}}
+
+test shadows-6 {the caller's package database stays as it was} -setup {
+    set ci [shChild]
+} -body {
+    $ci eval {::tclutils::tupkgfinder::shadows -pattern tupkghid}
+    list [$ci eval {package versions tupkghid}] [$ci eval {package require tupkghid}]
+} -cleanup {
+    interp delete $ci
+} -result {{} 1.0}
+
+test shadows-7 {package prefer stable: the stable module wins} -setup {
+    set ci [shChild]
+} -body {
+    set d [lindex [$ci eval {::tclutils::tupkgfinder::shadows -pattern tupkgpre}] 0]
+    list [dict get $d active] [dict get $d via]
+} -cleanup {
+    interp delete $ci
+} -result {1.0 module}
+
+test shadows-8 {only pkgIndex.tcl copies: the highest version wins} -setup {
+    set ci [shChild]
+} -body {
+    set d [lindex [$ci eval {::tclutils::tupkgfinder::shadows -pattern tupkgix}] 0]
+    list [dict get $d active] [dict get $d via] \
+        [lmap c [dict get $d candidates] {list [dict get $c version] [dict get $c status]}]
+} -cleanup {
+    interp delete $ci
+} -result {1.2 pkgIndex {{1.2 active} {1.0 {other version}}}}
+
+test shadows-9 {an already loaded package is reported as loaded} -setup {
+    set ci [shChild]
+} -body {
+    $ci eval {package require tupkgix 1.0-1.1}
+    set d [lindex [$ci eval {::tclutils::tupkgfinder::shadows -pattern tupkgix}] 0]
+    list [dict get $d active] [dict get $d via]
+} -cleanup {
+    interp delete $ci
+} -result {1.0 loaded}
+
 cleanupTests

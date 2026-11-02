@@ -1,4 +1,4 @@
-.TH tupkgfinder n 0.2 tclutils
+.TH tupkgfinder n 0.3 tclutils
 .SH tclutils::tupkgfinder
 .PP
 Inspect how Tcl resolves packages: known versions, their \fBifneeded\fR scripts and source locations, which version is active versus shadowed, the relevant search paths (\fBauto_path\fR, \fBtcl::tm::path\fR), and an optional filesystem search by glob pattern. \fBcandidates\fR and \fBshadows\fR (0.2) list every copy of a package on the search paths \-\- also a second copy with the same version, which the package database never shows because it keeps one \fBifneeded\fR per version. Useful for "about / diagnostics" views. Pure Tcl, no GUI.
@@ -30,7 +30,7 @@ Inspect how Tcl resolves packages: known versions, their \fBifneeded\fR scripts 
 .IP \(bu
 \fBcandidates\fR — list of dicts \fB{package version kind path}\fR for every copy: kind \fBtm\fR (path = the \fB.tm\fR file in a module path; \fBa/b/x\-1.0.tm\fR is \fBa::b::x\fR) or \fBpkgIndex\fR (path = a \fBpkgIndex.tcl\fR in an \fBauto_path\fR directory or one level below, as Tcl searches). Only literal \fBpackage ifneeded NAME VERSION\fR lines are seen. \fB\-tmpaths\fR / \fB\-autopath\fR replace the interpreter's paths.
 .IP \(bu
-\fBshadows\fR — one dict per package with more than one copy (every package with \fB\-all 1\fR): \fB{package active activePath duplicate candidates}\fR. Each candidate carries a \fBstatus\fR: \fBactive\fR (the copy \fBpackage require\fR takes), \fBsame version\fR (a second copy of the active version that is not used \-\- the case to look at), or \fBother version\fR. \fBduplicate\fR is 1 when a version has more than one copy. For a package whose copies are not all registered yet, an unsatisfiable \fBpackage require\fR runs Tcl's unknown handlers first; nothing is loaded.
+\fBshadows\fR — one dict per package with more than one copy (every package with \fB\-all 1\fR): \fB{package active activePath via duplicate candidates}\fR. \fBactive\fR is the version a fresh \fBpackage require\fR would take with these search paths and the current \fBpackage prefer\fR; a package already loaded is reported as loaded. \fBvia\fR is \fBloaded\fR, \fBmodule\fR or \fBpkgIndex\fR: when a module fits, Tcl does not read any \fBpkgIndex.tcl\fR. Each candidate carries a \fBstatus\fR: \fBactive\fR (the copy that is taken), \fBsame version\fR (a second copy of the active version that is not used \-\- the case to look at), \fBhidden by module\fR (a higher version in a \fBpkgIndex.tcl\fR that is never seen because a module wins), or \fBother version\fR. \fBduplicate\fR is 1 when a version has more than one copy. The search runs in a child interpreter that is deleted afterwards: the caller's package database is not changed, nothing is loaded.
 .CS
 puts [::tclutils::tupkgfinder::report tablelist]
 set w [::tclutils::tupkgfinder::which Img]
@@ -44,7 +44,7 @@ foreach d [::tclutils::tupkgfinder::shadows] {
 .PP
 Carries \fB{TCLUTILS TUPKGFINDER OPTION}\fR for an unknown option or a bad option/value count in \fBfindFileSystem\fR, \fBcandidates\fR and \fBshadows\fR.
 .PP
-Version note: 0.2 adds \fBcandidates\fR and \fBshadows\fR; the 0.1 commands are unchanged.
+Version note: 0.2 adds \fBcandidates\fR and \fBshadows\fR; the 0.1 commands are unchanged. 0.3: \fBshadows\fR works in a child interpreter (0.2 registered the \fBpkgIndex.tcl\fR versions in the caller, so a later \fBpackage require\fR could take another version), adds \fBvia\fR and the status \fBhidden by module\fR.
 .SS Demo
 .CS
 tclsh examples/demo-tupkgfinder.tcl

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- `tupkgfinder` 0.3: `shadows` works out the active copy in a child
+  interpreter. 0.2 registered every `pkgIndex.tcl` version in the caller,
+  so a later `package require` could take a higher `pkgIndex.tcl` version
+  instead of a module. New key `via` (`loaded`, `module`, `pkgIndex`) and
+  status `hidden by module`; `active` follows `package prefer`. When
+  copying over an older tree, delete `tupkgfinder-0.2.tm`.
+
 ## 0.69.0 - 2026-10-28
 
 Recommended pairing: tclutils 0.69.0 + tkutils 0.49.0 + ctrlutils 0.5.
@@ -234,9 +243,15 @@ Module versions: `tucsv` 0.2, `tusqlite` 0.2, `tuholiday` 0.2, `tuzip` 0.2,
   `TCL*_TM_PATH`, `LD_LIBRARY_PATH`, `DYLD_LIBRARY_PATH`), `tcl_pkgPath`
   and `Loaded Libraries` (`info loaded`); packages show the file they came
   from; missing search folders end in `(missing)`; Tcl and Tk library,
-  windowing system; `Host` from `info hostname` on every platform. The
-  demo loads the packages named on the command line. Tests `search-1`–`3`,
-  `missing-1`, `core-1`, `origin-1`, `2`, `libs-1`.
+  windowing system; `Host` from `info hostname` on every platform; section
+  `Build` (`tcl::pkgconfig`, mapped library file, note on a mixed or moved
+  installation, `tclConfig.sh` with `TCL_PREFIX`). The demo loads the
+  packages named on the command line. Tests `search-1`–`3`,
+  `missing-1`, `core-1`, `origin-1`, `2`, `libs-1`, `build-1`–`4`.
+- `apps/find-tclconfig`: version with patch level; a missing `TCL_PREFIX`
+  is reported; a linked config file counts once; hints for building
+  against a distribution Tcl and for 9.0/9.1. The test suite found the
+  script one level up and could not run.
 - `tutreemap`: a `:::class` name with umlauts is removed whole (was cut
   after the first letter). `tuclass`: `;` inside quotes stays in the
   member. `tuimage::fromDataUri`: `;base64` inside a quoted parameter is

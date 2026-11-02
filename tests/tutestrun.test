@@ -48,7 +48,12 @@ test tutestrun-1.2 {a failed test makes it 1, although tcltest exits 0} -body {
 } -result {1 1 0}
 
 test tutestrun-1.3 {no summary and non-zero exit are listed} -body {
-    suite {quiet.test {exit 0} boom.test {test b-1 x {expr 1} 1; cleanupTests; exit 3}}
+    # boom.test writes the summary line itself instead of calling
+    # cleanupTests: under wish, cleanupTests ends the process with exit 0
+    # (tcltest: "exit only if running Tk in non-interactive mode"), and the
+    # "exit 3" after it never ran.
+    set sum "boom.test:\tTotal\t1\tPassed\t1\tSkipped\t0\tFailed\t0"
+    suite [list quiet.test {exit 0} boom.test "puts [list $sum]; exit 3"]
     lassign [runSuite] code out
     list $code [string match "*quiet.test (no summary)*" $out] \
          [string match "*boom.test (exit code / error)*" $out]

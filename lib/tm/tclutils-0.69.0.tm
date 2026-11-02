@@ -104,7 +104,7 @@ package require tclutils::tulayout 0.2
 # Deployment / packaging
 package require tclutils::tudeploy 0.3
 # Introspection / diagnostics
-package require tclutils::tupkgfinder 0.2
+package require tclutils::tupkgfinder 0.3
 package require tclutils::tuappinfo 0.3
 package require tclutils::tuedid 0.1
 package require tclutils::tusysinfo 0.1

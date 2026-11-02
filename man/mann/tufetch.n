@@ -19,7 +19,7 @@ Commands:
 .IP \(bu
 \fBget url ?opts?\fR — return the response body as UTF\-8 text.
 .IP \(bu
-\fBdownload url path ?opts?\fR — save the body to \fBpath\fR (raw bytes); returns the transport used (\fBnative\fR, \fBcurl\fR or \fBwget\fR). The native path leaves an existing file if the write fails (0.5, \fBcommon::replaceFile\fR).
+\fBdownload url path ?opts?\fR — save the body to \fBpath\fR (raw bytes); returns the transport used (\fBnative\fR, \fBcurl\fR or \fBwget\fR). The native path leaves an existing file if the write fails (0.5).
 .PP
 Options (both commands):
 .IP \(bu

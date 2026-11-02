@@ -7,6 +7,7 @@ catch {tcl::tm::path add $tmDir}
 if {[info exists ::env(TCLUTILS_TM)]} { catch {tcl::tm::path add $::env(TCLUTILS_TM)} }
 package require tclutils::tuappinfo
 set ns ::tclutils::tuappinfo
+testConstraint linux [expr {$::tcl_platform(os) eq "Linux"}]
 
 test build-1 {report has the core sections} -body {
     set r [${ns}::buildReport -title "T"]
@@ -201,5 +202,43 @@ test libs-1 {Loaded Libraries lists info loaded, static as (static)} -body {
     }
     set ok
 } -result 1
+
+# ---- 0.3: build of the Tcl library ----
+
+test build-1 {Build section: flags and the library's directories} -body {
+    set r [${ns}::buildReport]
+    list [string match "*\n--- Build ---\nFlags: *threaded=*" $r] \
+         [string match "*\nlibdir,runtime: [tcl::pkgconfig get libdir,runtime]\n*" $r]
+} -result {1 1}
+
+test build-2 {_buildNote: same dir, other installation, moved installation} -setup {
+    set d [makeDirectory buildnote-bin]
+} -body {
+    list [${ns}::_buildNote [file join $d tclsh9.0] $d] \
+         [string match "*another installation*" \
+              [${ns}::_buildNote /x/bin/tclsh9.0 $d]] \
+         [string match "*moved or copied*" \
+              [${ns}::_buildNote /x/bin/tclsh9.0 /gibt/es/nicht/bin]] \
+         [${ns}::_buildNote "" $d]
+} -cleanup {
+    removeDirectory buildnote-bin
+} -result {{} 1 1 {}}
+
+test build-3 {_readTclConfig: version with patch level, prefix; forwarder empty} -setup {
+    set f [makeFile "TCL_VERSION='9.0'\nTCL_PATCH_LEVEL='.4'\nTCL_PREFIX='/opt/tcl9'\n" tc-a.sh]
+    set g [makeFile ". /usr/lib/x86_64-linux-gnu/tcl8.6/tclConfig.sh\n" tc-b.sh]
+} -body {
+    list [${ns}::_readTclConfig $f] [${ns}::_readTclConfig $g] \
+         [${ns}::_readTclConfig /gibt/es/nicht.sh]
+} -cleanup {
+    removeFile tc-a.sh
+    removeFile tc-b.sh
+} -result {{9.0 9.0.4 /opt/tcl9} {{} {} {}} {{} {} {}}}
+
+test build-4 {the library file on Linux is a libtcl; anonymize masks it} -constraints linux -body {
+    set lib [${ns}::_loadedTclLib]
+    set r [${ns}::buildReport -anonymize 1]
+    list [regexp {/libtcl[0-9]} $lib] [string match "*$lib*" $r]
+} -result {1 0}
 
 cleanupTests

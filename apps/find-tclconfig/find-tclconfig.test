@@ -4,7 +4,7 @@
 # against a synthetic fixture of tclConfig.sh / tkConfig.sh files and assert on
 # its output. Version-neutral: uses only core commands, runs on 8.6 and 9.0.
 #
-#   tclsh tests/find-tclconfig.test
+#   tclsh find-tclconfig.test
 #
 # The fixture covers the four cases the tool must get right:
 #   1. same directory (BAWT / Windows layout)      -> pair
@@ -16,7 +16,9 @@ package require tcltest
 namespace import ::tcltest::*
 
 set here   [file normalize [file dirname [info script]]]
-set script [file join $here .. find-tclconfig.tcl]
+# the script lies next to this test (apps/find-tclconfig/); it was looked
+# for one level up, so the suite could not run
+set script [file join $here find-tclconfig.tcl]
 
 # --- build the fixture --------------------------------------------------------
 set fix [makeDirectory fixture]
@@ -41,6 +43,16 @@ writeConfig [file join $fix debian tclConfig.sh] \
 # 4) cross-tree 9.0: Tcl in treeA, Tk in treeB (not siblings)
 writeConfig [file join $fix treeA lib tclConfig.sh] "TCL_VERSION='9.0'"
 writeConfig [file join $fix treeB lib tkConfig.sh]  "TK_VERSION='9.0'"
+
+# 5) patch level and a prefix that no longer exists (a moved build)
+writeConfig [file join $fix moved lib tclConfig.sh] \
+    "TCL_VERSION='9.0'\nTCL_PATCH_LEVEL='.1'\nTCL_PREFIX='[file join $fix gibtsnicht]'"
+# 6) a symlink to an existing config counts once (Debian multiarch link)
+if {$::tcl_platform(platform) ne "windows"} {
+    file mkdir [file join $fix linked]
+    file link -symbolic [file join $fix linked tclConfig.sh] \
+        [file join $fix bawt lib tclConfig.sh]
+}
 
 proc runTool {} {
     global script fix
@@ -83,6 +95,22 @@ test exit-code-success {finds something -> exit 0} -body {
     catch {runTool} _ opts
     dict get $opts -code
 } -result 0
+
+test patchlevel-shown {VER shows the patch level, not only 9.0} -body {
+    regexp -line "^Tcl\\s+9\\.0\\.1\\s+[file join $fix moved lib]\$" [runTool]
+} -result 1
+
+test prefix-missing {a TCL_PREFIX that does not exist is reported} -body {
+    set out [runTool]
+    list [string match "*Praefix fehlt: [file join $fix gibtsnicht]*" $out] \
+         [string match "*TCL_PREFIX [file join $fix gibtsnicht] fehlt*" $out]
+} -result {1 1}
+
+test symlink-once {a link to a config file is listed once} -constraints unix -body {
+    set out [runTool]
+    list [regexp -all -line "^Tcl\\s+8\\.6\\s+[file join $fix bawt lib]\$" $out] \
+         [string match "*[file join $fix linked]*" $out]
+} -result {1 0}
 
 removeDirectory fixture
 cleanupTests

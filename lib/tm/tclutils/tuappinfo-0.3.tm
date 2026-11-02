@@ -4,8 +4,8 @@
 # text report: Tcl/Tk versions and libraries, executable, platform, selected
 # environment, the variables that steer the package search, search paths
 # (missing folders marked), loaded packages with their origin, loaded binary
-# libraries (info loaded), and optionally a list of explicitly tracked module
-# files. Supports anonymisation of user/host/path data. Pure Tcl,
+# libraries (info loaded), the build of the Tcl library (tcl::pkgconfig,
+# tclConfig.sh), and optionally a list of explicitly tracked module files. Supports anonymisation of user/host/path data. Pure Tcl,
 # library-neutral, no GUI (rendering is left to the caller).
 #
 # Anonymisation rule for paths (-anonymize 1): a path equal to or below the
@@ -62,6 +62,7 @@ proc ::tclutils::tuappinfo::buildReport {args} {
     set an $opt(-anonymize)
     set report {}
     lappend report {*}[_collectCoreInfo    $opt(-title) $an]
+    lappend report {*}[_collectBuild       $an]
     lappend report {*}[_collectEnvironment $an]
     lappend report {*}[_collectSearchVars  $an]
     lappend report {*}[_collectAutoPath    $an]
@@ -191,6 +192,140 @@ proc ::tclutils::tuappinfo::_collectCoreInfo {title anonymize} {
             lappend info "Host: <host-[_hash $host]>"
         } else {
             lappend info "Host: $host"
+        }
+    }
+    return $info
+}
+
+# One value of tcl::pkgconfig, "" when the key is missing (older Tcl).
+proc ::tclutils::tuappinfo::_pkgconfig {key} {
+    if {[catch {::tcl::pkgconfig get $key} v]} { return "" }
+    return $v
+}
+
+# Same directory? Both normalized; Windows compares without case.
+proc ::tclutils::tuappinfo::_sameDir {a b} {
+    set a [file normalize $a]
+    set b [file normalize $b]
+    if {$::tcl_platform(platform) eq "windows"} {
+        return [string equal -nocase $a $b]
+    }
+    return [string equal $a $b]
+}
+
+# Does the executable belong to the installation the Tcl library was built
+# for? "" if yes or unknown, else a note (0.3). bindir is the library's
+# bindir,install: a library from another installation reports that one's;
+# a moved installation reports a folder that no longer exists.
+proc ::tclutils::tuappinfo::_buildNote {exe bindir} {
+    if {$exe eq "" || $bindir eq ""} { return "" }
+    if {[_sameDir [file dirname $exe] $bindir]} { return "" }
+    if {![file isdirectory $bindir]} {
+        return "bindir,install does not exist: the installation was moved or copied after building"
+    }
+    return "the executable is not in bindir,install: the Tcl library comes from another installation"
+}
+
+# The Tcl library file this process has mapped, from /proc/<pid>/maps
+# (Linux only, "" elsewhere or when Tcl is linked statically) (0.3).
+proc ::tclutils::tuappinfo::_loadedTclLib {} {
+    set maps /proc/[pid]/maps
+    if {![file readable $maps] || [catch {open $maps r} fh]} { return "" }
+    set data [read $fh]
+    close $fh
+    foreach line [split $data \n] {
+        set f [lindex $line end]
+        if {[regexp {/libtcl[0-9][0-9.]*\.so[0-9.]*$} $f]} { return $f }
+    }
+    return ""
+}
+
+# Read a tclConfig.sh: {version patchlevel prefix}, e.g. {9.0 9.0.4 /usr}.
+# A forwarder that only sources another file gives {"" "" ""}.
+proc ::tclutils::tuappinfo::_readTclConfig {file} {
+    set ver "" ; set pl "" ; set prefix ""
+    if {[catch {open $file r} fh]} { return [list "" "" ""] }
+    set data [read $fh]
+    close $fh
+    foreach line [split $data \n] {
+        if {![regexp {^TCL_(VERSION|PATCH_LEVEL|PREFIX)=['"]?([^'"]*)['"]?\s*$} \
+                $line -> key val]} {
+            continue
+        }
+        switch -- $key {
+            VERSION     { if {$ver eq ""}    { set ver $val } }
+            PATCH_LEVEL { if {$pl eq ""}     { set pl $val } }
+            PREFIX      { if {$prefix eq ""} { set prefix $val } }
+        }
+    }
+    set full $ver
+    if {$ver ne "" && [string match .* $pl]} { append full $pl }
+    return [list $ver $full $prefix]
+}
+
+# The tclConfig.sh of the running installation: next to the library
+# (libdir,install, Debian in tclX.Y below it), else lib/ beside the
+# executable's bin/. "" if none with a version line is found (0.3).
+proc ::tclutils::tuappinfo::_tclConfig {} {
+    set v [info tclversion]
+    set cands {}
+    foreach libdir [list [_pkgconfig libdir,install] [_pkgconfig libdir,runtime]] {
+        if {$libdir eq ""} continue
+        lappend cands [file join $libdir tcl$v tclConfig.sh] \
+                      [file join $libdir tclConfig.sh]
+    }
+    set lib [_loadedTclLib]
+    if {$lib ne ""} {
+        lappend cands [file join [file dirname $lib] tcl$v tclConfig.sh] \
+                      [file join [file dirname $lib] tclConfig.sh]
+    }
+    set exe [info nameofexecutable]
+    if {$exe ne ""} {
+        lappend cands [file join [file dirname [file dirname $exe]] lib tclConfig.sh]
+    }
+    foreach c $cands {
+        if {[file readable $c] && [lindex [_readTclConfig $c] 0] ne ""} {
+            return $c
+        }
+    }
+    return ""
+}
+
+# The build of the loaded Tcl library (0.3): tcl::pkgconfig belongs to the
+# library, not to the executable, so a mismatch shows a mixed installation.
+proc ::tclutils::tuappinfo::_collectBuild {anonymize} {
+    set info {}
+    lappend info ""
+    lappend info "--- Build ---"
+    set flags {}
+    foreach k {threaded 64bit debug optimized} {
+        set val [_pkgconfig $k]
+        if {$val ne ""} { lappend flags "$k=$val" }
+    }
+    if {[llength $flags]} { lappend info "Flags: [join $flags { }]" }
+    foreach k {bindir,install libdir,runtime scriptdir,runtime} {
+        set val [_pkgconfig $k]
+        if {$val ne ""} { lappend info "$k: [_showPath $val $anonymize]" }
+    }
+    set dll [_pkgconfig dllfile,runtime]
+    if {$dll ne ""} { lappend info "dllfile,runtime: $dll" }
+    set lib [_loadedTclLib]
+    if {$lib ne ""} { lappend info "Library file: [_showPath $lib $anonymize]" }
+    set note [_buildNote [info nameofexecutable] [_pkgconfig bindir,install]]
+    if {$note ne ""} { lappend info "Note: $note" }
+    set cfg [_tclConfig]
+    if {$cfg eq ""} {
+        lappend info "tclConfig.sh: (none found; the -dev package or build tree is missing)"
+    } else {
+        lassign [_readTclConfig $cfg] - full prefix
+        lappend info "tclConfig.sh: [_showPath $cfg $anonymize]"
+        if {$full ne [info patchlevel]} {
+            lappend info "  TCL_PATCH_LEVEL: $full (differs from [info patchlevel])"
+        }
+        if {$prefix ne ""} {
+            set line "  TCL_PREFIX: [_showPath $prefix $anonymize]"
+            if {![file isdirectory $prefix]} { append line " (missing)" }
+            lappend info $line
         }
     }
     return $info

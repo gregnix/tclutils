@@ -30,19 +30,21 @@ anhängen.
 ## Ausgabe lesen
 
 ```
-TYP   VER   VERZEICHNIS
+TYP   VER      VERZEICHNIS
 ------------------------------------------------------------------
-Tcl   ->    /usr/lib/tcl8.6
-Tk    ->    /usr/lib/tk8.6
-Tcl   8.6   /usr/lib/x86_64-linux-gnu/tcl8.6
-Tk    8.6   /usr/lib/x86_64-linux-gnu/tk8.6
-Tcl   9.0   /usr/lib/x86_64-linux-gnu/tcl9.0
-Tk    9.0   /usr/lib/x86_64-linux-gnu/tk9.0
+Tcl   9.0.1    /opt/Tcl/lib
+               Praefix fehlt: /home/<name>/Bawt/.../Install/Tcl
+Tcl   ->       /usr/lib/tcl8.6
+Tk    ->       /usr/lib/tk8.6
+Tcl   8.6.18   /usr/lib/x86_64-linux-gnu/tcl8.6
+Tk    8.6.18   /usr/lib/x86_64-linux-gnu/tk8.6
+Tcl   9.0.4    /usr/lib/x86_64-linux-gnu/tcl9.0
+Tk    9.0.4    /usr/lib/x86_64-linux-gnu/tk9.0
 
 Brauchbare Paare (gleiche Version fuer Tcl und Tk):
 ------------------------------------------------------------------
 
-  Tcl/Tk 9.0
+  Tcl/Tk 9.0.4
     ./configure --with-tcl=/usr/lib/x86_64-linux-gnu/tcl9.0 \
                 --with-tk=/usr/lib/x86_64-linux-gnu/tk9.0
 ```
@@ -52,6 +54,26 @@ Die Zeilen mit **`->`** in der Versionsspalte sind versionslose Weiterleitungen
 Welche Generation dahintersteckt, sieht man ihnen nicht an — und die für Tcl und
 die für Tk müssen nicht dieselbe sein. **Die nimmt man nicht.** Genau sie sind
 die Ursache der meisten Fehlgriffe.
+
+Die Versionsspalte zeigt den Patchlevel (`TCL_VERSION` plus
+`TCL_PATCH_LEVEL`): ein BAWT-Tcl 9.0.1 und Debians 9.0.4 sind so zu
+unterscheiden.
+
+**„Praefix fehlt“** heißt: `TCL_PREFIX` in der Datei zeigt auf einen Ordner,
+den es nicht mehr gibt. Das Tcl wurde gebaut und danach verschoben, etwa ein
+BAWT-Baum. `configure` übernimmt diesen Präfix, wenn `--prefix` fehlt, und
+installiert dann dorthin. Beim Paar steht dazu ein Hinweis.
+
+Am Ende stehen zwei Hinweise für das Bauen:
+
+- **Präfix `/usr`** (Tcl der Distribution): Zum Installieren in einen eigenen
+  Ordner `--libdir` angeben und `make install-lib-binaries` nehmen; `make
+  install` will Programme nach `/usr/bin` legen.
+- **9.0 und 9.1:** gegen 9.0 bauen. Beide Bauten heißen `libtcl9<name>.so`, die
+  gegen 9.0 gebaute lädt auch unter 9.1.
+
+Eine Datei, auf die ein Symlink zeigt, erscheint nur einmal. Debian legt
+`/usr/lib/x86_64-linux-gnu/tclConfig.sh` als Link auf `tcl8.6/tclConfig.sh` an.
 
 ## Was das Werkzeug garantiert
 
@@ -81,13 +103,13 @@ läuft — nur `tclsh`, sonst nichts.
 ## Tests
 
 ```bash
-tclsh tests/find-tclconfig.test
+tclsh find-tclconfig.test
 ```
 
 Die Suite legt eine synthetische Fixture aus `tclConfig.sh` / `tkConfig.sh` an
-und prüft die vier Fälle (Same-Dir, Geschwister, versionslose Weiterleitung,
-Quer-über-Bäume). Rein Tcl, läuft unverändert auf 8.6 und 9.0. Verifiziert auf
-Tcl 8.6.14 und 9.0.4: 5/5.
+und prüft Same-Dir, Geschwister, versionslose Weiterleitung, Quer-über-Bäume,
+Patchlevel, fehlenden Präfix und Symlink. Rein Tcl, läuft unverändert auf 8.6
+und 9.0. Verifiziert auf Tcl 8.6.14 und 9.0.4: 8/8.
 
 ## Lizenz
 

@@ -5,7 +5,9 @@ exec tclsh "$0" ${1+"$@"}
 # find-tclconfig.tcl -- findet tclConfig.sh / tkConfig.sh, paart sie nach
 # Version und gibt fertige configure-Zeilen aus.
 #
-# Laeuft ueberall, wo ein tclsh liegt -- Linux, macOS, Windows.
+# Laeuft ueberall, wo ein tclsh liegt -- Linux, macOS, Windows. Braucht
+# absichtlich nichts ausser tclsh (auch kein tclutils): man benutzt es,
+# bevor irgendetwas eingerichtet ist.
 #
 #   tclsh find-tclconfig.tcl [zusaetzliche-suchpfade ...]
 #
@@ -61,17 +63,37 @@ proc scan {dir depth} {
     return $hits
 }
 
+# Eine Datei, auf die ein Symlink zeigt, nur einmal zaehlen. Debian legt
+# /usr/lib/x86_64-linux-gnu/tclConfig.sh als Link auf tcl8.6/tclConfig.sh
+# daneben an -- dieselbe Datei, kein zweites Tcl.
+proc canon {f} {
+    set f [file normalize $f]
+    for {set n 0} {$n < 10} {incr n} {
+        if {[catch {file type $f} t] || $t ne "link"} { break }
+        set f [file normalize [file join [file dirname $f] [file readlink $f]]]
+    }
+    return $f
+}
+
 set files {}
 foreach r $roots {
     catch { lappend files {*}[scan $r 0] }
 }
-set files [lsort -unique $files]
+set seen [dict create]
+set uniq {}
+foreach f [lsort -unique $files] {
+    set c [canon $f]
+    if {[dict exists $seen $c]} { continue }
+    dict set seen $c 1
+    lappend uniq $c
+}
+set files $uniq
 
 if {[llength $files] == 0} {
     puts "Nichts gefunden."
     puts ""
     puts "Vermutlich fehlt das Entwicklungspaket:"
-    puts "  Debian/Ubuntu   apt install tcl-dev tk-dev"
+    puts "  Debian/Ubuntu   apt install tcl-dev tk-dev   (fuer 9.x: tcl9.0-dev tk9.0-dev)"
     puts "  Fedora/RHEL     dnf install tcl-devel tk-devel"
     puts "  openSUSE        zypper install tcl-devel tk-devel"
     puts "  Arch            pacman -S tcl tk"
@@ -80,31 +102,55 @@ if {[llength $files] == 0} {
     exit 1
 }
 
-# Version aus der Datei lesen. Debian legt versionslose Weiterleitungen an,
-# die die eigentliche Datei nur sourcen -- die haben keine Versionszeile.
-proc version {f} {
-    if {[catch {open $f r} fh]} { return "" }
+# Version, Patchlevel und Praefix aus der Datei lesen. Debian legt
+# versionslose Weiterleitungen an, die die eigentliche Datei nur sourcen --
+# die haben keine Versionszeile. Ergebnis: {version patchlevel prefix}.
+#   TCL_VERSION='9.0'  TCL_PATCH_LEVEL='.4'  ->  9.0  9.0.4
+proc readConf {f} {
+    set ver "" ; set pl "" ; set prefix ""
+    if {[catch {open $f r} fh]} { return [list "" "" ""] }
     set txt [read $fh]
     close $fh
-    if {[regexp {^(?:TCL|TK)_VERSION=['"]?([0-9.]+)} $txt -> v]} { return $v }
     foreach line [split $txt \n] {
-        if {[regexp {^(?:TCL|TK)_VERSION=['"]?([0-9.]+)} $line -> v]} { return $v }
+        if {![regexp {^(?:TCL|TK)_(VERSION|PATCH_LEVEL|PREFIX)=['"]?([^'"]*)['"]?\s*$} \
+                $line -> key val]} {
+            continue
+        }
+        switch -- $key {
+            VERSION     { if {$ver eq ""}    { set ver $val } }
+            PATCH_LEVEL { if {$pl eq ""}     { set pl $val } }
+            PREFIX      { if {$prefix eq ""} { set prefix $val } }
+        }
     }
-    return ""
+    set full $ver
+    if {$ver ne "" && [string match .* $pl]} { append full $pl }
+    return [list $ver $full $prefix]
 }
 
 set rows {}
 foreach f $files {
     set typ [expr {[string match "*tclConfig.sh" $f] ? "Tcl" : "Tk"}]
-    set ver [version $f]
-    lappend rows [list $typ $ver [file dirname $f]]
+    lassign [readConf $f] ver full prefix
+    lappend rows [list $typ $ver [file dirname $f] $full $prefix]
 }
 
-puts [format "%-5s %-5s %s" TYP VER VERZEICHNIS]
+# Ein Praefix, den es nicht mehr gibt: das Tcl wurde gebaut, installiert und
+# danach verschoben (BAWT, ein kopierter Baum). configure uebernimmt diesen
+# Praefix fuer das Installieren, wenn --prefix fehlt.
+proc prefixMissing {prefix} {
+    expr {$prefix ne "" && ![file isdirectory $prefix]}
+}
+
+puts [format "%-5s %-8s %s" TYP VER VERZEICHNIS]
 puts [string repeat - 66]
+set anyMissing 0
 foreach r [lsort -index 2 $rows] {
-    lassign $r typ ver dir
-    puts [format "%-5s %-5s %s" $typ [expr {$ver eq "" ? "->" : $ver}] $dir]
+    lassign $r typ ver dir full prefix
+    puts [format "%-5s %-8s %s" $typ [expr {$ver eq "" ? "->" : $full}] $dir]
+    if {[prefixMissing $prefix]} {
+        puts [format "%-14s %s" "" "Praefix fehlt: $prefix"]
+        set anyMissing 1
+    }
 }
 
 puts ""
@@ -112,8 +158,9 @@ puts "Brauchbare Paare (gleiche Version fuer Tcl und Tk):"
 puts [string repeat - 66]
 
 set any 0
+set systemPrefix 0
 foreach r $rows {
-    lassign $r typ ver dir
+    lassign $r typ ver dir full prefix
     if {$typ ne "Tcl" || $ver eq ""} { continue }
 
     # Tk derselben Version suchen. Und zwar NUR im selben Verzeichnis (so legt
@@ -125,18 +172,18 @@ foreach r $rows {
     # sein -- Tcl aus dem einen, Tk aus dem anderen ergibt einen Mischling, der
     # uebersetzt und spaeter umfaellt. Genau das ist die Falle, die dieses
     # Werkzeug aufdecken soll; es darf sie nicht selbst stellen.
-    set tkdir ""
+    set tkdir "" ; set tkfull ""
     foreach s $rows {
-        lassign $s t v d
-        if {$t eq "Tk" && $v eq $ver && $d eq $dir} { set tkdir $d ; break }
+        lassign $s t v d f
+        if {$t eq "Tk" && $v eq $ver && $d eq $dir} { set tkdir $d ; set tkfull $f ; break }
     }
     if {$tkdir eq ""} {
         set sibling [string map [list tcl$ver tk$ver] $dir]
         if {$sibling ne $dir} {
             foreach s $rows {
-                lassign $s t v d
+                lassign $s t v d f
                 if {$t eq "Tk" && $v eq $ver && $d eq $sibling} {
-                    set tkdir $d ; break
+                    set tkdir $d ; set tkfull $f ; break
                 }
             }
         }
@@ -145,13 +192,22 @@ foreach r $rows {
     set any 1
     puts ""
     if {$tkdir ne ""} {
-        puts "  Tcl/Tk $ver"
+        puts "  Tcl/Tk $full"
         puts "    ./configure --with-tcl=$dir \\"
         puts "                --with-tk=$tkdir"
+        if {$tkfull ne $full} {
+            puts "    Achtung: Tk meldet $tkfull, Tcl $full."
+        }
     } else {
-        puts "  Tcl $ver in $dir -- kein Tk daneben."
+        puts "  Tcl $full in $dir -- kein Tk daneben."
         puts "    Ohne Tk:  --with-tcl=$dir"
         puts "    Mit Tk:   ein Tk aus DEMSELBEN Baum waehlen, nicht aus einem anderen."
+    }
+    if {[prefixMissing $prefix]} {
+        puts "    Achtung: TCL_PREFIX $prefix fehlt. Ohne --prefix installiert"
+        puts "             configure dorthin; --prefix oder --libdir angeben."
+    } elseif {$prefix eq "/usr"} {
+        set systemPrefix 1
     }
 }
 
@@ -163,3 +219,14 @@ puts ""
 puts "Die versionslosen Eintraege (VER = ->) NICHT verwenden: das sind"
 puts "Weiterleitungen, und die fuer Tcl und die fuer Tk muessen nicht auf"
 puts "dieselbe Generation zeigen. Genau daran scheitern die meisten Builds."
+if {$systemPrefix} {
+    puts ""
+    puts "Praefix /usr (Tcl der Distribution): configure uebernimmt ihn. Zum"
+    puts "Installieren in einen eigenen Ordner --libdir angeben, etwa"
+    puts "  --libdir=\$HOME/lib/tcl-ext"
+    puts "und 'make install-lib-binaries' statt 'make install' -- sonst"
+    puts "will make Programme nach /usr/bin legen."
+}
+puts ""
+puts "Eine Erweiterung fuer 9.0 und 9.1 gegen 9.0 bauen: beide Bauten heissen"
+puts "libtcl9<name>.so, die gegen 9.0 gebaute laedt auch unter 9.1."

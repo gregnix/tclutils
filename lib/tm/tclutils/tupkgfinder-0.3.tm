@@ -5,7 +5,8 @@
 # shadowed, the relevant search paths, and an optional filesystem search by
 # pattern. candidates/shadows (0.2) list every copy on the search paths,
 # also a second copy with the same version that the package database never
-# shows. Pure Tcl, library-neutral, no GUI.
+# shows. shadows (0.3) works out the active copy in a child interpreter and
+# marks a higher pkgIndex.tcl version that a module hides. Pure Tcl, library-neutral, no GUI.
 #
 # Tcl 8.6-
 package require Tcl 8.6-
@@ -369,60 +370,96 @@ proc ::tclutils::tupkgfinder::_tmFiles {dir} {
 
 # shadows ?-pattern glob? ?-all 0|1? ?-tmpaths list? ?-autopath list?
 # One dict per package that has more than one copy (all packages with
-# -all 1): {package P active VERSION activePath PATH duplicate 0|1
-# candidates {{version V kind K path P status S} ...}}. Status is "active"
-# (the copy [package require] takes), "same version" (a second copy of the
-# active version that is NOT used -- the dangerous case), or "other version".
+# -all 1): {package P active VERSION activePath PATH via V duplicate 0|1
+# candidates {{version V kind K path P status S} ...}}.
+#
+# active is the version a fresh [package require P] would take with these
+# search paths and the current [package prefer]; for a package already
+# loaded here it is the loaded one. via says how: "loaded", "module" (a
+# module on the module paths satisfies the request, so Tcl does not read
+# any pkgIndex.tcl) or "pkgIndex".
+#
+# Status per candidate: "active" (the copy that is taken), "same version"
+# (a second copy of the active version that is NOT used -- the dangerous
+# case), "hidden by module" (a higher version in a pkgIndex.tcl that is
+# never seen because a module wins), or "other version".
 # duplicate is 1 when any version has more than one copy.
-# Side effect: for a package whose copies are not all registered yet, an
-# unsatisfiable [package require] runs Tcl's package unknown handlers, so
-# the pkgIndex.tcl files and that module directory are read (nothing is
-# loaded).
+#
+# The package search runs in a child interpreter that is deleted
+# afterwards (0.3): the caller's package database is not changed, nothing
+# is loaded. The child reads every pkgIndex.tcl on the paths once.
 proc ::tclutils::tupkgfinder::shadows {args} {
     set all 0
-    set cargs {}
+    set pattern *
+    set tmpaths {}
+    if {[llength [::info commands ::tcl::tm::path]]} { set tmpaths [::tcl::tm::path list] }
+    set autopath $::auto_path
     if {[llength $args] % 2} { _err OPTION "option/value pairs expected" }
     foreach {k v} $args {
         switch -- $k {
-            -all { set all $v }
-            -pattern - -tmpaths - -autopath { lappend cargs $k $v }
+            -all      { set all $v }
+            -pattern  { set pattern $v }
+            -tmpaths  { set tmpaths $v }
+            -autopath { set autopath $v }
             default { _err OPTION "unknown option \"$k\" (-pattern, -all, -tmpaths, -autopath)" }
         }
     }
     set by {}
     set seen {}
-    foreach c [candidates {*}$cargs] {
+    foreach c [candidates -pattern $pattern -tmpaths $tmpaths -autopath $autopath] {
         # a pkgIndex.tcl may name one version twice (if/else per Tcl version)
         set key [list [dict get $c package] [dict get $c version] [dict get $c path]]
         if {[dict exists $seen $key]} continue
         dict set seen $key 1
         dict lappend by [dict get $c package] $c
     }
-    set out {}
+    set pkgs {}
     foreach pkg [lsort -dictionary [dict keys $by]] {
+        if {$all || [llength [dict get $by $pkg]] > 1} { lappend pkgs $pkg }
+    }
+    if {![llength $pkgs]} { return {} }
+
+    # What a fresh interpreter registers from the pkgIndex.tcl files.
+    set ci [interp create]
+    try {
+        set idx [_childIndex $ci $autopath $pkgs]
+    } finally {
+        interp delete $ci
+    }
+
+    set out {}
+    foreach pkg $pkgs {
         set cands [dict get $by $pkg]
-        if {!$all && [llength $cands] < 2} continue
-        # Let Tcl register what it would find: an unsatisfiable request runs
-        # the package unknown handlers (module search for this name, every
-        # pkgIndex.tcl) and loads nothing.
+        set tmVers {}
         foreach c $cands {
-            if {[dict get $c version] ni [package versions $pkg]} {
-                catch {package require $pkg 99999-}
-                break
-            }
-        }
-        set active ""
-        if {[catch {package present $pkg} active]} {
-            set active ""
-            set vs [package versions $pkg]
-            if {[llength $vs]} {
-                set active [lindex [lsort -command {package vcompare} $vs] end]
-            }
+            if {[dict get $c kind] eq "tm"} { lappend tmVers [dict get $c version] }
         }
         set activePath ""
         set activeScript ""
-        if {$active ne ""} {
+        if {![catch {package present $pkg} active]} {
+            set via loaded
             set activeScript [package ifneeded $pkg $active]
+        } elseif {[llength $tmVers]} {
+            # Tcl's module handler: a module satisfies "0-", so the regular
+            # search through auto_path is skipped. Of two modules with one
+            # version the first on the module path wins.
+            set via module
+            set active [_pick $tmVers]
+            foreach c $cands {
+                if {[dict get $c kind] eq "tm" && [dict get $c version] eq $active} {
+                    set activePath [dict get $c path]
+                    break
+                }
+            }
+        } else {
+            set via pkgIndex
+            set active ""
+            if {[dict exists $idx $pkg]} {
+                set active [_pick [dict keys [dict get $idx $pkg]]]
+                set activeScript [dict get $idx $pkg $active]
+            }
+        }
+        if {$activePath eq "" && $activeScript ne ""} {
             set activePath [_ifneededSourcePath $activeScript]
             if {$activePath eq ""} {
                 set activePath [lindex [_extractPaths $activeScript] 0]
@@ -436,14 +473,20 @@ proc ::tclutils::tupkgfinder::shadows {args} {
         foreach c $cands {
             set v [dict get $c version]
             set p [dict get $c path]
-            if {$v ne $active} {
-                set st "other version"
-            } elseif {[_sameSource [dict get $c kind] $p $activePath $activeScript]} {
-                set st active
+            set kind [dict get $c kind]
+            if {$v eq $active} {
+                if {[_sameSource $kind $p $activePath $activeScript]} {
+                    set st active
+                } else {
+                    set st "same version"
+                }
+            } elseif {$via eq "module" && $kind eq "pkgIndex"
+                    && [package vcompare $v $active] > 0} {
+                set st "hidden by module"
             } else {
-                set st "same version"
+                set st "other version"
             }
-            lappend rows [dict create version $v kind [dict get $c kind] path $p status $st]
+            lappend rows [dict create version $v kind $kind path $p status $st]
         }
         set rows [lsort -command [list apply {{a b} {
             set r [package vcompare [dict get $b version] [dict get $a version]]
@@ -451,9 +494,37 @@ proc ::tclutils::tupkgfinder::shadows {args} {
             return $r
         }}] $rows]
         lappend out [dict create package $pkg active $active activePath $activePath \
-            duplicate $dup candidates $rows]
+            via $via duplicate $dup candidates $rows]
     }
     return $out
+}
+
+# In child CI: run Tcl's regular package search over AUTOPATH once and
+# return {pkg {version script ...} ...} for the packages PKGS.
+proc ::tclutils::tupkgfinder::_childIndex {ci autopath pkgs} {
+    # tclPkgUnknown lives in Tcl's library: load it before auto_path changes
+    $ci eval {auto_load ::tclPkgUnknown}
+    $ci eval [list set ::auto_path $autopath]
+    catch {$ci eval {::tclPkgUnknown ::tclutils::tupkgfinder::none 0-}}
+    set out {}
+    foreach pkg $pkgs {
+        foreach v [$ci eval [list package versions $pkg]] {
+            dict set out $pkg $v [$ci eval [list package ifneeded $pkg $v]]
+        }
+    }
+    return $out
+}
+
+# The version [package require] takes among VERSIONS, following the
+# current [package prefer]: with "stable" the highest version without a or
+# b, if there is one; otherwise the highest.
+proc ::tclutils::tupkgfinder::_pick {versions} {
+    set vs [lsort -unique -command {package vcompare} $versions]
+    if {[package prefer] eq "stable"} {
+        set st [lsearch -all -inline -regexp -not $vs {[ab]}]
+        if {[llength $st]} { return [lindex $st end] }
+    }
+    return [lindex $vs end]
 }
 
 # Is the registered source ACTIVEPATH this candidate? A .tm file must match
@@ -472,4 +543,4 @@ proc ::tclutils::tupkgfinder::_sameSource {kind path activePath script} {
     return [expr {[string first $dir $script] >= 0}]
 }
 
-package provide tclutils::tupkgfinder 0.2
+package provide tclutils::tupkgfinder 0.3

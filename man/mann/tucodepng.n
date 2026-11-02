@@ -11,8 +11,7 @@ set png [tclutils::tucodepng::latin1 -shownames 1]   ;# 128..255 -> PNG bytes
 .IP \(bu
 \fBrender from to ?opts?\fR \-> PNG bytes (range within 0..255).
 .IP \(bu
-\fBwrite file from to ?opts?\fR \-> writes the PNG, returns the filename.
-A failed write leaves an existing file (\fBcommon::replaceFile\fR, 0.2).
+\fBwrite file from to ?opts?\fR \-> writes the PNG, returns the filename. A failed write leaves an existing file (0.2, \fBcommon::replaceFile\fR).
 .IP \(bu
 \fBascii ?opts?\fR (0..127), \fBlatin1 ?opts?\fR (128..255), \fBall ?opts?\fR (0..255).
 .PP

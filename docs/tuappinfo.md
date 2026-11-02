@@ -21,7 +21,7 @@ caller renders the returned text (e.g. in a Tk window or a log file).
 - `buildReport` — return the full report as a single string. `-anonymize 1`
   masks user/host names (stable hash), `TEMP`/`TMP` (`<TEMP>`), `PATH`
   (`<anonymized>`), tracked module files (`<tm-HASH>.tm`) and every path in
-  the report (`Executable`, the libraries, `HOME`, the search variables,
+  the report (`Executable`, the libraries, the build paths, `HOME`, the search variables,
   `auto_path`, `tcl_pkgPath`, package origins, loaded libraries,
   `tm::path`) by one rule:
   a path equal to or below the home directory (`$HOME`, else
@@ -44,6 +44,7 @@ Sections, in this order ("0.3": new in 0.3):
 |---|---|
 | head | title, `Timestamp:`, `PID:` |
 | `--- Tcl / Tk ---` | Tcl version, `Tcl library:` (0.3); with Tk the patch level, `Tk library:` and `Windowing system:` (0.3); executable, platform, machine, `Host:` from `info hostname` (0.3: on every platform; `COMPUTERNAME` only as fallback) |
+| `--- Build ---` | 0.3: the build of the loaded Tcl library from `tcl::pkgconfig` (`Flags:` threaded, 64bit, debug, optimized; `bindir,install`, `libdir,runtime`, `scriptdir,runtime`, `dllfile,runtime`), on Linux the mapped `Library file:`, a `Note:` when the executable is not in `bindir,install`, and the installation's `tclConfig.sh` with `TCL_PREFIX` (`(missing)` if gone) and `TCL_PATCH_LEVEL` when it differs from `info patchlevel` |
 | `--- Environment ---` | `USER`, `USERNAME`, `HOME`, `TEMP`, `TMP`, `PATH`, if set |
 | `--- Search variables ---` | 0.3: `TCLLIBPATH`, every `TCL<x>_<y>_TM_PATH`, `LD_LIBRARY_PATH`, `DYLD_LIBRARY_PATH`, if set; one entry per line; otherwise `(none set)` |
 | `--- auto_path ---` | one entry per line |
@@ -57,6 +58,14 @@ A folder in the search variables, `auto_path`, `tcl_pkgPath` and `tm::path`
 that does not exist ends in ` (missing)` (0.3). `Loaded Libraries` is the
 proof of which shared library was loaded: two packages of the same name in
 different folders are told apart there.
+
+`tcl::pkgconfig` describes the Tcl **library**, not the executable. A
+`Note:` therefore shows a mixed installation: an executable from one
+installation running with the `libtcl` of another (same file name, found
+first by the loader), or an installation moved after it was built
+(`bindir,install` no longer exists). The `tclConfig.sh` is looked for next
+to the library (`libdir,install`, Debian in `tclX.Y` below it) and in `lib/`
+beside the executable's `bin/`.
 
 ```tcl
 puts [::tclutils::tuappinfo::buildReport -title "MyApp 1.0"]

@@ -23,12 +23,11 @@ package require tclutils::tuzipfs
 .SS "Image primitives (0.2)"
 .CS
 ::tclutils::tuzipfs::rcopy src dst
+# rcopy leaves an existing destination file if the write fails (0.4).
 ::tclutils::tuzipfs::copyStdlib destDir ?-tk boolean? ?-from running|DIR?
 ::tclutils::tuzipfs::mkimg outfile indir ?-strip DIR? ?-basekit FILE? ?-password PW?
 ::tclutils::tuzipfs::buildImage -out FILE -vfs DIR ?-basekit FILE? ?-stdlib none|cli|gui? ?-stdlibfrom running|DIR?
 .CE
-.PP
-\fBrcopy\fR leaves an existing destination file if the write fails (0.4, \fBcommon::replaceFile\fR).
 .IP \(bu
 \fBrcopy\fR — recursive byte\-exact copy. Works from a mounted \fBzipfs\fR source, where a plain \fBfile copy\fR is unreliable. Entries whose name starts with a dot (\fB.htaccess\fR, \fB.config/\fR) are copied too, so \fBcopyStdlib\fR and VFS copies are complete.
 .IP \(bu

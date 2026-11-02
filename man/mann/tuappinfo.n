@@ -11,7 +11,7 @@ Collect application / system information into a plain\-text report: Tcl/Tk versi
 .IP \(bu
 \fBtrackTm\fR — record a module file path so it appears under "Loaded TM Modules" (otherwise that section reads "(none tracked)").
 .IP \(bu
-\fBbuildReport\fR — return the full report as a single string. \fB\-anonymize 1\fR masks user/host names (stable hash), \fBTEMP\fR/\fBTMP\fR (\fB<TEMP>\fR), \fBPATH\fR (\fB<anonymized>\fR), tracked module files (\fB<tm\-HASH>.tm\fR) and every path in the report (\fBExecutable\fR, the libraries, \fBHOME\fR, the search variables, \fBauto_path\fR, \fBtcl_pkgPath\fR, package origins, loaded libraries, \fBtm::path\fR) by one rule: a path equal to or below the home directory (\fB$HOME\fR, else \fB$USERPROFILE\fR) becomes \fB<HOME>/rest\fR (\fBHOME\fR itself \fB<HOME>\fR), any other path becomes \fB<path>/<last component>\fR, e.g. \fB/usr/share/tcltk\fR \-> \fB<path>/tcltk\fR. Separators are shown as \fB/\fR; on Windows the home prefix is compared without case.
+\fBbuildReport\fR — return the full report as a single string. \fB\-anonymize 1\fR masks user/host names (stable hash), \fBTEMP\fR/\fBTMP\fR (\fB<TEMP>\fR), \fBPATH\fR (\fB<anonymized>\fR), tracked module files (\fB<tm\-HASH>.tm\fR) and every path in the report (\fBExecutable\fR, the libraries, the build paths, \fBHOME\fR, the search variables, \fBauto_path\fR, \fBtcl_pkgPath\fR, package origins, loaded libraries, \fBtm::path\fR) by one rule: a path equal to or below the home directory (\fB$HOME\fR, else \fB$USERPROFILE\fR) becomes \fB<HOME>/rest\fR (\fBHOME\fR itself \fB<HOME>\fR), any other path becomes \fB<path>/<last component>\fR, e.g. \fB/usr/share/tcltk\fR \-> \fB<path>/tcltk\fR. Separators are shown as \fB/\fR; on Windows the home prefix is compared without case.
 .IP \(bu
 Options: unknown options and an option without a value raise \fB{TCLUTILS TUAPPINFO OPTION}\fR, a non\-boolean \fB\-anonymize\fR raises \fB{TCLUTILS TUAPPINFO VALUE}\fR.
 .IP \(bu
@@ -25,6 +25,7 @@ l l.
 Section	Content
 head	title, \fBTimestamp:\fR, \fBPID:\fR
 \fB\-\-\- Tcl / Tk \-\-\-\fR	Tcl version, \fBTcl library:\fR (0.3); with Tk the patch level, \fBTk library:\fR and \fBWindowing system:\fR (0.3); executable, platform, machine, \fBHost:\fR from \fBinfo hostname\fR (0.3: on every platform; \fBCOMPUTERNAME\fR only as fallback)
+\fB\-\-\- Build \-\-\-\fR	0.3: the build of the loaded Tcl library from \fBtcl::pkgconfig\fR (\fBFlags:\fR threaded, 64bit, debug, optimized; \fBbindir,install\fR, \fBlibdir,runtime\fR, \fBscriptdir,runtime\fR, \fBdllfile,runtime\fR), on Linux the mapped \fBLibrary file:\fR, a \fBNote:\fR when the executable is not in \fBbindir,install\fR, and the installation's \fBtclConfig.sh\fR with \fBTCL_PREFIX\fR (\fB(missing)\fR if gone) and \fBTCL_PATCH_LEVEL\fR when it differs from \fBinfo patchlevel\fR
 \fB\-\-\- Environment \-\-\-\fR	\fBUSER\fR, \fBUSERNAME\fR, \fBHOME\fR, \fBTEMP\fR, \fBTMP\fR, \fBPATH\fR, if set
 \fB\-\-\- Search variables \-\-\-\fR	0.3: \fBTCLLIBPATH\fR, every \fBTCL<x>_<y>_TM_PATH\fR, \fBLD_LIBRARY_PATH\fR, \fBDYLD_LIBRARY_PATH\fR, if set; one entry per line; otherwise \fB(none set)\fR
 \fB\-\-\- auto_path \-\-\-\fR	one entry per line
@@ -36,6 +37,8 @@ head	title, \fBTimestamp:\fR, \fBPID:\fR
 .TE
 .PP
 A folder in the search variables, \fBauto_path\fR, \fBtcl_pkgPath\fR and \fBtm::path\fR that does not exist ends in \fB (missing)\fR (0.3). \fBLoaded Libraries\fR is the proof of which shared library was loaded: two packages of the same name in different folders are told apart there.
+.PP
+\fBtcl::pkgconfig\fR describes the Tcl \fBlibrary\fR, not the executable. A \fBNote:\fR therefore shows a mixed installation: an executable from one installation running with the \fBlibtcl\fR of another (same file name, found first by the loader), or an installation moved after it was built (\fBbindir,install\fR no longer exists). The \fBtclConfig.sh\fR is looked for next to the library (\fBlibdir,install\fR, Debian in \fBtclX.Y\fR below it) and in \fBlib/\fR beside the executable's \fBbin/\fR.
 .CS
 puts [::tclutils::tuappinfo::buildReport -title "MyApp 1.0"]
 ::tclutils::tuappinfo::writeLog /tmp/myapp-info.txt -title "MyApp 1.0" -anonymize 1

@@ -42,13 +42,18 @@ database never shows because it keeps one `ifneeded` per version. Useful for
   `package ifneeded NAME VERSION` lines are seen. `-tmpaths` / `-autopath`
   replace the interpreter's paths.
 - `shadows` — one dict per package with more than one copy (every package
-  with `-all 1`): `{package active activePath duplicate candidates}`. Each
-  candidate carries a `status`: `active` (the copy `package require` takes),
-  `same version` (a second copy of the active version that is not used --
-  the case to look at), or `other version`. `duplicate` is 1 when a version
-  has more than one copy. For a package whose copies are not all registered
-  yet, an unsatisfiable `package require` runs Tcl's unknown handlers first;
-  nothing is loaded.
+  with `-all 1`): `{package active activePath via duplicate candidates}`.
+  `active` is the version a fresh `package require` would take with these
+  search paths and the current `package prefer`; a package already loaded
+  is reported as loaded. `via` is `loaded`, `module` or `pkgIndex`: when a
+  module fits, Tcl does not read any `pkgIndex.tcl`. Each candidate carries
+  a `status`: `active` (the copy that is taken), `same version` (a second
+  copy of the active version that is not used -- the case to look at),
+  `hidden by module` (a higher version in a `pkgIndex.tcl` that is never
+  seen because a module wins), or `other version`. `duplicate` is 1 when a
+  version has more than one copy. The search runs in a child interpreter
+  that is deleted afterwards: the caller's package database is not
+  changed, nothing is loaded.
 
 ```tcl
 puts [::tclutils::tupkgfinder::report tablelist]
@@ -66,7 +71,9 @@ Carries `{TCLUTILS TUPKGFINDER OPTION}` for an unknown option or a bad
 option/value count in `findFileSystem`, `candidates` and `shadows`.
 
 Version note: 0.2 adds `candidates` and `shadows`; the 0.1 commands are
-unchanged.
+unchanged. 0.3: `shadows` works in a child interpreter (0.2 registered
+the `pkgIndex.tcl` versions in the caller, so a later `package require`
+could take another version), adds `via` and the status `hidden by module`.
 
 ## Demo
 
