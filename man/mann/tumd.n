@@ -1,60 +1,172 @@
-.TH tumd n 0.2 tclutils
+.TH tumd n 0.3 tclutils
 .SH tclutils::tumd
 .PP
 Small dependency\-free Markdown helpers for Tcl.
 .PP
-\fBtumd\fR is intentionally not a full Markdown system. It provides a practical CommonMark subset for scripts and CI: Markdown\-to\-HTML fragments, ATX heading extraction, table\-of\-contents generation, and YAML front matter splitting.
+\fBtumd\fR covers the Markdown that READMEs, manuals and help files use, for scripts and CI: Markdown\-to\-HTML fragments with GitHub\-style tables, heading extraction, table\-of\-contents generation, and YAML front matter splitting.
 .SS Package
 .CS
-package require tclutils::tumd 0.2
+package require tclutils::tumd 0.3
 .CE
 .SS API
 .CS
-::tclutils::tumd::toHtml markdown
+::tclutils::tumd::toHtml markdown ?option value ...?
 ::tclutils::tumd::headings markdown
 ::tclutils::tumd::toc markdown
 ::tclutils::tumd::frontmatter markdown
+::tclutils::tumd::parse markdown ?-lines 0|1?
+::tclutils::tumd::inline text ?refs? ?notes?
+::tclutils::tumd::paragraph lines ?refs? ?notes?
+::tclutils::tumd::unescape html
 .CE
-.SS Example
+.TS
+l l.
+command	returns
+\fBtoHtml\fR	HTML fragment, or a whole page with \fB\-page 1\fR (options below)
+\fBheadings\fR	\fB{level text}\fR for each top\-level heading
+\fBtoc\fR	Markdown list of links to the headings
+\fBfrontmatter\fR	\fB{frontMatterText body}\fR
+\fBparse\fR	dict: the blocks of the document, its link definitions and footnotes (below)
+\fBinline\fR	HTML of the inline Markdown of one block, with the document's definitions
+\fBparagraph\fR	HTML of a paragraph given as its lines (hard breaks as \fB<br>\fR)
+\fBunescape\fR	text of such HTML with the entities decoded
+.TE
+.SS "toHtml options"
+.TS
+l l.
+option	meaning
+\fB\-page bool\fR	a complete page: doctype, \fB<head>\fR with title and style, \fB<body>\fR
+\fB\-title text\fR	page title; default the front matter \fBtitle:\fR, else the first heading
+\fB\-css text\fR	style sheet of the page; default a small one, \fB""\fR for none
+\fB\-lang code\fR	\fBlang\fR attribute of the page
+\fB\-linkmap {from to ...}\fR	suffix pairs for relative links, e.g. \fB{.md .html}\fR
+\fB\-headingoffset n\fR	add \fBn\fR to every heading level (at most 6)
+.TE
 .CS
-package require tclutils::tumd
-
-set md {# Title
-
-A **short** paragraph.}
-puts [::tclutils::tumd::toHtml $md]
-puts [::tclutils::tumd::toc $md]
+set html [::tclutils::tumd::toHtml $md -page 1 -lang de -linkmap {.md .html}]
 .CE
-.SS "Supported subset"
+.PP
+Errors: \fB{TCLUTILS TUMD OPTION name}\fR for an unknown option, \fB{TCLUTILS TUMD VALUE}\fR for a bad value.
+.SS "Blocks for viewers and editors"
+.PP
+\fBparse\fR returns a dict:
+.TS
+l l.
+key	content
+\fBblocks\fR	the blocks of the document, the same \fBtoHtml\fR writes (below)
+\fBrefs\fR	link reference definitions, for \fBinline\fR and \fBparagraph\fR
+\fBnotes\fR	footnotes (key \-> number), for \fBinline\fR and \fBparagraph\fR
+.TE
+.PP
+With \fB\-lines 1\fR also:
+.TS
+l l.
+key	content
+\fBlines\fR	\fB{first last}\fR for each top\-level block; lines counted from 1 after the front matter, trailing blank lines not included
+\fBdefinitions\fR	\fB{key first last}\fR for each link reference definition (not a block)
+\fBoffset\fR	number of lines of the front matter, \fB0\fR without one
+.TE
+.PP
+CRLF and a lone CR count as one line end. Nested blocks (list items, quote and footnote contents) lie within the lines of their top\-level block. A footnote definition is a top\-level block (\fBfootnote\fR).
+.TS
+l l.
+block	content
+\fBh level text id\fR	heading; \fBid\fR as in \fBtoHtml\fR
+\fBp lines\fR	paragraph lines
+\fBcode lang text\fR	fenced or indented code
+\fBhr\fR	horizontal rule
+\fBquote blocks\fR	block quote
+\fBlist ordered start loose items marker\fR	list; item \fB{task blocks}\fR, task \fB""\fR, \fBopen\fR or \fBdone\fR; marker \fB\-\fR, \fB*\fR, \fB+\fR or \fB.\fR, \fB)\fR
+\fBtable aligns header rows\fR	table; align \fBleft\fR, \fBcenter\fR, \fBright\fR or \fB""\fR
+\fBfootnote key number blocks\fR	footnote definition
+\fBcomment text\fR	HTML comment (not shown)
+.TE
+.PP
+Text in blocks is still Markdown. \fBinline\fR (or \fBparagraph\fR for \fBp\fR) turns it into HTML; the definitions are passed explicitly, so several documents can be open at the same time:
+.CS
+set d [::tclutils::tumd::parse $md]
+foreach b [dict get $d blocks] {
+    if {[lindex $b 0] eq "p"} {
+        puts [::tclutils::tumd::paragraph [lindex $b 1] \
+            [dict get $d refs] [dict get $d notes]]
+    }
+}
+.CE
+.PP
+Without \fBrefs\fR and \fBnotes\fR, reference links and footnote references stay text. \fBtkutils::tkumdview\fR draws a document this way.
+.SS "HTML comments"
+.PP
+Raw HTML is escaped, with one exception: HTML comments are hidden, both as a block (a line starting with \fB<!\-\-\fR, up to the line with \fB\-\->\fR) and inside text (\fBVom <!\-\-f:datum\-\->12.11.2026<!\-\-/f\-\->\fR shows \fBVom 12.11.2026\fR). In code they stay text.
+.SS "What is supported"
 .PP
 Blocks:
 .IP \(bu
-ATX headings (\fB#\fR to \fB######\fR)
+ATX headings (\fB#\fR to \fB######\fR) and setext headings (a line underlined with \fB===\fR or \fB\-\-\-\fR)
 .IP \(bu
 paragraphs
 .IP \(bu
-fenced code blocks using backticks or tildes
+fenced code blocks using backticks or tildes; indented code (four spaces)
 .IP \(bu
-blockquotes
+blockquotes, also with lazy continuation lines
 .IP \(bu
-flat ordered and unordered lists
+ordered and unordered lists: nested, items continued on indented lines, tight or loose (blank lines between items give \fB<p>\fR inside \fB<li>\fR), start number of an ordered list, task items \fB\- [ ]\fR and \fB\- [x]\fR
+.IP \(bu
+GitHub\-style tables (see below)
 .IP \(bu
 horizontal rules
+.IP \(bu
+link reference definitions (\fB[label]: url "title"\fR), not printed
+.IP \(bu
+footnotes: \fB[^label]: text\fR, continued by lines indented four spaces
 .PP
 Inline constructs:
 .IP \(bu
-code spans
+code spans, also with a backtick inside (\fB``a`b``\fR)
 .IP \(bu
-bold and italic
+backslash escapes (\fB\e*\fR, \fB\e_\fR, \fB\e|\fR, ...)
 .IP \(bu
-links and images
+bold, italic, \fB~~strikethrough~~\fR; emphasis may span a line break
 .IP \(bu
-autolinks
+links and images, inline with optional title (\fB[t](url "title")\fR) and by reference (\fB[t][label]\fR, \fB[t][]\fR, \fB[label]\fR); a URL may contain parentheses (\fBhttps://de.wikipedia.org/wiki/Foo_(Bar)\fR)
 .IP \(bu
-hard line breaks with two trailing spaces
+autolinks for URLs and e\-mail addresses (\fB<https://...>\fR, \fB<a@b.de>\fR)
+.IP \(bu
+bare URLs (\fBhttps://...\fR, \fBwww....\fR) as links; trailing punctuation and an unbalanced \fB)\fR stay outside
+.IP \(bu
+entities: named (\fB&copy;\fR, \fB&auml;\fR, \fB&euro;\fR, ...) and numeric (\fB&#228;\fR, \fB&#x20AC;\fR); an unknown name and a single \fB&\fR are escaped
+.IP \(bu
+footnote references \fB[^label]\fR
+.IP \(bu
+hard line breaks with two trailing spaces or a trailing backslash
+.PP
+\fBheadings\fR and \fBtoc\fR list the top\-level headings, ATX and setext. CRLF line ends are read like LF.
+.SS Footnotes
+.CS
+Text with a note[^q].
+
+[^q]: The note.
+    A second line.
+.CE
+.PP
+Footnotes are numbered in the order of their definitions. A reference becomes \fB<sup id="fnref\-1"><a href="#fn\-1">1</a></sup>\fR; the notes follow at the end as \fB<section class="footnotes">\fR with an \fB<ol>\fR, each \fB<li id="fn\-1">\fR with a link back. A reference without a definition stays text.
+.SS Tables
+.PP
+A table is a header row and a separator row, then body rows until a blank line or another block:
+.CS
+| Status | Betrag |
+|:-------|-------:|
+| bezahlt | 1,00 |
+.CE
+.PP
+The separator sets the alignment (\fB:\-\-\fR left, \fB:\-:\fR center, \fB\-\-:\fR right), written as \fBstyle="text\-align:..."\fR on \fB<th>\fR and \fB<td>\fR. Inline markup works in cells, \fB\e|\fR is a literal pipe, short rows are filled with empty cells. Lines with pipes but no separator row stay a paragraph.
 .SS "Heading anchors"
 .PP
 \fBtoHtml\fR gives each heading an \fBid\fR, \fBtoc\fR links to it. The anchor is made as on GitHub: lower case, \fB*\fR and backticks removed, everything but letters, digits, \fB_\fR, \fB\-\fR and blanks removed, blanks become \fB\-\fR. Letters of every script stay (\fBJörg\fR \-> \fBjörg\fR, \fBÜber\fR \-> \fBüber\fR). A repeated anchor gets \fB\-1\fR, \fB\-2\fR, ... (0.2; 0.1 kept only \fBa\-z\fR and \fB0\-9\fR, so \fBJörg\fR and \fBJrg\fR both became \fBjrg\fR).
 .SS Limits
 .PP
-\fBtumd\fR does not implement nested lists, Setext headings, GFM tables, reference\-style links, raw HTML passthrough, or a full Markdown AST. For larger Markdown workflows, use the mdstack/docir toolchain.
+Raw HTML in the input is escaped, not passed through (comments are hidden), so the output is safe to embed. Not supported: definition lists, heading attributes (\fB{#id}\fR), and the finer CommonMark rules for emphasis and list indentation.
+.SH FOOTNOTES
+.TP
+[1]
+The note.
+A second line.

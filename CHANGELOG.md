@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- `tumd` 0.3: `toHtml` writes GitHub-style tables; lists nest, continue
+  on indented lines, may be loose or task items, keep their start number;
+  setext headings; indented code; reference links; link titles; URLs with
+  parentheses; bare URLs; entities; footnotes; backslash escapes;
+  `~~strikethrough~~`; emphasis across line breaks; e-mail autolinks; CRLF
+  input. `toHtml` options `-page`, `-title`, `-css`, `-lang`, `-linkmap`,
+  `-headingoffset`. New `parse` (dict with blocks, link definitions and
+  footnotes; `-lines 1` adds line numbers), `inline` and `paragraph`
+  (definitions passed explicitly), `unescape`. HTML comments are hidden.
+  Heading
+  ids unique across the whole document. When copying over an older tree,
+  delete `tumd-0.2.tm`.
 - `tupkgfinder` 0.3: `shadows` works out the active copy in a child
   interpreter. 0.2 registered every `pkgIndex.tcl` version in the caller,
   so a later `package require` could take a higher `pkgIndex.tcl` version

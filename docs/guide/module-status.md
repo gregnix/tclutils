@@ -125,7 +125,7 @@ two categories (`tuical`, `tucal`) appears in both here as well.
 
 | Module | Scope status | Notes |
 |---|---|---|
-| `tumd` | Markdown helper | CommonMark subset to HTML, headings, TOC, frontmatter; not a full Markdown engine. |
+| `tumd` | Markdown helper | CommonMark subset with GFM tables to HTML, headings, TOC, frontmatter; raw HTML is escaped. |
 | `tupdf` | inspector | Read-only PDF structure scan plus ZUGFeRD/Factur-X heuristics; not a full PDF parser or PDF/A-3/EN 16931 conformance check. |
 | `tupdftext` | basis complete | Text per page for full-text search: ToUnicode/encodings, filters, object streams, forms; no decryption, no OCR, no column layout. Measured against pdftotext (99.5–100 % of the words on 11 of 13 files). |
 | `tuodf` | minimal document helper | Create/read simple ODT text documents; read paragraphs of .odt/.odp and tables of .ods (0.2); not a full ODF library. |

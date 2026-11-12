@@ -3,7 +3,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tumd 0.2
+package require tclutils::tumd 0.3
 
 test tumd-1.1 {heading with slug id} -body {
     ::tclutils::tumd::toHtml "# Hello World"
@@ -104,5 +104,186 @@ test tumd-4.3 {toHtml ids match toc} -body {
 test tumd-4.4 {underscore stays, punctuation goes, * and ` go} -body {
     ::tclutils::tumd::toc "# foo_bar: *Baz* `x`\n"
 } -result "- \[foo_bar: *Baz* `x`\](#foo_bar-baz-x)"
+
+# --- 0.3: tables, lists, setext, references, escapes ---------------------------
+
+proc h {md args} { ::tclutils::tumd::toHtml $md {*}$args }
+
+test tumd-5.1 {GFM table with alignment, inline markup, escaped pipe, short row} -body {
+    h "| A | B |\n|:--|--:|\n| **x** | a\\|b |\n| 1 |"
+} -result "<table>\n<thead>\n<tr>\n<th style=\"text-align:left\">A</th>\n<th style=\"text-align:right\">B</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td style=\"text-align:left\"><strong>x</strong></td>\n<td style=\"text-align:right\">a|b</td>\n</tr>\n<tr>\n<td style=\"text-align:left\">1</td>\n<td style=\"text-align:right\"></td>\n</tr>\n</tbody>\n</table>"
+
+test tumd-5.2 {pipes without separator row stay a paragraph} -body {
+    h "a | b\nc | d"
+} -result "<p>a | b\nc | d</p>"
+
+test tumd-5.3 {table ends a paragraph and ends at a blank line} -body {
+    h "Text\n| a |\n| - |\n| 1 |\n\nweiter"
+} -result "<p>Text</p>\n<table>\n<thead>\n<tr>\n<th>a</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n</tr>\n</tbody>\n</table>\n<p>weiter</p>"
+
+test tumd-5.4 {list item continues on indented lines, emphasis across the break} -body {
+    h "1. erste Zeile\n   weiter *kursiv\n   hier*\n2. zwei"
+} -result "<ol>\n<li>erste Zeile\nweiter <em>kursiv\nhier</em></li>\n<li>zwei</li>\n</ol>"
+
+test tumd-5.5 {nested list} -body {
+    h "- a\n  - b\n  - c\n- d"
+} -result "<ul>\n<li>a\n<ul>\n<li>b</li>\n<li>c</li>\n</ul></li>\n<li>d</li>\n</ul>"
+
+test tumd-5.6 {blank line between items: loose list with paragraphs} -body {
+    h "- a\n\n- b"
+} -result "<ul>\n<li>\n<p>a</p>\n</li>\n<li>\n<p>b</p>\n</li>\n</ul>"
+
+test tumd-5.7 {ordered list keeps its start number} -body {
+    h "3. drei\n4. vier"
+} -result "<ol start=\"3\">\n<li>drei</li>\n<li>vier</li>\n</ol>"
+
+test tumd-5.8 {a number other than 1 does not interrupt a paragraph} -body {
+    h "Im Jahr\n2026. war es so"
+} -result "<p>Im Jahr\n2026. war es so</p>"
+
+test tumd-5.9 {task list items} -body {
+    h "- \[ \] offen\n- \[x\] fertig"
+} -result "<ul>\n<li><input type=\"checkbox\" disabled> offen</li>\n<li><input type=\"checkbox\" checked disabled> fertig</li>\n</ul>"
+
+test tumd-5.10 {setext headings in toHtml, headings and toc} -body {
+    set md "Titel\n=====\n\nUnter\n---"
+    list [h $md] [::tclutils::tumd::headings $md] [::tclutils::tumd::toc $md]
+} -result [list "<h1 id=\"titel\">Titel</h1>\n<h2 id=\"unter\">Unter</h2>" \
+    {{1 Titel} {2 Unter}} "- \[Titel\](#titel)\n  - \[Unter\](#unter)"]
+
+test tumd-5.11 {reference links, images and shortcut; the definition is dropped} -body {
+    h "\[Doku\]\[d\], \[d\], !\[Bild\]\[D\], \[nicht\]\n\n\[d\]: http://x/a?b=1&c=2 \"Ein Titel\""
+} -result {<p><a href="http://x/a?b=1&amp;c=2" title="Ein Titel">Doku</a>, <a href="http://x/a?b=1&amp;c=2" title="Ein Titel">d</a>, <img src="http://x/a?b=1&amp;c=2" alt="Bild" title="Ein Titel">, [nicht]</p>}
+
+test tumd-5.12 {inline link title, backslash escapes, strikethrough, lone stars} -body {
+    h "\[x\](http://y \"T\") und \\*kein\\* und ~~weg~~ und 2 * 3 * 4"
+} -result {<p><a href="http://y" title="T">x</a> und *kein* und <del>weg</del> und 2 * 3 * 4</p>}
+
+test tumd-5.13 {indented code block} -body {
+    h "    code <a>\n    zwei\n\ntext"
+} -result "<pre><code>code &lt;a&gt;\nzwei</code></pre>\n<p>text</p>"
+
+test tumd-5.14 {hard break with a backslash; none at the end of a paragraph} -body {
+    h "eins\\\nzwei  \ndrei  "
+} -result "<p>eins<br>\nzwei<br>\ndrei</p>"
+
+test tumd-5.15 {raw HTML is escaped; e-mail autolink; & in an autolink} -body {
+    h "<b>x</b> <a@b.de> <https://a.b/?d=1&e=2>"
+} -result {<p>&lt;b&gt;x&lt;/b&gt; <a href="mailto:a@b.de">a@b.de</a> <a href="https://a.b/?d=1&amp;e=2">https://a.b/?d=1&amp;e=2</a></p>}
+
+test tumd-5.16 {blockquote with lazy line; heading ids unique across the document} -body {
+    h "> zitat\nfaul\n\n# A\n> # A"
+} -result "<blockquote>\n<p>zitat\nfaul</p>\n</blockquote>\n<h1 id=\"a\">A</h1>\n<blockquote>\n<h1 id=\"a-1\">A</h1>\n</blockquote>"
+
+test tumd-5.17 {code span with backticks inside; markup in a link URL stays} -body {
+    h "``a`b`` \[x\](http://h/a_b_c*d*)"
+} -result {<p><code>a`b</code> <a href="http://h/a_b_c*d*">x</a></p>}
+
+test tumd-5.18 {CRLF input; a fence without closing runs to the end} -body {
+    h "# T\r\n\r\n```\r\nx\r\n"
+} -result "<h1 id=\"t\">T</h1>\n<pre><code>x\n</code></pre>"
+
+test tumd-5.19 {fenced code inside a list item} -body {
+    h "- a\n\n  ```\n  code\n  ```\n- b"
+} -result "<ul>\n<li>\n<p>a</p>\n<pre><code>code</code></pre>\n</li>\n<li>\n<p>b</p>\n</li>\n</ul>"
+
+# --- 0.3: URLs, entities, footnotes, options, parse --------------------------
+
+test tumd-6.1 {URL with parentheses; bare URL inside parentheses} -body {
+    h "\[Foo\](https://de.wikipedia.org/wiki/Foo_(Bar)) (https://x.de/a_b_c)."
+} -result {<p><a href="https://de.wikipedia.org/wiki/Foo_(Bar)">Foo</a> (<a href="https://x.de/a_b_c">https://x.de/a_b_c</a>).</p>}
+
+test tumd-6.2 {bare URLs: & kept, trailing punctuation out, www, not inside a link} -body {
+    h "Bare https://e.com/a?b=1&c=2, www.tcl-lang.org. \[https://x.de\](https://x.de)"
+} -result {<p>Bare <a href="https://e.com/a?b=1&amp;c=2">https://e.com/a?b=1&amp;c=2</a>, <a href="http://www.tcl-lang.org">www.tcl-lang.org</a>. <a href="https://x.de">https://x.de</a></p>}
+
+test tumd-6.3 {entities: named and numeric kept, unknown and bare & escaped} -body {
+    h "&copy; &auml; &#228; &#x20AC; &foo; AT&T `&amp;`"
+} -result {<p>&copy; &auml; &#228; &#x20AC; &amp;foo; AT&amp;T <code>&amp;amp;</code></p>}
+
+test tumd-6.4 {footnotes: numbered by definition, repeated reference, continuation} -body {
+    h "A\[^1\] B\[^n\] C\[^1\] D\[^x\]\n\n\[^1\]: Erste *Note*.\n\[^n\]: Zweite\n    weiter."
+} -result "<p>A<sup id=\"fnref-1\"><a href=\"#fn-1\">1</a></sup> B<sup id=\"fnref-2\"><a href=\"#fn-2\">2</a></sup> C<sup id=\"fnref-1-2\"><a href=\"#fn-1\">1</a></sup> D\[^x\]</p>\n<section class=\"footnotes\">\n<ol>\n<li id=\"fn-1\">Erste <em>Note</em>. <a href=\"#fnref-1\" class=\"footnote-backref\">\u21a9</a></li>\n<li id=\"fn-2\">Zweite\nweiter. <a href=\"#fnref-2\" class=\"footnote-backref\">\u21a9</a></li>\n</ol>\n</section>"
+
+test tumd-6.5 {-linkmap changes relative links only} -body {
+    h "\[a\](teil.md#x) \[b\](http://h/c.md) \[c\](#y) !\[i\](p.md)" -linkmap {.md .html}
+} -result {<p><a href="teil.html#x">a</a> <a href="http://h/c.md">b</a> <a href="#y">c</a> <img src="p.md" alt="i"></p>}
+
+test tumd-6.6 {-headingoffset, at most h6} -body {
+    h "# T\n###### U" -headingoffset 1
+} -result "<h2 id=\"t\">T</h2>\n<h6 id=\"u\">U</h6>"
+
+test tumd-6.7 {-page: title from front matter, lang, no style with -css ""} -body {
+    h "---\ntitle: Mein Titel\n---\n# Hallo & so" -page 1 -lang de -css ""
+} -result "<!DOCTYPE html>\n<html lang=\"de\">\n<head>\n<meta charset=\"utf-8\">\n<title>Mein Titel</title>\n</head>\n<body>\n<h1 id=\"hallo--so\">Hallo &amp; so</h1>\n</body>\n</html>"
+
+test tumd-6.8 {-page: title from the first heading, markup removed} -body {
+    lindex [regexp -inline {<title>.*</title>} [h "text\n\n# Das *ist* &auml;" -page 1]] 0
+} -result "<title>Das ist \u00e4</title>"
+
+test tumd-6.9 {unknown option and bad value} -body {
+    list [catch {h x -bad 1} m o] [dict get $o -errorcode] \
+         [catch {h x -page vielleicht} m o] [dict get $o -errorcode]
+} -result {1 {TCLUTILS TUMD OPTION -bad} 1 {TCLUTILS TUMD VALUE}}
+
+test tumd-6.10 {parse: dict with blocks, refs, notes; ids and numbers} -body {
+    set d [::tclutils::tumd::parse "# A\n> # A\n\n- x\n\n\[^q\]: n\n\n\[r\]: http://r"]
+    list [dict keys $d] [dict get $d blocks] [dict get $d refs] [dict get $d notes]
+} -result {{blocks refs notes} {{h 1 A a} {quote {{h 1 A a-1}}} {list 0 1 0 {{{} {{p x}}}} -} {footnote q 1 {{p n}}}} {r {http://r {}}} {q 1}}
+
+test tumd-6.11 {inline and paragraph take the definitions; unescape} -body {
+    set d [::tclutils::tumd::parse "\[d\]: http://x"]
+    list [::tclutils::tumd::inline "\[d\] & *e*" [dict get $d refs] [dict get $d notes]] \
+         [::tclutils::tumd::inline "\[d\]"] \
+         [::tclutils::tumd::paragraph [list "a  " "\[d\]"] [dict get $d refs] {}] \
+         [::tclutils::tumd::unescape "a &amp; &lt;b&gt; &auml; &#8364; &zz;"]
+} -result [list {<a href="http://x">d</a> &amp; <em>e</em>} {[d]} "a<br>\n<a href=\"http://x\">d</a>" "a & <b> \u00e4 \u20ac &zz;"]
+
+test tumd-6.12 {toc links the ids toHtml writes, also after a heading in a quote} -body {
+    set md "# A\n> # A\n# A"
+    list [::tclutils::tumd::toc $md] [regexp -all -inline {id="[^"]*"} [h $md]]
+} -result [list "- \[A\](#a)\n- \[A\](#a-2)" [list {id="a"} {id="a-1"} {id="a-2"}]]
+
+# --- 0.3: parse -lines, definitions per document, comments ------------------
+
+test tumd-7.1 {parse -lines: lines per top-level block, nested blocks inside} -body {
+    set d [::tclutils::tumd::parse "# T\n\nAbsatz\nzwei\n\n- a\n  - b\n- c\n\n```\nx\n```\n\nU\n---\n" -lines 1]
+    list [lmap b [dict get $d blocks] {lindex $b 0}] [dict get $d lines] [dict get $d offset]
+} -result {{h p list code h} {{1 1} {3 4} {6 8} {10 12} {14 15}} 0}
+
+test tumd-7.2 {parse -lines: link definitions, footnote as block, front matter offset} -body {
+    set d [::tclutils::tumd::parse "---\nt: x\n---\nText \[a\]\[^1\]\n\n\[a\]: http://a\n\[^1\]: Note\n    weiter\n\nEnde" -lines 1]
+    list [lmap b [dict get $d blocks] {lindex $b 0}] [dict get $d lines] \
+        [dict get $d definitions] [dict get $d offset]
+} -result {{p footnote p} {{1 1} {4 5} {7 7}} {{a 3 3}} 3}
+
+test tumd-7.3 {parse -lines: CRLF and lone CR count as line ends} -body {
+    dict get [::tclutils::tumd::parse "a\r\n\r\nb\rc\r\n" -lines 1] lines
+} -result {{1 1} {3 4}}
+
+test tumd-7.4 {list marker and delimiter} -body {
+    set d [::tclutils::tumd::parse "* a\n\n+ b\n\n3) c\n\n1. d"]
+    lmap b [dict get $d blocks] {lindex $b 5}
+} -result {* + ) .}
+
+test tumd-7.5 {two documents keep their definitions apart} -body {
+    set a [::tclutils::tumd::parse "\[x\]: http://a"]
+    set b [::tclutils::tumd::parse "\[x\]: http://b"]
+    list [::tclutils::tumd::inline "\[x\]" [dict get $a refs] {}] \
+         [::tclutils::tumd::inline "\[x\]" [dict get $b refs] {}]
+} -result {{<a href="http://a">x</a>} {<a href="http://b">x</a>}}
+
+test tumd-7.6 {HTML comments hidden: block, multi-line block, inline; field marks} -body {
+    h "<!-- mdsimple:gesch\u00fctzt -->\n## T\n<!--\nzwei\n-->\nVom <!--f:datum-->12.11.2026<!--/f--> an `<!-- code -->`"
+} -result "<h2 id=\"t\">T</h2>\n<p>Vom 12.11.2026 an <code>&lt;!-- code --&gt;</code></p>"
+
+test tumd-7.7 {comment block interrupts a paragraph; -lines counts it} -body {
+    set d [::tclutils::tumd::parse "Text\n<!-- m -->\nmehr" -lines 1]
+    list [lmap b [dict get $d blocks] {lindex $b 0}] [dict get $d lines]
+} -result {{p comment p} {{1 1} {2 2} {3 3}}}
+
+test tumd-7.8 {parse: unknown option} -body {
+    list [catch {::tclutils::tumd::parse x -zeilen 1} m o] [dict get $o -errorcode]
+} -result {1 {TCLUTILS TUMD OPTION -zeilen}}
 
 cleanupTests

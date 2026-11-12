@@ -45,7 +45,7 @@ package require tclutils::tudocx 0.1
 package require tclutils::tuxlsx 0.1
 package require tclutils::tupdf 0.2
 package require tclutils::tupdftext 0.2
-package require tclutils::tumd 0.2
+package require tclutils::tumd 0.3
 package require tclutils::tufile 0.2
 package require tclutils::tuawk 0.2
 package require tclutils::tucal 0.2
