@@ -1,5 +1,11 @@
 # Step by step: postgresql-editor (shared code + a native driver)
 
+> Current build-app (Tcl/Tk 9 only): `-launch` is not needed -- the program
+> starts the app through its own argv0 guard; the SQL editors bring their
+> shared code from `_lib/sqledit` themselves (no `-include`); the prober
+> looks in the Tcl running build-app when `-extlib` is missing. See
+> `build-app-README.md` (tclutils/apps/build-app/doc).
+
 This example builds `postgresql-editor` — the hardest case in the series. It adds
 two things over `sqlite-editor`: the launcher reuses **shared code from a sibling
 app directory** (handled with `-include`), and it depends on a **native database
@@ -50,10 +56,8 @@ Two things are new versus `sqlite-editor`:
 xvfb-run -a ./build-app-zipkit-linux -kind gui -out postgresql-editor \
     -basekit "$(pwd)/basekit-tk" \
     -app ../../../tkutils/apps/postgresql-editor -main postgresql-editor.tcl \
-    -launch '::sqledit::requireDeps; ::sqledit::buildApp .' \
     -tm ../../lib/tm -tm ../../../tkutils/lib/tm \
-    -extlib /opt/tcl9/lib \
-    -include ../../../tkutils/apps/sqlite-editor=sqlite-editor
+    -extlib /opt/tcl9/lib
 ```
 
 ```

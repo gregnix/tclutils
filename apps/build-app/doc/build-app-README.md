@@ -16,71 +16,132 @@ paths plus a launch script. A zipkit packs everything into one file: no
 unpacking, no temp directory, no dependency trouble, and the user need not know
 the program is written in Tcl.
 
-## Two forms
+## Tcl/Tk 9 only
 
-The tool comes in two forms with the same options:
-
-- **Bundled zipkit** `apps/bin/build-app-zipkit-linux` — carries `tuzipfs`
-  embedded. On the build host it needs **nothing** but itself and the basekits.
-  This is the normal case.
-- **Raw script** `apps/build-app/build-app.tcl` — run it from a basekit; it
-  finds `tuzipfs` repo-relative (or via `-tm`).
+`build-app` needs Tcl 9 to run and builds Tcl 9 programs (zipfs is Tcl 9).
+Started with Tcl 8.6 it stops with a message.
 
 ## Prerequisites
 
-Static Tcl/Tk 9 **basekits** (from BAWT or magicsplat), per target:
+- **Tcl/Tk 9** on the build machine (`wish9.0`), with the packages the apps
+  use: tklib (tablelist, scrollutil), sqlite3, tdbc, tdbc::postgres ...
+- A **static basekit** per target (BAWT or magicsplat): a `wish` basekit for
+  GUI apps, a `tclsh` basekit for command-line apps. The basekit decides the
+  platform of the program (a Windows basekit gives an `.exe`).
+- A **display** for GUI apps: the prober and the start check open the app
+  once. On a server: `xvfb-run -a`.
 
-- a `tclsh` basekit for CLI apps,
-- a `wish` basekit for GUI apps.
+Nothing is needed on the **target** machine, except native client
+libraries a driver loads (`libpq` for PostgreSQL, the Oracle Instant Client).
 
-Nothing is required on the **target** machine.
+`apps/bin/` is empty in the repository: run `build-app.tcl` with `wish9.0`, or
+build the builder itself first (`build-app-example-builder.md`).
 
-## Usage
+## All tkutils apps at once
 
 ```bash
-# CLI app (Tk-free) onto the tcl basekit
-./build-app-zipkit-linux -kind cli \
-    -out find-tclconfig -basekit basekit-tcl \
-    -app ../find-tclconfig -main find-tclconfig.tcl
-
-# GUI app onto the wish basekit
-./build-app-zipkit-linux -kind gui \
-    -out notes -basekit basekit-tk \
-    -app ../../../tkutils/apps/notes-app -main notes_app.tcl \
-    -launch '::notesapp::buildApp .' \
-    -tm ../../lib/tm -tm ../../../tkutils/lib/tm \
-    -extlib /opt/tcl9/lib
+wish9.0 tclutils/apps/build-app/build-tkutils-apps.tcl -basekit /path/basekit-tk
 ```
 
-Always quote `-launch` — curly braces do not quote in the shell.
+builds every app of `tkutils/apps` into `./programs` and ends with a table
+(app, size, starts or FAILED). `-tkutils DIR` when tkutils is not next to
+tclutils, `-outdir DIR`, `-only {notes-app csv-editor}`; any other option
+goes to `build-app` (e.g. `-extlib`). With a Windows basekit the programs get
+`.exe` and are not started (they do not run on Linux).
+
+## One app
+
+```bash
+wish9.0 tclutils/apps/build-app/build-app.tcl \
+    -out notes -basekit /path/basekit-tk \
+    -app tkutils/apps/notes-app -main notes_app.tcl \
+    -tm tclutils/lib/tm -tm tkutils/lib/tm
+```
+
+That is all a tkutils app needs:
+
+- **No `-launch`.** The generated `main.tcl` sets `argv0` to the app script
+  and sources it, so the app's own guard
+  `if {[file normalize $argv0] eq [file normalize [info script]]}` starts it,
+  exactly as with `wish app.tcl`. Command-line arguments arrive in `$argv`.
+- **Shared code** in `tkutils/apps/_lib` (e.g. `sqledit` for the SQL
+  editors) is bundled when the app's scripts name it; no `-include`.
+- **External packages** are found by the prober: it starts the app once and
+  bundles what it loaded -- package folders (tablelist via tklib, sqlite3,
+  tdbc ...) to `lib/pkgs`, Tcl modules outside the `-tm` trees (e.g.
+  `tdbc::sqlite3`) to `lib/tm`. Without `-extlib` it looks where the Tcl
+  running `build-app` finds its packages.
+- **Start check**: a GUI program is started once with `SMOKE=strict`; it
+  then sees only what is inside it (not the Tcl installed on the build
+  machine), reports `SMOKE OK` after the window is up and ends. A start
+  error is printed and `build-app` exits with 1. `-smoke 0` skips it.
+
+| App | `-main` | bundled besides tclutils/tkutils | target also needs |
+|---|---|---|---|
+| adressbuch | `adressbuch.tcl` | tklib, sqlite3 | -- |
+| csv-editor | `csv_editor.tcl` | tklib | -- |
+| knowledge | `knowledge-base.tcl` | tklib, sqlite3, tdbc, tdbc::sqlite3 | -- |
+| notes-app | `notes_app.tcl` | tklib | -- |
+| sqlite-editor | `sqlite-editor.tcl` | tklib, sqlite3 | -- |
+| tdbc-sqlite-editor | `tdbc-sqlite-editor.tcl` | tklib, sqlite3, tdbc, tdbc::sqlite3 | -- |
+| postgresql-editor | `postgresql-editor.tcl` | tklib, tdbc, tdbc::postgres | `libpq` |
+| oracle-editor | `oracle-editor.tcl` | Oratcl (must be installed to build) | Oracle Instant Client |
+| search-replace-tool | `search_replace_tool.tcl` | tklib | -- |
+| tkdevtools | `tkdevtools.tcl` | tklib, Thread | -- |
+| tkudesigner | `tkudesigner.tcl` | tklib | -- |
+| launcher | `launcher.tcl` | tklib | -- |
+
+All but oracle-editor (no Oratcl there) were built and started this way with
+Tcl 9.0.4; each program is 3 to 5 MB. The launcher as a program has no
+"Apps" submenu: the other apps are not next to it.
+
+## When the program does not start
+
+- **Start it from a terminal** (Windows: `cmd`, then the `.exe`): wish
+  shows the error in a window, a terminal also gets the trace. Or build
+  again: the start check prints it.
+- *"can't find package X"*: X was not bundled. Is X installed for the Tcl
+  that runs `build-app`? Else give its folder with `-extlib`. A package the
+  app loads only later (when you open a file, connect ...) is not seen by
+  the prober: record it in a manifest (below) or `-include DIR=lib/pkgs/DIR`.
+- *Nothing happens, no window*: the app was built with an old `-launch`
+  that names a proc the app does not have. Leave `-launch` out.
+- *"can't find package tclutils::..."*: a `-tm` tree is missing.
+- A Windows program built on Linux cannot be started there; copy it to
+  Windows and start it from `cmd` once.
 
 ## Options
 
 | Option | Meaning |
 |---|---|
-| `-out FILE` | output executable (required) |
-| `-basekit FILE` | static Tcl/Tk 9 basekit template (required) |
-| `-kind cli\|gui` | console app (tclsh) or GUI app (wish) (required) |
-| `-app DIR` | the app's source directory (required) |
+| `-out FILE` | output program (required) |
+| `-basekit FILE` | static Tcl/Tk 9 basekit (required) |
+| `-app DIR` | the app's folder (required) |
 | `-main FILE` | entry script, relative to `-app` (required) |
-| `-launch CODE` | Tcl to start the app (e.g. `{::notesapp::buildApp .}`); omit for scripts that run at source time (CLI) |
-| `-tm DIR` | module tm tree to bundle (repeatable) |
-| `-include SRC[=DEST]` | copy extra content into the VFS at DEST (default: basename); for shared code an app sources from a sibling dir, or data files/icons (repeatable) |
-| `-extlib DIR` | search root for external pkgIndex packages (for the prober; repeatable) |
-| `-probe 0\|1` | determine the real dependency closure (default: 1 for `gui`) |
-| `-writemanifest FILE` | run the prober and also write the found dependency list to FILE |
-| `-manifest FILE` | bundle exactly the packages listed in FILE — no probing, no display (reproducible builds) |
-| `-stdlibfrom basekit\|running\|DIR` | source of the standard library (default: the target `-basekit`) |
-| `-bootstrap none\|tkutils` | whether to emit a `_lib/paths.tcl` shim |
-| `-keep 0\|1` | keep the temporary VFS tree for inspection |
+| `-kind gui\|cli` | GUI app (default) or command-line app (`tclsh` basekit) |
+| `-tm DIR` | module tree to bundle (repeatable) |
+| `-extlib DIR` | where the prober looks for packages (repeatable; default: the package folders of the Tcl running `build-app`) |
+| `-probe 0\|1` | find the packages the app loads (default 1 for `gui`) |
+| `-writemanifest FILE` | probe and also write the found list to FILE |
+| `-manifest FILE` | bundle exactly the list in FILE, no probing, no display |
+| `-smoke 0\|1` | start the GUI program once after building (default 1) |
+| `-include SRC[=DEST]` | copy more into the program (data, icons, a package) |
+| `-launch CODE` | Tcl to run after sourcing the entry (only for an app without argv0 guard); then `argv0` is not set |
+| `-bootstrap none\|tkutils` | write the `_lib/paths.tcl` shim (default: `tkutils` for GUI apps) |
+| `-stdlibfrom basekit\|running\|DIR` | where the standard library comes from (default: the basekit) |
+| `-keep 0\|1` | keep the temporary tree for a look inside |
 
-## CLI vs GUI
+## CLI apps
 
-For **GUI** apps `build-app` generates a `main.tcl` that loads `Tk`, builds the
-app (`-launch`), and keeps the event loop open (`vwait forever` +
-`WM_DELETE_WINDOW → exit`) — a zipkit does not reproduce wish's implicit main
-loop. For **CLI** apps that run at source time, the entry script becomes the
-`main.tcl` directly.
+A command-line app that does its work at source time (find-tclconfig,
+build-app itself) needs `-kind cli` and a `tclsh` basekit; its script
+becomes `main.tcl`:
+
+```bash
+tclsh9.0 tclutils/apps/build-app/build-app.tcl -kind cli \
+    -out find-tclconfig -basekit /path/basekit-tcl \
+    -app tclutils/apps/find-tclconfig -main find-tclconfig.tcl
+```
 
 ## Cross-platform
 
@@ -123,115 +184,9 @@ dependency either way.)
 
 ## Worked examples
 
-In increasing difficulty (see this folder / `docs/guide/`):
-
-1. **builder** — build `build-app` itself (bootstrap).
-2. **find-tclconfig** — a dependency-free CLI app.
-3. **notes-app** — a pure-Tk GUI app.
-4. **sqlite-editor** — a GUI app with a self-contained C-extension.
-5. **postgresql-editor** — shared code (`-include`) and a native driver whose
-   client library must be on the target.
-6. **windows-host** — running the whole chain on Windows.
-
-## Build reference for the bundled apps
-
-Run from `apps/bin/` with `tclutils/` and `tkutils/` as siblings. `-basekit` is
-given as an **absolute** path (the prober `exec`s it, and `exec` does not search
-the current directory). GUI apps here share the same common options:
-
-```
--basekit "$(pwd)/basekit-tk" -tm ../../lib/tm -tm ../../../tkutils/lib/tm -extlib /opt/tcl9/lib
-```
-
-The table lists only what differs per app; the CLI app uses `basekit-tcl` and no
-module trees.
-
-| App | kind | entry option | external packages bundled | `-include` | target also needs | size |
-|---|---|---|---|---|---|---|
-| find-tclconfig | cli | — (runs at source) | — | — | — | 3.2 MB |
-| notes-app | gui | `-launch '::notesapp::buildApp .'` | — | — | — | 5.6 MB |
-| search-replace-tool | gui | `-launch '::srtool::buildGui'` | — | — | — | 5.6 MB |
-| tkdevtools | gui | `-launch '::tkdevtools::buildApp .'` | tablelist | — | — | 6.4 MB |
-| tkudesigner | gui | `-launch '::tkudesigner::buildApp .'` | tablelist, scrollutil | — | — | 6.8 MB |
-| sqlite-editor | gui | `-launch '::sqledit::requireDeps; ::sqledit::buildApp .'` | sqlite3, tablelist | — | — | 8.3 MB |
-| postgresql-editor | gui | `-launch '::sqledit::requireDeps; ::sqledit::buildApp .'` | tdbc, tdbc::postgres, tablelist | `sqlite-editor` | `libpq` | 6.5 MB |
-| oracle-editor | gui | `-launch '::sqledit::requireDeps; ::sqledit::buildApp .'` | Oratcl | `sqlite-editor` | Oracle Instant Client | — |
-
-`-main` per app: `find-tclconfig.tcl`, `notes_app.tcl`,
-`search_replace_tool.tcl`, `tkdevtools.tcl`, `tkudesigner.tcl`,
-`sqlite-editor.tcl`, `postgresql-editor.tcl`, `oracle-editor.tcl`. `-include`
-values are `../../../tkutils/apps/sqlite-editor=sqlite-editor`.
-
-Two things worth noting:
-
-- All the bundled GUI apps now expose a `buildApp` entry proc, so they package
-  with `-launch '::app::buildApp .'` and none needs a special flag. `-bootstrap
-  tkutils` without `-launch` remains available for a foreign app that builds its
-  UI at source time and has no entry proc: it forces the GUI `main.tcl` (load Tk,
-  set the module path, run the event loop) while only sourcing the app.
-- `postgresql-editor` and `oracle-editor` are launchers over the shared
-  `sqlite-editor` core, hence `-include`; their native drivers (`libpq`,
-  Oracle Instant Client) are system libraries that must be present on the target
-  — see `EXAMPLE-postgresql-editor.md`.
-
-Sizes and the SMOKE checks are from real builds in a Tcl 9.0.4 sandbox;
-`oracle-editor` was not built there (no `Oratcl`), so its row is the derived
-recipe.
-
-### Full commands
-
-Copy-paste, run from `apps/bin/` (with the builder and basekits present):
-
-```bash
-# find-tclconfig (CLI)
-./build-app-zipkit-linux -kind cli -out find-tclconfig -basekit basekit-tcl \
-    -app ../find-tclconfig -main find-tclconfig.tcl
-
-# notes-app
-xvfb-run -a ./build-app-zipkit-linux -kind gui -out notes-app -basekit "$(pwd)/basekit-tk" \
-    -app ../../../tkutils/apps/notes-app -main notes_app.tcl \
-    -launch '::notesapp::buildApp .' \
-    -tm ../../lib/tm -tm ../../../tkutils/lib/tm -extlib /opt/tcl9/lib
-
-# search-replace-tool
-xvfb-run -a ./build-app-zipkit-linux -kind gui -out search-replace-tool -basekit "$(pwd)/basekit-tk" \
-    -app ../../../tkutils/apps/search-replace-tool -main search_replace_tool.tcl \
-    -launch '::srtool::buildGui' \
-    -tm ../../lib/tm -tm ../../../tkutils/lib/tm -extlib /opt/tcl9/lib
-
-# tkdevtools
-xvfb-run -a ./build-app-zipkit-linux -kind gui -out tkdevtools -basekit "$(pwd)/basekit-tk" \
-    -app ../../../tkutils/apps/tkdevtools -main tkdevtools.tcl \
-    -launch '::tkdevtools::buildApp .' \
-    -tm ../../lib/tm -tm ../../../tkutils/lib/tm -extlib /opt/tcl9/lib
-
-# tkudesigner
-xvfb-run -a ./build-app-zipkit-linux -kind gui -out tkudesigner -basekit "$(pwd)/basekit-tk" \
-    -app ../../../tkutils/apps/tkudesigner -main tkudesigner.tcl \
-    -launch '::tkudesigner::buildApp .' \
-    -tm ../../lib/tm -tm ../../../tkutils/lib/tm -extlib /opt/tcl9/lib
-
-# sqlite-editor (C-extension sqlite3)
-xvfb-run -a ./build-app-zipkit-linux -kind gui -out sqlite-editor -basekit "$(pwd)/basekit-tk" \
-    -app ../../../tkutils/apps/sqlite-editor -main sqlite-editor.tcl \
-    -launch '::sqledit::requireDeps; ::sqledit::buildApp .' \
-    -tm ../../lib/tm -tm ../../../tkutils/lib/tm -extlib /opt/tcl9/lib
-
-# postgresql-editor (shared core via -include; needs libpq on the target)
-xvfb-run -a ./build-app-zipkit-linux -kind gui -out postgresql-editor -basekit "$(pwd)/basekit-tk" \
-    -app ../../../tkutils/apps/postgresql-editor -main postgresql-editor.tcl \
-    -launch '::sqledit::requireDeps; ::sqledit::buildApp .' \
-    -tm ../../lib/tm -tm ../../../tkutils/lib/tm -extlib /opt/tcl9/lib \
-    -include ../../../tkutils/apps/sqlite-editor=sqlite-editor
-
-# oracle-editor (needs Oratcl + Oracle Instant Client; -extlib must resolve Oratcl,
-# or build with -probe 0 and bundle Oratcl yourself)
-xvfb-run -a ./build-app-zipkit-linux -kind gui -out oracle-editor -basekit "$(pwd)/basekit-tk" \
-    -app ../../../tkutils/apps/oracle-editor -main oracle-editor.tcl \
-    -launch '::sqledit::requireDeps; ::sqledit::buildApp .' \
-    -tm ../../lib/tm -tm ../../../tkutils/lib/tm -extlib /opt/tcl9/lib \
-    -include ../../../tkutils/apps/sqlite-editor=sqlite-editor
-```
-
-On a machine with a real display, drop `xvfb-run -a`. To build without running the
-prober (e.g. no display, or dependencies already known), add `-probe 0`.
+The step-by-step examples in this folder (builder, find-tclconfig,
+notes-app, sqlite-editor, postgresql-editor, launcher, explorer,
+windows-host) explain the pieces in more depth. Where they still show
+`-launch` or `-include .../sqlite-editor=sqlite-editor`, leave those out:
+`-launch` is no longer needed and the SQL editors take their shared code
+from `_lib/sqledit` by themselves.

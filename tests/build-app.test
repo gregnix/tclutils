@@ -1,0 +1,69 @@
+package require Tcl 8.6-
+package require tcltest
+namespace import ::tcltest::*
+
+# build-app: Tcl 9 only; a GUI app starts through its own argv0 guard
+# (no -launch); shared code from apps/_lib comes along. The builds use the
+# running tclsh/wish as basekit (-stdlibfrom running); the GUI case runs only
+# with a wish next to this tclsh and a display.
+
+set here [file dirname [file normalize [info script]]]
+set root [file dirname $here]
+set script [file join $root apps build-app build-app.tcl]
+set tcl9 [package vsatisfies [info patchlevel] 9.0-]
+testConstraint tcl9 $tcl9
+set wish [file join [file dirname [info nameofexecutable]] \
+    [regsub tclsh [file tail [info nameofexecutable]] wish]]
+testConstraint gui [expr {$tcl9 && [file executable $wish]
+    && ([info exists env(DISPLAY)] || $tcl_platform(platform) eq "windows")}]
+set tmp [file join [temporaryDirectory] build-app-test]
+
+test build-app-1.1 {under Tcl 8.6 it says that it needs Tcl 9} -constraints {!tcl9} -body {
+    catch {exec [info nameofexecutable] $script} msg
+    string match "*needs Tcl 9*" $msg
+} -result 1
+
+test build-app-1.2 {a CLI app: the script becomes main.tcl} -constraints tcl9 -setup {
+    file delete -force $tmp; file mkdir $tmp/cli
+    makeFile {puts "hello [llength $argv]"} hello.tcl $tmp/cli
+} -body {
+    exec [info nameofexecutable] $script -kind cli -out $tmp/hello \
+        -basekit [info nameofexecutable] -stdlibfrom running -app $tmp/cli -main hello.tcl
+    exec $tmp/hello a b
+} -cleanup { file delete -force $tmp } -result {hello 2}
+
+test build-app-2.1 {a GUI app starts through its argv0 guard, _lib code included} -constraints gui -setup {
+    file delete -force $tmp; file mkdir $tmp/apps/demo $tmp/apps/_lib/shared $tmp/apps/_lib/unused
+    makeFile {proc ::shared::hello {} { return shared }} hello.tcl $tmp/apps/_lib/shared
+    makeFile {} x.tcl $tmp/apps/_lib/unused
+    makeFile {# _lib/paths.tcl stand-in} paths.tcl $tmp/apps/_lib
+    makeFile {
+        namespace eval ::shared {}
+        source [file join [file dirname [file normalize [info script]]] .. _lib shared hello.tcl]
+        if {[info exists argv0] && [file normalize $argv0] eq [file normalize [info script]]} {
+            wm title . "demo [::shared::hello] [llength $argv]"
+            ttk::label .l -text hi; pack .l
+        }
+    } demo.tcl $tmp/apps/demo
+} -body {
+    set log [exec $wish $script -out $tmp/demo -basekit $wish -stdlibfrom running \
+        -app $tmp/apps/demo -main demo.tcl -probe 0 -keep 1]
+    regexp {vfs kept: (\S+)} $log -> vfs
+    list [string match "*SMOKE OK: children=1 title=demo shared 0*" $log] \
+         [file exists $vfs/_lib/shared/hello.tcl] [file exists $vfs/_lib/unused]
+} -cleanup { file delete -force $tmp; catch {file delete -force [file dirname $vfs]} } -result {1 1 0}
+
+test build-app-2.2 {a start error fails the build with the message} -constraints gui -setup {
+    file delete -force $tmp; file mkdir $tmp/bad
+    makeFile {
+        if {[info exists argv0] && [file normalize $argv0] eq [file normalize [info script]]} {
+            package require no::such::package
+        }
+    } bad.tcl $tmp/bad
+} -body {
+    list [catch {exec $wish $script -out $tmp/bad.exe -basekit $wish -stdlibfrom running \
+        -app $tmp/bad -main bad.tcl -probe 0} log] \
+         [string match "*does not start*no::such::package*" $log]
+} -cleanup { file delete -force $tmp } -result {1 1}
+
+cleanupTests

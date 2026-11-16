@@ -1,5 +1,11 @@
 # Writing an app so build-app can package it
 
+> Current build-app (Tcl/Tk 9 only): `-launch` is not needed -- the program
+> starts the app through its own argv0 guard; the SQL editors bring their
+> shared code from `_lib/sqledit` themselves (no `-include`); the prober
+> looks in the Tcl running build-app when `-extlib` is missing. See
+> `build-app-README.md` (tclutils/apps/build-app/doc).
+
 `build-app` packages an app directory into a zipkit. That works cleanly only if
 the app follows a few conventions in how it starts, finds its files, and loads
 its dependencies. None of these are exotic — they are just the discipline that
@@ -26,15 +32,13 @@ if {[info exists argv0] && [file normalize $argv0] eq [file normalize [info scri
 }
 ```
 
-Inside a zipkit the generated `main.tcl` **sources** the entry script, so
-`[info script]` ≠ `$argv0` and the guard does **not** fire. Therefore the app
-must expose a single proc that builds/starts it, and you name it with `-launch`:
+Inside a zipkit the generated `main.tcl` sets `argv0` to the entry script
+and then sources it, so the guard fires as with `wish app.tcl`. No `-launch`
+is needed. (`-launch CODE` remains for a foreign app without such a guard;
+then `argv0` is not set and only CODE starts it.)
 
-```
--launch '::myapp::buildApp .'
-```
-
-Rule: **expose one entry proc; do not rely only on the argv0 guard.**
+Rule: **guard the start with the argv0 check above**, and keep everything
+the start needs inside it.
 
 ## 2. Locate your own files via `[info script]`
 
@@ -84,7 +88,7 @@ paths.**
 ## 5. Gather hard external requires in one proc
 
 For apps that need a native driver, put the `package require` of that driver in a
-single proc with a clear error, and call it from `-launch`:
+single proc with a clear error, and call it inside the argv0 guard:
 
 ```tcl
 proc ::myapp::requireDeps {} {
@@ -94,8 +98,11 @@ proc ::myapp::requireDeps {} {
 }
 ```
 
-```
--launch '::myapp::requireDeps; ::myapp::buildApp .'
+```tcl
+if {[info exists argv0] && [file normalize $argv0] eq [file normalize [info script]]} {
+    ::myapp::requireDeps
+    ::myapp::buildApp .
+}
 ```
 
 Rule: **one `requireDeps` proc for hard external drivers**, so failures are
@@ -148,13 +155,14 @@ Rule: **shared code belongs in a module; a shared sibling directory needs
 
 | The app… | build it with |
 |---|---|
-| defines a `buildApp`/entry proc (GUI) | `-launch '::app::buildApp .'` |
-| runs at source time (CLI) | no `-launch` |
+| starts in its argv0 guard (GUI) | nothing extra |
+| runs at source time (CLI) | `-kind cli` |
 | needs tclutils/tkutils modules | `-tm <tree>` (repeatable) |
 | needs external pkgIndex packages | `-extlib <root>` (repeatable) |
-| sources code from a sibling directory | `-include <dir>=<dest>` |
-| is a GUI app | `-kind gui` (wish basekit) |
+| sources code from `apps/_lib/<dir>` | nothing extra (bundled when named) |
+| sources code from another sibling directory | `-include <dir>=<dest>` |
+| is a GUI app | `-kind gui` (default; wish basekit) |
 | is a console app | `-kind cli` (tcl basekit) |
 
-An app that follows §1–§9 typically packages with just `-kind`, `-app`, `-main`,
-`-launch`, and its `-tm` trees.
+An app that follows §1–§9 typically packages with just `-out`, `-basekit`,
+`-app`, `-main` and its `-tm` trees.

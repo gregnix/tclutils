@@ -1,5 +1,11 @@
 # Step by step: explorer (GUI) as a standalone program
 
+> Current build-app (Tcl/Tk 9 only): `-launch` is not needed -- the program
+> starts the app through its own argv0 guard; the SQL editors bring their
+> shared code from `_lib/sqledit` themselves (no `-include`); the prober
+> looks in the Tcl running build-app when `-extlib` is missing. See
+> `build-app-README.md` (tclutils/apps/build-app/doc).
+
 This example builds the file-manager app `explorer` (from the ctrlutils repo)
 into a single self-contained program with `build-app`. The explorer is the
 biggest example so far: it pulls in **three** module trees (tclutils, tkutils
@@ -32,7 +38,6 @@ cd tclutils/apps/build-app
 xvfb-run -a ./build-app-zipkit-linux -kind gui -out explorer \
     -basekit <wish-basekit> \
     -app ../../../ctrlutils/apps/explorer -main explorer.tcl \
-    -launch '::explorer::main $argv' \
     -tm ../../lib/tm \
     -tm ../../../tkutils/lib/tm \
     -tm ../../../ctrlutils/lib/tm \
@@ -82,7 +87,6 @@ start a Windows .exe to trace it):
 wish9.0 build-app.tcl -kind gui -out explorer.exe \
     -basekit ../../../runtimes/zipkit-9_0_4-win64-intel-tk.exe \
     -app ../../../ctrlutils/apps/explorer -main explorer.tcl \
-    -launch '::explorer::main $argv' \
     -tm ../../lib/tm -tm ../../../tkutils/lib/tm -tm ../../../ctrlutils/lib/tm \
     -include <tklib>/modules/tablelist=pkgs/tablelist \
     -include <tklib>/modules/scrollutil=pkgs/scrollutil \

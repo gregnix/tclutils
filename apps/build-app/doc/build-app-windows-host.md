@@ -1,5 +1,11 @@
 # Building on Windows (no Linux)
 
+> Current build-app (Tcl/Tk 9 only): `-launch` is not needed -- the program
+> starts the app through its own argv0 guard; the SQL editors bring their
+> shared code from `_lib/sqledit` themselves (no `-include`); the prober
+> looks in the Tcl running build-app when `-extlib` is missing. See
+> `build-app-README.md` (tclutils/apps/build-app/doc).
+
 The whole toolchain runs the same on Windows — for anyone with no Linux, or with
 Windows as their main system. Only the basekits (`.exe` files) and the path /
 quoting syntax change. No installed Tcl, no installed tclutils on the target.
@@ -40,7 +46,6 @@ use **double** quotes:
 build-app.exe -kind gui -out notes-app.exe ^
     -basekit zipkit-9_0_4-win64-intel-tk.exe ^
     -app ../tkutils/apps/notes-app -main notes_app.tcl ^
-    -launch "::notesapp::buildApp ." ^
     -tm lib/tm -tm ../tkutils/lib/tm ^
     -extlib C:/Tcl/lib
 ```
@@ -94,7 +99,6 @@ as `-basekit`. Since cross-platform probing is not possible, build with
 build-app.exe -kind gui -out notes-app -probe 0 ^
     -basekit zipkit-9_0.4-Linux64-intel-tk ^
     -app ../tkutils/apps/notes-app -main notes_app.tcl ^
-    -launch "::notesapp::buildApp ." ^
     -tm lib/tm -tm ../tkutils/lib/tm
 ```
 

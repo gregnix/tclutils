@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- `build-app`: Tcl/Tk 9 only (clear message under 8.6). No `-launch` for
+  the tkutils apps: `main.tcl` sets `argv0` to the app script, so the app's
+  own argv0 guard starts it (the documented `-launch` strings named procs
+  some apps do not have, and the program stayed without a window). Shared
+  code in `apps/_lib` (e.g. `sqledit`) comes along without `-include`.
+  The prober also bundles Tcl modules outside the `-tm` trees (e.g.
+  `tdbc::sqlite3`, also in manifests as `tm:...`), reports when the app
+  fails to start, does not hang in the app's event loop, and without
+  `-extlib` looks where the running Tcl finds its packages. After the build
+  a GUI program is started once (`-smoke`, only what is inside it); the
+  exit code says whether it came up. `-kind` defaults to `gui`. Temporary
+  files via `file tempdir` (was `/tmp`); the script exits at the end (under
+  wish it used to wait). New `build-app/build-tkutils-apps.tcl` builds all
+  tkutils apps with a result table. README rewritten, the examples drop
+  `-launch` and `-include .../sqlite-editor`.
+
+- `tuprovider` 0.4: local entries carry `hidden` and `system`. On Windows
+  the attributes decide (a leading dot means nothing there), elsewhere the
+  leading dot; new `hiddenFlags`. The local `list` reads `glob *` plus
+  `glob -types hidden *` (new `localNames`): `* .*` listed dot names twice
+  on Windows and missed files and folders with the hidden attribute. A dangling symbolic link no longer makes
+  `list` fail (size and mtime stay empty). When copying over an older
+  tree, delete `tuprovider-0.3.tm`.
 - `tumd` 0.3: `toHtml` writes GitHub-style tables; lists nest, continue
   on indented lines, may be loose or task items, keep their start number;
   setext headings; indented code; reference links; link titles; URLs with

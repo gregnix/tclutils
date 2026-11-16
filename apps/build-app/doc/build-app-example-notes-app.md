@@ -1,5 +1,11 @@
 # Step by step: notes-app (GUI) as a program
 
+> Current build-app (Tcl/Tk 9 only): `-launch` is not needed -- the program
+> starts the app through its own argv0 guard; the SQL editors bring their
+> shared code from `_lib/sqledit` themselves (no `-include`); the prober
+> looks in the Tcl running build-app when `-extlib` is missing. See
+> `build-app-README.md` (tclutils/apps/build-app/doc).
+
 This example builds the GUI app `notes-app` from the tkutils repo into a single
 executable. Compared with the CLI example (`find-tclconfig`), three things are
 added: a **wish** basekit, bundling the module trees (`-tm`), and a launch
@@ -38,9 +44,8 @@ module trees at `../../lib/tm` (tclutils) and `../../../tkutils/lib/tm`.
 briefly — more on that below). New options versus the CLI case:
 
 - `-kind gui` — a GUI app, so wish basekit and an event loop in `main.tcl`.
-- `-launch '::notesapp::buildApp .'` — the call that builds the UI. Needed
-  because sourcing the app only defines its procedures; its built-in "run as
-  main script?" check does not fire inside a zipkit.
+- no `-launch`: `main.tcl` sets `argv0` to the app script, so its "run as
+  main script?" check fires inside the zipkit as with `wish notes_app.tcl`.
 - `-tm …` — the module trees `tkutils` and `tclutils::tunotes` are bundled from
   (twice, one per repo).
 - `-extlib /opt/tcl9/lib` — search root for external pkgIndex packages, in case
@@ -50,7 +55,6 @@ briefly — more on that below). New options versus the CLI case:
 xvfb-run -a ./build-app-zipkit-linux -kind gui -out notes-app \
     -basekit basekit-tk \
     -app ../../../tkutils/apps/notes-app -main notes_app.tcl \
-    -launch '::notesapp::buildApp .' \
     -tm ../../lib/tm -tm ../../../tkutils/lib/tm \
     -extlib /opt/tcl9/lib
 ```
@@ -104,7 +108,6 @@ dependencies (for notes-app it is only the tm trees), disable the prober with
 ./build-app-zipkit-linux -kind gui -out notes-app -probe 0 \
     -basekit basekit-tk \
     -app ../../../tkutils/apps/notes-app -main notes_app.tcl \
-    -launch '::notesapp::buildApp .' \
     -tm ../../lib/tm -tm ../../../tkutils/lib/tm
 ```
 

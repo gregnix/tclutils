@@ -1,5 +1,11 @@
 # Step by step: sqlite-editor (with a C-extension)
 
+> Current build-app (Tcl/Tk 9 only): `-launch` is not needed -- the program
+> starts the app through its own argv0 guard; the SQL editors bring their
+> shared code from `_lib/sqledit` themselves (no `-include`); the prober
+> looks in the Tcl running build-app when `-extlib` is missing. See
+> `build-app-README.md` (tclutils/apps/build-app/doc).
+
 This example builds `sqlite-editor` — a GUI app that needs **real external
 packages**: the C-extension `sqlite3` and the `tablelist` widget set. That brings
 in the role of the **prober** and the `-extlib` option, and shows how a
@@ -40,7 +46,6 @@ New versus `notes-app`: `-extlib` points at the external package install.
 xvfb-run -a ./build-app-zipkit-linux -kind gui -out sqlite-editor \
     -basekit "$(pwd)/basekit-tk" \
     -app ../../../tkutils/apps/sqlite-editor -main sqlite-editor.tcl \
-    -launch '::sqledit::requireDeps; ::sqledit::buildApp .' \
     -tm ../../lib/tm -tm ../../../tkutils/lib/tm \
     -extlib /opt/tcl9/lib
 ```

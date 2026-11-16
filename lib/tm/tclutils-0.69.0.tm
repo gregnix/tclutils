@@ -127,7 +127,7 @@ package require tclutils::tummdb 0.2
 package require tclutils::tuflow 0.4
 # Storage-provider interface + backends (local built in; zip/dav register their
 # schemes on load). Consumers browse any backend as one path-with-children tree.
-package require tclutils::tuprovider 0.3
+package require tclutils::tuprovider 0.4
 package require tclutils::tuprovider::zip 0.1
 package require tclutils::tuprovider::dav 0.1
 package require tclutils::tuprovider::ftp 0.2

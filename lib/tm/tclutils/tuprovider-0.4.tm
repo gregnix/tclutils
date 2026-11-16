@@ -32,6 +32,15 @@
 # unknown keys. name/path/type are mandatory; size/mtime are best-effort so
 # a remote provider need not pay for a stat per entry.
 #
+# The local provider adds (0.4):
+#
+#     hidden  1 if the system hides the entry: on Windows the "hidden"
+#             attribute (a leading dot means nothing there), elsewhere a
+#             leading dot
+#     system  1 for the Windows "system" attribute, else 0
+#
+# A consumer that finds no "hidden" key falls back to the leading dot.
+#
 # A provider is an object (tcloo). `tuprovider::open <scheme> ?args?` returns
 # one; the Explorer talks to it by method. This mirrors tudav's client model
 # (a handle you pass around) rather than a global.
@@ -41,11 +50,49 @@ package require TclOO
 package require tclutils::common 0.3
 
 namespace eval ::tclutils::tuprovider {
-    namespace export open register schemes
+    namespace export open register schemes hiddenFlags localNames
     namespace ensemble create
 
     # scheme name -> class command
     variable registry {}
+    # test hook for hiddenFlags: "" = detect; else unix | windows
+    variable platform ""
+}
+
+# localNames dir -> every entry of a local directory, once, without . and ..
+# "*" alone misses what the system hides: on Windows files with the hidden
+# attribute, elsewhere dot names. "-types hidden *" adds exactly those. On
+# Windows "*" already matches dot names, so "* .*" (up to 0.4 of 2026-11-13)
+# listed them twice and still missed hidden files (found 2026-11-14 on
+# Windows 10.0.26300).
+proc ::tclutils::tuprovider::localNames {dir} {
+    set seen [dict create]
+    set out {}
+    foreach f [concat [glob -nocomplain -directory $dir -- *] \
+                      [glob -nocomplain -directory $dir -types hidden -- *]] {
+        set leaf [file tail $f]
+        if {$leaf in {. ..} || [dict exists $seen $leaf]} continue
+        dict set seen $leaf 1
+        lappend out $f
+    }
+    return $out
+}
+
+# hiddenFlags path leaf -> {hidden system} for a local file system entry. On
+# Windows the attributes decide, as in the Explorer and the system file
+# dialog; elsewhere the leading dot. An attribute that cannot be read counts
+# as not set (0.4).
+proc ::tclutils::tuprovider::hiddenFlags {path leaf} {
+    variable platform
+    set p [expr {$platform ne "" ? $platform : $::tcl_platform(platform)}]
+    if {$p eq "windows"} {
+        set hidden 0
+        set system 0
+        catch {set hidden [file attributes $path -hidden]}
+        catch {set system [file attributes $path -system]}
+        return [list [expr {$hidden ? 1 : 0}] [expr {$system ? 1 : 0}]]
+    }
+    return [list [string match .* $leaf] 0]
 }
 
 # Register a provider class under a scheme name ("local", "zip", "dav", ...).
@@ -148,37 +195,31 @@ oo::class create ::tclutils::tuprovider::Local {
 
     method list {path} {
         set out {}
-        foreach f [glob -nocomplain -directory $path -- * .*] {
-            set leaf [file tail $f]
-            if {$leaf in {. ..}} continue
-            if {[file isdirectory $f]} {
-                set type dir
-            } else {
-                set type file
-            }
-            if {$type eq "file"} {
-                set size [file size $f]
-            } else {
-                set size ""
-            }
-            lappend out [my _entry $leaf $f $type $size [file mtime $f]]
+        foreach f [::tclutils::tuprovider::localNames $path] {
+            lappend out [my _localEntry $f [file tail $f]]
         }
         return $out
     }
 
+    # One entry with hidden/system (0.4). size and mtime stay "" when they
+    # cannot be read -- a dangling symbolic link made the whole listing fail
+    # up to 0.3.
+    method _localEntry {f leaf} {
+        set type [expr {[file isdirectory $f] ? "dir" : "file"}]
+        set size ""
+        set mtime ""
+        if {$type eq "file"} { catch {set size [file size $f]} }
+        catch {set mtime [file mtime $f]}
+        set e [my _entry $leaf $f $type $size $mtime]
+        lassign [::tclutils::tuprovider::hiddenFlags $f $leaf] hidden system
+        dict set e hidden $hidden
+        dict set e system $system
+        return $e
+    }
+
     method stat {path} {
-        if {![file exists $path]} { error "no such path: $path" }
-        if {[file isdirectory $path]} {
-            set type dir
-        } else {
-            set type file
-        }
-        if {$type eq "file"} {
-            set size [file size $path]
-        } else {
-            set size ""
-        }
-        return [my _entry [file tail $path] $path $type $size [file mtime $path]]
+        if {![file exists $path] && [catch {file lstat $path lst}]} { error "no such path: $path" }
+        return [my _localEntry $path [file tail $path]]
     }
 
     method get    {path}      { return [::tclutils::common::readBinaryFile $path] }
@@ -201,4 +242,4 @@ oo::class create ::tclutils::tuprovider::Local {
 # Register the built-in local provider.
 ::tclutils::tuprovider::register local ::tclutils::tuprovider::Local
 
-package provide tclutils::tuprovider 0.3
+package provide tclutils::tuprovider 0.4

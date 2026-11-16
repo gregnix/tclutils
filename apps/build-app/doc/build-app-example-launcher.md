@@ -1,5 +1,11 @@
 # Step by step: launcher (GUI, external packages + Windows .exe) as a program
 
+> Current build-app (Tcl/Tk 9 only): `-launch` is not needed -- the program
+> starts the app through its own argv0 guard; the SQL editors bring their
+> shared code from `_lib/sqledit` themselves (no `-include`); the prober
+> looks in the Tcl running build-app when `-extlib` is missing. See
+> `build-app-README.md` (tclutils/apps/build-app/doc).
+
 This example builds the GUI app `launcher` from the tkutils repo into a single
 executable — for Linux and, cross-built on the same Linux host, for Windows.
 Compared with the `notes-app` example it adds one thing the others do not need:
@@ -53,7 +59,6 @@ cd tclutils/apps/build-app
 xvfb-run -a wish9.0 build-app.tcl -kind gui -out launcher \
     -basekit ../../../runtimes/zipkit-9_0_4-Linux64-intel-tk \
     -app ../../../tkutils/apps/launcher -main launcher.tcl \
-    -launch '::launcherapp::main $argv' \
     -tm ../../lib/tm -tm ../../../tkutils/lib/tm \
     -include /path/to/tklib/modules/scrollutil=pkgs/scrollutil \
     -include /path/to/tical=pkgs/tical
@@ -65,9 +70,6 @@ built: launcher (6933388 bytes)
 
 Notes on the options:
 
-- `-launch '::launcherapp::main $argv'` — builds the UI and starts the event
-  loop. Always **double-quote** `-launch`; curly braces do not quote in the
-  shell, so the space would split the value.
 - `-include SRC=DEST` — copies the package directory into the image at
   `DEST`. Using `pkgs/<name>` matches how the app finds bundled packages: at
   startup it adds every `pkgs/*` directory to `auto_path`.
@@ -90,7 +92,6 @@ from the Linux build:
 wish9.0 build-app.tcl -kind gui -out launcher.exe -probe 0 \
     -basekit ../../../runtimes/zipkit-9_0_4-win64-intel-tk.exe \
     -app ../../../tkutils/apps/launcher -main launcher.tcl \
-    -launch '::launcherapp::main $argv' \
     -tm ../../lib/tm -tm ../../../tkutils/lib/tm \
     -include /path/to/tklib/modules/scrollutil=pkgs/scrollutil \
     -include /path/to/tical=pkgs/tical

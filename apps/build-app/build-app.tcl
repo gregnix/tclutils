@@ -1,38 +1,48 @@
-#!/usr/bin/env tclsh
+#!/usr/bin/env wish9.0
 # build-app.tcl -- turn a tclutils/tkutils app into a standalone Tcl 9 zipkit.
+# Tcl/Tk 9 only.
 #
-# MUST be run BY the target basekit, e.g.:
-#     ./zipkit-9_0.4-Linux64-intel-tcl  tools/build-app.tcl -kind cli ...
-#     ./zipkit-9_0.4-Linux64-intel-tk   tools/build-app.tcl -kind gui ...
-# so that the standard library it bundles ([info library] / $tk_library) matches
-# the basekit exactly. All the heavy lifting is in tclutils::tuzipfs; this script
-# only assembles the VFS, writes main.tcl, and (optionally) probes the app's real
-# runtime dependency closure to bundle any external (non-tm) packages.
+#     wish9.0 build-app.tcl -out notes -basekit /path/basekit-tk \
+#         -app tkutils/apps/notes-app -main notes_app.tcl \
+#         -tm tclutils/lib/tm -tm tkutils/lib/tm
+#
+# Any Tcl 9 runs it (wish9.0, tclsh9.0, a basekit); the standard library is
+# taken from -basekit, so it matches the target. All the heavy lifting is in
+# tclutils::tuzipfs; this script assembles the VFS, writes main.tcl, probes the
+# packages the app really loads (to bundle the external ones) and, for a GUI
+# app, starts the result once to see that it comes up.
 #
 # Options:
 #   -out FILE          output executable                                 (required)
 #   -basekit FILE      static Tcl/Tk 9 basekit template                  (required)
-#   -kind cli|gui      console app (tclsh basekit) or GUI app (wish)      (required)
+#   -kind cli|gui      console app (tclsh basekit) or GUI app (wish)  (default gui)
 #   -app DIR           the app's source directory                        (required)
 #   -main FILE         entry script (relative to -app, or absolute)      (required)
-#   -launch CODE       Tcl to start the app (e.g. {::notesapp::buildApp .});
-#                      omit for scripts that run at source time (CLI)
+#   -launch CODE       Tcl to start the app after sourcing; normally omitted:
+#                      main.tcl sets argv0 to the entry script, so the app's own
+#                      argv0 guard starts it as if run with wish
 #   -bootstrap none|tkutils   emit _lib/paths.tcl shim for the app family (default:
-#                      tkutils when -app is given and -main runs via source)
+#                      tkutils for gui or when <app>/../_lib/paths.tcl exists);
+#                      the other folders of <app>/../_lib (e.g. sqledit) come along
+#   -smoke 0|1         start the built program once with SMOKE=1 (default 1 for gui)
 #   -tm DIR            module tm tree to bundle (repeatable)
 #   -include SRC[=DEST] copy extra content into the VFS at DEST (default: SRC's
 #                      basename); for shared code an app sources from a sibling
 #                      directory, or data files/icons (repeatable)
-#   -extlib DIR        external pkgIndex search root for the prober (repeatable)
+#   -extlib DIR        external pkgIndex search root for the prober (repeatable;
+#                      default: the package folders of the Tcl running this)
 #   -probe 0|1         probe the real dependency closure (default: 1 for gui)
 #   -manifest FILE     bundle exactly the packages listed in FILE (no probing,
 #                      no display needed) -- reproducible builds
 #   -writemanifest FILE  run the prober AND write the found closure to FILE
-#   -stdlibfrom running|DIR   stdlib source; DIR = mounted foreign basekit
-#                      (cross-platform builds); default: running interpreter
+#   -stdlibfrom basekit|running|DIR   stdlib source (default: the -basekit)
 #   -keep 0|1          keep the temporary VFS dir for inspection (default 0)
 
-package require Tcl 8.6-
+# Tcl/Tk 9 only: zipfs and the zipkit format are Tcl 9.
+if {![package vsatisfies [info patchlevel] 9.0-]} {
+    puts stderr "build-app: needs Tcl 9 (this is Tcl [info patchlevel]); run it with tclsh9.0/wish9.0 or a Tcl 9 basekit"
+    exit 2
+}
 
 # --- locate tclutils::tuzipfs -------------------------------------------------
 # Prefer an explicit -tm on the command line; otherwise fall back to a repo-
@@ -61,7 +71,7 @@ proc findTuzipfs {argv} {
 
 # --- tiny option parser (repeatable -tm / -extlib) ----------------------------
 proc parseArgs {argv} {
-    set opt(-out) ""; set opt(-basekit) ""; set opt(-kind) ""
+    set opt(-out) ""; set opt(-basekit) ""; set opt(-kind) gui; set opt(-smoke) ""
     set opt(-app) ""; set opt(-main) ""; set opt(-launch) ""
     set opt(-bootstrap) ""; set opt(-probe) ""; set opt(-stdlibfrom) basekit
     set opt(-keep) 0; set opt(-manifest) ""; set opt(-writemanifest) ""
@@ -73,7 +83,7 @@ proc parseArgs {argv} {
             -extlib  { lappend opt(-extlib) $v }
             -include { lappend opt(-include) $v }
             -out - -basekit - -kind - -app - -main - -launch -
-            -bootstrap - -probe - -stdlibfrom - -keep -
+            -bootstrap - -probe - -stdlibfrom - -keep - -smoke -
             -manifest - -writemanifest { set opt($k) $v }
             default  { die "unknown option \"$k\"" }
         }
@@ -94,26 +104,51 @@ proc probeExternalDirs {opt} {
     set probe [file join [tempDir] probe-[pid].tcl]
     set fh [open $probe w]
     puts $fh {
-        lassign $argv entry launch tmList extList
+        lassign $argv entry launch tmList extList skipList
         foreach d $tmList  { tcl::tm::path add $d }
         foreach d $extList { lappend auto_path $d }
         catch { package require Tk }
-        namespace eval ::tkupaths { proc add args {} }
-        catch { source $entry }
-        if {$launch ne ""} { catch { uplevel #0 $launch } }
-        catch { update }
-        foreach p [lsort [package names]] {
-            if {[catch {package present $p} v]} continue
-            if {[regexp {^(Tcl|Tk|Ttk|ttk|tcl|tk|msgcat|http|tcl::)} $p]} continue
-            if {[regexp {^(tclutils|tkutils)} $p]} continue
-            set ifn [package ifneeded $p $v]
-            set dir ""
-            if {[regexp {([/A-Za-z]:?[^ \}\]]*/)[^/ \}\]]+\.(tcl|tm|so|dll|dylib)} $ifn -> d]} {
-                set dir [string trimright $d /]
+        proc report {} {
+            global skipList
+            foreach p [lsort [package names]] {
+                if {[catch {package present $p} v]} continue
+                if {[regexp {^(Tcl|Tk|Ttk|ttk|tcl|tk|msgcat|http|tcl::)} $p]} continue
+                if {[regexp {^(tclutils|tkutils)} $p]} continue
+                set ifn [package ifneeded $p $v]
+                set dir ""
+                if {[regexp {([/A-Za-z]:?[^ \}\]]*/)[^/ \}\]]+\.(tcl|tm|so|dll|dylib)} $ifn -> d]} {
+                    set dir [string trimright $d /]
+                }
+                set skip 0
+                foreach s $skipList {
+                    if {$dir ne "" && [string first [file normalize $s]/ [file normalize $dir]/] == 0} { set skip 1 }
+                }
+                if {$skip} continue
+                # a Tcl module (.tm) outside the -tm trees, e.g. tdbc::sqlite3
+                if {[regexp {source(?: -encoding \S+)? (\S+\.tm)} $ifn -> tmf]} {
+                    # part of the basekit's own library: comes with the stdlib
+                    if {[string match //zipfs:* $tmf]} continue
+                    puts "TM\t$p\t$v\t$tmf"
+                } else {
+                    puts "EXT\t$p\t$v\t$dir"
+                }
             }
-            puts "EXT\t$p\t$v\t$dir"
+            flush stdout
+            exit 0
         }
-        exit 0
+        # the app may enter its own event loop (vwait forever): report anyway
+        after 3000 report
+        # start it the way the zipkit does: argv0 = entry, so its guard fires
+        set ::argv0 $entry
+        set ::argv {}
+        if {[catch {
+            uplevel #0 [list source $entry]
+            if {$launch ne ""} { uplevel #0 $launch }
+        } msg]} {
+            puts "PROBEERR\t[string map {\n { | }} $msg]"
+        }
+        catch { update }
+        report
     }
     close $fh
     # run the probe under the TARGET basekit (it has Tk for GUI apps), not the
@@ -125,19 +160,41 @@ proc probeExternalDirs {opt} {
     set res {}
     set failed 0
     if {[catch {
-        exec $self $probe $entry $o(-launch) $o(-tm) $o(-extlib) 2>@ stderr
+        # the module trees plus where this Tcl finds modules (tdbc::sqlite3 ...)
+        set tmList $o(-tm)
+        foreach d [tcl::tm::path list] {
+            if {![string match //zipfs:* $d] && $d ni $tmList} { lappend tmList $d }
+        }
+        exec $self $probe [file normalize $entry] $o(-launch) $tmList $o(-extlib) \
+            [concat [list $o(-app)] $o(-tm)] 2>@ stderr
     } out]} {
         # exec returns child stdout in $out even on non-zero exit; but a real
         # launch failure (basekit not found, crash) leaves no EXT lines.
         set failed 1
     }
-    if {![string match "*EXT\t*" $out]} {
+    foreach line [split $out \n] {
+        if {[string match "PROBEERR\t*" $line]} {
+            puts "  probe: the app failed to start: [lindex [split $line \t] 1]"
+            puts "  probe: packages loaded until then are bundled; fix it or give -manifest"
+        }
+    }
+    if {![regexp {(EXT|TM)\t} $out]} {
         puts "  probe: no external packages detected\
-              [expr {$failed ? {(probe run failed -- check -basekit path)} : {}}]"
+              [expr {$failed ? {(the probe run failed: the app ended with an error, see above, or -basekit does not run)} : {}}]"
     }
     set roots {}
     set seen {}
     foreach line [split $out \n] {
+        if {[string match "TM\t*" $line]} {
+            lassign [split $line \t] _ p v file
+            set rel [tmRel $p $file]
+            if {![dict exists $seen tm:$rel]} {
+                dict set seen tm:$rel 1
+                lappend roots [list tm:$rel "$p $v"]
+                puts "  probe: external module $p $v  <- $file"
+            }
+            continue
+        }
         if {![string match "EXT\t*" $line]} continue
         lassign [split $line \t] _ p v dir
         if {$dir eq "" || ![file isdirectory $dir]} {
@@ -177,6 +234,21 @@ proc installRoot {path extlibs} {
     return ""
 }
 
+# --- external Tcl modules (.tm) -----------------------------------------------
+# Recorded as "tm:<path below a tm root>", e.g. tm:tdbc/sqlite3-1.1.13.tm, and
+# bundled to lib/tm/<that path>, where the zipkit's module path finds them.
+proc tmRel {pkg file} {
+    set ns [string map {:: /} [namespace qualifiers $pkg]]
+    return [expr {$ns eq "" ? [file tail $file] : "$ns/[file tail $file]"}]
+}
+proc resolveTm {rel extlibs} {
+    foreach root [concat [tcl::tm::path list] $extlibs] {
+        set f [file join $root $rel]
+        if {[file isfile $f]} { return $f }
+    }
+    return ""
+}
+
 # --- manifest read/write ------------------------------------------------------
 # A manifest records the external package install directories to bundle, by
 # BASENAME (portable across machines with the same package layout). Lines are
@@ -190,7 +262,8 @@ proc writeManifest {file rootsWithNotes} {
     puts $fh "# regenerate: build-app -writemanifest <file> ...   use: build-app -manifest <file> ..."
     foreach pair $rootsWithNotes {
         lassign $pair root note
-        puts $fh [format "%-24s # %s" [file tail $root] $note]
+        set name [expr {[string match tm:* $root] ? $root : [file tail $root]}]
+        puts $fh [format "%-24s # %s" $name $note]
     }
     close $fh
     return $file
@@ -220,10 +293,11 @@ proc resolvePkgDir {base extlibs} {
     return ""
 }
 
+# one temporary folder per run (Tcl 9 file tempdir: TMPDIR, TEMP, ...)
 proc tempDir {} {
-    set d [file join /tmp build-app-[pid]]
-    file mkdir $d
-    return $d
+    global buildTemp
+    if {![info exists buildTemp]} { set buildTemp [file tempdir build-app] }
+    return $buildTemp
 }
 
 # --- main ---------------------------------------------------------------------
@@ -234,7 +308,7 @@ if {![namespace exists ::tclutils::tuzipfs]} {
 namespace import ::tclutils::tuzipfs::rcopy
 
 array set o [parseArgs $argv]
-foreach req {-out -basekit -kind -app -main} {
+foreach req {-out -basekit -app -main} {
     if {$o($req) eq ""} { die "$req is required" }
 }
 if {$o(-kind) ni {cli gui}} { die "-kind must be cli or gui" }
@@ -243,9 +317,23 @@ set entryPath [file join $o(-app) $o(-main)]
 if {![file exists $entryPath]} { die "entry not found: $entryPath" }
 
 # defaults keyed off -kind / -launch
+set o(-basekit) [file normalize $o(-basekit)]
+set o(-app) [file normalize $o(-app)]
+set appLib [file join [file dirname $o(-app)] _lib]
 if {$o(-probe) eq ""} { set o(-probe) [expr {$o(-kind) eq "gui"}] }
+if {$o(-smoke) eq ""} { set o(-smoke) [expr {$o(-kind) eq "gui"}] }
 if {$o(-bootstrap) eq ""} {
-    set o(-bootstrap) [expr {$o(-launch) ne "" ? "tkutils" : "none"}]
+    set o(-bootstrap) [expr {$o(-kind) eq "gui" || $o(-launch) ne ""
+        || [file exists [file join $appLib paths.tcl]] ? "tkutils" : "none"}]
+}
+# without -extlib the prober looks where this Tcl finds its packages
+if {[truthy $o(-probe)] && ![llength $o(-extlib)] && $o(-manifest) eq ""} {
+    foreach d $auto_path {
+        if {![string match //zipfs:* $d] && [file isdirectory $d] && $d ni $o(-extlib)} {
+            lappend o(-extlib) $d
+        }
+    }
+    puts "  probe: -extlib not given, using [join $o(-extlib) {, }]"
 }
 
 set vfs [file join [tempDir] [file rootname [file tail $o(-out)]].vfs]
@@ -290,14 +378,28 @@ if {[llength $o(-tm)]} {
 #    the same closure the prober finds, just recorded so a build is reproducible
 #    without running the app.
 set extBundled 0
-proc bundlePkgDir {vfs dir} {
+proc bundlePkgDir {vfs dir {extlibs {}}} {
+    if {[string match tm:* $dir]} {
+        set rel [string range $dir 3 end]
+        set f [resolveTm $rel $extlibs]
+        if {$f eq ""} { die "module $rel not found on the tm path" }
+        file mkdir [file dirname [file join $vfs lib tm $rel]]
+        file copy -force $f [file join $vfs lib tm $rel]
+        return 0
+    }
     file mkdir [file join $vfs lib pkgs]
     rcopy $dir [file join $vfs lib pkgs [file tail $dir]]
+    return 1
 }
 
 if {$o(-manifest) ne ""} {
     # read mode: bundle exactly the directories named in the manifest
     foreach base [readManifest $o(-manifest)] {
+        if {[string match tm:* $base]} {
+            bundlePkgDir $vfs $base $o(-extlib)
+            puts "  manifest: bundling module [string range $base 3 end]"
+            continue
+        }
         set dir [resolvePkgDir $base $o(-extlib)]
         if {$dir eq ""} { die "manifest: package dir \"$base\" not found under any -extlib root" }
         bundlePkgDir $vfs $dir
@@ -307,8 +409,7 @@ if {$o(-manifest) ne ""} {
 } elseif {[truthy $o(-probe)] && [llength $o(-extlib)]} {
     set found [probeExternalDirs o]
     foreach pair $found {
-        bundlePkgDir $vfs [lindex $pair 0]
-        set extBundled 1
+        if {[bundlePkgDir $vfs [lindex $pair 0] $o(-extlib)]} { set extBundled 1 }
     }
     if {$o(-writemanifest) ne ""} {
         writeManifest $o(-writemanifest) $found
@@ -365,6 +466,17 @@ if {$o(-launch) eq "" && $o(-bootstrap) eq "none"} {
     }
     if {$o(-bootstrap) eq "tkutils"} {
         file mkdir [file join $vfs _lib]
+        # shared code next to the apps (tkutils/apps/_lib/sqledit, ...)
+        # only what the app's scripts name
+        set appText ""
+        foreach f [glob -nocomplain -directory $o(-app) *.tcl] {
+            set fh [open $f]; append appText [read $fh]; close $fh
+        }
+        foreach d [glob -nocomplain -types d -directory $appLib *] {
+            if {[file tail $d] eq "tests" || [string first [file tail $d] $appText] < 0} continue
+            rcopy $d [file join $vfs _lib [file tail $d]]
+            puts "  shared: _lib/[file tail $d]"
+        }
         set sh [open [file join $vfs _lib paths.tcl] w]
         puts $sh {# zipkit bootstrap shim: bundled modules live under //zipfs:/app/lib/tm}
         puts $sh {tcl::tm::path add //zipfs:/app/lib/tm}
@@ -372,14 +484,39 @@ if {$o(-launch) eq "" && $o(-bootstrap) eq "none"} {
         close $sh
     }
     set m [open [file join $vfs main.tcl] w]
+    set entry //zipfs:/app/app/[file tail $o(-main)]
     if {$o(-kind) eq "gui"} { puts $m {package require Tk} }
+    # SMOKE=strict (the check after the build): only what is inside the
+    # program, so a package found in a Tcl installed here does not hide a gap
+    puts $m {if {[info exists env(SMOKE)] && $env(SMOKE) eq "strict"} {
+    set auto_path [lmap d $auto_path {expr {[string match //zipfs:* $d] ? $d : [continue]}}]
+    foreach d [tcl::tm::path list] { if {![string match //zipfs:* $d]} { tcl::tm::path remove $d } }
+}}
     puts $m {tcl::tm::path add //zipfs:/app/lib/tm}
     foreach d $autoPathDirs { puts $m "lappend auto_path $d" }
-    puts $m "source //zipfs:/app/app/[file tail $o(-main)]"
-    if {$o(-launch) ne ""} { puts $m $o(-launch) }
     if {$o(-kind) eq "gui"} {
-        puts $m {if {[info exists env(SMOKE)]} { update; puts "SMOKE OK: children=[llength [winfo children .]] title=[wm title .]"; exit 0 }}
-        puts $m {wm protocol . WM_DELETE_WINDOW {exit 0}}
+        # SMOKE=1: report after the window is up -- also when the app sits
+        # in its own event loop -- and on a start error, then exit
+        puts $m {if {[info exists env(SMOKE)]} { after 1500 { puts "SMOKE OK: children=[llength [winfo children .]] title=[wm title .]"; exit 0 } }}
+    }
+    if {$o(-launch) eq ""} {
+        # the app's argv0 guard starts it, as with "wish app.tcl"
+        puts $m [list set ::argv0 $entry]
+        puts $m [list set entry $entry]
+    } else {
+        puts $m [list set entry $entry]
+    }
+    puts $m [list set launch $o(-launch)]
+    puts $m {if {[info exists env(SMOKE)]} {
+    if {[catch {uplevel #0 [list source $entry]; uplevel #0 $launch} msg]} {
+        puts "SMOKE FAILED: $msg"; puts $::errorInfo; exit 1
+    }
+} else {
+    uplevel #0 [list source $entry]
+    uplevel #0 $launch
+}}
+    if {$o(-kind) eq "gui"} {
+        puts $m {if {[wm protocol . WM_DELETE_WINDOW] eq ""} { wm protocol . WM_DELETE_WINDOW {exit 0} }}
         puts $m {vwait forever}
     }
     close $m
@@ -389,4 +526,20 @@ if {$o(-launch) eq "" && $o(-bootstrap) eq "none"} {
 ::tclutils::tuzipfs::mkimg $o(-out) $vfs -strip $vfs -basekit $o(-basekit)
 catch {file attributes $o(-out) -permissions 0755}
 puts "built: $o(-out) ([file size $o(-out)] bytes)"
-if {[truthy $o(-keep)]} { puts "vfs kept: $vfs" } else { file delete -force $vfs }
+if {[truthy $o(-keep)]} { puts "vfs kept: $vfs" } else { file delete -force [tempDir] }
+
+# 6) start it once (needs a display for gui)
+set rc 0
+if {$o(-kind) eq "gui" && [truthy $o(-smoke)]} {
+    set env(SMOKE) strict
+    if {[catch {exec [file normalize $o(-out)] 2>@1} out]} { set rc 1 }
+    unset env(SMOKE)
+    if {[string match "*SMOKE OK*" $out]} {
+        puts "smoke: [lindex [regexp -inline {SMOKE OK[^\n]*} $out] 0]"
+    } else {
+        puts "smoke: the program does not start:"
+        puts $out
+        set rc 1
+    }
+}
+exit $rc

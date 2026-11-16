@@ -59,6 +59,20 @@ size   byte size (files)
 mtime  modification time (where the backend provides it)
 ```
 
+The local provider adds (0.4):
+
+```
+hidden  1 if the system hides the entry, else 0
+system  1 for the Windows "system" attribute, else 0
+```
+
+On Windows the *hidden* attribute decides and a leading dot means nothing;
+elsewhere the leading dot. `tuprovider hiddenFlags path leaf` returns
+`{hidden system}` for any local path. Other providers do not set the keys; a
+consumer then goes by the leading dot. A local entry whose size or time
+cannot be read (a dangling symbolic link) keeps `""` there instead of making
+the whole listing fail.
+
 ## Capabilities
 
 Not every backend can do everything -- a ZIP is read-only, WebDAV has no
@@ -80,6 +94,12 @@ automatically, at any inheritance depth.
 - `::tclutils::tuprovider::register $scheme $class` -- register a backend class
   under a scheme (backends call this on load).
 - `::tclutils::tuprovider::schemes` -- list the registered schemes.
+- `::tclutils::tuprovider::hiddenFlags $path $leaf` -- `{hidden system}` for a
+  local path, by the rules of the system (0.4).
+- `::tclutils::tuprovider::localNames $dir` -- every entry of a local
+  directory once, without `.` and `..`: `glob *` plus `glob -types hidden *`.
+  `* .*` lists dot names twice on Windows (where `*` matches them) and misses
+  files with the hidden attribute there; the local `list` uses this.
 
 A provider also offers `head $path $len` -- return at most `$len` bytes from the
 start of a file (`$len <= 0` means the whole file). **`head` is not a cap.**

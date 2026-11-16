@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 set here [file dirname [file normalize [info script]]]
 set root [file dirname $here]
 tcl::tm::path add [file join $root lib tm]
-package require tclutils::tuprovider 0.3
+package require tclutils::tuprovider 0.4
 
 # a scratch tree for the local provider
 set ::d [makeDirectory tuprov]
@@ -129,5 +129,112 @@ test tuprovider-9.1 {a failed write leaves the old file, no temp file, no channe
     if {[llength [info commands ::_realPuts]]} { rename ::puts {}; rename ::_realPuts ::puts }
     removeFile tuprovider-9.1.bin
 } -result {1 PRECIOUS 0 0}
+
+# --- 0.4: hidden/system, unreadable entries ---------------------------------
+testConstraint unixFs [expr {$::tcl_platform(platform) eq "unix"}]
+testConstraint winFs  [expr {$::tcl_platform(platform) eq "windows"}]
+
+test tuprovider-3.1 {local entries carry hidden and system} -setup {
+    set dd [makeDirectory tuprov31]
+    makeFile x .versteckt $dd
+    makeFile x sichtbar.txt $dd
+} -body {
+    set p [::tclutils::tuprovider open local]
+    set out {}
+    foreach e [$p list $dd] { lappend out [dict get $e name] [dict get $e hidden] [dict get $e system] }
+    $p destroy
+    lsort -stride 3 $out
+} -constraints unixFs -cleanup {
+    removeDirectory tuprov31
+} -result {.versteckt 1 0 sichtbar.txt 0 0}
+
+test tuprovider-3.2 {stat carries hidden too} -setup {
+    set dd [makeDirectory tuprov32]
+    set f [makeFile x .h $dd]
+} -body {
+    set p [::tclutils::tuprovider open local]
+    set e [$p stat $f]
+    $p destroy
+    dict get $e hidden
+} -constraints unixFs -cleanup {
+    removeDirectory tuprov32
+} -result 1
+
+test tuprovider-3.3 {on Windows the attribute decides, not the dot; each entry once} -setup {
+    set dd [makeDirectory tuprov33]
+    # name -> attributes; every case as a file and as a folder
+    set cases {dot {} norm {} sys {-system 1} hid {-hidden 1} both {-hidden 1 -system 1}}
+    foreach {n attrs} $cases {
+        set f [makeFile x $n.txt $dd]
+        set d [makeDirectory ${n}dir $dd]
+        if {$n eq "dot"} { file rename $f [file join $dd .dot.txt]; file rename $d [file join $dd .dotdir] }
+        if {[llength $attrs]} { file attributes $f {*}$attrs; file attributes $d {*}$attrs }
+    }
+} -body {
+    set p [::tclutils::tuprovider open local]
+    set out {}
+    foreach e [$p list $dd] {
+        lappend out [list [dict get $e name] [dict get $e type] [dict get $e hidden] [dict get $e system]]
+    }
+    $p destroy
+    lsort -index 0 $out
+} -constraints winFs -cleanup {
+    foreach f [::tclutils::tuprovider localNames $dd] {
+        catch {file attributes $f -hidden 0 -system 0}
+    }
+    removeDirectory tuprov33
+} -result {{.dot.txt file 0 0} {.dotdir dir 0 0} {both.txt file 1 1} {bothdir dir 1 1} {hid.txt file 1 0} {hiddir dir 1 0} {norm.txt file 0 0} {normdir dir 0 0} {sys.txt file 0 1} {sysdir dir 0 1}}
+
+test tuprovider-3.3a {Unix: dot names once, as file and folder} -setup {
+    set dd [makeDirectory tuprov33a]
+    makeFile x .dot.txt $dd
+    makeDirectory .dotdir $dd
+    makeFile x norm.txt $dd
+    makeDirectory normdir $dd
+} -body {
+    set p [::tclutils::tuprovider open local]
+    set out {}
+    foreach e [$p list $dd] { lappend out [list [dict get $e name] [dict get $e type] [dict get $e hidden]] }
+    $p destroy
+    lsort -index 0 $out
+} -constraints unixFs -cleanup {
+    removeDirectory tuprov33a
+} -result {{.dot.txt file 1} {.dotdir dir 1} {norm.txt file 0} {normdir dir 0}}
+
+test tuprovider-3.3b {localNames: each entry once, no . or ..} -setup {
+    set dd [makeDirectory tuprov33b]
+    makeFile x a $dd
+    makeFile x .b $dd
+} -body {
+    lsort [lmap f [::tclutils::tuprovider localNames $dd] {file tail $f}]
+} -cleanup {
+    removeDirectory tuprov33b
+} -result {.b a}
+
+test tuprovider-3.4 {hiddenFlags with the platform hook} -body {
+    set ::tclutils::tuprovider::platform unix
+    set r [::tclutils::tuprovider hiddenFlags /x/.a .a]
+    lappend r {*}[::tclutils::tuprovider hiddenFlags /x/a a]
+} -cleanup {
+    set ::tclutils::tuprovider::platform ""
+} -result {1 0 0 0}
+
+test tuprovider-3.5 {a dangling symbolic link does not break the listing} -setup {
+    set dd [makeDirectory tuprov35]
+    makeFile x echt.txt $dd
+    # Tcl links only to an existing target: link first, then remove it
+    set ziel [makeFile x gibtsnicht $dd]
+    file link -symbolic [file join $dd kaputt] $ziel
+    file delete $ziel
+} -body {
+    set p [::tclutils::tuprovider open local]
+    set out {}
+    foreach e [$p list $dd] { lappend out [dict get $e name] [dict get $e mtime] }
+    $p destroy
+    set names [lsort [lmap {n m} $out {set n}]]
+    list $names [expr {[dict get $out kaputt] eq ""}]
+} -constraints unixFs -cleanup {
+    removeDirectory tuprov35
+} -result {{echt.txt kaputt} 1}
 
 cleanupTests

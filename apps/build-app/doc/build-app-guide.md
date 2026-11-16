@@ -1,5 +1,11 @@
 # Building standalone applications (zipkits)
 
+> Current build-app (Tcl/Tk 9 only): `-launch` is not needed -- the program
+> starts the app through its own argv0 guard; the SQL editors bring their
+> shared code from `_lib/sqledit` themselves (no `-include`); the prober
+> looks in the Tcl running build-app when `-extlib` is missing. See
+> `build-app-README.md` (tclutils/apps/build-app/doc).
+
 This guide explains how `tclutils` turns an application into a single
 self-contained executable for Tcl/Tk 9, how the pieces fit together, and the two
 non-obvious facts that make or break a build. The mechanics live in
